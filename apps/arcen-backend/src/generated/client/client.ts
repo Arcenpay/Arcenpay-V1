@@ -227,6 +227,11 @@ export type WebhookDelivery = Prisma.WebhookDeliveryModel
  */
 export type PlatformTierConfig = Prisma.PlatformTierConfigModel
 /**
+ * Model PlatformBillingPlan
+ * 
+ */
+export type PlatformBillingPlan = Prisma.PlatformBillingPlanModel
+/**
  * Model GasSpend
  * 
  */
@@ -261,6 +266,16 @@ export type ArcenEvent = Prisma.ArcenEventModel
  * 
  */
 export type CompanyAddOnGrant = Prisma.CompanyAddOnGrantModel
+/**
+ * Model CompanyCreditGrant
+ * 
+ */
+export type CompanyCreditGrant = Prisma.CompanyCreditGrantModel
+/**
+ * Model CreditLedgerEntry
+ * 
+ */
+export type CreditLedgerEntry = Prisma.CreditLedgerEntryModel
 /**
  * Model PaymentLink
  * 

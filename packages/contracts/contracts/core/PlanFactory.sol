@@ -59,6 +59,13 @@ contract PlanFactory is
     mapping(address => bool) public approvedTokens;
 
     // ============================================================
+    //                         EVENTS
+    // ============================================================
+
+    event TokenApproved(address indexed token);
+    event TokenRevoked(address indexed token);
+
+    // ============================================================
     //                        CONSTRUCTOR
     // ============================================================
 
@@ -92,6 +99,7 @@ contract PlanFactory is
     function approveToken(address token) external onlyOwner {
         require(token != address(0), "PlanFactory: zero token");
         approvedTokens[token] = true;
+        emit TokenApproved(token);
     }
 
     /// @notice Removes a token from the approved list
@@ -99,6 +107,7 @@ contract PlanFactory is
     function revokeToken(address token) external onlyOwner {
         require(token != address(0), "PlanFactory: zero token");
         approvedTokens[token] = false;
+        emit TokenRevoked(token);
     }
 
     // ============================================================
@@ -228,7 +237,7 @@ contract PlanFactory is
         uint256 planId,
         uint256 price,
         string calldata metadataURI
-    ) external {
+    ) external whenNotPaused {
         Plan storage plan = _plans[planId];
         require(plan.id != 0, "PlanFactory: plan not found");
         require(plan.provider == msg.sender, "PlanFactory: not plan owner");

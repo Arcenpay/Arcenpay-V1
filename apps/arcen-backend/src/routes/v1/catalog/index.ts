@@ -7,10 +7,10 @@ import { getPlanCreditGrants, addPlanCreditGrant, deletePlanCreditGrant } from "
 import { registerPlanOnChain } from "./plan-register-onchain.js";
 import { getPlanSignNonce } from "./plan-sign-nonce.js";
 import { confirmPlanOnChain } from "./plan-chain-confirm.js";
-import { listAddOns, createAddOn, updateAddOn } from "./addons.js";
+import { listAddOns, createAddOn, updateAddOn, deleteAddOn } from "./addons.js";
 import { getAddOnEntitlements, addAddOnEntitlement, updateAddOnEntitlement, deleteAddOnEntitlement } from "./addon-entitlements.js";
 import { getAddOnGrants } from "./addon-grants.js";
-import { listCredits, createCredit, updateCredit } from "./credits.js";
+import { listCredits, createCredit, updateCredit, deleteCredit } from "./credits.js";
 import { getCreditBundles, saveCreditBundle, deleteCreditBundle } from "./credit-bundles.js";
 import { getCreditPlanGrants, saveCreditPlanGrant, deleteCreditPlanGrant } from "./credit-plan-grants.js";
 import { getCatalogConfig, updateCatalogConfig } from "./config.js";
@@ -36,6 +36,7 @@ export const catalogRoutes = new Hono()
   .get("/add-ons", requirePermission("catalog:read"), listAddOns)
   .post("/add-ons", requirePermission("catalog:write"), createAddOn)
   .put("/add-ons", requirePermission("catalog:write"), updateAddOn)
+  .delete("/add-ons", requirePermission("catalog:write"), deleteAddOn)
   .get("/add-ons/:id/entitlements", requirePermission("catalog:read"), getAddOnEntitlements)
   .post("/add-ons/:id/entitlements", requirePermission("catalog:write"), addAddOnEntitlement)
   .put("/add-ons/:id/entitlements", requirePermission("catalog:write"), updateAddOnEntitlement)
@@ -44,6 +45,7 @@ export const catalogRoutes = new Hono()
   .get("/credits", requirePermission("catalog:read"), listCredits)
   .post("/credits", requirePermission("catalog:write"), createCredit)
   .put("/credits", requirePermission("catalog:write"), updateCredit)
+  .delete("/credits", requirePermission("catalog:write"), deleteCredit)
   .get("/credits/:id/bundles", requirePermission("catalog:read"), getCreditBundles)
   .post("/credits/:id/bundles", requirePermission("catalog:write"), saveCreditBundle)
   .delete("/credits/:id/bundles", requirePermission("catalog:write"), deleteCreditBundle)

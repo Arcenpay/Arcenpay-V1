@@ -10,6 +10,7 @@ import { requireAnyAuth, isAnyAuthError } from "../../lib/auth/require-any-auth.
 import { db } from "../../db.js";
 import { Prisma } from "../../generated/client/client.js";
 import { getCompanyEnvironmentWhere } from "../../lib/environments/company-scope.js";
+import { assertCanCreateSubscriber } from "../../lib/catalog/tier-guard.js";
 
 export async function GET(c: Context) {
   const ctx = await requireAnyAuth(c);
@@ -132,6 +133,15 @@ export async function POST(c: Context) {
 
   const walletAddress = body.wallet?.toLowerCase();
   const email = body.email?.trim().toLowerCase();
+
+  // Enforce subscriber count limit
+  const subscriberCheck = await assertCanCreateSubscriber(teamId);
+  if (!subscriberCheck.allowed) {
+    return c.json({
+      error: "LIMIT_REACHED",
+      message: subscriberCheck.reason,
+    }, 409 as any);
+  }
 
   // Check for duplicates
   if (walletAddress) {

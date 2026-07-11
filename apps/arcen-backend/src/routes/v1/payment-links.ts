@@ -9,6 +9,7 @@ import { RUNTIME_CHAIN_ID } from "../../lib/platform/runtime-chain.js";
 import { getUsdcAddress } from "../../lib/platform/contracts.js";
 import { requireResolvedActiveEnvironment } from "../../lib/environments/workspace-environments.js";
 import { deliverWebhook } from "../../lib/webhooks/deliver-webhook.js";
+import { assertCanCreatePaymentLink } from "../../lib/catalog/tier-guard.js";
 
 const createSchema = z
   .object({
@@ -84,6 +85,14 @@ export async function GET(c: Context) {
 export async function POST(c: Context) {
   const auth = await requireAnyAuth(c);
   if (isAnyAuthError(auth)) return c.json({ ok: false, error: auth.error }, auth.status as any as any);
+
+  const linkCheck = await assertCanCreatePaymentLink(auth.teamId);
+  if (!linkCheck.allowed) {
+    return c.json({
+      error: "LIMIT_REACHED",
+      message: linkCheck.reason,
+    }, 409 as any);
+  }
 
   const body = await c.req.json() .catch(() => ({}));
   const parsed = createSchema.safeParse(body);

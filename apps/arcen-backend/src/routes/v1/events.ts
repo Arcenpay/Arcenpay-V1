@@ -18,6 +18,8 @@ import { invalidateFlagCache } from "../../lib/entitlements/flag-cache.js";
 import { resolveEmbedAccessToken } from "../../lib/entitlements/embed-access-token.js";
 import { touchEntityActivity } from "../../lib/platform/activity.js";
 import { resolveEntitlementResult } from "../../lib/entitlements/entitlements.js";
+import { resolveCreditBurnConfig } from "../../lib/billing/usage-credits.js";
+import { consumeMeteredEntitlement } from "../../lib/billing/usage-consume.js";
 import { Prisma } from "../../generated/client/client.js";
 import { corsHeaders } from "../../middleware/cors.js";
 
@@ -520,12 +522,19 @@ export async function POST(c: Context) {
         teamId,
         OR: [{ featureKey: b.name }, { eventKey: b.name }],
       },
-      select: { featureKey: true },
+      select: { featureKey: true, featureType: true, eventKey: true },
     });
 
     if (trackedFeature) {
       enforcedFeatureKey = trackedFeature.featureKey;
       invalidateUsageCache(teamId, companyId, trackedFeature.featureKey);
+
+      const creditBurn = await resolveCreditBurnConfig({
+        teamId,
+        environmentId,
+        featureKey: trackedFeature.featureKey,
+      });
+
       const entitlement = await resolveEntitlementResult({
         teamId,
         companyKeys: {
@@ -535,16 +544,44 @@ export async function POST(c: Context) {
         },
         featureKey: trackedFeature.featureKey,
       });
-      if (
-        entitlement &&
-        ((entitlement.allocation !== null && entitlement.exceeded) ||
-          !entitlement.enabled)
-      ) {
+
+      const isMetered =
+        Boolean(creditBurn) ||
+        trackedFeature.featureType === "event_based" ||
+        entitlement.allocation !== null;
+
+      if (isMetered) {
+        // Use consumeMeteredEntitlement to atomically check limits, burn credits, and create the event
+        const result = await consumeMeteredEntitlement({
+          teamId,
+          companyKeys: {
+            internalId: companyId,
+            environmentId,
+            wallet: b.company?.wallet ?? undefined,
+          },
+          userKeys: userId ? { internalId: userId, environmentId } : undefined,
+          featureKey: trackedFeature.featureKey,
+          traits: b.traits,
+          idempotencyKey: b.idempotencyKey,
+        });
+
+        const meteredResult = result as any;
+        if (!meteredResult.consumed) {
+          return jsonWithCors(
+            c,
+            { error: meteredResult.reason || "Limit reached or insufficient credits" },
+            meteredResult.reason.includes("Insufficient credits") ? 402 : 429
+          );
+        }
+
+        return jsonWithCors(c, { ok: true, data: { companyId, userId } });
+      }
+
+      // If it's a non-metered feature flag, perform simple Boolean check
+      if (entitlement && !entitlement.enabled) {
         return jsonWithCors(
           c,
-          { error: entitlement.exceeded
-            ? `Usage limit reached for "${trackedFeature.featureKey}". Upgrade to continue.`
-            : `Feature "${trackedFeature.featureKey}" is not available on your current plan.` },
+          { error: `Feature "${trackedFeature.featureKey}" is not available on your current plan.` },
           429,
         );
       }

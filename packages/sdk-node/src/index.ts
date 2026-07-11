@@ -16,6 +16,10 @@ export type {
   UpdatePaymentLinkInput,
   CheckoutSessionSummary,
   CreateCheckoutSessionInput,
+  ChargeCustomerInput,
+  ChargeCustomerResult,
+  HostedCheckoutInput,
+  HostedCheckoutResult,
 } from "./client";
 export type {
   ArcenCompanyKeys,

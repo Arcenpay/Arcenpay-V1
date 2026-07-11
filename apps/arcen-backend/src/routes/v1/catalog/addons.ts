@@ -6,6 +6,7 @@ import { writeAuditEvent } from "../../../lib/platform/audit.js";
 import { APP_URL } from "../../../config.js";
 import { requireResolvedActiveEnvironment } from "../../../lib/environments/workspace-environments.js";
 import { isAcceptedTokenSupportedOnChain } from "../../../lib/environments/supported-tokens.js";
+import { assertCanCreateAddOn } from "../../../lib/catalog/tier-guard.js";
 
 const createSchema = z.object({
   name: z.string().min(1),
@@ -134,6 +135,15 @@ export async function createAddOn(c: Context) {
   if (!activeEnvironment) {
     return c.json({ error: "No workspace environment selected" }, 409 as any);
   }
+
+  const addOnCheck = await assertCanCreateAddOn(auth.team.teamId, activeEnvironment.id);
+  if (!addOnCheck.allowed) {
+    return c.json({
+      error: addOnCheck.limit === 0 ? "UPGRADE_REQUIRED" : "LIMIT_REACHED",
+      message: addOnCheck.reason,
+    }, addOnCheck.limit === 0 ? 403 as any : 409 as any);
+  }
+
   if (!isAcceptedTokenSupportedOnChain(activeEnvironment.chainId, data.acceptedToken)) {
     return c.json({
       error: `Accepted token must belong to ${activeEnvironment.name}'s configured chain.`,
@@ -214,6 +224,14 @@ export async function updateAddOn(c: Context) {
   if (!activeEnvironment || existing.environmentId !== activeEnvironment.id) {
     return c.json({ error: "Switch to this add-on's environment before editing it." }, 409 as any);
   }
+
+  const addOnCheck = await assertCanCreateAddOn(auth.team.teamId, activeEnvironment.id);
+  if (!addOnCheck.allowed) {
+    return c.json({
+      error: "UPGRADE_REQUIRED",
+      message: addOnCheck.reason,
+    }, 403 as any);
+  }
   if (
     parsed.data.acceptedToken !== undefined &&
     !isAcceptedTokenSupportedOnChain(activeEnvironment.chainId, parsed.data.acceptedToken)
@@ -284,4 +302,72 @@ export async function updateAddOn(c: Context) {
   });
 
   return c.json({ addOn: addCheckoutUrl(updated) });
+}
+
+const deleteSchema = z.object({
+  id: z.string().min(1),
+});
+
+export async function deleteAddOn(c: Context) {
+  const auth = await requirePermission(c, "catalog:write");
+  if (isErrorResponse(auth)) return c.json({ ok: false, error: auth.error }, auth.status as any as any);
+
+  const body = await c.req.json().catch(() => ({}));
+  const parsed = deleteSchema.safeParse(body);
+  if (!parsed.success) {
+    return c.json({ error: "Invalid request", details: parsed.error.flatten().fieldErrors }, 400 as any);
+  }
+
+  const existing = await db.catalogAddOn.findFirst({
+    where: { id: parsed.data.id, teamId: auth.team.teamId },
+  });
+  if (!existing) {
+    return c.json({ error: "Add-on not found" }, 404 as any);
+  }
+  if (!existing.environmentId) {
+    return c.json({ error: "Legacy add-ons cannot be deleted here." }, 409 as any);
+  }
+  const activeEnvironment = await requireResolvedActiveEnvironment(
+    auth.session,
+    auth.team.teamId,
+  );
+  if (!activeEnvironment || existing.environmentId !== activeEnvironment.id) {
+    return c.json({ error: "Switch to this add-on's environment before deleting it." }, 409 as any);
+  }
+
+  const addOnCheck = await assertCanCreateAddOn(auth.team.teamId, activeEnvironment.id);
+  if (!addOnCheck.allowed) {
+    return c.json({
+      error: "UPGRADE_REQUIRED",
+      message: addOnCheck.reason,
+    }, 403 as any);
+  }
+
+  if (existing.status === "PUBLISHED") {
+    return c.json({ error: "Published add-ons cannot be deleted. Archive first." }, 409 as any);
+  }
+
+  await db.$transaction([
+    db.catalogVersion.deleteMany({
+      where: {
+        teamId: auth.team.teamId,
+        entityType: "ADDON",
+        entityId: existing.id,
+      },
+    }),
+    db.catalogAddOn.delete({ where: { id: existing.id } }),
+  ]);
+
+  await writeAuditEvent({
+    headers: c.req.raw.headers,
+    teamId: auth.team.teamId,
+    userId: auth.team.userId,
+    walletAddress: auth.team.walletAddress,
+    action: "catalog.addon.delete",
+    resourceType: "CatalogAddOn",
+    resourceId: existing.id,
+    beforeData: existing,
+  });
+
+  return c.json({ success: true });
 }

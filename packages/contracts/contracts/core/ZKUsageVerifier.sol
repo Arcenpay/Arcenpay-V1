@@ -50,6 +50,8 @@ contract ZKUsageVerifier is
     /// @notice snarkjs-exported Groth16 verifier contract
     address public groth16Verifier;
 
+    event RateScheduleSet(uint256 indexed planId, uint256 ratePerCall);
+
     // ============================================================
     //                        CONSTRUCTOR
     // ============================================================
@@ -91,6 +93,7 @@ contract ZKUsageVerifier is
     function setRateSchedule(uint256 planId, uint256 ratePerCall) external onlyOwner {
         require(ratePerCall > 0, "ZKVerifier: zero rate");
         _rateSchedules[planId] = ratePerCall;
+        emit RateScheduleSet(planId, ratePerCall);
     }
 
     /// @inheritdoc IZKUsageVerifier

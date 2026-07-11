@@ -65,11 +65,42 @@ export async function getProfile(c: Context) {
     auth.session,
     teamId,
   );
+
+  // No environment yet — return team-level onboarding profile
   if (!activeEnvironment) {
-    return c.json({ error: "No workspace environment selected" }, 409 as any);
+    const teamRecord = await db.team.findUnique({
+      where: { id: teamId },
+      select: { profileData: true },
+    });
+    const raw = teamRecord?.profileData;
+    const profileData = raw && typeof raw === "object" && !Array.isArray(raw)
+      ? raw as Record<string, unknown>
+      : {};
+    return c.json({
+      providerName: typeof profileData.providerName === "string" ? profileData.providerName : null,
+      website: typeof profileData.website === "string" ? profileData.website : null,
+      contactEmail: typeof profileData.contactEmail === "string" ? profileData.contactEmail : null,
+      legalName: typeof profileData.legalName === "string" ? profileData.legalName : null,
+      billingEmail: typeof profileData.billingEmail === "string" ? profileData.billingEmail : null,
+      supportEmail: typeof profileData.supportEmail === "string" ? profileData.supportEmail : null,
+      supportPhone: typeof profileData.supportPhone === "string" ? profileData.supportPhone : null,
+      supportUrl: typeof profileData.supportUrl === "string" ? profileData.supportUrl : null,
+      addressLine1: typeof profileData.addressLine1 === "string" ? profileData.addressLine1 : null,
+      addressLine2: typeof profileData.addressLine2 === "string" ? profileData.addressLine2 : null,
+      city: typeof profileData.city === "string" ? profileData.city : null,
+      state: typeof profileData.state === "string" ? profileData.state : null,
+      postalCode: typeof profileData.postalCode === "string" ? profileData.postalCode : null,
+      country: typeof profileData.country === "string" ? profileData.country : null,
+      taxId: typeof profileData.taxId === "string" ? profileData.taxId : null,
+      gstin: typeof profileData.gstin === "string" ? profileData.gstin : null,
+      notifyEmail: true,
+      notifyWebhook: false,
+      webhookUrl: null,
+      apiKeyPrefix: null,
+    });
   }
 
-  const profile = await db.providerProfile.findUnique({
+  let profile = await db.providerProfile.findUnique({
     where: {
       teamId_environmentId: {
         teamId,
@@ -100,6 +131,66 @@ export async function getProfile(c: Context) {
     },
   });
 
+  if (!profile) {
+    // Self-healing fallback: Check if the team has onboarding profileData
+    const teamRecord = await db.team.findUnique({
+      where: { id: teamId },
+      select: { profileData: true },
+    });
+    const raw = teamRecord?.profileData;
+    const profileData = raw && typeof raw === "object" && !Array.isArray(raw)
+      ? raw as Record<string, unknown>
+      : null;
+
+    if (profileData && (profileData.providerName || profileData.contactEmail)) {
+      // Auto-create ProviderProfile for this environment from team's profileData!
+      profile = await db.providerProfile.create({
+        data: {
+          teamId,
+          environmentId: activeEnvironment.id,
+          providerName: typeof profileData.providerName === "string" ? profileData.providerName : null,
+          website: typeof profileData.website === "string" ? profileData.website : null,
+          contactEmail: typeof profileData.contactEmail === "string" ? profileData.contactEmail : null,
+          legalName: typeof profileData.legalName === "string" ? profileData.legalName : null,
+          billingEmail: typeof profileData.billingEmail === "string" ? profileData.billingEmail : null,
+          supportEmail: typeof profileData.supportEmail === "string" ? profileData.supportEmail : null,
+          supportPhone: typeof profileData.supportPhone === "string" ? profileData.supportPhone : null,
+          supportUrl: typeof profileData.supportUrl === "string" ? profileData.supportUrl : null,
+          addressLine1: typeof profileData.addressLine1 === "string" ? profileData.addressLine1 : null,
+          addressLine2: typeof profileData.addressLine2 === "string" ? profileData.addressLine2 : null,
+          city: typeof profileData.city === "string" ? profileData.city : null,
+          state: typeof profileData.state === "string" ? profileData.state : null,
+          postalCode: typeof profileData.postalCode === "string" ? profileData.postalCode : null,
+          country: typeof profileData.country === "string" ? profileData.country : null,
+          taxId: typeof profileData.taxId === "string" ? profileData.taxId : null,
+          gstin: typeof profileData.gstin === "string" ? profileData.gstin : null,
+        },
+        select: {
+          providerName: true,
+          website: true,
+          contactEmail: true,
+          legalName: true,
+          billingEmail: true,
+          supportEmail: true,
+          supportPhone: true,
+          supportUrl: true,
+          addressLine1: true,
+          addressLine2: true,
+          city: true,
+          state: true,
+          postalCode: true,
+          country: true,
+          taxId: true,
+          gstin: true,
+          notifyEmail: true,
+          notifyWebhook: true,
+          webhookUrl: true,
+          apiKeyPrefix: true,
+        },
+      });
+    }
+  }
+
   return c.json(profile ?? EMPTY_PROFILE);
 }
 
@@ -115,14 +206,6 @@ export async function putProfile(c: Context) {
 
   const { team } = auth;
   const teamId = team.teamId;
-  const activeEnvironment = await requireResolvedActiveEnvironment(
-    auth.session,
-    teamId,
-  );
-  if (!activeEnvironment) {
-    return c.json({ error: "No workspace environment selected" }, 409 as any);
-  }
-
   const d = parsed.data;
   const data: Record<string, unknown> = {};
   if (d.providerName !== undefined) data.providerName = d.providerName || null;
@@ -146,6 +229,50 @@ export async function putProfile(c: Context) {
   if (d.webhookUrl !== undefined) data.webhookUrl = d.webhookUrl || null;
   if (d.webhookSigningSecret !== undefined)
     data.webhookSigningSecret = d.webhookSigningSecret;
+
+  const activeEnvironment = await requireResolvedActiveEnvironment(
+    auth.session,
+    teamId,
+  );
+
+  // No environment yet — store profile at team level for onboarding
+  if (!activeEnvironment) {
+    const onboardingProfile: Record<string, unknown> = {};
+    if (data.providerName) onboardingProfile.providerName = data.providerName;
+    if (data.website) onboardingProfile.website = data.website;
+    if (data.contactEmail) onboardingProfile.contactEmail = data.contactEmail;
+    if (data.legalName) onboardingProfile.legalName = data.legalName;
+    if (data.billingEmail) onboardingProfile.billingEmail = data.billingEmail;
+    if (data.supportEmail) onboardingProfile.supportEmail = data.supportEmail;
+    if (data.supportPhone) onboardingProfile.supportPhone = data.supportPhone;
+    if (data.supportUrl) onboardingProfile.supportUrl = data.supportUrl;
+    if (data.addressLine1) onboardingProfile.addressLine1 = data.addressLine1;
+    if (data.addressLine2) onboardingProfile.addressLine2 = data.addressLine2;
+    if (data.city) onboardingProfile.city = data.city;
+    if (data.state) onboardingProfile.state = data.state;
+    if (data.postalCode) onboardingProfile.postalCode = data.postalCode;
+    if (data.country) onboardingProfile.country = data.country;
+    if (data.taxId) onboardingProfile.taxId = data.taxId;
+    if (data.gstin) onboardingProfile.gstin = data.gstin;
+
+    await db.team.update({
+      where: { id: teamId },
+      data: { profileData: onboardingProfile as any },
+    });
+
+    await writeAuditEvent({
+      headers: c.req.raw.headers,
+      teamId,
+      userId: team.userId,
+      walletAddress: team.walletAddress,
+      action: "provider.profile.update.onboarding",
+      resourceType: "Team",
+      resourceId: teamId,
+      afterData: onboardingProfile,
+    });
+
+    return c.json({ ...data, providerName: data.providerName ?? null, website: data.website ?? null, contactEmail: data.contactEmail ?? null });
+  }
 
   const before = await db.providerProfile.findUnique({
     where: {

@@ -6,6 +6,14 @@ async function handler(request: NextRequest) {
   const url = new URL(request.url);
   let path = url.pathname;
 
+  if (path === "/api/health") {
+    return Response.json({
+      status: "ok",
+      service: "arcen-dashboard",
+      timestamp: new Date().toISOString(),
+    });
+  }
+
   // Rewrite /api/xxx → /api/v1/xxx, but /api/v1/xxx stays as-is
   if (path.startsWith("/api/") && !path.startsWith("/api/v1/")) {
     path = path.replace("/api/", "/api/v1/");

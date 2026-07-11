@@ -62,7 +62,7 @@ type BackendSessionResponse = {
   }>;
 };
 
-async function callBackend<T>(path: string, options: RequestInit = {}): Promise<T | null> {
+export async function callBackend<T>(path: string, options: RequestInit = {}): Promise<T | null> {
   const store = await cookies();
   const token = store.get("arcen_session")?.value;
   const headers: Record<string, string> = { ...(options.headers as Record<string, string> ?? {}) };

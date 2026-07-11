@@ -60,6 +60,16 @@ contract SessionVault is
     bool public providerWhitelistEnabled;
 
     // ============================================================
+    //                         EVENTS
+    // ============================================================
+
+    event SettlerAuthorized(address indexed settler);
+    event SettlerRevoked(address indexed settler);
+    event ProviderWhitelistConfigured(bool enabled);
+    event ProviderWhitelisted(address indexed provider);
+    event ProviderRemovedFromWhitelist(address indexed provider);
+
+    // ============================================================
     //                        CONSTRUCTOR
     // ============================================================
 
@@ -94,27 +104,32 @@ contract SessionVault is
     function authorizeSettler(address settler) external onlyOwner {
         require(settler != address(0), "SessionVault: zero settler");
         authorizedSettlers[settler] = true;
+        emit SettlerAuthorized(settler);
     }
 
     /// @notice Revokes a settler's authorization
     function revokeSettler(address settler) external onlyOwner {
         authorizedSettlers[settler] = false;
+        emit SettlerRevoked(settler);
     }
 
     /// @notice Enables/disables the provider whitelist
     function setProviderWhitelistEnabled(bool enabled) external onlyOwner {
         providerWhitelistEnabled = enabled;
+        emit ProviderWhitelistConfigured(enabled);
     }
 
     /// @notice Adds a provider to the whitelist
     function whitelistProvider(address _provider) external onlyOwner {
         require(_provider != address(0), "SessionVault: zero provider");
         whitelistedProviders[_provider] = true;
+        emit ProviderWhitelisted(_provider);
     }
 
     /// @notice Removes a provider from the whitelist
     function removeProviderFromWhitelist(address _provider) external onlyOwner {
         whitelistedProviders[_provider] = false;
+        emit ProviderRemovedFromWhitelist(_provider);
     }
 
     // ============================================================

@@ -12,6 +12,7 @@ import {
   Repeat,
   FileText,
 } from "lucide-react";
+import { SkeletonTable } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -120,7 +121,7 @@ function classifyInvoice(invoice: InvoiceItem): InvoiceSource {
 function InvoiceStatusBadge({ status }: { status: InvoiceStatus }) {
   if (status === "PAID") {
     return (
-      <Badge className="border-success/20 bg-success/10 text-success">
+      <Badge className="border-border bg-secondary text-success">
         PAID
       </Badge>
     );
@@ -144,7 +145,7 @@ function InvoiceStatusBadge({ status }: { status: InvoiceStatus }) {
 function DeliveryBadge({ status }: { status: DeliveryStatus }) {
   if (status === "SENT") {
     return (
-      <Badge className="border-success/20 bg-success/10 text-xs text-success">
+      <Badge className="border-border bg-secondary text-xs text-success">
         Sent
       </Badge>
     );
@@ -182,7 +183,7 @@ function InvoiceSourceBadge({
 
   if (source === "SUBSCRIPTION") {
     return (
-      <Badge className="gap-1 border-amber-500/20 bg-amber-500/10 text-amber-200">
+      <Badge className="gap-1 border-border bg-secondary text-foreground">
         <Repeat className="h-3 w-3" />
         Subscription
       </Badge>
@@ -229,16 +230,7 @@ function InvoiceTable({
         </TableRow>
       </TableHeader>
       <TableBody>
-        {loading && (
-          <TableRow>
-            <TableCell
-              colSpan={8}
-              className="py-8 text-center text-muted-foreground"
-            >
-              Loading invoices...
-            </TableCell>
-          </TableRow>
-        )}
+        {loading && <SkeletonTable rows={4} cols={7} />}
         {!loading && rows.length === 0 && (
           <TableRow>
             <TableCell
@@ -471,17 +463,17 @@ export function InvoicesSection() {
 
   return (
     <div className="space-y-6">
-      <Card className="border-border bg-card">
-        <CardHeader className="flex flex-row items-center justify-between gap-4">
-          <div>
-            <CardTitle className="text-base font-medium">
+      <Card className="border-border bg-card overflow-hidden">
+        <CardHeader className="flex flex-row items-center justify-between gap-4 min-w-0">
+          <div className="min-w-0 overflow-hidden">
+            <CardTitle className="text-base font-medium truncate">
               Invoice Center
             </CardTitle>
-            <p className="mt-1 text-sm text-muted-foreground">
+            <p className="mt-1 text-sm text-muted-foreground truncate">
               Keep one-time payment-link invoices separate from recurring subscription billing.
             </p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0">
             <Button
               variant="outline"
               size="sm"
@@ -598,15 +590,17 @@ export function InvoicesSection() {
                   Review every invoice with its billing source labeled clearly.
                 </p>
               </div>
-              <InvoiceTable
-                rows={filteredRows}
-                loading={loading}
-                busyId={busyId}
-                emptyMessage="No invoices found."
-                onMarkStatus={handleMarkStatus}
-                onDownload={handleDownload}
-                onResend={handleResend}
-              />
+              <div className="w-full overflow-x-auto">
+                <InvoiceTable
+                  rows={filteredRows}
+                  loading={loading}
+                  busyId={busyId}
+                  emptyMessage="No invoices found."
+                  onMarkStatus={handleMarkStatus}
+                  onDownload={handleDownload}
+                  onResend={handleResend}
+                />
+              </div>
             </TabsContent>
 
             {(["PAYMENT_LINK", "SUBSCRIPTION", "OTHER"] as InvoiceSource[]).map(
@@ -620,15 +614,17 @@ export function InvoicesSection() {
                       {SOURCE_COPY[source].description}
                     </p>
                   </div>
-                  <InvoiceTable
-                    rows={filteredRows}
-                    loading={loading}
-                    busyId={busyId}
-                    emptyMessage={SOURCE_COPY[source].empty}
-                    onMarkStatus={handleMarkStatus}
-                    onDownload={handleDownload}
-                    onResend={handleResend}
-                  />
+                  <div className="w-full overflow-x-auto">
+                    <InvoiceTable
+                      rows={filteredRows}
+                      loading={loading}
+                      busyId={busyId}
+                      emptyMessage={SOURCE_COPY[source].empty}
+                      onMarkStatus={handleMarkStatus}
+                      onDownload={handleDownload}
+                      onResend={handleResend}
+                    />
+                  </div>
                 </TabsContent>
               ),
             )}

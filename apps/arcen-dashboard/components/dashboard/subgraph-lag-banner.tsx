@@ -47,8 +47,8 @@ export function SubgraphLagBanner() {
 
   const Icon = isUnhealthy ? XCircle : AlertTriangle;
   const bgColor = isUnhealthy
-    ? "bg-destructive/10 border-destructive/30 text-destructive"
-    : "bg-yellow-500/10 border-yellow-500/30 text-yellow-600 dark:text-yellow-400";
+    ? "bg-secondary border-border text-destructive"
+    : "bg-secondary border-border text-warning";
 
   const message = health.error
     ? `Indexer unreachable — on-chain data may be outdated`

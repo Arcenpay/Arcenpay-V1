@@ -9,13 +9,12 @@
     "subgraph"
   ],
   "scripts": {
-    "build": "turbo run build --filter=!arcen-demo && npm run build --workspace=arcen-demo",
-    "build:sdk": "turbo run build --filter=@arcenpay/react --filter=@arcenpay/node",
+    "build": "turbo run build",
+    "build:sdk": "turbo run build --filter=@arcenpay/react --filter=@arcenpay/node --filter=@arcenpay/agent",
     "build:launch": "turbo run build --filter=@arcenpay/dashboard... --filter=@arcenpay/facilitator...",
     "dev": "turbo run dev --ui=tui",
     "dev:all": "turbo run dev --ui=tui",
     "dev:stream": "turbo run dev --ui=stream --log-order=stream --log-prefix=task",
-    "dev:demo": "turbo run dev --ui=tui --filter=arcen-demo...",
     "dev:dashboard": "turbo run dev --ui=tui --filter=@arcenpay/dashboard...",
     "dev:docs": "turbo run dev --ui=tui --filter=@arcenpay/docs...",
     "dev:facilitator": "turbo run dev --ui=tui --filter=@arcenpay/facilitator...",

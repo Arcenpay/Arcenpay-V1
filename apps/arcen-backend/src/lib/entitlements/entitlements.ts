@@ -8,6 +8,7 @@ import {
   type UserKeys,
 } from "./flag-engine.js";
 import { listMetadataEntitlements } from "../catalog/catalog-entitlements.js";
+import { resolveCreditBurnConfig } from "../billing/usage-credits.js";
 
 interface EntitlementEntry {
   featureName?: string;
@@ -60,16 +61,33 @@ export interface ResolvedEntitlementResults {
 }
 
 function listEntitlements(metadata: unknown): EntitlementEntry[] {
-  const entries = Array.isArray(metadata)
+  // Accept both a raw metadata object (containing an `.entitlements` array)
+  // or a pre-parsed array. Always pass through listMetadataEntitlements so
+  // we consistently pick up the `entitlements` key from the JSON blob.
+  const raw = Array.isArray(metadata)
     ? metadata
     : listMetadataEntitlements(metadata);
-  return entries.filter((entry): entry is EntitlementEntry => {
-    const candidate = entry as Partial<EntitlementEntry>;
-    return (
-      typeof candidate.type === "string" &&
-      typeof candidate.enabled === "boolean"
-    );
-  });
+
+  return raw
+    .filter((entry) => {
+      // Only require featureKey — type and enabled are optional in storage
+      const candidate = entry as Partial<EntitlementEntry>;
+      return typeof candidate.featureKey === "string" && candidate.featureKey.length > 0;
+    })
+    .map((entry) => {
+      const candidate = entry as Partial<EntitlementEntry>;
+      const rawType = candidate.type;
+      const type: EntitlementEntry["type"] =
+        rawType === "NUMERIC" || rawType === "UNLIMITED" ? rawType : "BOOLEAN";
+      return {
+        featureKey: candidate.featureKey as string,
+        featureName: candidate.featureName,
+        type,
+        value: candidate.value !== undefined ? candidate.value : null,
+        // Default enabled to true when the field is absent (schema default)
+        enabled: typeof candidate.enabled === "boolean" ? candidate.enabled : true,
+      };
+    });
 }
 
 function metadataEnabled(entitlement: MetadataEntitlement | undefined): boolean {
@@ -93,9 +111,11 @@ async function loadMergedMetadataEntitlements(
     });
 
     if (plan) {
-      for (const entitlement of listEntitlements(
-        listMetadataEntitlements(plan.metadata, company.billingPeriod),
-      )) {
+      // Pass raw metadata so listEntitlements can parse and normalize it.
+      // Previously this double-called listMetadataEntitlements which returned
+      // MetadataEntitlementLink[] (with optional type/enabled), and then the
+      // old filter silently dropped every entry missing those fields.
+      for (const entitlement of listEntitlements(plan.metadata)) {
         merged.set(entitlement.featureKey, {
           ...entitlement,
           source: "plan",
@@ -108,7 +128,13 @@ async function loadMergedMetadataEntitlements(
   const activeAddOnIds = company?.activeAddOnIds ?? [];
   if (activeAddOnIds.length > 0) {
     const addOns = await db.catalogAddOn.findMany({
-      where: { teamId, id: { in: activeAddOnIds } },
+      where: {
+        teamId,
+        id: { in: activeAddOnIds },
+        active: true,
+        status: "PUBLISHED",
+        ...(company?.environmentId ? { environmentId: company.environmentId } : {}),
+      },
       select: { id: true, metadata: true },
     });
 
@@ -401,6 +427,31 @@ export async function resolveEntitlementResults(
       let reason: string;
 
       // Rule priority: 1. Metadata entitlements > 2. Explicit global flag rules > 3. Suppress default > 4. Flag default
+      // 1. Resolve credit burn configuration
+      const creditBurn = await resolveCreditBurnConfig({
+        teamId,
+        environmentId: company?.environmentId ?? null,
+        featureKey,
+      });
+
+      // 2. Fetch remaining credits if applicable
+      let creditBalance: number | null = null;
+      if (company && creditBurn) {
+        const now = new Date();
+        const grants = await db.companyCreditGrant.findMany({
+          where: {
+            teamId,
+            companyId: company.id,
+            creditTypeId: creditBurn.creditTypeId,
+            status: "ACTIVE",
+            remainingAmount: { gt: 0 },
+            OR: [{ expiresAt: null }, { expiresAt: { gt: now } }],
+          },
+          select: { remainingAmount: true },
+        });
+        creditBalance = grants.reduce((sum, g) => sum + g.remainingAmount, 0);
+      }
+
       if (metadataEntitlement) {
         // Plan/add-on metadata is the canonical source for catalog-based access.
         enabled = metadataEntitlement.enabled && metadataEnabled(metadataEntitlement);
@@ -421,8 +472,15 @@ export async function resolveEntitlementResults(
         reason = evaluated.reason;
       }
 
+      // If credit-based feature has insufficient credits, override enabled state
+      if (creditBurn && creditBalance !== null && creditBalance < creditBurn.amount) {
+        enabled = false;
+        reason = "Insufficient credits";
+      }
+
       const isMetered =
         flag.featureType === "event_based" ||
+        Boolean(creditBurn) ||
         metadataEntitlement?.type === "NUMERIC" ||
         metadataEntitlement?.type === "UNLIMITED";
       const allocation =
@@ -449,11 +507,30 @@ export async function resolveEntitlementResults(
         exceeded: false,
       } satisfies EntitlementResult;
 
-      if (isMetered) {
-        return finalizeMeteredEntitlement(entitlement, usage);
+      let finalEnt = isMetered
+        ? finalizeMeteredEntitlement(entitlement, usage)
+        : entitlement;
+
+      // Force-override if credit check failed
+      if (creditBurn && creditBalance !== null && creditBalance < creditBurn.amount) {
+        finalEnt = {
+          ...finalEnt,
+          enabled: false,
+          reason: "Insufficient credits",
+          exceeded: true,
+        };
       }
 
-      return entitlement;
+      // Inject extra metadata fields for credit tracking
+      if (creditBurn && company) {
+        finalEnt = {
+          ...finalEnt,
+          creditBalance,
+          creditCost: creditBurn.amount,
+        } as any;
+      }
+
+      return finalEnt;
     }),
   );
 

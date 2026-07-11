@@ -63,8 +63,8 @@ export function TransactionFlow({
     <div
       className={cn(
         "rounded-xl border border-border bg-secondary/40 p-4 space-y-3 animate-in fade-in slide-in-from-bottom-2 duration-300",
-        step === "error" && "border-destructive/30 bg-destructive/5",
-        step === "success" && "border-success/30 bg-success/5",
+        step === "error" && "border-border bg-secondary",
+        step === "success" && "border-border bg-success/5",
         className
       )}
     >

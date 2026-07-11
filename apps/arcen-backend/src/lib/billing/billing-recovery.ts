@@ -12,6 +12,8 @@ import { sendPaidInvoiceReceipt } from "./invoice-notifications.js";
 import { allocateInvoiceNumber, toSix } from "./invoices.js";
 import { syncCustomerUserIdentity } from "./customer-identity.js";
 import { upsertScopedSubscriberEmail } from "./subscriber-emails.js";
+import { grantPlanCreditsForCompany } from "./usage-credits.js";
+import { asRecord, normalizeWallet } from "./utils.js";
 
 const BILLING_RECOVERY_RETRY_DELAYS_MS = [
   5 * 60 * 1000,
@@ -19,15 +21,6 @@ const BILLING_RECOVERY_RETRY_DELAYS_MS = [
   2 * 60 * 60 * 1000,
   8 * 60 * 60 * 1000,
 ] as const;
-
-function asRecord(value: unknown): Record<string, unknown> {
-  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
-  return value as Record<string, unknown>;
-}
-
-function normalizeWallet(value?: string | null): string | null {
-  return value?.trim() ? value.trim().toLowerCase() : null;
-}
 
 function parseDate(value: unknown): Date | null {
   if (value instanceof Date) return value;
@@ -793,6 +786,21 @@ export async function finalizeSubscriptionActivation(
   await db.arcenCompany.update({
     where: { id: input.payload.companyId },
     data: companyUpdate,
+  });
+
+  await grantPlanCreditsForCompany({
+    teamId: input.teamId,
+    environmentId: input.payload.environmentId ?? null,
+    companyId: input.payload.companyId,
+    planId: input.payload.catalogPlanId,
+    billingPeriod: input.payload.billingPeriod ?? "monthly",
+    periodStartedAt: occurredAt,
+    periodEndsAt: currentPeriodEnd,
+    metadata: {
+      source,
+      txHash: input.payload.txHash,
+      recoveryTaskId: input.taskId ?? null,
+    },
   });
 
   await syncCustomerUserIdentity({

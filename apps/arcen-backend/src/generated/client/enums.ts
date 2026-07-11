@@ -156,6 +156,37 @@ export const CompanyAddOnGrantSource = {
 export type CompanyAddOnGrantSource = (typeof CompanyAddOnGrantSource)[keyof typeof CompanyAddOnGrantSource]
 
 
+export const CompanyCreditGrantStatus = {
+  ACTIVE: 'ACTIVE',
+  EXPIRED: 'EXPIRED',
+  REVOKED: 'REVOKED'
+} as const
+
+export type CompanyCreditGrantStatus = (typeof CompanyCreditGrantStatus)[keyof typeof CompanyCreditGrantStatus]
+
+
+export const CompanyCreditGrantSource = {
+  PLAN_GRANT: 'PLAN_GRANT',
+  CREDIT_BUNDLE: 'CREDIT_BUNDLE',
+  ADMIN: 'ADMIN',
+  ADJUSTMENT: 'ADJUSTMENT'
+} as const
+
+export type CompanyCreditGrantSource = (typeof CompanyCreditGrantSource)[keyof typeof CompanyCreditGrantSource]
+
+
+export const CreditLedgerEntryKind = {
+  GRANT: 'GRANT',
+  CONSUME: 'CONSUME',
+  REFUND: 'REFUND',
+  ADJUSTMENT: 'ADJUSTMENT',
+  EXPIRE: 'EXPIRE',
+  REVOKE: 'REVOKE'
+} as const
+
+export type CreditLedgerEntryKind = (typeof CreditLedgerEntryKind)[keyof typeof CreditLedgerEntryKind]
+
+
 export const PaymentLinkKind = {
   ADDON: 'ADDON',
   INVOICE: 'INVOICE',

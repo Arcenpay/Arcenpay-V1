@@ -15,6 +15,7 @@ import {
 } from "viem";
 import { deliverWebhook } from "../../lib/webhooks/deliver-webhook.js";
 import { resolveEntitlementResults } from "../../lib/entitlements/entitlements.js";
+import { YEARLY_INTERVAL } from "@arcenpay/internal-core";
 import {
   extractEmbedAccessToken,
   resolveEmbedAccessToken,
@@ -42,6 +43,7 @@ import {
 } from "../../lib/billing/email.js";
 import { sendPaidInvoiceReceipt } from "../../lib/billing/invoice-notifications.js";
 import { computeProrationSettlement } from "../../lib/billing/billing-proration.js";
+import { grantPlanCreditsForCompany } from "../../lib/billing/usage-credits.js";
 import {
   createSubscriptionChangeRequest,
   findSimilarOpenSubscriptionChangeRequest,
@@ -106,12 +108,12 @@ function deriveBillingPeriodFromPlan(
   plan: { billingInterval?: number | null } | null | undefined,
 ): "monthly" | "annual" {
   return typeof plan?.billingInterval === "number" &&
-    plan.billingInterval >= 31_536_000
+    plan.billingInterval >= YEARLY_INTERVAL
     ? "annual"
     : "monthly";
 }
 
-const ANNUAL_BILLING_INTERVAL_SECONDS = 31_536_000;
+const ANNUAL_BILLING_INTERVAL_SECONDS = YEARLY_INTERVAL;
 const PERIOD_END_RENEWAL_TOLERANCE_MS = 5 * 60 * 1000;
 
 function resolveExpectedAutopayIntervalSeconds(input: {
@@ -1749,6 +1751,32 @@ export async function handleCompanyPlanRequest(
               },
             }, tx);
 
+            if (!shouldScheduleBillingPeriodActivation) {
+              await grantPlanCreditsForCompany(
+                {
+                  teamId,
+                  environmentId:
+                    company.subscriptionState?.environmentId ??
+                    company.environmentId ??
+                    plan.environmentId ??
+                    null,
+                  companyId,
+                  planId: plan.id,
+                  billingPeriod: activeBillingPeriodAfterChange,
+                  periodStartedAt: periodStart,
+                  periodEndsAt: accessChangePeriodEnd,
+                  metadata: {
+                    source: "self_service",
+                    mode: lifecycleMode,
+                    previousPlanId: previousPlanId ?? null,
+                    accessChangeTxHash: finalizedAccessChangeTxHash,
+                    paymentTxHash: normalizedPaymentTxHash,
+                  },
+                },
+                tx,
+              );
+            }
+
             await revertOpenSubscriptionChangeRequests(
               {
                 teamId,
@@ -2463,6 +2491,26 @@ export async function handleCompanyPlanRequest(
     data: {
       activePlanId: planId,
       traits: toPrismaJson(nextTraits),
+    },
+  });
+
+  await grantPlanCreditsForCompany({
+    teamId,
+    environmentId:
+      company.subscriptionState?.environmentId ??
+      company.environmentId ??
+      plan.environmentId ??
+      null,
+    companyId,
+    planId,
+    billingPeriod: normalizedBillingPeriod,
+    periodStartedAt: new Date(),
+    periodEndsAt: company.subscriptionState?.currentPeriodEnd ?? null,
+    metadata: {
+      source: "self_service",
+      mode: "immediate",
+      previousPlanId: previousPlanId ?? null,
+      paymentTxHash: txHash ? normalizeTxHash(txHash) : null,
     },
   });
 

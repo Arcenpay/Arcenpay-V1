@@ -11,6 +11,12 @@ import {
 } from "../entitlements/flag-engine.js";
 import { resolveEntitlementResult } from "../entitlements/entitlements.js";
 import { touchEntityActivity } from "../platform/activity.js";
+import {
+  consumeCompanyCredits,
+  CreditLedgerError,
+  resolveCreditBurnConfig,
+} from "./usage-credits.js";
+import { deliverWebhook } from "../webhooks/deliver-webhook.js";
 
 type UsageEventStore = Pick<typeof db, "arcenEvent">;
 
@@ -145,8 +151,16 @@ export async function consumeMeteredEntitlement(
     select: { eventKey: true, featureType: true },
   });
 
+  const creditBurn = await resolveCreditBurnConfig({
+    teamId: input.teamId,
+    environmentId: company.environmentId ?? null,
+    featureKey: input.featureKey,
+  });
+
   const isMetered =
-    flag?.featureType === "event_based" || baseEntitlement.allocation !== null;
+    Boolean(creditBurn) ||
+    flag?.featureType === "event_based" ||
+    baseEntitlement.allocation !== null;
 
   if (!isMetered) {
     throw new ConsumeEntitlementError(
@@ -172,7 +186,7 @@ export async function consumeMeteredEntitlement(
           });
 
           if (existing) {
-            return { consumed: true, duplicate: true };
+            return { consumed: true, duplicate: true, creditError: null };
           }
         }
 
@@ -190,12 +204,44 @@ export async function consumeMeteredEntitlement(
           });
 
           if (currentUsage >= baseEntitlement.allocation) {
-            return { consumed: false, duplicate: false };
+            return { consumed: false, duplicate: false, creditError: null };
           }
-        } else if (!baseEntitlement.enabled) {
+        } else if (!baseEntitlement.enabled && !creditBurn) {
           // Feature is disabled for a non-allocation reason (e.g. plan doesn't include it).
           // Since there's no allocation to count against, we trust the enabled flag.
-          return { consumed: false, duplicate: false };
+          return { consumed: false, duplicate: false, creditError: null };
+        }
+
+        if (creditBurn) {
+          try {
+            await consumeCompanyCredits(
+              {
+                teamId: input.teamId,
+                environmentId: company.environmentId ?? null,
+                companyId: company.id,
+                creditTypeId: creditBurn.creditTypeId,
+                amount: creditBurn.amount,
+                featureKey: input.featureKey,
+                idempotencyKey: input.idempotencyKey
+                  ? `usage-credit:${input.idempotencyKey}`
+                  : undefined,
+                metadata: {
+                  eventKey,
+                  source: "consume",
+                },
+              },
+              tx,
+            );
+          } catch (error) {
+            if (error instanceof CreditLedgerError && error.statusCode === 402) {
+              return {
+                consumed: false,
+                duplicate: false,
+                creditError: "Insufficient credits",
+              };
+            }
+            throw error;
+          }
         }
 
         await tx.arcenEvent.create({
@@ -215,7 +261,7 @@ export async function consumeMeteredEntitlement(
           },
         });
 
-        return { consumed: true, duplicate: false };
+        return { consumed: true, duplicate: false, creditError: null };
       },
       {
         isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
@@ -226,6 +272,48 @@ export async function consumeMeteredEntitlement(
   await touchEntityActivity(company.id, user?.id ?? null);
   invalidateUsageCache(input.teamId, company.id, eventKey);
   invalidateFlagCache(`${input.teamId}:`);
+
+  // ── Low-balance webhook (fire-and-forget) ─────────────────────────────────
+  // After a successful credit consumption, notify the team if the remaining
+  // balance for this credit type drops below 20 % of the initial allocation
+  // (or below an absolute floor of 10 credits). This gives merchants a chance
+  // to top up before service is fully interrupted.
+  if (creditBurn && transactionResult.consumed && !transactionResult.duplicate) {
+    (async () => {
+      try {
+        const now = new Date();
+        const activeGrants = await db.companyCreditGrant.findMany({
+          where: {
+            teamId: input.teamId,
+            companyId: company.id,
+            creditTypeId: creditBurn.creditTypeId,
+            status: "ACTIVE",
+            OR: [{ expiresAt: null }, { expiresAt: { gt: now } }],
+          },
+          select: { remainingAmount: true, initialAmount: true },
+        });
+        const totalRemaining = activeGrants.reduce((s, g) => s + g.remainingAmount, 0);
+        const totalInitial = activeGrants.reduce((s, g) => s + g.initialAmount, 0);
+        const LOW_BALANCE_RATIO = 0.2;
+        const isLowBalance =
+          totalInitial > 0 &&
+          (totalRemaining <= totalInitial * LOW_BALANCE_RATIO);
+        if (isLowBalance) {
+          await deliverWebhook(input.teamId, "credit.low_balance", {
+            companyId: company.id,
+            creditTypeId: creditBurn.creditTypeId,
+            remainingBalance: totalRemaining,
+            initialBalance: totalInitial,
+            percentRemaining:
+              totalInitial > 0 ? Math.round((totalRemaining / totalInitial) * 100) : 0,
+            featureKey: input.featureKey,
+          });
+        }
+      } catch {
+        // Best-effort: never let webhook delivery block the SDK response
+      }
+    })();
+  }
 
   const finalEntitlement = await resolveEntitlementResult({
     teamId: input.teamId,
@@ -240,6 +328,26 @@ export async function consumeMeteredEntitlement(
       enabled: false,
       reason: appendLimitReason(finalEntitlement.reason),
       consumed: false,
+    };
+  }
+
+  if (!transactionResult.consumed && transactionResult.creditError) {
+    return {
+      ...finalEntitlement,
+      enabled: false,
+      reason: transactionResult.creditError,
+      consumed: false,
+    };
+  }
+
+  if (creditBurn && transactionResult.consumed) {
+    return {
+      ...finalEntitlement,
+      enabled: true,
+      reason: transactionResult.duplicate
+        ? finalEntitlement.reason
+        : "Credit consumed",
+      consumed: true,
     };
   }
 

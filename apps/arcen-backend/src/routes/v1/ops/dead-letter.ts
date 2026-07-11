@@ -2,7 +2,7 @@ import type { Context } from "hono";
 import { z } from "zod";
 import { db } from "../../../db.js";
 import { writeAuditEvent } from "../../../lib/platform/audit.js";
-import { FACILITATOR_URL, FACILITATOR_SECRET } from "../../../config.js";
+import { ingestBillingEvent } from "../../../lib/billing/billing-events.js";
 import { requireTeamRoles, isErrorResponse } from "../../../lib/auth/api-auth.js";
 
 const listQuerySchema = z.object({
@@ -76,36 +76,15 @@ export async function replayDeadLetterEvents(c: Context) {
 
   const results = await Promise.allSettled(
     events.map(async (event) => {
-      const res = await fetch(`${FACILITATOR_URL}/api/billing/events`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(FACILITATOR_SECRET
-            ? { Authorization: `Bearer ${FACILITATOR_SECRET}` }
-            : {}),
-        },
-        body: JSON.stringify({
-          teamId: event.teamId,
-          eventType: event.eventType,
-          idempotencyKey: event.idempotencyKey,
-          eventName:
-            typeof (event.payload as any)?._event?.name === "string"
-              ? (event.payload as any)._event.name
-              : undefined,
-          schemaVersion:
-            typeof (event.payload as any)?._event?.schemaVersion === "string"
-              ? (event.payload as any)._event.schemaVersion
-              : undefined,
-          occurredAt:
-            typeof (event.payload as any)?._event?.occurredAt === "string"
-              ? (event.payload as any)._event.occurredAt
-              : undefined,
-          payload: event.payload,
-          source: "ops-replay",
-          triggerInvoice: shouldTriggerInvoice(event.eventType),
-        }),
+      const result = await ingestBillingEvent({
+        teamId: event.teamId,
+        eventType: event.eventType as any,
+        idempotencyKey: event.idempotencyKey,
+        payload: event.payload as Record<string, unknown>,
+        source: "ops-replay",
+        triggerInvoice: shouldTriggerInvoice(event.eventType),
       });
-      return { id: event.id, ok: res.ok, status: res.status };
+      return { id: event.id, ok: !result.skipped, status: result.deduped ? 200 : 201 };
     }),
   );
 

@@ -1,5 +1,6 @@
 import { getBillingReconciliationSummary } from "./billing-reconciliation.js";
 import { runBillingDunningSweep } from "./billing-dunning.js";
+import { runPlatformTierDunningSweep, runPlatformTierRenewalSweep } from "./platform-tier-billing.js";
 import { processPendingBillingRecoveryTasks } from "./billing-recovery.js";
 import { db } from "../../db.js";
 import { resolvePublishedFreePlan } from "../catalog/catalog-billing.js";
@@ -13,11 +14,7 @@ import {
 import { deliverWebhook } from "../webhooks/deliver-webhook.js";
 import { computeProrationQuote } from "./billing-proration.js";
 import { getLatestSubscriptionChangeRequest } from "./subscription-change-requests.js";
-
-function asRecord(value: unknown): Record<string, unknown> {
-  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
-  return value as Record<string, unknown>;
-}
+import { asRecord, deriveBillingPeriodFromInterval } from "./utils.js";
 
 function normalizeBillingPeriod(
   value: unknown,
@@ -27,14 +24,6 @@ function normalizeBillingPeriod(
   if (normalized === "annual" || normalized === "yearly") return "annual";
   if (normalized === "monthly" || normalized === "month") return "monthly";
   return null;
-}
-
-function deriveBillingPeriodFromInterval(
-  billingInterval: unknown,
-): "monthly" | "annual" {
-  return typeof billingInterval === "number" && billingInterval >= 31_536_000
-    ? "annual"
-    : "monthly";
 }
 
 function priceToNumber(price: unknown): number {
@@ -497,6 +486,27 @@ export async function runBillingMaintenance(input: {
           dryRun: true,
         };
 
+  const platformTierRenewal = await runPlatformTierRenewalSweep({
+    teamId: input.teamId,
+    now,
+    limit: input.limit ?? 50,
+  });
+
+  const platformTierDunning =
+    input.executeDunning
+      ? await runPlatformTierDunningSweep({
+          teamId: input.teamId,
+          now,
+          limit: input.limit ?? 50,
+        })
+      : {
+          scanned: 0,
+          enforced: 0,
+          skipped: 0,
+          results: [],
+          dryRun: true,
+        };
+
   const reconciliationAfter = await getBillingReconciliationSummary({
     teamId: input.teamId,
     now,
@@ -510,6 +520,8 @@ export async function runBillingMaintenance(input: {
     recovery,
     scheduledTransitions,
     dunning,
+    platformTierRenewal,
+    platformTierDunning,
     reconciliationAfter,
   };
 }

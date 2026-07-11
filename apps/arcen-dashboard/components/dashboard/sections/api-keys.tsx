@@ -49,7 +49,7 @@ function CopyableKey({ value }: { value: string }) {
         onClick={() => { navigator.clipboard.writeText(value); setCopied(true); setTimeout(() => setCopied(false), 1500); }}
         className="text-muted-foreground hover:text-foreground"
       >
-        {copied ? <Check className="h-3 w-3 text-green-500" /> : <Copy className="h-3 w-3" />}
+        {copied ? <Check className="h-3 w-3 text-foreground" /> : <Copy className="h-3 w-3" />}
       </button>
     </div>
   );
@@ -126,11 +126,11 @@ function ApiKeysContent() {
 
       {/* New key banner */}
       {newKey && (
-        <div className="rounded-lg border border-green-500/30 bg-green-500/5 p-4">
+        <div className="rounded-lg border border-border bg-secondary p-4">
           <div className="flex items-start gap-3">
-            <AlertTriangle className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
+            <AlertTriangle className="h-5 w-5 text-foreground flex-shrink-0 mt-0.5" />
             <div className="flex-1 min-w-0">
-              <p className="font-medium text-green-600 dark:text-green-400 text-sm">
+              <p className="font-medium text-foreground dark:text-foreground text-sm">
                 Key created: <strong>{newKey.name}</strong>
               </p>
               <p className="text-muted-foreground text-xs mt-1 mb-3">
@@ -169,7 +169,7 @@ function ApiKeysContent() {
           </Button>
         </div>
       ) : (
-        <div className="rounded-xl border border-border overflow-hidden">
+        <div className="rounded-xl border border-border overflow-hidden overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-muted/40">
               <tr>
@@ -266,7 +266,7 @@ X-Arcen-Company-Keys: wallet=0x...`}
               />
             </div>
 
-            <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 p-3 text-xs text-amber-600 dark:text-amber-400 flex items-start gap-2">
+            <div className="rounded-lg border border-border bg-secondary p-3 text-xs text-warning flex items-start gap-2">
               <AlertTriangle className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" />
               <span>The full key is shown only once after creation. Store it somewhere safe immediately.</span>
             </div>

@@ -5,13 +5,14 @@ import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
+import "../utils/UpgradeableReentrancyGuard.sol";
 import "../interfaces/ISubscriptionRegistry.sol";
 
 /// @title MirrorRegistry
 /// @notice Cross-chain entitlement state mirror
 /// @dev Receives GMP messages and mirrors subscription state from primary chain
 /// @dev Supports Axelar GMP (primary) and Chainlink CCIP (fallback) transport routes
-contract MirrorRegistry is Initializable, OwnableUpgradeable, PausableUpgradeable, UUPSUpgradeable {
+contract MirrorRegistry is Initializable, OwnableUpgradeable, UpgradeableReentrancyGuard, PausableUpgradeable, UUPSUpgradeable {
     uint8 public constant ROUTE_AXELAR = 1;
     uint8 public constant ROUTE_CCIP = 2;
 
@@ -82,6 +83,7 @@ contract MirrorRegistry is Initializable, OwnableUpgradeable, PausableUpgradeabl
 
     function initialize(address initialOwner) external initializer {
         __Ownable_init(initialOwner);
+        __UpgradeableReentrancyGuard_init();
         __Pausable_init();
     }
 
@@ -150,37 +152,7 @@ contract MirrorRegistry is Initializable, OwnableUpgradeable, PausableUpgradeabl
             authorizedBridges[sourceChainId][msg.sender],
             "MirrorRegistry: unauthorized bridge"
         );
-
-        // Trusted source verification (parity with _processRoutedMessage)
-        require(messageId != bytes32(0), "MirrorRegistry: zero message id");
-        require(!processedMessages[messageId], "MirrorRegistry: duplicate message");
-
-        bytes32 trustedSourceHash = trustedSources[sourceChainId];
-        require(trustedSourceHash != bytes32(0), "MirrorRegistry: source not configured");
-        require(keccak256(sourceAddress) == trustedSourceHash, "MirrorRegistry: invalid source");
-
-        processedMessages[messageId] = true;
-
-        (
-            address subscriber,
-            uint256 sourceTokenId,
-            uint256 planId,
-            string memory planTier,
-            uint64 expiration,
-            uint64 sourceUpdatedAt
-        ) = abi.decode(payload, (address, uint256, uint256, string, uint64, uint64));
-
-        _applyMirrorUpdate(
-            subscriber,
-            sourceTokenId,
-            planId,
-            planTier,
-            expiration,
-            sourceChainId,
-            sourceUpdatedAt
-        );
-
-        emit RoutedMessageProcessed(messageId, 0);
+        _processRoutedMessage(0, sourceChainId, sourceAddress, messageId, payload);
     }
 
     /// @notice Axelar-routed update entrypoint (primary route)

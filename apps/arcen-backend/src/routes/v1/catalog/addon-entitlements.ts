@@ -3,37 +3,40 @@ import { z } from "zod";
 import { db } from "../../../db.js";
 import { requirePermission, isErrorResponse } from "../../../lib/auth/api-auth.js";
 import { writeAuditEvent } from "../../../lib/platform/audit.js";
+import {
+    listMetadataEntitlements,
+    writeMetadataEntitlements,
+} from "../../../lib/catalog/catalog-entitlements.js";
+import { toPrismaNullableJson } from "../../../utils/prisma-json.js";
+import { assertCanCreateAddOn } from "../../../lib/catalog/tier-guard.js";
 
 const entitlementSchema = z.object({
     featureName: z.string().min(1),
     featureKey: z.string().min(1).regex(/^[a-z0-9_\-]+$/i),
     type: z.enum(["BOOLEAN", "NUMERIC", "UNLIMITED"]).default("BOOLEAN"),
     value: z.union([z.boolean(), z.number(), z.null()]).optional(),
+    valueUnit: z.string().trim().nullable().optional(),
     enabled: z.boolean().default(true),
+    featureType: z.enum(["boolean", "event", "trait"]).optional(),
+    icon: z.string().trim().nullable().optional(),
 });
 
 function getEntitlements(metadata: unknown): z.infer<typeof entitlementSchema>[] {
-    if (!metadata || typeof metadata !== "object") return [];
-    const meta = metadata as Record<string, unknown>;
-    if (!Array.isArray(meta.entitlements)) return [];
-    return meta.entitlements as z.infer<typeof entitlementSchema>[];
+    return listMetadataEntitlements(metadata) as z.infer<typeof entitlementSchema>[];
 }
 
-async function findAddOnRaw(id: string, teamId: string): Promise<{ id: string; metadata: unknown } | null> {
-    const rows = await db.$queryRawUnsafe<Array<{ id: string; metadata: unknown }>>(
-        `SELECT "id", "metadata" FROM "CatalogAddOn" WHERE "id" = $1 AND "teamId" = $2 LIMIT 1`,
-        id,
-        teamId,
-    );
-    return rows[0] ?? null;
+async function findAddOn(id: string, teamId: string): Promise<{ id: string; metadata: unknown } | null> {
+    return db.catalogAddOn.findFirst({
+        where: { id, teamId },
+        select: { id: true, metadata: true },
+    });
 }
 
-async function updateMetadataRaw(id: string, metadata: unknown): Promise<void> {
-    await db.$executeRawUnsafe(
-        `UPDATE "CatalogAddOn" SET "metadata" = $1::jsonb, "updatedAt" = NOW() WHERE "id" = $2`,
-        JSON.stringify(metadata),
-        id,
-    );
+async function updateMetadata(id: string, metadata: unknown): Promise<void> {
+    await db.catalogAddOn.update({
+        where: { id },
+        data: { metadata: toPrismaNullableJson(metadata) },
+    });
 }
 
 export async function getAddOnEntitlements(c: Context) {
@@ -42,7 +45,7 @@ export async function getAddOnEntitlements(c: Context) {
         if (isErrorResponse(auth)) return c.json({ ok: false, error: auth.error }, auth.status as any as any);
 
         const id = c.req.param("id");
-        const addOn = await findAddOnRaw(id, auth.team.teamId);
+        const addOn = await findAddOn(id, auth.team.teamId);
         if (!addOn) {
             return c.json({ error: "Add-on not found" }, 404 as any);
         }
@@ -60,9 +63,21 @@ export async function addAddOnEntitlement(c: Context) {
         if (isErrorResponse(auth)) return c.json({ ok: false, error: auth.error }, auth.status as any as any);
 
         const id = c.req.param("id");
-        const addOn = await findAddOnRaw(id, auth.team.teamId);
+        const addOn = await findAddOn(id, auth.team.teamId);
         if (!addOn) {
             return c.json({ error: "Add-on not found" }, 404 as any);
+        }
+
+        // Fetch the add-on's environment ID for tier check
+        const fullAddOn = await db.catalogAddOn.findFirst({
+            where: { id },
+            select: { environmentId: true },
+        });
+        if (fullAddOn?.environmentId) {
+            const addOnCheck = await assertCanCreateAddOn(auth.team.teamId, fullAddOn.environmentId);
+            if (!addOnCheck.allowed) {
+                return c.json({ error: "UPGRADE_REQUIRED", message: addOnCheck.reason }, 403 as any);
+            }
         }
 
         const body = await c.req.json() .catch(() => ({}));
@@ -77,12 +92,12 @@ export async function addAddOnEntitlement(c: Context) {
         }
 
         const newEntitlements = [...existing, parsed.data];
-        const updatedMeta = {
-            ...((addOn.metadata as Record<string, unknown>) ?? {}),
+        const updatedMeta = writeMetadataEntitlements({
+            metadata: addOn.metadata,
             entitlements: newEntitlements,
-        };
+        });
 
-        await updateMetadataRaw(addOn.id, updatedMeta);
+        await updateMetadata(addOn.id, updatedMeta);
 
         await writeAuditEvent({
             headers: c.req.raw.headers,
@@ -108,7 +123,7 @@ export async function updateAddOnEntitlement(c: Context) {
         if (isErrorResponse(auth)) return c.json({ ok: false, error: auth.error }, auth.status as any as any);
 
         const id = c.req.param("id");
-        const addOn = await findAddOnRaw(id, auth.team.teamId);
+        const addOn = await findAddOn(id, auth.team.teamId);
         if (!addOn) {
             return c.json({ error: "Add-on not found" }, 404 as any);
         }
@@ -119,7 +134,10 @@ export async function updateAddOnEntitlement(c: Context) {
             featureName: z.string().min(1).optional(),
             type: z.enum(["BOOLEAN", "NUMERIC", "UNLIMITED"]).optional(),
             value: z.union([z.boolean(), z.number(), z.null()]).optional(),
+            valueUnit: z.string().trim().nullable().optional(),
             enabled: z.boolean().optional(),
+            featureType: z.enum(["boolean", "event", "trait"]).optional(),
+            icon: z.string().trim().nullable().optional(),
         }).safeParse(body);
 
         if (!parsed.success) {
@@ -133,12 +151,12 @@ export async function updateAddOnEntitlement(c: Context) {
         }
 
         existing[idx] = { ...existing[idx], ...parsed.data };
-        const updatedMeta = {
-            ...((addOn.metadata as Record<string, unknown>) ?? {}),
+        const updatedMeta = writeMetadataEntitlements({
+            metadata: addOn.metadata,
             entitlements: existing,
-        };
+        });
 
-        await updateMetadataRaw(addOn.id, updatedMeta);
+        await updateMetadata(addOn.id, updatedMeta);
         return c.json({ entitlements: existing });
     } catch (err) {
         console.error("[add-ons entitlements PUT]", err);
@@ -157,7 +175,7 @@ export async function deleteAddOnEntitlement(c: Context) {
             return c.json({ error: "featureKey is required" }, 400 as any);
         }
 
-        const addOn = await findAddOnRaw(id, auth.team.teamId);
+        const addOn = await findAddOn(id, auth.team.teamId);
         if (!addOn) {
             return c.json({ error: "Add-on not found" }, 404 as any);
         }
@@ -168,12 +186,12 @@ export async function deleteAddOnEntitlement(c: Context) {
             return c.json({ error: "Entitlement not found" }, 404 as any);
         }
 
-        const updatedMeta = {
-            ...((addOn.metadata as Record<string, unknown>) ?? {}),
+        const updatedMeta = writeMetadataEntitlements({
+            metadata: addOn.metadata,
             entitlements: filtered,
-        };
+        });
 
-        await updateMetadataRaw(addOn.id, updatedMeta);
+        await updateMetadata(addOn.id, updatedMeta);
 
         await writeAuditEvent({
             headers: c.req.raw.headers,

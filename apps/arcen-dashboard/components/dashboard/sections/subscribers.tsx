@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { SkeletonList } from "@/components/ui/skeleton";
 import {
   Users,
   Search,
@@ -72,7 +73,7 @@ function CopyButton({ text }: { text: string }) {
       className="text-muted-foreground hover:text-foreground transition-colors"
     >
       {copied ? (
-        <Check className="h-3 w-3 text-emerald-500" />
+        <Check className="h-3 w-3 text-foreground" />
       ) : (
         <Copy className="h-3 w-3" />
       )}
@@ -269,7 +270,7 @@ function CreateUserSheet({
           </div>
 
           {error && (
-            <div className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
+            <div className="rounded-lg border border-border bg-secondary px-3 py-2 text-sm text-destructive">
               {error}
             </div>
           )}
@@ -354,11 +355,7 @@ export function SubscribersSection() {
       </div>
 
       {loading ? (
-        <div className="space-y-2">
-          {[...Array(4)].map((_, index) => (
-            <div key={index} className="h-14 rounded-lg bg-muted/40 animate-pulse" />
-          ))}
-        </div>
+        <SkeletonList items={4} />
       ) : users.length === 0 ? (
         <div className="rounded-xl border border-dashed border-border bg-muted/20 p-14 text-center space-y-3">
           <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center mx-auto">
@@ -379,7 +376,7 @@ export function SubscribersSection() {
           )}
         </div>
       ) : (
-        <div className="overflow-hidden rounded-xl border border-border bg-card">
+        <div className="overflow-x-auto rounded-xl border border-border bg-card">
           <table className="w-full table-fixed text-sm">
             <thead>
               <tr className="bg-muted/40 border-b border-border/60">

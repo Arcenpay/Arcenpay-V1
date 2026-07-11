@@ -104,12 +104,73 @@ async function createEnvironment(c: Context) {
         teamId: auth.team.teamId,
         name: parsed.data.name,
       },
-      select: { id: true },
     }),
   ]);
 
   if (existingName) {
-    return c.json({ error: "An environment with this name already exists." }, 409 as any);
+    // If the environment with this name already exists for the team, select it as active!
+    await db.authSession.update({
+      where: { id: auth.session.sessionId },
+      data: { activeEnvironmentId: existingName.id },
+    });
+
+    // Copy onboarding profile if missing
+    try {
+      const existingProfile = await db.providerProfile.findUnique({
+        where: {
+          teamId_environmentId: {
+            teamId: auth.team.teamId,
+            environmentId: existingName.id,
+          },
+        },
+      });
+
+      if (!existingProfile) {
+        const teamRecord = await db.team.findUnique({
+          where: { id: auth.team.teamId },
+          select: { profileData: true },
+        });
+        const raw = teamRecord?.profileData;
+        const profileData = raw && typeof raw === "object" && !Array.isArray(raw)
+          ? raw as Record<string, unknown>
+          : null;
+
+        if (profileData && (profileData.providerName || profileData.contactEmail)) {
+          await db.providerProfile.create({
+            data: {
+              teamId: auth.team.teamId,
+              environmentId: existingName.id,
+              providerName: typeof profileData.providerName === "string" ? profileData.providerName : null,
+              website: typeof profileData.website === "string" ? profileData.website : null,
+              contactEmail: typeof profileData.contactEmail === "string" ? profileData.contactEmail : null,
+              legalName: typeof profileData.legalName === "string" ? profileData.legalName : null,
+              billingEmail: typeof profileData.billingEmail === "string" ? profileData.billingEmail : null,
+              supportEmail: typeof profileData.supportEmail === "string" ? profileData.supportEmail : null,
+              supportPhone: typeof profileData.supportPhone === "string" ? profileData.supportPhone : null,
+              supportUrl: typeof profileData.supportUrl === "string" ? profileData.supportUrl : null,
+              addressLine1: typeof profileData.addressLine1 === "string" ? profileData.addressLine1 : null,
+              addressLine2: typeof profileData.addressLine2 === "string" ? profileData.addressLine2 : null,
+              city: typeof profileData.city === "string" ? profileData.city : null,
+              state: typeof profileData.state === "string" ? profileData.state : null,
+              postalCode: typeof profileData.postalCode === "string" ? profileData.postalCode : null,
+              country: typeof profileData.country === "string" ? profileData.country : null,
+              taxId: typeof profileData.taxId === "string" ? profileData.taxId : null,
+              gstin: typeof profileData.gstin === "string" ? profileData.gstin : null,
+            },
+          });
+        }
+      }
+    } catch (profileErr) {
+      console.error("Failed to copy provider profile for existing environment:", profileErr);
+    }
+
+    return c.json(
+      {
+        environment: toEnvironmentSummary(existingName, existingName.id),
+        message: "Environment already exists; activated successfully.",
+      },
+      200 as any,
+    );
   }
 
   const limit =
@@ -149,6 +210,45 @@ async function createEnvironment(c: Context) {
       environmentMode: environment.mode,
     },
   }).catch(() => {});
+
+  // Copy onboarding profile from team record to the new environment's ProviderProfile
+  try {
+    const teamRecord = await db.team.findUnique({
+      where: { id: auth.team.teamId },
+      select: { profileData: true },
+    });
+    const raw = teamRecord?.profileData;
+    const profileData = raw && typeof raw === "object" && !Array.isArray(raw)
+      ? raw as Record<string, unknown>
+      : null;
+
+    if (profileData && (profileData.providerName || profileData.contactEmail)) {
+      await db.providerProfile.create({
+        data: {
+          teamId: auth.team.teamId,
+          environmentId: environment.id,
+          providerName: typeof profileData.providerName === "string" ? profileData.providerName : null,
+          website: typeof profileData.website === "string" ? profileData.website : null,
+          contactEmail: typeof profileData.contactEmail === "string" ? profileData.contactEmail : null,
+          legalName: typeof profileData.legalName === "string" ? profileData.legalName : null,
+          billingEmail: typeof profileData.billingEmail === "string" ? profileData.billingEmail : null,
+          supportEmail: typeof profileData.supportEmail === "string" ? profileData.supportEmail : null,
+          supportPhone: typeof profileData.supportPhone === "string" ? profileData.supportPhone : null,
+          supportUrl: typeof profileData.supportUrl === "string" ? profileData.supportUrl : null,
+          addressLine1: typeof profileData.addressLine1 === "string" ? profileData.addressLine1 : null,
+          addressLine2: typeof profileData.addressLine2 === "string" ? profileData.addressLine2 : null,
+          city: typeof profileData.city === "string" ? profileData.city : null,
+          state: typeof profileData.state === "string" ? profileData.state : null,
+          postalCode: typeof profileData.postalCode === "string" ? profileData.postalCode : null,
+          country: typeof profileData.country === "string" ? profileData.country : null,
+          taxId: typeof profileData.taxId === "string" ? profileData.taxId : null,
+          gstin: typeof profileData.gstin === "string" ? profileData.gstin : null,
+        },
+      });
+    }
+  } catch (profileErr) {
+    console.error("Failed to copy provider profile on environment creation:", profileErr);
+  }
 
   await writeAuditEvent({
     headers: c.req.raw.headers,

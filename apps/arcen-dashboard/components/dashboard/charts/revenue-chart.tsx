@@ -98,7 +98,7 @@ export function RevenueChart({ chainId, environmentKey }: RevenueChartProps) {
         </div>
       ) : data.length === 0 ? (
         <div className="flex flex-col items-center justify-center h-[280px] text-center">
-          <div className="w-14 h-14 rounded-xl bg-secondary flex items-center justify-center mb-4">
+          <div className="w-14 h-14 rounded-xl bg-surface border border-border flex items-center justify-center mb-4">
             <BarChart3 className="w-7 h-7 text-muted-foreground" />
           </div>
           <p className="text-sm font-medium text-foreground mb-1">No revenue data yet</p>
@@ -131,9 +131,9 @@ export function RevenueChart({ chainId, environmentKey }: RevenueChartProps) {
               <Area
                 type="monotone"
                 dataKey="revenue"
-                stroke="var(--chart-1)"
-                fill="var(--chart-1)"
-                fillOpacity={0.2}
+                stroke="var(--muted-foreground)"
+                fill="var(--muted-foreground)"
+                fillOpacity={0.15}
                 strokeWidth={2}
               />
             </AreaChart>

@@ -73,6 +73,13 @@ import {
   Puzzle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import {
+  Skeleton,
+  SkeletonTable,
+  SkeletonCard,
+  SkeletonMetricGrid,
+  SkeletonList,
+} from "@/components/ui/skeleton";
 import { useEnvironment } from "@/contexts/environment-context";
 import { FeatureAvatar } from "./features";
 import { Web3Icon } from "@/components/web3-icon";
@@ -106,6 +113,7 @@ import {
   sendSmartAccountTransaction,
 } from "@arcenpay/react/smart-account";
 import { useDashboardWallet } from "@/hooks/use-dashboard-wallet";
+import { useTeamTier } from "@/hooks/use-team-tier";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -161,6 +169,10 @@ interface CatalogCreditType {
   unitsPerPack: number;
   price: string;
   acceptedToken: string;
+  metadata?: {
+    description?: string | null;
+    unitNamePlural?: string | null;
+  } | null;
   environmentMode: EnvMode;
   status: CatalogStatus;
   active: boolean;
@@ -389,8 +401,8 @@ function EnvBadge({ mode }: { mode: EnvMode }) {
       variant="outline"
       className={
         mode === "PRODUCTION"
-          ? "border-orange-400 text-orange-400"
-          : "border-blue-400 text-blue-400"
+          ? "border-orange-400 text-foreground"
+          : "border-blue-400 text-foreground"
       }
     >
       {mode === "PRODUCTION" ? "PROD" : "DEV"}
@@ -439,7 +451,7 @@ function ChainSyncBadge({ status }: { status: ChainSyncStatus }) {
     return (
       <Badge
         variant="secondary"
-        className="text-yellow-600 border-yellow-400 text-xs"
+        className="text-warning border-border text-xs"
       >
         Needs sync
       </Badge>
@@ -666,7 +678,7 @@ function CreatePlanDialog({
                       or ${form.annualPrice} USDC / year
                       {form.price &&
                         Number(form.annualPrice) < Number(form.price) * 12 && (
-                          <span className="text-green-500 ml-1">
+                          <span className="text-foreground ml-1">
                             (save{" "}
                             {Math.round(
                               (1 -
@@ -714,7 +726,7 @@ function CreatePlanDialog({
                 </div>
 
                 {errors._global && (
-                  <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20">
+                  <div className="p-3 rounded-lg bg-secondary border border-border">
                     <p className="text-sm text-destructive">{errors._global}</p>
                   </div>
                 )}
@@ -782,7 +794,7 @@ function CreatePlanDialog({
                     <h3 className="text-xl font-bold text-foreground tracking-tight">
                       Pricing
                     </h3>
-                    <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-warning/10 text-warning border border-warning/20">
+                    <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-secondary text-warning border border-border">
                       {env === "DEVELOPMENT" ? "DEV" : "PROD"}
                     </span>
                   </div>
@@ -859,7 +871,7 @@ function CreatePlanDialog({
                               </span>
                               {selectedChainOpt && (
                                 <span
-                                  className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded shrink-0 ${selectedChainOpt.tag === "mainnet" ? "bg-success/10 text-success" : "bg-secondary text-muted-foreground border border-border"}`}
+                                  className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded shrink-0 ${selectedChainOpt.tag === "mainnet" ? "bg-secondary text-success" : "bg-secondary text-muted-foreground border border-border"}`}
                                 >
                                   {selectedChainOpt.tag}
                                 </span>
@@ -1272,7 +1284,7 @@ function CreatePlanDialog({
                                 form.annualPrice &&
                                 Number(form.annualPrice) > 0 && (
                                   <div className="pt-6 text-right">
-                                    <p className="text-xs font-semibold text-green-500">
+                                    <p className="text-xs font-semibold text-foreground">
                                       {Math.round(
                                         (1 -
                                           Number(form.annualPrice) /
@@ -1522,7 +1534,7 @@ function CreateAddOnDialog({
                         ? "One-time"
                         : "Recurring"}
                     </span>
-                    <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-blue-50 border border-blue-200 text-blue-700">
+                    <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-blue-50 border border-blue-200 text-foreground">
                       {form.saleMode === "STANDALONE"
                         ? "Standalone"
                         : form.saleMode === "UPSELL"
@@ -1573,7 +1585,7 @@ function CreateAddOnDialog({
                 </div>
 
                 {errors._global && (
-                  <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20">
+                  <div className="p-3 rounded-lg bg-secondary border border-border">
                     <p className="text-sm text-destructive">{errors._global}</p>
                   </div>
                 )}
@@ -1803,7 +1815,7 @@ function CreateAddOnDialog({
                               </span>
                               {selectedChainOpt && (
                                 <span
-                                  className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded shrink-0 ${selectedChainOpt.tag === "mainnet" ? "bg-success/10 text-success" : "bg-secondary text-muted-foreground border border-border"}`}
+                                  className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded shrink-0 ${selectedChainOpt.tag === "mainnet" ? "bg-secondary text-success" : "bg-secondary text-muted-foreground border border-border"}`}
                                 >
                                   {selectedChainOpt.tag}
                                 </span>
@@ -2167,7 +2179,9 @@ function CreateCreditTypeDialog({
         body: JSON.stringify({
           name: form.name,
           code: autoCode || "credit",
+          description: form.description || undefined,
           unitName,
+          unitNamePlural: form.unitNamePlural || undefined,
           unitsPerPack: Number(form.unitsPerPack),
           price: Number(form.price),
           acceptedToken: form.acceptedToken,
@@ -2296,7 +2310,7 @@ function CreateCreditTypeDialog({
                 </div>
 
                 {errors._global && (
-                  <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20">
+                  <div className="p-3 rounded-lg bg-secondary border border-border">
                     <p className="text-sm text-destructive">{errors._global}</p>
                   </div>
                 )}
@@ -2471,7 +2485,7 @@ function CreateCreditTypeDialog({
                           </span>
                           {selectedChainOpt && (
                             <span
-                              className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded shrink-0 ${selectedChainOpt.tag === "mainnet" ? "bg-success/10 text-success" : "bg-secondary text-muted-foreground border border-border"}`}
+                              className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded shrink-0 ${selectedChainOpt.tag === "mainnet" ? "bg-secondary text-success" : "bg-secondary text-muted-foreground border border-border"}`}
                             >
                               {selectedChainOpt.tag}
                             </span>
@@ -2656,6 +2670,327 @@ function CreateCreditTypeDialog({
   );
 }
 
+// ─── Edit Add-On Dialog ─────────────────────────────────────────────────────────
+
+function EditAddOnDialog({
+  addon,
+  onSaved,
+}: {
+  addon: CatalogAddOn;
+  onSaved: () => void;
+}) {
+  const { activeEnvironment } = useEnvironment();
+  const chainId = useChainId();
+  const lockedChainId =
+    activeEnvironment?.chainId ?? resolveEnvironmentChainId(addon.environmentMode);
+  const tokenOptions = getTokenOptionsForChain(lockedChainId);
+
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [billingIntervalDays, setBillingIntervalDays] = useState(
+    addon.billingIntervalDays ?? 30,
+  );
+  const [form, setForm] = useState({
+    name: addon.name,
+    description: addon.description ?? "",
+    billingType: addon.billingType,
+    saleMode: addon.saleMode,
+    price: String(parseFloat(addon.price)),
+    acceptedToken: addon.acceptedToken,
+  });
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    setForm({
+      name: addon.name,
+      description: addon.description ?? "",
+      billingType: addon.billingType,
+      saleMode: addon.saleMode,
+      price: String(parseFloat(addon.price)),
+      acceptedToken: addon.acceptedToken,
+    });
+    setBillingIntervalDays(addon.billingIntervalDays ?? 30);
+  }, [addon]);
+
+  function validate() {
+    const e: Record<string, string> = {};
+    if (!form.name.trim()) e.name = "Required";
+    const p = Number(form.price);
+    if (!form.price || isNaN(p) || p <= 0) e.price = "Must be positive";
+    return e;
+  }
+
+  async function handleSubmit(ev: React.FormEvent) {
+    ev.preventDefault();
+    const errs = validate();
+    if (Object.keys(errs).length) {
+      setErrors(errs);
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await fetch("/api/catalog/add-ons", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: addon.id,
+          name: form.name,
+          description: form.description || null,
+          billingType: form.billingType,
+          saleMode: form.saleMode,
+          billingIntervalDays:
+            form.billingType === "RECURRING" ? billingIntervalDays : null,
+          price: Number(form.price),
+          acceptedToken: form.acceptedToken,
+        }),
+      });
+      if (res.ok) {
+        toast.success("Add-on updated");
+        setOpen(false);
+        onSaved();
+      } else {
+        const data = await res.json();
+        setErrors({ _global: data.error || "Failed to update add-on" });
+      }
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const selectedChainOpt = tokenOptions.find(
+    (o) => o.address === form.acceptedToken,
+  );
+  const chainName = (o: TokenOption) => o.chainLabel;
+  const chainInitial = (o: TokenOption) => {
+    const n = o.chainLabel;
+    return n.startsWith("Base")
+      ? "B"
+      : n.startsWith("Sepolia")
+        ? "S"
+        : n.startsWith("Arc")
+          ? "A"
+          : (n[0]?.toUpperCase() ?? "?");
+  };
+
+  return (
+    <Sheet open={open} onOpenChange={setOpen}>
+      <SheetTrigger asChild>
+        <Button size="sm" variant="outline" className="gap-2">
+          Edit Add-On
+        </Button>
+      </SheetTrigger>
+      <SheetContent className="w-full sm:max-w-2xl p-0 overflow-hidden flex flex-col">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border shrink-0">
+          <h2 className="text-base font-semibold">Edit Add-On</h2>
+          <button
+            onClick={() => setOpen(false)}
+            className="w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-secondary hover:text-foreground transition-all"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto">
+          <form
+            id="edit-addon-form"
+            onSubmit={handleSubmit}
+            className="p-6 space-y-6"
+          >
+            {errors._global && (
+              <div className="p-3 rounded-lg bg-secondary border border-border">
+                <p className="text-sm text-destructive">{errors._global}</p>
+              </div>
+            )}
+
+            <div>
+              <Label className="text-sm font-medium mb-2 block">
+                Add-on name *
+              </Label>
+              <Input
+                value={form.name}
+                onChange={(e) => {
+                  setForm({ ...form, name: e.target.value });
+                  setErrors((p) => ({ ...p, name: "" }));
+                }}
+                className="h-11 bg-background border-border"
+              />
+              {errors.name && (
+                <p className="text-xs text-destructive mt-1">{errors.name}</p>
+              )}
+            </div>
+
+            <div>
+              <Label className="text-sm font-medium mb-2 block">
+                Description
+              </Label>
+              <Input
+                value={form.description}
+                onChange={(e) =>
+                  setForm({ ...form, description: e.target.value })
+                }
+                className="h-11 bg-background border-border"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label className="text-sm font-medium mb-2 block">
+                  Billing Type
+                </Label>
+                <Select
+                  value={form.billingType}
+                  onValueChange={(v) =>
+                    setForm({
+                      ...form,
+                      billingType: v as "ONE_TIME" | "RECURRING",
+                      ...(v === "RECURRING" && { saleMode: "UPSELL" as const }),
+                    })
+                  }
+                >
+                  <SelectTrigger className="h-11 bg-background border-border">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ONE_TIME">One Time</SelectItem>
+                    <SelectItem value="RECURRING">Recurring</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label className="text-sm font-medium mb-2 block">
+                  Sale Mode
+                </Label>
+                <Select
+                  value={form.saleMode}
+                  onValueChange={(v) =>
+                    setForm({
+                      ...form,
+                      saleMode: v as "STANDALONE" | "UPSELL" | "BOTH",
+                    })
+                  }
+                >
+                  <SelectTrigger className="h-11 bg-background border-border">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="STANDALONE">Standalone</SelectItem>
+                    <SelectItem value="UPSELL">Upsell</SelectItem>
+                    <SelectItem value="BOTH">Both</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {form.billingType === "RECURRING" && (
+              <div>
+                <Label className="text-sm font-medium mb-2 block">
+                  Billing Interval (days)
+                </Label>
+                <Input
+                  type="number"
+                  min="1"
+                  value={billingIntervalDays}
+                  onChange={(e) =>
+                    setBillingIntervalDays(Number(e.target.value) || 30)
+                  }
+                  className="h-11 bg-background border-border"
+                />
+              </div>
+            )}
+
+            <div>
+              <Label className="text-sm font-medium mb-2 block">
+                Price (USDC) *
+              </Label>
+              <Input
+                type="number"
+                min="0.01"
+                step="0.01"
+                value={form.price}
+                onChange={(e) => {
+                  setForm({ ...form, price: e.target.value });
+                  setErrors((p) => ({ ...p, price: "" }));
+                }}
+                className="h-11 bg-background border-border"
+              />
+              {errors.price && (
+                <p className="text-xs text-destructive mt-1">{errors.price}</p>
+              )}
+            </div>
+
+            <div>
+              <Label className="text-sm font-medium mb-2 block">
+                Accepted Token
+              </Label>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    type="button"
+                    className="flex items-center justify-between w-full h-11 px-3 rounded-lg bg-background border border-border text-sm hover:border-ring/50 transition-colors"
+                  >
+                    {selectedChainOpt ? (
+                      <div className="flex items-center gap-2.5">
+                        <Web3Icon chainId={selectedChainOpt.chainId} size="sm" />
+                        <div className="text-left">
+                          <p className="text-sm font-medium leading-none">
+                            {chainName(selectedChainOpt)}
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-0.5 font-mono">
+                            {selectedChainOpt.symbol} ·{" "}
+                            {selectedChainOpt.address.slice(0, 6)}…
+                            {selectedChainOpt.address.slice(-4)}
+                          </p>
+                        </div>
+                      </div>
+                    ) : (
+                      <span className="text-muted-foreground">Select token</span>
+                    )}
+                    <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-[var(--radix-dropdown-menu-trigger-width)]">
+                  {tokenOptions.map((o) => (
+                    <DropdownMenuItem
+                      key={o.address}
+                      onClick={() =>
+                        setForm({ ...form, acceptedToken: o.address })
+                      }
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <span className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-[11px] font-bold">
+                          {chainInitial(o)}
+                        </span>
+                        <div className="text-left">
+                          <p className="text-sm font-medium">{chainName(o)}</p>
+                          <p className="text-xs text-muted-foreground font-mono">
+                            {o.symbol}
+                          </p>
+                        </div>
+                      </div>
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </form>
+        </div>
+
+        <div className="px-6 py-4 border-t border-border shrink-0 flex justify-end gap-3">
+          <Button variant="outline" onClick={() => setOpen(false)}>
+            Cancel
+          </Button>
+          <Button type="submit" form="edit-addon-form" disabled={loading}>
+            {loading ? (
+              <Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" />
+            ) : null}
+            Save Changes
+          </Button>
+        </div>
+      </SheetContent>
+    </Sheet>
+  );
+}
+
 // ─── Edit Credit Type Dialog ────────────────────────────────────────────────────
 
 function EditCreditTypeDialog({
@@ -2675,7 +3010,9 @@ function EditCreditTypeDialog({
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({
     name: credit.name,
+    description: credit.metadata?.description ?? "",
     unitNameSingle: credit.unitName,
+    unitNamePlural: credit.metadata?.unitNamePlural ?? "",
     unitsPerPack: String(credit.unitsPerPack),
     price: String(parseFloat(credit.price)),
     acceptedToken: credit.acceptedToken,
@@ -2686,7 +3023,9 @@ function EditCreditTypeDialog({
   useEffect(() => {
     setForm({
       name: credit.name,
+      description: credit.metadata?.description ?? "",
       unitNameSingle: credit.unitName,
+      unitNamePlural: credit.metadata?.unitNamePlural ?? "",
       unitsPerPack: String(credit.unitsPerPack),
       price: String(parseFloat(credit.price)),
       acceptedToken: credit.acceptedToken,
@@ -2720,7 +3059,9 @@ function EditCreditTypeDialog({
         body: JSON.stringify({
           id: credit.id,
           name: form.name,
+          description: form.description || null,
           unitName: form.unitNameSingle,
+          unitNamePlural: form.unitNamePlural || null,
           unitsPerPack: Number(form.unitsPerPack),
           price: Number(form.price),
           acceptedToken: form.acceptedToken,
@@ -2779,7 +3120,7 @@ function EditCreditTypeDialog({
             className="p-6 space-y-6"
           >
             {errors._global && (
-              <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20">
+              <div className="p-3 rounded-lg bg-secondary border border-border">
                 <p className="text-sm text-destructive">{errors._global}</p>
               </div>
             )}
@@ -2803,6 +3144,20 @@ function EditCreditTypeDialog({
 
             <div>
               <Label className="text-sm font-medium mb-2 block">
+                Description
+              </Label>
+              <Input
+                value={form.description}
+                onChange={(e) =>
+                  setForm({ ...form, description: e.target.value })
+                }
+                placeholder="Optional, displayed in customer components"
+                className="h-11 bg-background border-border"
+              />
+            </div>
+
+            <div>
+              <Label className="text-sm font-medium mb-2 block">
                 Unit name (singular) *
               </Label>
               <Input
@@ -2819,6 +3174,20 @@ function EditCreditTypeDialog({
                   {errors.unitNameSingle}
                 </p>
               )}
+            </div>
+
+            <div>
+              <Label className="text-sm font-medium mb-2 block">
+                Unit name (plural)
+              </Label>
+              <Input
+                value={form.unitNamePlural}
+                onChange={(e) =>
+                  setForm({ ...form, unitNamePlural: e.target.value })
+                }
+                placeholder="e.g. credits, calls, tokens"
+                className="h-11 bg-background border-border"
+              />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
@@ -3467,7 +3836,7 @@ function PlansTable({
       </div>
 
       {loading ? (
-        <p className="text-sm text-muted-foreground py-4">Loading…</p>
+        <SkeletonTable rows={5} cols={5} />
       ) : plans.length === 0 ? (
         <div className="rounded-xl border border-dashed border-border bg-secondary/15 px-6 py-12 text-center">
           <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl border border-border bg-card">
@@ -3537,7 +3906,7 @@ function PlansTable({
                             <span className="block text-[10px] text-muted-foreground">
                               ${parseFloat(plan.annualPrice).toFixed(2)}/yr
                               {parseFloat(plan.price) > 0 && (
-                                <span className="ml-1 text-green-500">
+                                <span className="ml-1 text-foreground">
                                   ·{" "}
                                   {Math.round(
                                     (1 -
@@ -4019,6 +4388,28 @@ function AddOnsTable({
     }
   }
 
+  async function handleDelete(id: string) {
+    setUpdating(id);
+    try {
+      const res = await fetch("/api/catalog/add-ons", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({} as { error?: string }));
+        toast.error(data.error ?? "Failed to delete add-on");
+      } else {
+        toast.success("Add-on deleted");
+        load();
+      }
+    } catch {
+      toast.error("Could not delete add-on");
+    } finally {
+      setUpdating(null);
+    }
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-3">
@@ -4050,12 +4441,7 @@ function AddOnsTable({
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center py-12">
-          <div className="flex flex-col items-center gap-3">
-            <RefreshCw className="w-6 h-6 animate-spin text-muted-foreground" />
-            <p className="text-sm text-muted-foreground">Loading add-ons...</p>
-          </div>
-        </div>
+        <SkeletonTable rows={5} cols={4} />
       ) : addOns.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-12 border border-dashed border-border rounded-lg bg-secondary/20">
           <Package className="w-12 h-12 text-muted-foreground/50 mb-4" />
@@ -4183,6 +4569,19 @@ function AddOnsTable({
                                 {statusActionLabel(s)}
                               </DropdownMenuItem>
                             ))}
+                          </>
+                        )}
+                        {addon.status !== "PUBLISHED" && (
+                          <>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              className="text-destructive"
+                              disabled={updating === addon.id}
+                              onClick={() => handleDelete(addon.id)}
+                            >
+                              <Trash2 className="w-3.5 h-3.5 mr-2" />
+                              Delete
+                            </DropdownMenuItem>
                           </>
                         )}
                       </DropdownMenuContent>
@@ -4338,9 +4737,9 @@ function AddOnsTable({
                     {flagsLoading ? (
                       <div className="flex gap-1.5 flex-wrap">
                         {Array.from({ length: 3 }).map((_, i) => (
-                          <div
+                          <Skeleton
                             key={i}
-                            className="h-6 w-20 rounded-full bg-secondary animate-pulse"
+                            className="h-6 w-20 rounded-full"
                           />
                         ))}
                       </div>
@@ -4459,14 +4858,7 @@ function AddOnsTable({
 
             {/* Entitlements list */}
             {entLoading ? (
-              <div className="space-y-2">
-                {Array.from({ length: 3 }).map((_, i) => (
-                  <div
-                    key={i}
-                    className="h-14 rounded-xl bg-secondary/60 animate-pulse"
-                  />
-                ))}
-              </div>
+              <SkeletonList items={3} />
             ) : (
               (() => {
                 const filtered = entitlements.filter(
@@ -4545,7 +4937,7 @@ function AddOnsTable({
                             deleteEntitlement(entAddon.id, ent.featureKey)
                           }
                           disabled={deletingKey === ent.featureKey}
-                          className="shrink-0 p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-50"
+                          className="shrink-0 p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-secondary transition-colors disabled:opacity-50"
                           title="Remove entitlement"
                         >
                           {deletingKey === ent.featureKey ? (
@@ -4587,6 +4979,7 @@ function CreditTypesTable({
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<CatalogStatus | "">("");
   const [updating, setUpdating] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -4621,6 +5014,28 @@ function CreditTypesTable({
     }
   }
 
+  async function handleDelete(id: string) {
+    setDeleting(id);
+    try {
+      const res = await fetch("/api/catalog/credits", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({} as { error?: string }));
+        toast.error(data.error ?? "Failed to delete credit type");
+      } else {
+        toast.success("Credit type deleted");
+        load();
+      }
+    } catch {
+      toast.error("Could not delete credit type");
+    } finally {
+      setDeleting(null);
+    }
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-3">
@@ -4652,14 +5067,7 @@ function CreditTypesTable({
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center py-12">
-          <div className="flex flex-col items-center gap-3">
-            <RefreshCw className="w-6 h-6 animate-spin text-muted-foreground" />
-            <p className="text-sm text-muted-foreground">
-              Loading credit types...
-            </p>
-          </div>
-        </div>
+        <SkeletonTable rows={5} cols={4} />
       ) : creditTypes.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-12 border border-dashed border-border rounded-lg bg-secondary/20">
           <Coins className="w-12 h-12 text-muted-foreground/50 mb-4" />
@@ -4706,7 +5114,7 @@ function CreditTypesTable({
                   <TableCell className="font-medium">
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 rounded-lg bg-linear-to-br from-amber-500/20 to-orange-400/10 border border-border flex items-center justify-center">
-                        <Coins className="w-4 h-4 text-amber-500" />
+                        <Coins className="w-4 h-4 text-foreground" />
                       </div>
                       <div>
                         <p className="text-sm font-medium">{ct.name}</p>
@@ -4754,6 +5162,16 @@ function CreditTypesTable({
                             {statusActionLabel(s)}
                           </DropdownMenuItem>
                         ))}
+                        {ct.status !== "PUBLISHED" && (
+                          <DropdownMenuItem
+                            className="text-destructive"
+                            disabled={deleting === ct.id}
+                            onClick={() => handleDelete(ct.id)}
+                          >
+                            <Trash2 className="w-3.5 h-3.5 mr-2" />
+                            {deleting === ct.id ? "Deleting..." : "Delete"}
+                          </DropdownMenuItem>
+                        )}
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>
@@ -5118,7 +5536,7 @@ function ConfigurationTab() {
       </div>
 
       {configError && (
-        <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
+        <div className="rounded-lg border border-border bg-secondary p-3 text-sm text-destructive">
           {configError}
         </div>
       )}
@@ -5538,7 +5956,7 @@ function ConfigurationTab() {
         <div className="flex items-center justify-between gap-3 rounded-xl border border-border bg-card px-4 py-3 shadow-sm">
           <p className="text-xs text-muted-foreground">
             {loadingConfig
-              ? "Loading configuration…"
+              ? <Skeleton className="h-4 w-32" />
               : "Changes are saved per environment"}
           </p>
           <div className="flex items-center gap-2">
@@ -5578,6 +5996,7 @@ export function CatalogAddOnsSection() {
   const { envMode } = useEnvironment();
   const [refresh, setRefresh] = useState(0);
   const [selectedAddOn, setSelectedAddOn] = useState<CatalogAddOn | null>(null);
+  const { currentTier } = useTeamTier();
 
   function tr() {
     setRefresh((n) => n + 1);
@@ -5596,6 +6015,8 @@ export function CatalogAddOnsSection() {
     );
   }
 
+  const canCreateAddOns = currentTier && currentTier.limits.maxAddOns > 0;
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -5610,7 +6031,13 @@ export function CatalogAddOnsSection() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <CreateAddOnDialog env={envMode} onCreated={tr} />
+          {canCreateAddOns ? (
+            <CreateAddOnDialog env={envMode} onCreated={tr} />
+          ) : (
+            <div className="text-xs text-muted-foreground px-3 py-2 rounded-lg border border-border bg-muted/30">
+              Upgrade to Growth or Enterprise to create add-ons
+            </div>
+          )}
         </div>
       </div>
       <AddOnsTable
@@ -5627,6 +6054,7 @@ export function CatalogCreditsSection() {
   const [refresh, setRefresh] = useState(0);
   const [selectedCredit, setSelectedCredit] =
     useState<CatalogCreditType | null>(null);
+  const { currentTier } = useTeamTier();
 
   function tr() {
     setRefresh((n) => n + 1);
@@ -5645,6 +6073,8 @@ export function CatalogCreditsSection() {
     );
   }
 
+  const canCreateCredits = currentTier && currentTier.limits.maxCreditTypes > 0;
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -5658,7 +6088,13 @@ export function CatalogCreditsSection() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <CreateCreditTypeDialog env={envMode} onCreated={tr} />
+          {canCreateCredits ? (
+            <CreateCreditTypeDialog env={envMode} onCreated={tr} />
+          ) : (
+            <div className="text-xs text-muted-foreground px-3 py-2 rounded-lg border border-border bg-muted/30">
+              Upgrade to Growth or Enterprise to create credits
+            </div>
+          )}
         </div>
       </div>
       <CreditTypesTable
@@ -5924,7 +6360,7 @@ function AddEntitlementDialog({
           <div className="space-y-2">
             <Label className="text-sm font-medium">Feature</Label>
             {featuresLoading ? (
-              <div className="h-11 bg-secondary rounded-lg animate-pulse" />
+              <Skeleton className="h-11 w-full rounded-lg" />
             ) : (
               <Select
                 value={selectedFeature?.id ?? ""}
@@ -6449,7 +6885,7 @@ function EditPlanDialog({
                         {form.price &&
                           Number(form.annualPrice) <
                             Number(form.price) * 12 && (
-                            <span className="text-green-500 ml-1">
+                            <span className="text-foreground ml-1">
                               (save{" "}
                               {Math.round(
                                 (1 -
@@ -6499,14 +6935,14 @@ function EditPlanDialog({
                 </div>
 
                 {errors._global && (
-                  <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20">
+                  <div className="p-3 rounded-lg bg-secondary border border-border">
                     <p className="text-sm text-destructive">{errors._global}</p>
                   </div>
                 )}
 
                 {isOnChainLocked && (
-                  <div className="rounded-lg border border-yellow-500/20 bg-yellow-500/5 p-4">
-                    <p className="text-sm font-medium text-yellow-700 dark:text-yellow-300">
+                  <div className="rounded-lg border border-border bg-secondary p-4">
+                    <p className="text-sm font-medium text-warning">
                       This plan is already on-chain.
                     </p>
                     <p className="text-xs text-muted-foreground mt-1">
@@ -6667,7 +7103,7 @@ function EditPlanDialog({
                               </span>
                               {selectedChainOpt && (
                                 <span
-                                  className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded shrink-0 ${selectedChainOpt.tag === "mainnet" ? "bg-success/10 text-success" : "bg-secondary text-muted-foreground border border-border"}`}
+                                  className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded shrink-0 ${selectedChainOpt.tag === "mainnet" ? "bg-secondary text-success" : "bg-secondary text-muted-foreground border border-border"}`}
                                 >
                                   {selectedChainOpt.tag}
                                 </span>
@@ -7104,7 +7540,7 @@ function EditPlanDialog({
                                 form.annualPrice &&
                                 Number(form.annualPrice) > 0 && (
                                   <div className="pt-6 text-right">
-                                    <p className="text-xs font-semibold text-green-500">
+                                    <p className="text-xs font-semibold text-foreground">
                                       {Math.round(
                                         (1 -
                                           Number(form.annualPrice) /
@@ -7300,7 +7736,7 @@ function AddCreditGrantDialog({
           <div className="space-y-1.5">
             <Label className="text-sm font-medium">Credit Type</Label>
             {creditsLoading ? (
-              <div className="h-10 bg-secondary rounded-lg animate-pulse" />
+              <Skeleton className="h-10 w-full rounded-lg" />
             ) : (
               <Select value={selectedId} onValueChange={setSelectedId}>
                 <SelectTrigger className="bg-secondary border-border h-10">
@@ -7322,7 +7758,7 @@ function AddCreditGrantDialog({
                       <SelectItem key={ct.id} value={ct.id}>
                         <div className="flex items-center gap-2 py-0.5">
                           <div className="w-5 h-5 rounded bg-secondary border border-border flex items-center justify-center shrink-0">
-                            <Coins className="w-3 h-3 text-amber-500" />
+                            <Coins className="w-3 h-3 text-foreground" />
                           </div>
                           <div>
                             <p className="text-sm font-medium">{ct.name}</p>
@@ -7630,7 +8066,7 @@ function PlanDetailView({
             {/* Price badge */}
             <Badge
               variant="secondary"
-              className={`text-xs font-semibold ${isFree ? "text-green-600" : ""}`}
+              className={`text-xs font-semibold ${isFree ? "text-foreground" : ""}`}
             >
               {isFree ? "Free" : planPriceLabel(plan)}
             </Badge>
@@ -7640,7 +8076,7 @@ function PlanDetailView({
               parseFloat(plan.annualPrice) > 0 && (
                 <Badge
                   variant="outline"
-                  className="text-xs font-semibold text-green-600 border-green-500/30 bg-green-500/5"
+                  className="text-xs font-semibold text-foreground border-border bg-secondary"
                 >
                   ${parseFloat(plan.annualPrice).toFixed(2)}/yr
                   {parseFloat(plan.price) > 0 && (
@@ -7676,7 +8112,7 @@ function PlanDetailView({
                   <DropdownMenuItem onClick={copyId}>
                     {copiedId ? (
                       <>
-                        <Check className="w-3.5 h-3.5 mr-2 text-green-500" />
+                        <Check className="w-3.5 h-3.5 mr-2 text-foreground" />
                         Copied!
                       </>
                     ) : (
@@ -7832,9 +8268,7 @@ function PlanDetailView({
             </div>
 
             {entLoading ? (
-              <div className="flex items-center justify-center py-12">
-                <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-              </div>
+              <SkeletonTable rows={4} cols={4} />
             ) : (
               <>
                 {filteredEnt.length > 0 ? (
@@ -7920,7 +8354,7 @@ function PlanDetailView({
                                     />
                                   </div>
                                   <span
-                                    className={`text-sm font-medium ${ent.enabled ? "text-green-600" : "text-muted-foreground"}`}
+                                    className={`text-sm font-medium ${ent.enabled ? "text-foreground" : "text-muted-foreground"}`}
                                   >
                                     {ent.enabled ? "On" : "Off"}
                                   </span>
@@ -8036,9 +8470,7 @@ function PlanDetailView({
               />
             </div>
             {cgLoading ? (
-              <div className="flex items-center justify-center py-8">
-                <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
-              </div>
+              <SkeletonTable rows={3} cols={3} />
             ) : creditGrants.length > 0 ? (
               <div className="bg-card border border-border rounded-xl overflow-hidden">
                 <table className="w-full text-sm">
@@ -8060,7 +8492,7 @@ function PlanDetailView({
                         className="border-b border-border last:border-0 hover:bg-secondary/10"
                       >
                         <td className="py-3 px-4 font-medium flex items-center gap-2">
-                          <Coins className="w-3.5 h-3.5 text-amber-500" />
+                          <Coins className="w-3.5 h-3.5 text-foreground" />
                           {grant.name ?? grant.creditTypeId}
                           {grant.code ? (
                             <span className="text-xs text-muted-foreground font-mono">
@@ -8075,7 +8507,7 @@ function PlanDetailView({
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                            className="h-8 w-8 text-destructive hover:text-destructive hover:bg-secondary"
                             onClick={() =>
                               deleteCreditGrant(grant.creditTypeId)
                             }
@@ -8133,36 +8565,7 @@ function PlanDetailView({
             </Button>
           </div>
           {companiesLoading ? (
-            <div className="border border-border rounded-xl overflow-hidden">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Company</TableHead>
-                    <TableHead>Identity</TableHead>
-                    <TableHead>Created</TableHead>
-                    <TableHead>Last Seen</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {Array.from({ length: 3 }).map((_, index) => (
-                    <TableRow key={index}>
-                      <TableCell>
-                        <div className="h-4 w-32 rounded bg-muted animate-pulse" />
-                      </TableCell>
-                      <TableCell>
-                        <div className="h-4 w-40 rounded bg-muted animate-pulse" />
-                      </TableCell>
-                      <TableCell>
-                        <div className="h-4 w-24 rounded bg-muted animate-pulse" />
-                      </TableCell>
-                      <TableCell>
-                        <div className="h-4 w-24 rounded bg-muted animate-pulse" />
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+            <SkeletonTable rows={3} cols={4} />
           ) : subscribedCompanies.length > 0 ? (
             <div className="border border-border rounded-xl overflow-hidden">
               <Table>
@@ -8250,7 +8653,7 @@ function PlanDetailView({
                 </p>
                 <p className="text-lg font-semibold">
                   {isFree ? (
-                    <span className="text-green-500">Free</span>
+                    <span className="text-foreground">Free</span>
                   ) : (
                     `$${parseFloat(plan.price).toFixed(2)}`
                   )}
@@ -8271,7 +8674,7 @@ function PlanDetailView({
                     <p className="text-xs text-muted-foreground">
                       USDC / yr
                       {parseFloat(plan.price) > 0 && (
-                        <span className="ml-1.5 text-green-500 font-medium">
+                        <span className="ml-1.5 text-foreground font-medium">
                           {Math.round(
                             (1 -
                               parseFloat(plan.annualPrice) /
@@ -8347,7 +8750,7 @@ function PlanDetailView({
               </div>
             ) : plan.chainSyncStatus === "SYNCED" ? (
               <div className="space-y-3">
-                <div className="flex items-center gap-2 text-green-500 text-sm font-medium">
+                <div className="flex items-center gap-2 text-foreground text-sm font-medium">
                   <Check className="w-4 h-4" />
                   Registered on-chain
                 </div>
@@ -8363,15 +8766,15 @@ function PlanDetailView({
                 )}
               </div>
             ) : plan.chainSyncStatus === "PENDING" ? (
-              <div className="flex items-center justify-between p-4 rounded-lg bg-yellow-500/5 border border-yellow-500/20">
-                <div className="flex items-center gap-2 text-yellow-600 text-sm dark:text-yellow-400">
+              <div className="flex items-center justify-between p-4 rounded-lg bg-secondary border border-border">
+                <div className="flex items-center gap-2 text-warning text-sm">
                   <Loader2 className="w-4 h-4" />
                   Pending on-chain sync
                 </div>
                 <Button
                   size="sm"
                   variant="outline"
-                  className="gap-1.5 border-yellow-500/30 text-yellow-600 hover:bg-yellow-500/10 dark:text-yellow-400"
+                  className="gap-1.5 border-border text-warning hover:bg-secondary"
                   onClick={() =>
                     toast.info("Use the sync button in the plans list")
                   }
@@ -8380,7 +8783,7 @@ function PlanDetailView({
                 </Button>
               </div>
             ) : (
-              <div className="flex items-center gap-2 text-destructive text-sm p-4 rounded-lg bg-destructive/5 border border-destructive/20">
+              <div className="flex items-center gap-2 text-destructive text-sm p-4 rounded-lg bg-secondary border border-border">
                 <AlertTriangle className="w-4 h-4 shrink-0" />
                 <div>
                   <p className="font-medium">Sync failed</p>
@@ -8611,6 +9014,7 @@ function AddOnDetailView({
             <StatusBadge status={addon.status} />
             <div className="h-6 w-px bg-border hidden sm:block" />
             <div className="flex items-center gap-2">
+              <EditAddOnDialog addon={addon} onSaved={onUpdated} />
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" size="icon" className="h-9 w-9">
@@ -8621,7 +9025,7 @@ function AddOnDetailView({
                   <DropdownMenuItem onClick={copyId}>
                     {copiedId ? (
                       <>
-                        <Check className="w-3.5 h-3.5 mr-2 text-green-500" />
+                        <Check className="w-3.5 h-3.5 mr-2 text-foreground" />
                         Copied!
                       </>
                     ) : (
@@ -8643,7 +9047,7 @@ function AddOnDetailView({
                           </>
                         ) : copiedCheckout ? (
                           <>
-                            <Check className="w-3.5 h-3.5 mr-2 text-green-500" />
+                            <Check className="w-3.5 h-3.5 mr-2 text-foreground" />
                             Checkout link copied
                           </>
                         ) : (
@@ -8691,6 +9095,23 @@ function AddOnDetailView({
                       className="text-destructive focus:text-destructive"
                     >
                       Archive Add-On
+                    </DropdownMenuItem>
+                  )}
+                  {addon.status !== "PUBLISHED" && (
+                    <DropdownMenuItem
+                      onClick={async () => {
+                        await fetch("/api/catalog/add-ons", {
+                          method: "DELETE",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ id: addon.id }),
+                        });
+                        onUpdated();
+                        toast.success("Add-on deleted");
+                      }}
+                      className="text-destructive focus:text-destructive"
+                    >
+                      <Trash2 className="w-3.5 h-3.5 mr-2" />
+                      Delete Permanently
                     </DropdownMenuItem>
                   )}
                 </DropdownMenuContent>
@@ -9281,7 +9702,8 @@ function CreditDetailView({
               {credit.code}
             </Badge>
             <Badge variant="secondary" className="text-xs font-semibold">
-              ${parseFloat(credit.price).toFixed(2)}/credit
+              {credit.unitsPerPack} {credit.unitName} for $
+              {parseFloat(credit.price).toFixed(2)}
             </Badge>
             <StatusBadge status={credit.status} />
             <div className="h-6 w-px bg-border hidden sm:block" />
@@ -9298,7 +9720,7 @@ function CreditDetailView({
                   <DropdownMenuItem onClick={copyId}>
                     {copiedId ? (
                       <>
-                        <Check className="w-3.5 h-3.5 mr-2 text-green-500" />
+                        <Check className="w-3.5 h-3.5 mr-2 text-foreground" />
                         Copied!
                       </>
                     ) : (
@@ -9343,6 +9765,23 @@ function CreditDetailView({
                       className="text-destructive focus:text-destructive"
                     >
                       Archive
+                    </DropdownMenuItem>
+                  )}
+                  {credit.status !== "PUBLISHED" && (
+                    <DropdownMenuItem
+                      onClick={async () => {
+                        await fetch("/api/catalog/credits", {
+                          method: "DELETE",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ id: credit.id }),
+                        });
+                        onUpdated();
+                        toast.success("Credit type deleted");
+                      }}
+                      className="text-destructive focus:text-destructive"
+                    >
+                      <Trash2 className="w-3.5 h-3.5 mr-2" />
+                      Delete Permanently
                     </DropdownMenuItem>
                   )}
                 </DropdownMenuContent>
@@ -9424,7 +9863,7 @@ function CreditDetailView({
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                            className="h-8 w-8 text-destructive hover:text-destructive hover:bg-secondary"
                             onClick={() => deleteBundle(b.id)}
                           >
                             <Trash2 className="w-4 h-4" />
@@ -9485,8 +9924,13 @@ function CreditDetailView({
                         className="border-b border-border last:border-0 hover:bg-secondary/10"
                       >
                         <td className="py-3 px-4 font-medium flex items-center gap-2">
-                          <Package className="w-3.5 h-3.5 text-blue-500" />
-                          {grant.planId} {/* Ideally show plan name here */}
+                          <Package className="w-3.5 h-3.5 text-foreground" />
+                          {grant.planName ?? grant.planId}
+                          {grant.planTier ? (
+                            <span className="text-xs text-muted-foreground font-mono">
+                              {grant.planTier}
+                            </span>
+                          ) : null}
                         </td>
                         <td className="py-3 px-4 text-foreground">
                           {grant.amount} units
@@ -9495,7 +9939,7 @@ function CreditDetailView({
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                            className="h-8 w-8 text-destructive hover:text-destructive hover:bg-secondary"
                             onClick={() => deletePlanGrant(grant.planId)}
                           >
                             <Trash2 className="w-4 h-4" />

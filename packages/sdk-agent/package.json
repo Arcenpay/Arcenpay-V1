@@ -19,8 +19,11 @@
     "src"
   ],
   "scripts": {
-    "prebuild": "npm run build --workspace=@arcenpay/internal-core",
-    "pretypecheck": "npm run build --workspace=@arcenpay/internal-core",
+    "sync:core": "node ../../scripts/sync-internal-core.mjs sdk-agent",
+    "prebuild": "npm run sync:core",
+    "predev": "npm run sync:core",
+    "pretest": "npm run sync:core",
+    "pretypecheck": "npm run sync:core",
     "build": "tsup src/index.ts --format cjs,esm --dts --dts-resolve --sourcemap",
     "dev": "tsup src/index.ts --format cjs,esm --dts --watch",
     "test": "vitest run",
@@ -29,7 +32,6 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "@arcenpay/internal-core": "0.0.2",
     "viem": "^2.21.0"
   },
   "devDependencies": {

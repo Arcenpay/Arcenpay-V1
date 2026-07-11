@@ -8,6 +8,7 @@ import {
   sendTeamInviteEmail,
   sendWelcomeEmail,
 } from "../billing/email.js";
+import { assertCanCreateWorkspace } from "../catalog/tier-guard.js";
 
 export const EMAIL_AUTH_PURPOSE_LOGIN = "login";
 export const EMAIL_AUTH_CODE_TTL_MS = 10 * 60 * 1000;
@@ -201,6 +202,12 @@ export async function provisionUserForEmail(emailInput: string) {
   const email = normalizeEmail(emailInput);
   const existing = await db.user.findUnique({ where: { email } });
   if (existing) {
+    // Enforce workspace creation limit for existing users
+    const workspaceCheck = await assertCanCreateWorkspace(existing.id);
+    if (!workspaceCheck.allowed) {
+      throw new Error(workspaceCheck.reason);
+    }
+
     if (!existing.currentTeamId) {
       const membership = await db.teamMember.findFirst({
         where: { userId: existing.id },

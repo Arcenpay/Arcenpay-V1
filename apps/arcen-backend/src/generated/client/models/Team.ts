@@ -61,6 +61,7 @@ export type TeamCountAggregateOutputType = {
   platformTier: number
   tierExpiresAt: number
   tierSubscriptionId: number
+  profileData: number
   _all: number
 }
 
@@ -102,6 +103,7 @@ export type TeamCountAggregateInputType = {
   platformTier?: true
   tierExpiresAt?: true
   tierSubscriptionId?: true
+  profileData?: true
   _all?: true
 }
 
@@ -188,6 +190,7 @@ export type TeamGroupByOutputType = {
   platformTier: $Enums.PlatformTier
   tierExpiresAt: Date | null
   tierSubscriptionId: string | null
+  profileData: runtime.JsonValue | null
   _count: TeamCountAggregateOutputType | null
   _min: TeamMinAggregateOutputType | null
   _max: TeamMaxAggregateOutputType | null
@@ -222,6 +225,7 @@ export type TeamWhereInput = {
   platformTier?: Prisma.EnumPlatformTierFilter<"Team"> | $Enums.PlatformTier
   tierExpiresAt?: Prisma.DateTimeNullableFilter<"Team"> | Date | string | null
   tierSubscriptionId?: Prisma.StringNullableFilter<"Team"> | string | null
+  profileData?: Prisma.JsonNullableFilter<"Team">
   members?: Prisma.TeamMemberListRelationFilter
   providerProfiles?: Prisma.ProviderProfileListRelationFilter
   invitations?: Prisma.TeamInvitationListRelationFilter
@@ -229,6 +233,7 @@ export type TeamWhereInput = {
   catalogPlans?: Prisma.CatalogPlanListRelationFilter
   catalogAddOns?: Prisma.CatalogAddOnListRelationFilter
   catalogCreditTypes?: Prisma.CatalogCreditTypeListRelationFilter
+  creditLedgerEntries?: Prisma.CreditLedgerEntryListRelationFilter
   catalogVersions?: Prisma.CatalogVersionListRelationFilter
   catalogConfigs?: Prisma.CatalogConfigListRelationFilter
   billingTemplates?: Prisma.BillingTemplateListRelationFilter
@@ -253,6 +258,7 @@ export type TeamWhereInput = {
   supportTickets?: Prisma.SupportTicketListRelationFilter
   arcenCompanies?: Prisma.ArcenCompanyListRelationFilter
   addOnGrants?: Prisma.CompanyAddOnGrantListRelationFilter
+  creditGrants?: Prisma.CompanyCreditGrantListRelationFilter
   featureFlags?: Prisma.CatalogFeatureFlagListRelationFilter
   arcenApiKeys?: Prisma.ArcenApiKeyListRelationFilter
   embedAccessTokens?: Prisma.EmbedAccessTokenListRelationFilter
@@ -272,6 +278,7 @@ export type TeamOrderByWithRelationInput = {
   platformTier?: Prisma.SortOrder
   tierExpiresAt?: Prisma.SortOrderInput | Prisma.SortOrder
   tierSubscriptionId?: Prisma.SortOrderInput | Prisma.SortOrder
+  profileData?: Prisma.SortOrderInput | Prisma.SortOrder
   members?: Prisma.TeamMemberOrderByRelationAggregateInput
   providerProfiles?: Prisma.ProviderProfileOrderByRelationAggregateInput
   invitations?: Prisma.TeamInvitationOrderByRelationAggregateInput
@@ -279,6 +286,7 @@ export type TeamOrderByWithRelationInput = {
   catalogPlans?: Prisma.CatalogPlanOrderByRelationAggregateInput
   catalogAddOns?: Prisma.CatalogAddOnOrderByRelationAggregateInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeOrderByRelationAggregateInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryOrderByRelationAggregateInput
   catalogVersions?: Prisma.CatalogVersionOrderByRelationAggregateInput
   catalogConfigs?: Prisma.CatalogConfigOrderByRelationAggregateInput
   billingTemplates?: Prisma.BillingTemplateOrderByRelationAggregateInput
@@ -303,6 +311,7 @@ export type TeamOrderByWithRelationInput = {
   supportTickets?: Prisma.SupportTicketOrderByRelationAggregateInput
   arcenCompanies?: Prisma.ArcenCompanyOrderByRelationAggregateInput
   addOnGrants?: Prisma.CompanyAddOnGrantOrderByRelationAggregateInput
+  creditGrants?: Prisma.CompanyCreditGrantOrderByRelationAggregateInput
   featureFlags?: Prisma.CatalogFeatureFlagOrderByRelationAggregateInput
   arcenApiKeys?: Prisma.ArcenApiKeyOrderByRelationAggregateInput
   embedAccessTokens?: Prisma.EmbedAccessTokenOrderByRelationAggregateInput
@@ -325,6 +334,7 @@ export type TeamWhereUniqueInput = Prisma.AtLeast<{
   platformTier?: Prisma.EnumPlatformTierFilter<"Team"> | $Enums.PlatformTier
   tierExpiresAt?: Prisma.DateTimeNullableFilter<"Team"> | Date | string | null
   tierSubscriptionId?: Prisma.StringNullableFilter<"Team"> | string | null
+  profileData?: Prisma.JsonNullableFilter<"Team">
   members?: Prisma.TeamMemberListRelationFilter
   providerProfiles?: Prisma.ProviderProfileListRelationFilter
   invitations?: Prisma.TeamInvitationListRelationFilter
@@ -332,6 +342,7 @@ export type TeamWhereUniqueInput = Prisma.AtLeast<{
   catalogPlans?: Prisma.CatalogPlanListRelationFilter
   catalogAddOns?: Prisma.CatalogAddOnListRelationFilter
   catalogCreditTypes?: Prisma.CatalogCreditTypeListRelationFilter
+  creditLedgerEntries?: Prisma.CreditLedgerEntryListRelationFilter
   catalogVersions?: Prisma.CatalogVersionListRelationFilter
   catalogConfigs?: Prisma.CatalogConfigListRelationFilter
   billingTemplates?: Prisma.BillingTemplateListRelationFilter
@@ -356,6 +367,7 @@ export type TeamWhereUniqueInput = Prisma.AtLeast<{
   supportTickets?: Prisma.SupportTicketListRelationFilter
   arcenCompanies?: Prisma.ArcenCompanyListRelationFilter
   addOnGrants?: Prisma.CompanyAddOnGrantListRelationFilter
+  creditGrants?: Prisma.CompanyCreditGrantListRelationFilter
   featureFlags?: Prisma.CatalogFeatureFlagListRelationFilter
   arcenApiKeys?: Prisma.ArcenApiKeyListRelationFilter
   embedAccessTokens?: Prisma.EmbedAccessTokenListRelationFilter
@@ -375,6 +387,7 @@ export type TeamOrderByWithAggregationInput = {
   platformTier?: Prisma.SortOrder
   tierExpiresAt?: Prisma.SortOrderInput | Prisma.SortOrder
   tierSubscriptionId?: Prisma.SortOrderInput | Prisma.SortOrder
+  profileData?: Prisma.SortOrderInput | Prisma.SortOrder
   _count?: Prisma.TeamCountOrderByAggregateInput
   _max?: Prisma.TeamMaxOrderByAggregateInput
   _min?: Prisma.TeamMinOrderByAggregateInput
@@ -394,6 +407,7 @@ export type TeamScalarWhereWithAggregatesInput = {
   platformTier?: Prisma.EnumPlatformTierWithAggregatesFilter<"Team"> | $Enums.PlatformTier
   tierExpiresAt?: Prisma.DateTimeNullableWithAggregatesFilter<"Team"> | Date | string | null
   tierSubscriptionId?: Prisma.StringNullableWithAggregatesFilter<"Team"> | string | null
+  profileData?: Prisma.JsonNullableWithAggregatesFilter<"Team">
 }
 
 export type TeamCreateInput = {
@@ -407,6 +421,7 @@ export type TeamCreateInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
@@ -414,6 +429,7 @@ export type TeamCreateInput = {
   catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeCreateNestedManyWithoutTeamInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryCreateNestedManyWithoutTeamInput
   catalogVersions?: Prisma.CatalogVersionCreateNestedManyWithoutTeamInput
   catalogConfigs?: Prisma.CatalogConfigCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateCreateNestedManyWithoutTeamInput
@@ -438,6 +454,7 @@ export type TeamCreateInput = {
   supportTickets?: Prisma.SupportTicketCreateNestedManyWithoutTeamInput
   arcenCompanies?: Prisma.ArcenCompanyCreateNestedManyWithoutTeamInput
   addOnGrants?: Prisma.CompanyAddOnGrantCreateNestedManyWithoutTeamInput
+  creditGrants?: Prisma.CompanyCreditGrantCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyCreateNestedManyWithoutTeamInput
   embedAccessTokens?: Prisma.EmbedAccessTokenCreateNestedManyWithoutTeamInput
@@ -457,6 +474,7 @@ export type TeamUncheckedCreateInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileUncheckedCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
@@ -464,6 +482,7 @@ export type TeamUncheckedCreateInput = {
   catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedCreateNestedManyWithoutTeamInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedCreateNestedManyWithoutTeamInput
   catalogVersions?: Prisma.CatalogVersionUncheckedCreateNestedManyWithoutTeamInput
   catalogConfigs?: Prisma.CatalogConfigUncheckedCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateUncheckedCreateNestedManyWithoutTeamInput
@@ -488,6 +507,7 @@ export type TeamUncheckedCreateInput = {
   supportTickets?: Prisma.SupportTicketUncheckedCreateNestedManyWithoutTeamInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedCreateNestedManyWithoutTeamInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedCreateNestedManyWithoutTeamInput
+  creditGrants?: Prisma.CompanyCreditGrantUncheckedCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedCreateNestedManyWithoutTeamInput
   embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedCreateNestedManyWithoutTeamInput
@@ -507,6 +527,7 @@ export type TeamUpdateInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
@@ -514,6 +535,7 @@ export type TeamUpdateInput = {
   catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUpdateManyWithoutTeamNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUpdateManyWithoutTeamNestedInput
   catalogVersions?: Prisma.CatalogVersionUpdateManyWithoutTeamNestedInput
   catalogConfigs?: Prisma.CatalogConfigUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUpdateManyWithoutTeamNestedInput
@@ -538,6 +560,7 @@ export type TeamUpdateInput = {
   supportTickets?: Prisma.SupportTicketUpdateManyWithoutTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUpdateManyWithoutTeamNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUpdateManyWithoutTeamNestedInput
+  creditGrants?: Prisma.CompanyCreditGrantUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUpdateManyWithoutTeamNestedInput
   embedAccessTokens?: Prisma.EmbedAccessTokenUpdateManyWithoutTeamNestedInput
@@ -557,6 +580,7 @@ export type TeamUncheckedUpdateInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUncheckedUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
@@ -564,6 +588,7 @@ export type TeamUncheckedUpdateInput = {
   catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedUpdateManyWithoutTeamNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedUpdateManyWithoutTeamNestedInput
   catalogVersions?: Prisma.CatalogVersionUncheckedUpdateManyWithoutTeamNestedInput
   catalogConfigs?: Prisma.CatalogConfigUncheckedUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUncheckedUpdateManyWithoutTeamNestedInput
@@ -588,6 +613,7 @@ export type TeamUncheckedUpdateInput = {
   supportTickets?: Prisma.SupportTicketUncheckedUpdateManyWithoutTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedUpdateManyWithoutTeamNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedUpdateManyWithoutTeamNestedInput
+  creditGrants?: Prisma.CompanyCreditGrantUncheckedUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedUpdateManyWithoutTeamNestedInput
   embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedUpdateManyWithoutTeamNestedInput
@@ -607,6 +633,7 @@ export type TeamCreateManyInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
 }
 
 export type TeamUpdateManyMutationInput = {
@@ -620,6 +647,7 @@ export type TeamUpdateManyMutationInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
 }
 
 export type TeamUncheckedUpdateManyInput = {
@@ -633,6 +661,7 @@ export type TeamUncheckedUpdateManyInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
 }
 
 export type TeamCountOrderByAggregateInput = {
@@ -646,6 +675,7 @@ export type TeamCountOrderByAggregateInput = {
   platformTier?: Prisma.SortOrder
   tierExpiresAt?: Prisma.SortOrder
   tierSubscriptionId?: Prisma.SortOrder
+  profileData?: Prisma.SortOrder
 }
 
 export type TeamMaxOrderByAggregateInput = {
@@ -1093,6 +1123,34 @@ export type TeamUpdateOneRequiredWithoutAddOnGrantsNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.TeamUpdateToOneWithWhereWithoutAddOnGrantsInput, Prisma.TeamUpdateWithoutAddOnGrantsInput>, Prisma.TeamUncheckedUpdateWithoutAddOnGrantsInput>
 }
 
+export type TeamCreateNestedOneWithoutCreditGrantsInput = {
+  create?: Prisma.XOR<Prisma.TeamCreateWithoutCreditGrantsInput, Prisma.TeamUncheckedCreateWithoutCreditGrantsInput>
+  connectOrCreate?: Prisma.TeamCreateOrConnectWithoutCreditGrantsInput
+  connect?: Prisma.TeamWhereUniqueInput
+}
+
+export type TeamUpdateOneRequiredWithoutCreditGrantsNestedInput = {
+  create?: Prisma.XOR<Prisma.TeamCreateWithoutCreditGrantsInput, Prisma.TeamUncheckedCreateWithoutCreditGrantsInput>
+  connectOrCreate?: Prisma.TeamCreateOrConnectWithoutCreditGrantsInput
+  upsert?: Prisma.TeamUpsertWithoutCreditGrantsInput
+  connect?: Prisma.TeamWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.TeamUpdateToOneWithWhereWithoutCreditGrantsInput, Prisma.TeamUpdateWithoutCreditGrantsInput>, Prisma.TeamUncheckedUpdateWithoutCreditGrantsInput>
+}
+
+export type TeamCreateNestedOneWithoutCreditLedgerEntriesInput = {
+  create?: Prisma.XOR<Prisma.TeamCreateWithoutCreditLedgerEntriesInput, Prisma.TeamUncheckedCreateWithoutCreditLedgerEntriesInput>
+  connectOrCreate?: Prisma.TeamCreateOrConnectWithoutCreditLedgerEntriesInput
+  connect?: Prisma.TeamWhereUniqueInput
+}
+
+export type TeamUpdateOneRequiredWithoutCreditLedgerEntriesNestedInput = {
+  create?: Prisma.XOR<Prisma.TeamCreateWithoutCreditLedgerEntriesInput, Prisma.TeamUncheckedCreateWithoutCreditLedgerEntriesInput>
+  connectOrCreate?: Prisma.TeamCreateOrConnectWithoutCreditLedgerEntriesInput
+  upsert?: Prisma.TeamUpsertWithoutCreditLedgerEntriesInput
+  connect?: Prisma.TeamWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.TeamUpdateToOneWithWhereWithoutCreditLedgerEntriesInput, Prisma.TeamUpdateWithoutCreditLedgerEntriesInput>, Prisma.TeamUncheckedUpdateWithoutCreditLedgerEntriesInput>
+}
+
 export type TeamCreateNestedOneWithoutPaymentLinksInput = {
   create?: Prisma.XOR<Prisma.TeamCreateWithoutPaymentLinksInput, Prisma.TeamUncheckedCreateWithoutPaymentLinksInput>
   connectOrCreate?: Prisma.TeamCreateOrConnectWithoutPaymentLinksInput
@@ -1216,12 +1274,14 @@ export type TeamCreateWithoutEnvironmentsInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeCreateNestedManyWithoutTeamInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryCreateNestedManyWithoutTeamInput
   catalogVersions?: Prisma.CatalogVersionCreateNestedManyWithoutTeamInput
   catalogConfigs?: Prisma.CatalogConfigCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateCreateNestedManyWithoutTeamInput
@@ -1246,6 +1306,7 @@ export type TeamCreateWithoutEnvironmentsInput = {
   supportTickets?: Prisma.SupportTicketCreateNestedManyWithoutTeamInput
   arcenCompanies?: Prisma.ArcenCompanyCreateNestedManyWithoutTeamInput
   addOnGrants?: Prisma.CompanyAddOnGrantCreateNestedManyWithoutTeamInput
+  creditGrants?: Prisma.CompanyCreditGrantCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyCreateNestedManyWithoutTeamInput
   embedAccessTokens?: Prisma.EmbedAccessTokenCreateNestedManyWithoutTeamInput
@@ -1265,12 +1326,14 @@ export type TeamUncheckedCreateWithoutEnvironmentsInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileUncheckedCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedCreateNestedManyWithoutTeamInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedCreateNestedManyWithoutTeamInput
   catalogVersions?: Prisma.CatalogVersionUncheckedCreateNestedManyWithoutTeamInput
   catalogConfigs?: Prisma.CatalogConfigUncheckedCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateUncheckedCreateNestedManyWithoutTeamInput
@@ -1295,6 +1358,7 @@ export type TeamUncheckedCreateWithoutEnvironmentsInput = {
   supportTickets?: Prisma.SupportTicketUncheckedCreateNestedManyWithoutTeamInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedCreateNestedManyWithoutTeamInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedCreateNestedManyWithoutTeamInput
+  creditGrants?: Prisma.CompanyCreditGrantUncheckedCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedCreateNestedManyWithoutTeamInput
   embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedCreateNestedManyWithoutTeamInput
@@ -1330,12 +1394,14 @@ export type TeamUpdateWithoutEnvironmentsInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUpdateManyWithoutTeamNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUpdateManyWithoutTeamNestedInput
   catalogVersions?: Prisma.CatalogVersionUpdateManyWithoutTeamNestedInput
   catalogConfigs?: Prisma.CatalogConfigUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUpdateManyWithoutTeamNestedInput
@@ -1360,6 +1426,7 @@ export type TeamUpdateWithoutEnvironmentsInput = {
   supportTickets?: Prisma.SupportTicketUpdateManyWithoutTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUpdateManyWithoutTeamNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUpdateManyWithoutTeamNestedInput
+  creditGrants?: Prisma.CompanyCreditGrantUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUpdateManyWithoutTeamNestedInput
   embedAccessTokens?: Prisma.EmbedAccessTokenUpdateManyWithoutTeamNestedInput
@@ -1379,12 +1446,14 @@ export type TeamUncheckedUpdateWithoutEnvironmentsInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUncheckedUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedUpdateManyWithoutTeamNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedUpdateManyWithoutTeamNestedInput
   catalogVersions?: Prisma.CatalogVersionUncheckedUpdateManyWithoutTeamNestedInput
   catalogConfigs?: Prisma.CatalogConfigUncheckedUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUncheckedUpdateManyWithoutTeamNestedInput
@@ -1409,6 +1478,7 @@ export type TeamUncheckedUpdateWithoutEnvironmentsInput = {
   supportTickets?: Prisma.SupportTicketUncheckedUpdateManyWithoutTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedUpdateManyWithoutTeamNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedUpdateManyWithoutTeamNestedInput
+  creditGrants?: Prisma.CompanyCreditGrantUncheckedUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedUpdateManyWithoutTeamNestedInput
   embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedUpdateManyWithoutTeamNestedInput
@@ -1428,12 +1498,14 @@ export type TeamCreateWithoutMembersInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   providerProfiles?: Prisma.ProviderProfileCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
   environments?: Prisma.WorkspaceEnvironmentCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeCreateNestedManyWithoutTeamInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryCreateNestedManyWithoutTeamInput
   catalogVersions?: Prisma.CatalogVersionCreateNestedManyWithoutTeamInput
   catalogConfigs?: Prisma.CatalogConfigCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateCreateNestedManyWithoutTeamInput
@@ -1458,6 +1530,7 @@ export type TeamCreateWithoutMembersInput = {
   supportTickets?: Prisma.SupportTicketCreateNestedManyWithoutTeamInput
   arcenCompanies?: Prisma.ArcenCompanyCreateNestedManyWithoutTeamInput
   addOnGrants?: Prisma.CompanyAddOnGrantCreateNestedManyWithoutTeamInput
+  creditGrants?: Prisma.CompanyCreditGrantCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyCreateNestedManyWithoutTeamInput
   embedAccessTokens?: Prisma.EmbedAccessTokenCreateNestedManyWithoutTeamInput
@@ -1477,12 +1550,14 @@ export type TeamUncheckedCreateWithoutMembersInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   providerProfiles?: Prisma.ProviderProfileUncheckedCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
   environments?: Prisma.WorkspaceEnvironmentUncheckedCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedCreateNestedManyWithoutTeamInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedCreateNestedManyWithoutTeamInput
   catalogVersions?: Prisma.CatalogVersionUncheckedCreateNestedManyWithoutTeamInput
   catalogConfigs?: Prisma.CatalogConfigUncheckedCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateUncheckedCreateNestedManyWithoutTeamInput
@@ -1507,6 +1582,7 @@ export type TeamUncheckedCreateWithoutMembersInput = {
   supportTickets?: Prisma.SupportTicketUncheckedCreateNestedManyWithoutTeamInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedCreateNestedManyWithoutTeamInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedCreateNestedManyWithoutTeamInput
+  creditGrants?: Prisma.CompanyCreditGrantUncheckedCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedCreateNestedManyWithoutTeamInput
   embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedCreateNestedManyWithoutTeamInput
@@ -1542,12 +1618,14 @@ export type TeamUpdateWithoutMembersInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   providerProfiles?: Prisma.ProviderProfileUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
   environments?: Prisma.WorkspaceEnvironmentUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUpdateManyWithoutTeamNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUpdateManyWithoutTeamNestedInput
   catalogVersions?: Prisma.CatalogVersionUpdateManyWithoutTeamNestedInput
   catalogConfigs?: Prisma.CatalogConfigUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUpdateManyWithoutTeamNestedInput
@@ -1572,6 +1650,7 @@ export type TeamUpdateWithoutMembersInput = {
   supportTickets?: Prisma.SupportTicketUpdateManyWithoutTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUpdateManyWithoutTeamNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUpdateManyWithoutTeamNestedInput
+  creditGrants?: Prisma.CompanyCreditGrantUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUpdateManyWithoutTeamNestedInput
   embedAccessTokens?: Prisma.EmbedAccessTokenUpdateManyWithoutTeamNestedInput
@@ -1591,12 +1670,14 @@ export type TeamUncheckedUpdateWithoutMembersInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   providerProfiles?: Prisma.ProviderProfileUncheckedUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
   environments?: Prisma.WorkspaceEnvironmentUncheckedUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedUpdateManyWithoutTeamNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedUpdateManyWithoutTeamNestedInput
   catalogVersions?: Prisma.CatalogVersionUncheckedUpdateManyWithoutTeamNestedInput
   catalogConfigs?: Prisma.CatalogConfigUncheckedUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUncheckedUpdateManyWithoutTeamNestedInput
@@ -1621,6 +1702,7 @@ export type TeamUncheckedUpdateWithoutMembersInput = {
   supportTickets?: Prisma.SupportTicketUncheckedUpdateManyWithoutTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedUpdateManyWithoutTeamNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedUpdateManyWithoutTeamNestedInput
+  creditGrants?: Prisma.CompanyCreditGrantUncheckedUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedUpdateManyWithoutTeamNestedInput
   embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedUpdateManyWithoutTeamNestedInput
@@ -1640,12 +1722,14 @@ export type TeamCreateWithoutInvitationsInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileCreateNestedManyWithoutTeamInput
   environments?: Prisma.WorkspaceEnvironmentCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeCreateNestedManyWithoutTeamInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryCreateNestedManyWithoutTeamInput
   catalogVersions?: Prisma.CatalogVersionCreateNestedManyWithoutTeamInput
   catalogConfigs?: Prisma.CatalogConfigCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateCreateNestedManyWithoutTeamInput
@@ -1670,6 +1754,7 @@ export type TeamCreateWithoutInvitationsInput = {
   supportTickets?: Prisma.SupportTicketCreateNestedManyWithoutTeamInput
   arcenCompanies?: Prisma.ArcenCompanyCreateNestedManyWithoutTeamInput
   addOnGrants?: Prisma.CompanyAddOnGrantCreateNestedManyWithoutTeamInput
+  creditGrants?: Prisma.CompanyCreditGrantCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyCreateNestedManyWithoutTeamInput
   embedAccessTokens?: Prisma.EmbedAccessTokenCreateNestedManyWithoutTeamInput
@@ -1689,12 +1774,14 @@ export type TeamUncheckedCreateWithoutInvitationsInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileUncheckedCreateNestedManyWithoutTeamInput
   environments?: Prisma.WorkspaceEnvironmentUncheckedCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedCreateNestedManyWithoutTeamInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedCreateNestedManyWithoutTeamInput
   catalogVersions?: Prisma.CatalogVersionUncheckedCreateNestedManyWithoutTeamInput
   catalogConfigs?: Prisma.CatalogConfigUncheckedCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateUncheckedCreateNestedManyWithoutTeamInput
@@ -1719,6 +1806,7 @@ export type TeamUncheckedCreateWithoutInvitationsInput = {
   supportTickets?: Prisma.SupportTicketUncheckedCreateNestedManyWithoutTeamInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedCreateNestedManyWithoutTeamInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedCreateNestedManyWithoutTeamInput
+  creditGrants?: Prisma.CompanyCreditGrantUncheckedCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedCreateNestedManyWithoutTeamInput
   embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedCreateNestedManyWithoutTeamInput
@@ -1754,12 +1842,14 @@ export type TeamUpdateWithoutInvitationsInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUpdateManyWithoutTeamNestedInput
   environments?: Prisma.WorkspaceEnvironmentUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUpdateManyWithoutTeamNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUpdateManyWithoutTeamNestedInput
   catalogVersions?: Prisma.CatalogVersionUpdateManyWithoutTeamNestedInput
   catalogConfigs?: Prisma.CatalogConfigUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUpdateManyWithoutTeamNestedInput
@@ -1784,6 +1874,7 @@ export type TeamUpdateWithoutInvitationsInput = {
   supportTickets?: Prisma.SupportTicketUpdateManyWithoutTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUpdateManyWithoutTeamNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUpdateManyWithoutTeamNestedInput
+  creditGrants?: Prisma.CompanyCreditGrantUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUpdateManyWithoutTeamNestedInput
   embedAccessTokens?: Prisma.EmbedAccessTokenUpdateManyWithoutTeamNestedInput
@@ -1803,12 +1894,14 @@ export type TeamUncheckedUpdateWithoutInvitationsInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUncheckedUpdateManyWithoutTeamNestedInput
   environments?: Prisma.WorkspaceEnvironmentUncheckedUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedUpdateManyWithoutTeamNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedUpdateManyWithoutTeamNestedInput
   catalogVersions?: Prisma.CatalogVersionUncheckedUpdateManyWithoutTeamNestedInput
   catalogConfigs?: Prisma.CatalogConfigUncheckedUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUncheckedUpdateManyWithoutTeamNestedInput
@@ -1833,6 +1926,7 @@ export type TeamUncheckedUpdateWithoutInvitationsInput = {
   supportTickets?: Prisma.SupportTicketUncheckedUpdateManyWithoutTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedUpdateManyWithoutTeamNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedUpdateManyWithoutTeamNestedInput
+  creditGrants?: Prisma.CompanyCreditGrantUncheckedUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedUpdateManyWithoutTeamNestedInput
   embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedUpdateManyWithoutTeamNestedInput
@@ -1852,12 +1946,14 @@ export type TeamCreateWithoutProviderProfilesInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
   environments?: Prisma.WorkspaceEnvironmentCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeCreateNestedManyWithoutTeamInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryCreateNestedManyWithoutTeamInput
   catalogVersions?: Prisma.CatalogVersionCreateNestedManyWithoutTeamInput
   catalogConfigs?: Prisma.CatalogConfigCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateCreateNestedManyWithoutTeamInput
@@ -1882,6 +1978,7 @@ export type TeamCreateWithoutProviderProfilesInput = {
   supportTickets?: Prisma.SupportTicketCreateNestedManyWithoutTeamInput
   arcenCompanies?: Prisma.ArcenCompanyCreateNestedManyWithoutTeamInput
   addOnGrants?: Prisma.CompanyAddOnGrantCreateNestedManyWithoutTeamInput
+  creditGrants?: Prisma.CompanyCreditGrantCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyCreateNestedManyWithoutTeamInput
   embedAccessTokens?: Prisma.EmbedAccessTokenCreateNestedManyWithoutTeamInput
@@ -1901,12 +1998,14 @@ export type TeamUncheckedCreateWithoutProviderProfilesInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
   environments?: Prisma.WorkspaceEnvironmentUncheckedCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedCreateNestedManyWithoutTeamInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedCreateNestedManyWithoutTeamInput
   catalogVersions?: Prisma.CatalogVersionUncheckedCreateNestedManyWithoutTeamInput
   catalogConfigs?: Prisma.CatalogConfigUncheckedCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateUncheckedCreateNestedManyWithoutTeamInput
@@ -1931,6 +2030,7 @@ export type TeamUncheckedCreateWithoutProviderProfilesInput = {
   supportTickets?: Prisma.SupportTicketUncheckedCreateNestedManyWithoutTeamInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedCreateNestedManyWithoutTeamInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedCreateNestedManyWithoutTeamInput
+  creditGrants?: Prisma.CompanyCreditGrantUncheckedCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedCreateNestedManyWithoutTeamInput
   embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedCreateNestedManyWithoutTeamInput
@@ -1966,12 +2066,14 @@ export type TeamUpdateWithoutProviderProfilesInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
   environments?: Prisma.WorkspaceEnvironmentUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUpdateManyWithoutTeamNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUpdateManyWithoutTeamNestedInput
   catalogVersions?: Prisma.CatalogVersionUpdateManyWithoutTeamNestedInput
   catalogConfigs?: Prisma.CatalogConfigUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUpdateManyWithoutTeamNestedInput
@@ -1996,6 +2098,7 @@ export type TeamUpdateWithoutProviderProfilesInput = {
   supportTickets?: Prisma.SupportTicketUpdateManyWithoutTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUpdateManyWithoutTeamNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUpdateManyWithoutTeamNestedInput
+  creditGrants?: Prisma.CompanyCreditGrantUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUpdateManyWithoutTeamNestedInput
   embedAccessTokens?: Prisma.EmbedAccessTokenUpdateManyWithoutTeamNestedInput
@@ -2015,12 +2118,14 @@ export type TeamUncheckedUpdateWithoutProviderProfilesInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
   environments?: Prisma.WorkspaceEnvironmentUncheckedUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedUpdateManyWithoutTeamNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedUpdateManyWithoutTeamNestedInput
   catalogVersions?: Prisma.CatalogVersionUncheckedUpdateManyWithoutTeamNestedInput
   catalogConfigs?: Prisma.CatalogConfigUncheckedUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUncheckedUpdateManyWithoutTeamNestedInput
@@ -2045,6 +2150,7 @@ export type TeamUncheckedUpdateWithoutProviderProfilesInput = {
   supportTickets?: Prisma.SupportTicketUncheckedUpdateManyWithoutTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedUpdateManyWithoutTeamNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedUpdateManyWithoutTeamNestedInput
+  creditGrants?: Prisma.CompanyCreditGrantUncheckedUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedUpdateManyWithoutTeamNestedInput
   embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedUpdateManyWithoutTeamNestedInput
@@ -2064,12 +2170,14 @@ export type TeamCreateWithoutCatalogPlansInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
   environments?: Prisma.WorkspaceEnvironmentCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeCreateNestedManyWithoutTeamInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryCreateNestedManyWithoutTeamInput
   catalogVersions?: Prisma.CatalogVersionCreateNestedManyWithoutTeamInput
   catalogConfigs?: Prisma.CatalogConfigCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateCreateNestedManyWithoutTeamInput
@@ -2094,6 +2202,7 @@ export type TeamCreateWithoutCatalogPlansInput = {
   supportTickets?: Prisma.SupportTicketCreateNestedManyWithoutTeamInput
   arcenCompanies?: Prisma.ArcenCompanyCreateNestedManyWithoutTeamInput
   addOnGrants?: Prisma.CompanyAddOnGrantCreateNestedManyWithoutTeamInput
+  creditGrants?: Prisma.CompanyCreditGrantCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyCreateNestedManyWithoutTeamInput
   embedAccessTokens?: Prisma.EmbedAccessTokenCreateNestedManyWithoutTeamInput
@@ -2113,12 +2222,14 @@ export type TeamUncheckedCreateWithoutCatalogPlansInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileUncheckedCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
   environments?: Prisma.WorkspaceEnvironmentUncheckedCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedCreateNestedManyWithoutTeamInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedCreateNestedManyWithoutTeamInput
   catalogVersions?: Prisma.CatalogVersionUncheckedCreateNestedManyWithoutTeamInput
   catalogConfigs?: Prisma.CatalogConfigUncheckedCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateUncheckedCreateNestedManyWithoutTeamInput
@@ -2143,6 +2254,7 @@ export type TeamUncheckedCreateWithoutCatalogPlansInput = {
   supportTickets?: Prisma.SupportTicketUncheckedCreateNestedManyWithoutTeamInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedCreateNestedManyWithoutTeamInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedCreateNestedManyWithoutTeamInput
+  creditGrants?: Prisma.CompanyCreditGrantUncheckedCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedCreateNestedManyWithoutTeamInput
   embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedCreateNestedManyWithoutTeamInput
@@ -2178,12 +2290,14 @@ export type TeamUpdateWithoutCatalogPlansInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
   environments?: Prisma.WorkspaceEnvironmentUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUpdateManyWithoutTeamNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUpdateManyWithoutTeamNestedInput
   catalogVersions?: Prisma.CatalogVersionUpdateManyWithoutTeamNestedInput
   catalogConfigs?: Prisma.CatalogConfigUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUpdateManyWithoutTeamNestedInput
@@ -2208,6 +2322,7 @@ export type TeamUpdateWithoutCatalogPlansInput = {
   supportTickets?: Prisma.SupportTicketUpdateManyWithoutTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUpdateManyWithoutTeamNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUpdateManyWithoutTeamNestedInput
+  creditGrants?: Prisma.CompanyCreditGrantUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUpdateManyWithoutTeamNestedInput
   embedAccessTokens?: Prisma.EmbedAccessTokenUpdateManyWithoutTeamNestedInput
@@ -2227,12 +2342,14 @@ export type TeamUncheckedUpdateWithoutCatalogPlansInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUncheckedUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
   environments?: Prisma.WorkspaceEnvironmentUncheckedUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedUpdateManyWithoutTeamNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedUpdateManyWithoutTeamNestedInput
   catalogVersions?: Prisma.CatalogVersionUncheckedUpdateManyWithoutTeamNestedInput
   catalogConfigs?: Prisma.CatalogConfigUncheckedUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUncheckedUpdateManyWithoutTeamNestedInput
@@ -2257,6 +2374,7 @@ export type TeamUncheckedUpdateWithoutCatalogPlansInput = {
   supportTickets?: Prisma.SupportTicketUncheckedUpdateManyWithoutTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedUpdateManyWithoutTeamNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedUpdateManyWithoutTeamNestedInput
+  creditGrants?: Prisma.CompanyCreditGrantUncheckedUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedUpdateManyWithoutTeamNestedInput
   embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedUpdateManyWithoutTeamNestedInput
@@ -2276,12 +2394,14 @@ export type TeamCreateWithoutCatalogAddOnsInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
   environments?: Prisma.WorkspaceEnvironmentCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeCreateNestedManyWithoutTeamInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryCreateNestedManyWithoutTeamInput
   catalogVersions?: Prisma.CatalogVersionCreateNestedManyWithoutTeamInput
   catalogConfigs?: Prisma.CatalogConfigCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateCreateNestedManyWithoutTeamInput
@@ -2306,6 +2426,7 @@ export type TeamCreateWithoutCatalogAddOnsInput = {
   supportTickets?: Prisma.SupportTicketCreateNestedManyWithoutTeamInput
   arcenCompanies?: Prisma.ArcenCompanyCreateNestedManyWithoutTeamInput
   addOnGrants?: Prisma.CompanyAddOnGrantCreateNestedManyWithoutTeamInput
+  creditGrants?: Prisma.CompanyCreditGrantCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyCreateNestedManyWithoutTeamInput
   embedAccessTokens?: Prisma.EmbedAccessTokenCreateNestedManyWithoutTeamInput
@@ -2325,12 +2446,14 @@ export type TeamUncheckedCreateWithoutCatalogAddOnsInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileUncheckedCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
   environments?: Prisma.WorkspaceEnvironmentUncheckedCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedCreateNestedManyWithoutTeamInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedCreateNestedManyWithoutTeamInput
   catalogVersions?: Prisma.CatalogVersionUncheckedCreateNestedManyWithoutTeamInput
   catalogConfigs?: Prisma.CatalogConfigUncheckedCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateUncheckedCreateNestedManyWithoutTeamInput
@@ -2355,6 +2478,7 @@ export type TeamUncheckedCreateWithoutCatalogAddOnsInput = {
   supportTickets?: Prisma.SupportTicketUncheckedCreateNestedManyWithoutTeamInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedCreateNestedManyWithoutTeamInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedCreateNestedManyWithoutTeamInput
+  creditGrants?: Prisma.CompanyCreditGrantUncheckedCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedCreateNestedManyWithoutTeamInput
   embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedCreateNestedManyWithoutTeamInput
@@ -2390,12 +2514,14 @@ export type TeamUpdateWithoutCatalogAddOnsInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
   environments?: Prisma.WorkspaceEnvironmentUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUpdateManyWithoutTeamNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUpdateManyWithoutTeamNestedInput
   catalogVersions?: Prisma.CatalogVersionUpdateManyWithoutTeamNestedInput
   catalogConfigs?: Prisma.CatalogConfigUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUpdateManyWithoutTeamNestedInput
@@ -2420,6 +2546,7 @@ export type TeamUpdateWithoutCatalogAddOnsInput = {
   supportTickets?: Prisma.SupportTicketUpdateManyWithoutTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUpdateManyWithoutTeamNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUpdateManyWithoutTeamNestedInput
+  creditGrants?: Prisma.CompanyCreditGrantUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUpdateManyWithoutTeamNestedInput
   embedAccessTokens?: Prisma.EmbedAccessTokenUpdateManyWithoutTeamNestedInput
@@ -2439,12 +2566,14 @@ export type TeamUncheckedUpdateWithoutCatalogAddOnsInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUncheckedUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
   environments?: Prisma.WorkspaceEnvironmentUncheckedUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedUpdateManyWithoutTeamNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedUpdateManyWithoutTeamNestedInput
   catalogVersions?: Prisma.CatalogVersionUncheckedUpdateManyWithoutTeamNestedInput
   catalogConfigs?: Prisma.CatalogConfigUncheckedUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUncheckedUpdateManyWithoutTeamNestedInput
@@ -2469,6 +2598,7 @@ export type TeamUncheckedUpdateWithoutCatalogAddOnsInput = {
   supportTickets?: Prisma.SupportTicketUncheckedUpdateManyWithoutTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedUpdateManyWithoutTeamNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedUpdateManyWithoutTeamNestedInput
+  creditGrants?: Prisma.CompanyCreditGrantUncheckedUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedUpdateManyWithoutTeamNestedInput
   embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedUpdateManyWithoutTeamNestedInput
@@ -2488,12 +2618,14 @@ export type TeamCreateWithoutCatalogCreditTypesInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
   environments?: Prisma.WorkspaceEnvironmentCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnCreateNestedManyWithoutTeamInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryCreateNestedManyWithoutTeamInput
   catalogVersions?: Prisma.CatalogVersionCreateNestedManyWithoutTeamInput
   catalogConfigs?: Prisma.CatalogConfigCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateCreateNestedManyWithoutTeamInput
@@ -2518,6 +2650,7 @@ export type TeamCreateWithoutCatalogCreditTypesInput = {
   supportTickets?: Prisma.SupportTicketCreateNestedManyWithoutTeamInput
   arcenCompanies?: Prisma.ArcenCompanyCreateNestedManyWithoutTeamInput
   addOnGrants?: Prisma.CompanyAddOnGrantCreateNestedManyWithoutTeamInput
+  creditGrants?: Prisma.CompanyCreditGrantCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyCreateNestedManyWithoutTeamInput
   embedAccessTokens?: Prisma.EmbedAccessTokenCreateNestedManyWithoutTeamInput
@@ -2537,12 +2670,14 @@ export type TeamUncheckedCreateWithoutCatalogCreditTypesInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileUncheckedCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
   environments?: Prisma.WorkspaceEnvironmentUncheckedCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedCreateNestedManyWithoutTeamInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedCreateNestedManyWithoutTeamInput
   catalogVersions?: Prisma.CatalogVersionUncheckedCreateNestedManyWithoutTeamInput
   catalogConfigs?: Prisma.CatalogConfigUncheckedCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateUncheckedCreateNestedManyWithoutTeamInput
@@ -2567,6 +2702,7 @@ export type TeamUncheckedCreateWithoutCatalogCreditTypesInput = {
   supportTickets?: Prisma.SupportTicketUncheckedCreateNestedManyWithoutTeamInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedCreateNestedManyWithoutTeamInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedCreateNestedManyWithoutTeamInput
+  creditGrants?: Prisma.CompanyCreditGrantUncheckedCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedCreateNestedManyWithoutTeamInput
   embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedCreateNestedManyWithoutTeamInput
@@ -2602,12 +2738,14 @@ export type TeamUpdateWithoutCatalogCreditTypesInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
   environments?: Prisma.WorkspaceEnvironmentUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUpdateManyWithoutTeamNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUpdateManyWithoutTeamNestedInput
   catalogVersions?: Prisma.CatalogVersionUpdateManyWithoutTeamNestedInput
   catalogConfigs?: Prisma.CatalogConfigUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUpdateManyWithoutTeamNestedInput
@@ -2632,6 +2770,7 @@ export type TeamUpdateWithoutCatalogCreditTypesInput = {
   supportTickets?: Prisma.SupportTicketUpdateManyWithoutTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUpdateManyWithoutTeamNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUpdateManyWithoutTeamNestedInput
+  creditGrants?: Prisma.CompanyCreditGrantUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUpdateManyWithoutTeamNestedInput
   embedAccessTokens?: Prisma.EmbedAccessTokenUpdateManyWithoutTeamNestedInput
@@ -2651,12 +2790,14 @@ export type TeamUncheckedUpdateWithoutCatalogCreditTypesInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUncheckedUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
   environments?: Prisma.WorkspaceEnvironmentUncheckedUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedUpdateManyWithoutTeamNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedUpdateManyWithoutTeamNestedInput
   catalogVersions?: Prisma.CatalogVersionUncheckedUpdateManyWithoutTeamNestedInput
   catalogConfigs?: Prisma.CatalogConfigUncheckedUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUncheckedUpdateManyWithoutTeamNestedInput
@@ -2681,6 +2822,7 @@ export type TeamUncheckedUpdateWithoutCatalogCreditTypesInput = {
   supportTickets?: Prisma.SupportTicketUncheckedUpdateManyWithoutTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedUpdateManyWithoutTeamNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedUpdateManyWithoutTeamNestedInput
+  creditGrants?: Prisma.CompanyCreditGrantUncheckedUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedUpdateManyWithoutTeamNestedInput
   embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedUpdateManyWithoutTeamNestedInput
@@ -2700,6 +2842,7 @@ export type TeamCreateWithoutCatalogVersionsInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
@@ -2707,6 +2850,7 @@ export type TeamCreateWithoutCatalogVersionsInput = {
   catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeCreateNestedManyWithoutTeamInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryCreateNestedManyWithoutTeamInput
   catalogConfigs?: Prisma.CatalogConfigCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateCreateNestedManyWithoutTeamInput
   templateInstalls?: Prisma.TemplateInstallCreateNestedManyWithoutTeamInput
@@ -2730,6 +2874,7 @@ export type TeamCreateWithoutCatalogVersionsInput = {
   supportTickets?: Prisma.SupportTicketCreateNestedManyWithoutTeamInput
   arcenCompanies?: Prisma.ArcenCompanyCreateNestedManyWithoutTeamInput
   addOnGrants?: Prisma.CompanyAddOnGrantCreateNestedManyWithoutTeamInput
+  creditGrants?: Prisma.CompanyCreditGrantCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyCreateNestedManyWithoutTeamInput
   embedAccessTokens?: Prisma.EmbedAccessTokenCreateNestedManyWithoutTeamInput
@@ -2749,6 +2894,7 @@ export type TeamUncheckedCreateWithoutCatalogVersionsInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileUncheckedCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
@@ -2756,6 +2902,7 @@ export type TeamUncheckedCreateWithoutCatalogVersionsInput = {
   catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedCreateNestedManyWithoutTeamInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedCreateNestedManyWithoutTeamInput
   catalogConfigs?: Prisma.CatalogConfigUncheckedCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateUncheckedCreateNestedManyWithoutTeamInput
   templateInstalls?: Prisma.TemplateInstallUncheckedCreateNestedManyWithoutTeamInput
@@ -2779,6 +2926,7 @@ export type TeamUncheckedCreateWithoutCatalogVersionsInput = {
   supportTickets?: Prisma.SupportTicketUncheckedCreateNestedManyWithoutTeamInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedCreateNestedManyWithoutTeamInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedCreateNestedManyWithoutTeamInput
+  creditGrants?: Prisma.CompanyCreditGrantUncheckedCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedCreateNestedManyWithoutTeamInput
   embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedCreateNestedManyWithoutTeamInput
@@ -2814,6 +2962,7 @@ export type TeamUpdateWithoutCatalogVersionsInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
@@ -2821,6 +2970,7 @@ export type TeamUpdateWithoutCatalogVersionsInput = {
   catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUpdateManyWithoutTeamNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUpdateManyWithoutTeamNestedInput
   catalogConfigs?: Prisma.CatalogConfigUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUpdateManyWithoutTeamNestedInput
   templateInstalls?: Prisma.TemplateInstallUpdateManyWithoutTeamNestedInput
@@ -2844,6 +2994,7 @@ export type TeamUpdateWithoutCatalogVersionsInput = {
   supportTickets?: Prisma.SupportTicketUpdateManyWithoutTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUpdateManyWithoutTeamNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUpdateManyWithoutTeamNestedInput
+  creditGrants?: Prisma.CompanyCreditGrantUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUpdateManyWithoutTeamNestedInput
   embedAccessTokens?: Prisma.EmbedAccessTokenUpdateManyWithoutTeamNestedInput
@@ -2863,6 +3014,7 @@ export type TeamUncheckedUpdateWithoutCatalogVersionsInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUncheckedUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
@@ -2870,6 +3022,7 @@ export type TeamUncheckedUpdateWithoutCatalogVersionsInput = {
   catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedUpdateManyWithoutTeamNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedUpdateManyWithoutTeamNestedInput
   catalogConfigs?: Prisma.CatalogConfigUncheckedUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUncheckedUpdateManyWithoutTeamNestedInput
   templateInstalls?: Prisma.TemplateInstallUncheckedUpdateManyWithoutTeamNestedInput
@@ -2893,6 +3046,7 @@ export type TeamUncheckedUpdateWithoutCatalogVersionsInput = {
   supportTickets?: Prisma.SupportTicketUncheckedUpdateManyWithoutTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedUpdateManyWithoutTeamNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedUpdateManyWithoutTeamNestedInput
+  creditGrants?: Prisma.CompanyCreditGrantUncheckedUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedUpdateManyWithoutTeamNestedInput
   embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedUpdateManyWithoutTeamNestedInput
@@ -2912,6 +3066,7 @@ export type TeamCreateWithoutCatalogConfigsInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
@@ -2919,6 +3074,7 @@ export type TeamCreateWithoutCatalogConfigsInput = {
   catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeCreateNestedManyWithoutTeamInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryCreateNestedManyWithoutTeamInput
   catalogVersions?: Prisma.CatalogVersionCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateCreateNestedManyWithoutTeamInput
   templateInstalls?: Prisma.TemplateInstallCreateNestedManyWithoutTeamInput
@@ -2942,6 +3098,7 @@ export type TeamCreateWithoutCatalogConfigsInput = {
   supportTickets?: Prisma.SupportTicketCreateNestedManyWithoutTeamInput
   arcenCompanies?: Prisma.ArcenCompanyCreateNestedManyWithoutTeamInput
   addOnGrants?: Prisma.CompanyAddOnGrantCreateNestedManyWithoutTeamInput
+  creditGrants?: Prisma.CompanyCreditGrantCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyCreateNestedManyWithoutTeamInput
   embedAccessTokens?: Prisma.EmbedAccessTokenCreateNestedManyWithoutTeamInput
@@ -2961,6 +3118,7 @@ export type TeamUncheckedCreateWithoutCatalogConfigsInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileUncheckedCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
@@ -2968,6 +3126,7 @@ export type TeamUncheckedCreateWithoutCatalogConfigsInput = {
   catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedCreateNestedManyWithoutTeamInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedCreateNestedManyWithoutTeamInput
   catalogVersions?: Prisma.CatalogVersionUncheckedCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateUncheckedCreateNestedManyWithoutTeamInput
   templateInstalls?: Prisma.TemplateInstallUncheckedCreateNestedManyWithoutTeamInput
@@ -2991,6 +3150,7 @@ export type TeamUncheckedCreateWithoutCatalogConfigsInput = {
   supportTickets?: Prisma.SupportTicketUncheckedCreateNestedManyWithoutTeamInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedCreateNestedManyWithoutTeamInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedCreateNestedManyWithoutTeamInput
+  creditGrants?: Prisma.CompanyCreditGrantUncheckedCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedCreateNestedManyWithoutTeamInput
   embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedCreateNestedManyWithoutTeamInput
@@ -3026,6 +3186,7 @@ export type TeamUpdateWithoutCatalogConfigsInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
@@ -3033,6 +3194,7 @@ export type TeamUpdateWithoutCatalogConfigsInput = {
   catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUpdateManyWithoutTeamNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUpdateManyWithoutTeamNestedInput
   catalogVersions?: Prisma.CatalogVersionUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUpdateManyWithoutTeamNestedInput
   templateInstalls?: Prisma.TemplateInstallUpdateManyWithoutTeamNestedInput
@@ -3056,6 +3218,7 @@ export type TeamUpdateWithoutCatalogConfigsInput = {
   supportTickets?: Prisma.SupportTicketUpdateManyWithoutTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUpdateManyWithoutTeamNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUpdateManyWithoutTeamNestedInput
+  creditGrants?: Prisma.CompanyCreditGrantUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUpdateManyWithoutTeamNestedInput
   embedAccessTokens?: Prisma.EmbedAccessTokenUpdateManyWithoutTeamNestedInput
@@ -3075,6 +3238,7 @@ export type TeamUncheckedUpdateWithoutCatalogConfigsInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUncheckedUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
@@ -3082,6 +3246,7 @@ export type TeamUncheckedUpdateWithoutCatalogConfigsInput = {
   catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedUpdateManyWithoutTeamNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedUpdateManyWithoutTeamNestedInput
   catalogVersions?: Prisma.CatalogVersionUncheckedUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUncheckedUpdateManyWithoutTeamNestedInput
   templateInstalls?: Prisma.TemplateInstallUncheckedUpdateManyWithoutTeamNestedInput
@@ -3105,6 +3270,7 @@ export type TeamUncheckedUpdateWithoutCatalogConfigsInput = {
   supportTickets?: Prisma.SupportTicketUncheckedUpdateManyWithoutTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedUpdateManyWithoutTeamNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedUpdateManyWithoutTeamNestedInput
+  creditGrants?: Prisma.CompanyCreditGrantUncheckedUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedUpdateManyWithoutTeamNestedInput
   embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedUpdateManyWithoutTeamNestedInput
@@ -3124,6 +3290,7 @@ export type TeamCreateWithoutBillingTemplatesInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
@@ -3131,6 +3298,7 @@ export type TeamCreateWithoutBillingTemplatesInput = {
   catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeCreateNestedManyWithoutTeamInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryCreateNestedManyWithoutTeamInput
   catalogVersions?: Prisma.CatalogVersionCreateNestedManyWithoutTeamInput
   catalogConfigs?: Prisma.CatalogConfigCreateNestedManyWithoutTeamInput
   templateInstalls?: Prisma.TemplateInstallCreateNestedManyWithoutTeamInput
@@ -3154,6 +3322,7 @@ export type TeamCreateWithoutBillingTemplatesInput = {
   supportTickets?: Prisma.SupportTicketCreateNestedManyWithoutTeamInput
   arcenCompanies?: Prisma.ArcenCompanyCreateNestedManyWithoutTeamInput
   addOnGrants?: Prisma.CompanyAddOnGrantCreateNestedManyWithoutTeamInput
+  creditGrants?: Prisma.CompanyCreditGrantCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyCreateNestedManyWithoutTeamInput
   embedAccessTokens?: Prisma.EmbedAccessTokenCreateNestedManyWithoutTeamInput
@@ -3173,6 +3342,7 @@ export type TeamUncheckedCreateWithoutBillingTemplatesInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileUncheckedCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
@@ -3180,6 +3350,7 @@ export type TeamUncheckedCreateWithoutBillingTemplatesInput = {
   catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedCreateNestedManyWithoutTeamInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedCreateNestedManyWithoutTeamInput
   catalogVersions?: Prisma.CatalogVersionUncheckedCreateNestedManyWithoutTeamInput
   catalogConfigs?: Prisma.CatalogConfigUncheckedCreateNestedManyWithoutTeamInput
   templateInstalls?: Prisma.TemplateInstallUncheckedCreateNestedManyWithoutTeamInput
@@ -3203,6 +3374,7 @@ export type TeamUncheckedCreateWithoutBillingTemplatesInput = {
   supportTickets?: Prisma.SupportTicketUncheckedCreateNestedManyWithoutTeamInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedCreateNestedManyWithoutTeamInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedCreateNestedManyWithoutTeamInput
+  creditGrants?: Prisma.CompanyCreditGrantUncheckedCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedCreateNestedManyWithoutTeamInput
   embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedCreateNestedManyWithoutTeamInput
@@ -3238,6 +3410,7 @@ export type TeamUpdateWithoutBillingTemplatesInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
@@ -3245,6 +3418,7 @@ export type TeamUpdateWithoutBillingTemplatesInput = {
   catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUpdateManyWithoutTeamNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUpdateManyWithoutTeamNestedInput
   catalogVersions?: Prisma.CatalogVersionUpdateManyWithoutTeamNestedInput
   catalogConfigs?: Prisma.CatalogConfigUpdateManyWithoutTeamNestedInput
   templateInstalls?: Prisma.TemplateInstallUpdateManyWithoutTeamNestedInput
@@ -3268,6 +3442,7 @@ export type TeamUpdateWithoutBillingTemplatesInput = {
   supportTickets?: Prisma.SupportTicketUpdateManyWithoutTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUpdateManyWithoutTeamNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUpdateManyWithoutTeamNestedInput
+  creditGrants?: Prisma.CompanyCreditGrantUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUpdateManyWithoutTeamNestedInput
   embedAccessTokens?: Prisma.EmbedAccessTokenUpdateManyWithoutTeamNestedInput
@@ -3287,6 +3462,7 @@ export type TeamUncheckedUpdateWithoutBillingTemplatesInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUncheckedUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
@@ -3294,6 +3470,7 @@ export type TeamUncheckedUpdateWithoutBillingTemplatesInput = {
   catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedUpdateManyWithoutTeamNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedUpdateManyWithoutTeamNestedInput
   catalogVersions?: Prisma.CatalogVersionUncheckedUpdateManyWithoutTeamNestedInput
   catalogConfigs?: Prisma.CatalogConfigUncheckedUpdateManyWithoutTeamNestedInput
   templateInstalls?: Prisma.TemplateInstallUncheckedUpdateManyWithoutTeamNestedInput
@@ -3317,6 +3494,7 @@ export type TeamUncheckedUpdateWithoutBillingTemplatesInput = {
   supportTickets?: Prisma.SupportTicketUncheckedUpdateManyWithoutTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedUpdateManyWithoutTeamNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedUpdateManyWithoutTeamNestedInput
+  creditGrants?: Prisma.CompanyCreditGrantUncheckedUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedUpdateManyWithoutTeamNestedInput
   embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedUpdateManyWithoutTeamNestedInput
@@ -3336,6 +3514,7 @@ export type TeamCreateWithoutTemplateInstallsInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
@@ -3343,6 +3522,7 @@ export type TeamCreateWithoutTemplateInstallsInput = {
   catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeCreateNestedManyWithoutTeamInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryCreateNestedManyWithoutTeamInput
   catalogVersions?: Prisma.CatalogVersionCreateNestedManyWithoutTeamInput
   catalogConfigs?: Prisma.CatalogConfigCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateCreateNestedManyWithoutTeamInput
@@ -3366,6 +3546,7 @@ export type TeamCreateWithoutTemplateInstallsInput = {
   supportTickets?: Prisma.SupportTicketCreateNestedManyWithoutTeamInput
   arcenCompanies?: Prisma.ArcenCompanyCreateNestedManyWithoutTeamInput
   addOnGrants?: Prisma.CompanyAddOnGrantCreateNestedManyWithoutTeamInput
+  creditGrants?: Prisma.CompanyCreditGrantCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyCreateNestedManyWithoutTeamInput
   embedAccessTokens?: Prisma.EmbedAccessTokenCreateNestedManyWithoutTeamInput
@@ -3385,6 +3566,7 @@ export type TeamUncheckedCreateWithoutTemplateInstallsInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileUncheckedCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
@@ -3392,6 +3574,7 @@ export type TeamUncheckedCreateWithoutTemplateInstallsInput = {
   catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedCreateNestedManyWithoutTeamInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedCreateNestedManyWithoutTeamInput
   catalogVersions?: Prisma.CatalogVersionUncheckedCreateNestedManyWithoutTeamInput
   catalogConfigs?: Prisma.CatalogConfigUncheckedCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateUncheckedCreateNestedManyWithoutTeamInput
@@ -3415,6 +3598,7 @@ export type TeamUncheckedCreateWithoutTemplateInstallsInput = {
   supportTickets?: Prisma.SupportTicketUncheckedCreateNestedManyWithoutTeamInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedCreateNestedManyWithoutTeamInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedCreateNestedManyWithoutTeamInput
+  creditGrants?: Prisma.CompanyCreditGrantUncheckedCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedCreateNestedManyWithoutTeamInput
   embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedCreateNestedManyWithoutTeamInput
@@ -3450,6 +3634,7 @@ export type TeamUpdateWithoutTemplateInstallsInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
@@ -3457,6 +3642,7 @@ export type TeamUpdateWithoutTemplateInstallsInput = {
   catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUpdateManyWithoutTeamNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUpdateManyWithoutTeamNestedInput
   catalogVersions?: Prisma.CatalogVersionUpdateManyWithoutTeamNestedInput
   catalogConfigs?: Prisma.CatalogConfigUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUpdateManyWithoutTeamNestedInput
@@ -3480,6 +3666,7 @@ export type TeamUpdateWithoutTemplateInstallsInput = {
   supportTickets?: Prisma.SupportTicketUpdateManyWithoutTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUpdateManyWithoutTeamNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUpdateManyWithoutTeamNestedInput
+  creditGrants?: Prisma.CompanyCreditGrantUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUpdateManyWithoutTeamNestedInput
   embedAccessTokens?: Prisma.EmbedAccessTokenUpdateManyWithoutTeamNestedInput
@@ -3499,6 +3686,7 @@ export type TeamUncheckedUpdateWithoutTemplateInstallsInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUncheckedUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
@@ -3506,6 +3694,7 @@ export type TeamUncheckedUpdateWithoutTemplateInstallsInput = {
   catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedUpdateManyWithoutTeamNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedUpdateManyWithoutTeamNestedInput
   catalogVersions?: Prisma.CatalogVersionUncheckedUpdateManyWithoutTeamNestedInput
   catalogConfigs?: Prisma.CatalogConfigUncheckedUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUncheckedUpdateManyWithoutTeamNestedInput
@@ -3529,6 +3718,7 @@ export type TeamUncheckedUpdateWithoutTemplateInstallsInput = {
   supportTickets?: Prisma.SupportTicketUncheckedUpdateManyWithoutTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedUpdateManyWithoutTeamNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedUpdateManyWithoutTeamNestedInput
+  creditGrants?: Prisma.CompanyCreditGrantUncheckedUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedUpdateManyWithoutTeamNestedInput
   embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedUpdateManyWithoutTeamNestedInput
@@ -3548,6 +3738,7 @@ export type TeamCreateWithoutTaxProfileInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
@@ -3555,6 +3746,7 @@ export type TeamCreateWithoutTaxProfileInput = {
   catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeCreateNestedManyWithoutTeamInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryCreateNestedManyWithoutTeamInput
   catalogVersions?: Prisma.CatalogVersionCreateNestedManyWithoutTeamInput
   catalogConfigs?: Prisma.CatalogConfigCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateCreateNestedManyWithoutTeamInput
@@ -3578,6 +3770,7 @@ export type TeamCreateWithoutTaxProfileInput = {
   supportTickets?: Prisma.SupportTicketCreateNestedManyWithoutTeamInput
   arcenCompanies?: Prisma.ArcenCompanyCreateNestedManyWithoutTeamInput
   addOnGrants?: Prisma.CompanyAddOnGrantCreateNestedManyWithoutTeamInput
+  creditGrants?: Prisma.CompanyCreditGrantCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyCreateNestedManyWithoutTeamInput
   embedAccessTokens?: Prisma.EmbedAccessTokenCreateNestedManyWithoutTeamInput
@@ -3597,6 +3790,7 @@ export type TeamUncheckedCreateWithoutTaxProfileInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileUncheckedCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
@@ -3604,6 +3798,7 @@ export type TeamUncheckedCreateWithoutTaxProfileInput = {
   catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedCreateNestedManyWithoutTeamInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedCreateNestedManyWithoutTeamInput
   catalogVersions?: Prisma.CatalogVersionUncheckedCreateNestedManyWithoutTeamInput
   catalogConfigs?: Prisma.CatalogConfigUncheckedCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateUncheckedCreateNestedManyWithoutTeamInput
@@ -3627,6 +3822,7 @@ export type TeamUncheckedCreateWithoutTaxProfileInput = {
   supportTickets?: Prisma.SupportTicketUncheckedCreateNestedManyWithoutTeamInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedCreateNestedManyWithoutTeamInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedCreateNestedManyWithoutTeamInput
+  creditGrants?: Prisma.CompanyCreditGrantUncheckedCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedCreateNestedManyWithoutTeamInput
   embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedCreateNestedManyWithoutTeamInput
@@ -3662,6 +3858,7 @@ export type TeamUpdateWithoutTaxProfileInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
@@ -3669,6 +3866,7 @@ export type TeamUpdateWithoutTaxProfileInput = {
   catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUpdateManyWithoutTeamNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUpdateManyWithoutTeamNestedInput
   catalogVersions?: Prisma.CatalogVersionUpdateManyWithoutTeamNestedInput
   catalogConfigs?: Prisma.CatalogConfigUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUpdateManyWithoutTeamNestedInput
@@ -3692,6 +3890,7 @@ export type TeamUpdateWithoutTaxProfileInput = {
   supportTickets?: Prisma.SupportTicketUpdateManyWithoutTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUpdateManyWithoutTeamNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUpdateManyWithoutTeamNestedInput
+  creditGrants?: Prisma.CompanyCreditGrantUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUpdateManyWithoutTeamNestedInput
   embedAccessTokens?: Prisma.EmbedAccessTokenUpdateManyWithoutTeamNestedInput
@@ -3711,6 +3910,7 @@ export type TeamUncheckedUpdateWithoutTaxProfileInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUncheckedUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
@@ -3718,6 +3918,7 @@ export type TeamUncheckedUpdateWithoutTaxProfileInput = {
   catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedUpdateManyWithoutTeamNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedUpdateManyWithoutTeamNestedInput
   catalogVersions?: Prisma.CatalogVersionUncheckedUpdateManyWithoutTeamNestedInput
   catalogConfigs?: Prisma.CatalogConfigUncheckedUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUncheckedUpdateManyWithoutTeamNestedInput
@@ -3741,6 +3942,7 @@ export type TeamUncheckedUpdateWithoutTaxProfileInput = {
   supportTickets?: Prisma.SupportTicketUncheckedUpdateManyWithoutTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedUpdateManyWithoutTeamNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedUpdateManyWithoutTeamNestedInput
+  creditGrants?: Prisma.CompanyCreditGrantUncheckedUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedUpdateManyWithoutTeamNestedInput
   embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedUpdateManyWithoutTeamNestedInput
@@ -3760,6 +3962,7 @@ export type TeamCreateWithoutInvoiceSequencesInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
@@ -3767,6 +3970,7 @@ export type TeamCreateWithoutInvoiceSequencesInput = {
   catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeCreateNestedManyWithoutTeamInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryCreateNestedManyWithoutTeamInput
   catalogVersions?: Prisma.CatalogVersionCreateNestedManyWithoutTeamInput
   catalogConfigs?: Prisma.CatalogConfigCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateCreateNestedManyWithoutTeamInput
@@ -3790,6 +3994,7 @@ export type TeamCreateWithoutInvoiceSequencesInput = {
   supportTickets?: Prisma.SupportTicketCreateNestedManyWithoutTeamInput
   arcenCompanies?: Prisma.ArcenCompanyCreateNestedManyWithoutTeamInput
   addOnGrants?: Prisma.CompanyAddOnGrantCreateNestedManyWithoutTeamInput
+  creditGrants?: Prisma.CompanyCreditGrantCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyCreateNestedManyWithoutTeamInput
   embedAccessTokens?: Prisma.EmbedAccessTokenCreateNestedManyWithoutTeamInput
@@ -3809,6 +4014,7 @@ export type TeamUncheckedCreateWithoutInvoiceSequencesInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileUncheckedCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
@@ -3816,6 +4022,7 @@ export type TeamUncheckedCreateWithoutInvoiceSequencesInput = {
   catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedCreateNestedManyWithoutTeamInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedCreateNestedManyWithoutTeamInput
   catalogVersions?: Prisma.CatalogVersionUncheckedCreateNestedManyWithoutTeamInput
   catalogConfigs?: Prisma.CatalogConfigUncheckedCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateUncheckedCreateNestedManyWithoutTeamInput
@@ -3839,6 +4046,7 @@ export type TeamUncheckedCreateWithoutInvoiceSequencesInput = {
   supportTickets?: Prisma.SupportTicketUncheckedCreateNestedManyWithoutTeamInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedCreateNestedManyWithoutTeamInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedCreateNestedManyWithoutTeamInput
+  creditGrants?: Prisma.CompanyCreditGrantUncheckedCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedCreateNestedManyWithoutTeamInput
   embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedCreateNestedManyWithoutTeamInput
@@ -3874,6 +4082,7 @@ export type TeamUpdateWithoutInvoiceSequencesInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
@@ -3881,6 +4090,7 @@ export type TeamUpdateWithoutInvoiceSequencesInput = {
   catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUpdateManyWithoutTeamNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUpdateManyWithoutTeamNestedInput
   catalogVersions?: Prisma.CatalogVersionUpdateManyWithoutTeamNestedInput
   catalogConfigs?: Prisma.CatalogConfigUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUpdateManyWithoutTeamNestedInput
@@ -3904,6 +4114,7 @@ export type TeamUpdateWithoutInvoiceSequencesInput = {
   supportTickets?: Prisma.SupportTicketUpdateManyWithoutTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUpdateManyWithoutTeamNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUpdateManyWithoutTeamNestedInput
+  creditGrants?: Prisma.CompanyCreditGrantUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUpdateManyWithoutTeamNestedInput
   embedAccessTokens?: Prisma.EmbedAccessTokenUpdateManyWithoutTeamNestedInput
@@ -3923,6 +4134,7 @@ export type TeamUncheckedUpdateWithoutInvoiceSequencesInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUncheckedUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
@@ -3930,6 +4142,7 @@ export type TeamUncheckedUpdateWithoutInvoiceSequencesInput = {
   catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedUpdateManyWithoutTeamNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedUpdateManyWithoutTeamNestedInput
   catalogVersions?: Prisma.CatalogVersionUncheckedUpdateManyWithoutTeamNestedInput
   catalogConfigs?: Prisma.CatalogConfigUncheckedUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUncheckedUpdateManyWithoutTeamNestedInput
@@ -3953,6 +4166,7 @@ export type TeamUncheckedUpdateWithoutInvoiceSequencesInput = {
   supportTickets?: Prisma.SupportTicketUncheckedUpdateManyWithoutTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedUpdateManyWithoutTeamNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedUpdateManyWithoutTeamNestedInput
+  creditGrants?: Prisma.CompanyCreditGrantUncheckedUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedUpdateManyWithoutTeamNestedInput
   embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedUpdateManyWithoutTeamNestedInput
@@ -3972,6 +4186,7 @@ export type TeamCreateWithoutInvoicesInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
@@ -3979,6 +4194,7 @@ export type TeamCreateWithoutInvoicesInput = {
   catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeCreateNestedManyWithoutTeamInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryCreateNestedManyWithoutTeamInput
   catalogVersions?: Prisma.CatalogVersionCreateNestedManyWithoutTeamInput
   catalogConfigs?: Prisma.CatalogConfigCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateCreateNestedManyWithoutTeamInput
@@ -4002,6 +4218,7 @@ export type TeamCreateWithoutInvoicesInput = {
   supportTickets?: Prisma.SupportTicketCreateNestedManyWithoutTeamInput
   arcenCompanies?: Prisma.ArcenCompanyCreateNestedManyWithoutTeamInput
   addOnGrants?: Prisma.CompanyAddOnGrantCreateNestedManyWithoutTeamInput
+  creditGrants?: Prisma.CompanyCreditGrantCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyCreateNestedManyWithoutTeamInput
   embedAccessTokens?: Prisma.EmbedAccessTokenCreateNestedManyWithoutTeamInput
@@ -4021,6 +4238,7 @@ export type TeamUncheckedCreateWithoutInvoicesInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileUncheckedCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
@@ -4028,6 +4246,7 @@ export type TeamUncheckedCreateWithoutInvoicesInput = {
   catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedCreateNestedManyWithoutTeamInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedCreateNestedManyWithoutTeamInput
   catalogVersions?: Prisma.CatalogVersionUncheckedCreateNestedManyWithoutTeamInput
   catalogConfigs?: Prisma.CatalogConfigUncheckedCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateUncheckedCreateNestedManyWithoutTeamInput
@@ -4051,6 +4270,7 @@ export type TeamUncheckedCreateWithoutInvoicesInput = {
   supportTickets?: Prisma.SupportTicketUncheckedCreateNestedManyWithoutTeamInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedCreateNestedManyWithoutTeamInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedCreateNestedManyWithoutTeamInput
+  creditGrants?: Prisma.CompanyCreditGrantUncheckedCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedCreateNestedManyWithoutTeamInput
   embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedCreateNestedManyWithoutTeamInput
@@ -4086,6 +4306,7 @@ export type TeamUpdateWithoutInvoicesInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
@@ -4093,6 +4314,7 @@ export type TeamUpdateWithoutInvoicesInput = {
   catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUpdateManyWithoutTeamNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUpdateManyWithoutTeamNestedInput
   catalogVersions?: Prisma.CatalogVersionUpdateManyWithoutTeamNestedInput
   catalogConfigs?: Prisma.CatalogConfigUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUpdateManyWithoutTeamNestedInput
@@ -4116,6 +4338,7 @@ export type TeamUpdateWithoutInvoicesInput = {
   supportTickets?: Prisma.SupportTicketUpdateManyWithoutTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUpdateManyWithoutTeamNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUpdateManyWithoutTeamNestedInput
+  creditGrants?: Prisma.CompanyCreditGrantUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUpdateManyWithoutTeamNestedInput
   embedAccessTokens?: Prisma.EmbedAccessTokenUpdateManyWithoutTeamNestedInput
@@ -4135,6 +4358,7 @@ export type TeamUncheckedUpdateWithoutInvoicesInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUncheckedUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
@@ -4142,6 +4366,7 @@ export type TeamUncheckedUpdateWithoutInvoicesInput = {
   catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedUpdateManyWithoutTeamNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedUpdateManyWithoutTeamNestedInput
   catalogVersions?: Prisma.CatalogVersionUncheckedUpdateManyWithoutTeamNestedInput
   catalogConfigs?: Prisma.CatalogConfigUncheckedUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUncheckedUpdateManyWithoutTeamNestedInput
@@ -4165,6 +4390,7 @@ export type TeamUncheckedUpdateWithoutInvoicesInput = {
   supportTickets?: Prisma.SupportTicketUncheckedUpdateManyWithoutTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedUpdateManyWithoutTeamNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedUpdateManyWithoutTeamNestedInput
+  creditGrants?: Prisma.CompanyCreditGrantUncheckedUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedUpdateManyWithoutTeamNestedInput
   embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedUpdateManyWithoutTeamNestedInput
@@ -4184,6 +4410,7 @@ export type TeamCreateWithoutAuditEventsInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
@@ -4191,6 +4418,7 @@ export type TeamCreateWithoutAuditEventsInput = {
   catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeCreateNestedManyWithoutTeamInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryCreateNestedManyWithoutTeamInput
   catalogVersions?: Prisma.CatalogVersionCreateNestedManyWithoutTeamInput
   catalogConfigs?: Prisma.CatalogConfigCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateCreateNestedManyWithoutTeamInput
@@ -4214,6 +4442,7 @@ export type TeamCreateWithoutAuditEventsInput = {
   supportTickets?: Prisma.SupportTicketCreateNestedManyWithoutTeamInput
   arcenCompanies?: Prisma.ArcenCompanyCreateNestedManyWithoutTeamInput
   addOnGrants?: Prisma.CompanyAddOnGrantCreateNestedManyWithoutTeamInput
+  creditGrants?: Prisma.CompanyCreditGrantCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyCreateNestedManyWithoutTeamInput
   embedAccessTokens?: Prisma.EmbedAccessTokenCreateNestedManyWithoutTeamInput
@@ -4233,6 +4462,7 @@ export type TeamUncheckedCreateWithoutAuditEventsInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileUncheckedCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
@@ -4240,6 +4470,7 @@ export type TeamUncheckedCreateWithoutAuditEventsInput = {
   catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedCreateNestedManyWithoutTeamInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedCreateNestedManyWithoutTeamInput
   catalogVersions?: Prisma.CatalogVersionUncheckedCreateNestedManyWithoutTeamInput
   catalogConfigs?: Prisma.CatalogConfigUncheckedCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateUncheckedCreateNestedManyWithoutTeamInput
@@ -4263,6 +4494,7 @@ export type TeamUncheckedCreateWithoutAuditEventsInput = {
   supportTickets?: Prisma.SupportTicketUncheckedCreateNestedManyWithoutTeamInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedCreateNestedManyWithoutTeamInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedCreateNestedManyWithoutTeamInput
+  creditGrants?: Prisma.CompanyCreditGrantUncheckedCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedCreateNestedManyWithoutTeamInput
   embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedCreateNestedManyWithoutTeamInput
@@ -4298,6 +4530,7 @@ export type TeamUpdateWithoutAuditEventsInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
@@ -4305,6 +4538,7 @@ export type TeamUpdateWithoutAuditEventsInput = {
   catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUpdateManyWithoutTeamNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUpdateManyWithoutTeamNestedInput
   catalogVersions?: Prisma.CatalogVersionUpdateManyWithoutTeamNestedInput
   catalogConfigs?: Prisma.CatalogConfigUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUpdateManyWithoutTeamNestedInput
@@ -4328,6 +4562,7 @@ export type TeamUpdateWithoutAuditEventsInput = {
   supportTickets?: Prisma.SupportTicketUpdateManyWithoutTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUpdateManyWithoutTeamNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUpdateManyWithoutTeamNestedInput
+  creditGrants?: Prisma.CompanyCreditGrantUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUpdateManyWithoutTeamNestedInput
   embedAccessTokens?: Prisma.EmbedAccessTokenUpdateManyWithoutTeamNestedInput
@@ -4347,6 +4582,7 @@ export type TeamUncheckedUpdateWithoutAuditEventsInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUncheckedUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
@@ -4354,6 +4590,7 @@ export type TeamUncheckedUpdateWithoutAuditEventsInput = {
   catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedUpdateManyWithoutTeamNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedUpdateManyWithoutTeamNestedInput
   catalogVersions?: Prisma.CatalogVersionUncheckedUpdateManyWithoutTeamNestedInput
   catalogConfigs?: Prisma.CatalogConfigUncheckedUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUncheckedUpdateManyWithoutTeamNestedInput
@@ -4377,6 +4614,7 @@ export type TeamUncheckedUpdateWithoutAuditEventsInput = {
   supportTickets?: Prisma.SupportTicketUncheckedUpdateManyWithoutTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedUpdateManyWithoutTeamNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedUpdateManyWithoutTeamNestedInput
+  creditGrants?: Prisma.CompanyCreditGrantUncheckedUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedUpdateManyWithoutTeamNestedInput
   embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedUpdateManyWithoutTeamNestedInput
@@ -4396,6 +4634,7 @@ export type TeamCreateWithoutBillingEventsInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
@@ -4403,6 +4642,7 @@ export type TeamCreateWithoutBillingEventsInput = {
   catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeCreateNestedManyWithoutTeamInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryCreateNestedManyWithoutTeamInput
   catalogVersions?: Prisma.CatalogVersionCreateNestedManyWithoutTeamInput
   catalogConfigs?: Prisma.CatalogConfigCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateCreateNestedManyWithoutTeamInput
@@ -4426,6 +4666,7 @@ export type TeamCreateWithoutBillingEventsInput = {
   supportTickets?: Prisma.SupportTicketCreateNestedManyWithoutTeamInput
   arcenCompanies?: Prisma.ArcenCompanyCreateNestedManyWithoutTeamInput
   addOnGrants?: Prisma.CompanyAddOnGrantCreateNestedManyWithoutTeamInput
+  creditGrants?: Prisma.CompanyCreditGrantCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyCreateNestedManyWithoutTeamInput
   embedAccessTokens?: Prisma.EmbedAccessTokenCreateNestedManyWithoutTeamInput
@@ -4445,6 +4686,7 @@ export type TeamUncheckedCreateWithoutBillingEventsInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileUncheckedCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
@@ -4452,6 +4694,7 @@ export type TeamUncheckedCreateWithoutBillingEventsInput = {
   catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedCreateNestedManyWithoutTeamInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedCreateNestedManyWithoutTeamInput
   catalogVersions?: Prisma.CatalogVersionUncheckedCreateNestedManyWithoutTeamInput
   catalogConfigs?: Prisma.CatalogConfigUncheckedCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateUncheckedCreateNestedManyWithoutTeamInput
@@ -4475,6 +4718,7 @@ export type TeamUncheckedCreateWithoutBillingEventsInput = {
   supportTickets?: Prisma.SupportTicketUncheckedCreateNestedManyWithoutTeamInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedCreateNestedManyWithoutTeamInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedCreateNestedManyWithoutTeamInput
+  creditGrants?: Prisma.CompanyCreditGrantUncheckedCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedCreateNestedManyWithoutTeamInput
   embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedCreateNestedManyWithoutTeamInput
@@ -4510,6 +4754,7 @@ export type TeamUpdateWithoutBillingEventsInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
@@ -4517,6 +4762,7 @@ export type TeamUpdateWithoutBillingEventsInput = {
   catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUpdateManyWithoutTeamNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUpdateManyWithoutTeamNestedInput
   catalogVersions?: Prisma.CatalogVersionUpdateManyWithoutTeamNestedInput
   catalogConfigs?: Prisma.CatalogConfigUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUpdateManyWithoutTeamNestedInput
@@ -4540,6 +4786,7 @@ export type TeamUpdateWithoutBillingEventsInput = {
   supportTickets?: Prisma.SupportTicketUpdateManyWithoutTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUpdateManyWithoutTeamNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUpdateManyWithoutTeamNestedInput
+  creditGrants?: Prisma.CompanyCreditGrantUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUpdateManyWithoutTeamNestedInput
   embedAccessTokens?: Prisma.EmbedAccessTokenUpdateManyWithoutTeamNestedInput
@@ -4559,6 +4806,7 @@ export type TeamUncheckedUpdateWithoutBillingEventsInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUncheckedUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
@@ -4566,6 +4814,7 @@ export type TeamUncheckedUpdateWithoutBillingEventsInput = {
   catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedUpdateManyWithoutTeamNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedUpdateManyWithoutTeamNestedInput
   catalogVersions?: Prisma.CatalogVersionUncheckedUpdateManyWithoutTeamNestedInput
   catalogConfigs?: Prisma.CatalogConfigUncheckedUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUncheckedUpdateManyWithoutTeamNestedInput
@@ -4589,6 +4838,7 @@ export type TeamUncheckedUpdateWithoutBillingEventsInput = {
   supportTickets?: Prisma.SupportTicketUncheckedUpdateManyWithoutTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedUpdateManyWithoutTeamNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedUpdateManyWithoutTeamNestedInput
+  creditGrants?: Prisma.CompanyCreditGrantUncheckedUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedUpdateManyWithoutTeamNestedInput
   embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedUpdateManyWithoutTeamNestedInput
@@ -4608,6 +4858,7 @@ export type TeamCreateWithoutSubscriptionStatesInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
@@ -4615,6 +4866,7 @@ export type TeamCreateWithoutSubscriptionStatesInput = {
   catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeCreateNestedManyWithoutTeamInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryCreateNestedManyWithoutTeamInput
   catalogVersions?: Prisma.CatalogVersionCreateNestedManyWithoutTeamInput
   catalogConfigs?: Prisma.CatalogConfigCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateCreateNestedManyWithoutTeamInput
@@ -4638,6 +4890,7 @@ export type TeamCreateWithoutSubscriptionStatesInput = {
   supportTickets?: Prisma.SupportTicketCreateNestedManyWithoutTeamInput
   arcenCompanies?: Prisma.ArcenCompanyCreateNestedManyWithoutTeamInput
   addOnGrants?: Prisma.CompanyAddOnGrantCreateNestedManyWithoutTeamInput
+  creditGrants?: Prisma.CompanyCreditGrantCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyCreateNestedManyWithoutTeamInput
   embedAccessTokens?: Prisma.EmbedAccessTokenCreateNestedManyWithoutTeamInput
@@ -4657,6 +4910,7 @@ export type TeamUncheckedCreateWithoutSubscriptionStatesInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileUncheckedCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
@@ -4664,6 +4918,7 @@ export type TeamUncheckedCreateWithoutSubscriptionStatesInput = {
   catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedCreateNestedManyWithoutTeamInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedCreateNestedManyWithoutTeamInput
   catalogVersions?: Prisma.CatalogVersionUncheckedCreateNestedManyWithoutTeamInput
   catalogConfigs?: Prisma.CatalogConfigUncheckedCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateUncheckedCreateNestedManyWithoutTeamInput
@@ -4687,6 +4942,7 @@ export type TeamUncheckedCreateWithoutSubscriptionStatesInput = {
   supportTickets?: Prisma.SupportTicketUncheckedCreateNestedManyWithoutTeamInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedCreateNestedManyWithoutTeamInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedCreateNestedManyWithoutTeamInput
+  creditGrants?: Prisma.CompanyCreditGrantUncheckedCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedCreateNestedManyWithoutTeamInput
   embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedCreateNestedManyWithoutTeamInput
@@ -4722,6 +4978,7 @@ export type TeamUpdateWithoutSubscriptionStatesInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
@@ -4729,6 +4986,7 @@ export type TeamUpdateWithoutSubscriptionStatesInput = {
   catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUpdateManyWithoutTeamNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUpdateManyWithoutTeamNestedInput
   catalogVersions?: Prisma.CatalogVersionUpdateManyWithoutTeamNestedInput
   catalogConfigs?: Prisma.CatalogConfigUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUpdateManyWithoutTeamNestedInput
@@ -4752,6 +5010,7 @@ export type TeamUpdateWithoutSubscriptionStatesInput = {
   supportTickets?: Prisma.SupportTicketUpdateManyWithoutTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUpdateManyWithoutTeamNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUpdateManyWithoutTeamNestedInput
+  creditGrants?: Prisma.CompanyCreditGrantUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUpdateManyWithoutTeamNestedInput
   embedAccessTokens?: Prisma.EmbedAccessTokenUpdateManyWithoutTeamNestedInput
@@ -4771,6 +5030,7 @@ export type TeamUncheckedUpdateWithoutSubscriptionStatesInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUncheckedUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
@@ -4778,6 +5038,7 @@ export type TeamUncheckedUpdateWithoutSubscriptionStatesInput = {
   catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedUpdateManyWithoutTeamNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedUpdateManyWithoutTeamNestedInput
   catalogVersions?: Prisma.CatalogVersionUncheckedUpdateManyWithoutTeamNestedInput
   catalogConfigs?: Prisma.CatalogConfigUncheckedUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUncheckedUpdateManyWithoutTeamNestedInput
@@ -4801,6 +5062,7 @@ export type TeamUncheckedUpdateWithoutSubscriptionStatesInput = {
   supportTickets?: Prisma.SupportTicketUncheckedUpdateManyWithoutTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedUpdateManyWithoutTeamNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedUpdateManyWithoutTeamNestedInput
+  creditGrants?: Prisma.CompanyCreditGrantUncheckedUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedUpdateManyWithoutTeamNestedInput
   embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedUpdateManyWithoutTeamNestedInput
@@ -4820,6 +5082,7 @@ export type TeamCreateWithoutSubscriptionChangeRequestsInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
@@ -4827,6 +5090,7 @@ export type TeamCreateWithoutSubscriptionChangeRequestsInput = {
   catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeCreateNestedManyWithoutTeamInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryCreateNestedManyWithoutTeamInput
   catalogVersions?: Prisma.CatalogVersionCreateNestedManyWithoutTeamInput
   catalogConfigs?: Prisma.CatalogConfigCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateCreateNestedManyWithoutTeamInput
@@ -4850,6 +5114,7 @@ export type TeamCreateWithoutSubscriptionChangeRequestsInput = {
   supportTickets?: Prisma.SupportTicketCreateNestedManyWithoutTeamInput
   arcenCompanies?: Prisma.ArcenCompanyCreateNestedManyWithoutTeamInput
   addOnGrants?: Prisma.CompanyAddOnGrantCreateNestedManyWithoutTeamInput
+  creditGrants?: Prisma.CompanyCreditGrantCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyCreateNestedManyWithoutTeamInput
   embedAccessTokens?: Prisma.EmbedAccessTokenCreateNestedManyWithoutTeamInput
@@ -4869,6 +5134,7 @@ export type TeamUncheckedCreateWithoutSubscriptionChangeRequestsInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileUncheckedCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
@@ -4876,6 +5142,7 @@ export type TeamUncheckedCreateWithoutSubscriptionChangeRequestsInput = {
   catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedCreateNestedManyWithoutTeamInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedCreateNestedManyWithoutTeamInput
   catalogVersions?: Prisma.CatalogVersionUncheckedCreateNestedManyWithoutTeamInput
   catalogConfigs?: Prisma.CatalogConfigUncheckedCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateUncheckedCreateNestedManyWithoutTeamInput
@@ -4899,6 +5166,7 @@ export type TeamUncheckedCreateWithoutSubscriptionChangeRequestsInput = {
   supportTickets?: Prisma.SupportTicketUncheckedCreateNestedManyWithoutTeamInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedCreateNestedManyWithoutTeamInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedCreateNestedManyWithoutTeamInput
+  creditGrants?: Prisma.CompanyCreditGrantUncheckedCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedCreateNestedManyWithoutTeamInput
   embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedCreateNestedManyWithoutTeamInput
@@ -4934,6 +5202,7 @@ export type TeamUpdateWithoutSubscriptionChangeRequestsInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
@@ -4941,6 +5210,7 @@ export type TeamUpdateWithoutSubscriptionChangeRequestsInput = {
   catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUpdateManyWithoutTeamNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUpdateManyWithoutTeamNestedInput
   catalogVersions?: Prisma.CatalogVersionUpdateManyWithoutTeamNestedInput
   catalogConfigs?: Prisma.CatalogConfigUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUpdateManyWithoutTeamNestedInput
@@ -4964,6 +5234,7 @@ export type TeamUpdateWithoutSubscriptionChangeRequestsInput = {
   supportTickets?: Prisma.SupportTicketUpdateManyWithoutTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUpdateManyWithoutTeamNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUpdateManyWithoutTeamNestedInput
+  creditGrants?: Prisma.CompanyCreditGrantUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUpdateManyWithoutTeamNestedInput
   embedAccessTokens?: Prisma.EmbedAccessTokenUpdateManyWithoutTeamNestedInput
@@ -4983,6 +5254,7 @@ export type TeamUncheckedUpdateWithoutSubscriptionChangeRequestsInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUncheckedUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
@@ -4990,6 +5262,7 @@ export type TeamUncheckedUpdateWithoutSubscriptionChangeRequestsInput = {
   catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedUpdateManyWithoutTeamNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedUpdateManyWithoutTeamNestedInput
   catalogVersions?: Prisma.CatalogVersionUncheckedUpdateManyWithoutTeamNestedInput
   catalogConfigs?: Prisma.CatalogConfigUncheckedUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUncheckedUpdateManyWithoutTeamNestedInput
@@ -5013,6 +5286,7 @@ export type TeamUncheckedUpdateWithoutSubscriptionChangeRequestsInput = {
   supportTickets?: Prisma.SupportTicketUncheckedUpdateManyWithoutTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedUpdateManyWithoutTeamNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedUpdateManyWithoutTeamNestedInput
+  creditGrants?: Prisma.CompanyCreditGrantUncheckedUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedUpdateManyWithoutTeamNestedInput
   embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedUpdateManyWithoutTeamNestedInput
@@ -5032,6 +5306,7 @@ export type TeamCreateWithoutPaymentsInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
@@ -5039,6 +5314,7 @@ export type TeamCreateWithoutPaymentsInput = {
   catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeCreateNestedManyWithoutTeamInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryCreateNestedManyWithoutTeamInput
   catalogVersions?: Prisma.CatalogVersionCreateNestedManyWithoutTeamInput
   catalogConfigs?: Prisma.CatalogConfigCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateCreateNestedManyWithoutTeamInput
@@ -5062,6 +5338,7 @@ export type TeamCreateWithoutPaymentsInput = {
   supportTickets?: Prisma.SupportTicketCreateNestedManyWithoutTeamInput
   arcenCompanies?: Prisma.ArcenCompanyCreateNestedManyWithoutTeamInput
   addOnGrants?: Prisma.CompanyAddOnGrantCreateNestedManyWithoutTeamInput
+  creditGrants?: Prisma.CompanyCreditGrantCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyCreateNestedManyWithoutTeamInput
   embedAccessTokens?: Prisma.EmbedAccessTokenCreateNestedManyWithoutTeamInput
@@ -5081,6 +5358,7 @@ export type TeamUncheckedCreateWithoutPaymentsInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileUncheckedCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
@@ -5088,6 +5366,7 @@ export type TeamUncheckedCreateWithoutPaymentsInput = {
   catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedCreateNestedManyWithoutTeamInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedCreateNestedManyWithoutTeamInput
   catalogVersions?: Prisma.CatalogVersionUncheckedCreateNestedManyWithoutTeamInput
   catalogConfigs?: Prisma.CatalogConfigUncheckedCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateUncheckedCreateNestedManyWithoutTeamInput
@@ -5111,6 +5390,7 @@ export type TeamUncheckedCreateWithoutPaymentsInput = {
   supportTickets?: Prisma.SupportTicketUncheckedCreateNestedManyWithoutTeamInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedCreateNestedManyWithoutTeamInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedCreateNestedManyWithoutTeamInput
+  creditGrants?: Prisma.CompanyCreditGrantUncheckedCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedCreateNestedManyWithoutTeamInput
   embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedCreateNestedManyWithoutTeamInput
@@ -5146,6 +5426,7 @@ export type TeamUpdateWithoutPaymentsInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
@@ -5153,6 +5434,7 @@ export type TeamUpdateWithoutPaymentsInput = {
   catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUpdateManyWithoutTeamNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUpdateManyWithoutTeamNestedInput
   catalogVersions?: Prisma.CatalogVersionUpdateManyWithoutTeamNestedInput
   catalogConfigs?: Prisma.CatalogConfigUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUpdateManyWithoutTeamNestedInput
@@ -5176,6 +5458,7 @@ export type TeamUpdateWithoutPaymentsInput = {
   supportTickets?: Prisma.SupportTicketUpdateManyWithoutTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUpdateManyWithoutTeamNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUpdateManyWithoutTeamNestedInput
+  creditGrants?: Prisma.CompanyCreditGrantUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUpdateManyWithoutTeamNestedInput
   embedAccessTokens?: Prisma.EmbedAccessTokenUpdateManyWithoutTeamNestedInput
@@ -5195,6 +5478,7 @@ export type TeamUncheckedUpdateWithoutPaymentsInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUncheckedUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
@@ -5202,6 +5486,7 @@ export type TeamUncheckedUpdateWithoutPaymentsInput = {
   catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedUpdateManyWithoutTeamNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedUpdateManyWithoutTeamNestedInput
   catalogVersions?: Prisma.CatalogVersionUncheckedUpdateManyWithoutTeamNestedInput
   catalogConfigs?: Prisma.CatalogConfigUncheckedUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUncheckedUpdateManyWithoutTeamNestedInput
@@ -5225,6 +5510,7 @@ export type TeamUncheckedUpdateWithoutPaymentsInput = {
   supportTickets?: Prisma.SupportTicketUncheckedUpdateManyWithoutTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedUpdateManyWithoutTeamNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedUpdateManyWithoutTeamNestedInput
+  creditGrants?: Prisma.CompanyCreditGrantUncheckedUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedUpdateManyWithoutTeamNestedInput
   embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedUpdateManyWithoutTeamNestedInput
@@ -5244,6 +5530,7 @@ export type TeamCreateWithoutBillingAdjustmentsInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
@@ -5251,6 +5538,7 @@ export type TeamCreateWithoutBillingAdjustmentsInput = {
   catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeCreateNestedManyWithoutTeamInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryCreateNestedManyWithoutTeamInput
   catalogVersions?: Prisma.CatalogVersionCreateNestedManyWithoutTeamInput
   catalogConfigs?: Prisma.CatalogConfigCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateCreateNestedManyWithoutTeamInput
@@ -5274,6 +5562,7 @@ export type TeamCreateWithoutBillingAdjustmentsInput = {
   supportTickets?: Prisma.SupportTicketCreateNestedManyWithoutTeamInput
   arcenCompanies?: Prisma.ArcenCompanyCreateNestedManyWithoutTeamInput
   addOnGrants?: Prisma.CompanyAddOnGrantCreateNestedManyWithoutTeamInput
+  creditGrants?: Prisma.CompanyCreditGrantCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyCreateNestedManyWithoutTeamInput
   embedAccessTokens?: Prisma.EmbedAccessTokenCreateNestedManyWithoutTeamInput
@@ -5293,6 +5582,7 @@ export type TeamUncheckedCreateWithoutBillingAdjustmentsInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileUncheckedCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
@@ -5300,6 +5590,7 @@ export type TeamUncheckedCreateWithoutBillingAdjustmentsInput = {
   catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedCreateNestedManyWithoutTeamInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedCreateNestedManyWithoutTeamInput
   catalogVersions?: Prisma.CatalogVersionUncheckedCreateNestedManyWithoutTeamInput
   catalogConfigs?: Prisma.CatalogConfigUncheckedCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateUncheckedCreateNestedManyWithoutTeamInput
@@ -5323,6 +5614,7 @@ export type TeamUncheckedCreateWithoutBillingAdjustmentsInput = {
   supportTickets?: Prisma.SupportTicketUncheckedCreateNestedManyWithoutTeamInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedCreateNestedManyWithoutTeamInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedCreateNestedManyWithoutTeamInput
+  creditGrants?: Prisma.CompanyCreditGrantUncheckedCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedCreateNestedManyWithoutTeamInput
   embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedCreateNestedManyWithoutTeamInput
@@ -5358,6 +5650,7 @@ export type TeamUpdateWithoutBillingAdjustmentsInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
@@ -5365,6 +5658,7 @@ export type TeamUpdateWithoutBillingAdjustmentsInput = {
   catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUpdateManyWithoutTeamNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUpdateManyWithoutTeamNestedInput
   catalogVersions?: Prisma.CatalogVersionUpdateManyWithoutTeamNestedInput
   catalogConfigs?: Prisma.CatalogConfigUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUpdateManyWithoutTeamNestedInput
@@ -5388,6 +5682,7 @@ export type TeamUpdateWithoutBillingAdjustmentsInput = {
   supportTickets?: Prisma.SupportTicketUpdateManyWithoutTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUpdateManyWithoutTeamNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUpdateManyWithoutTeamNestedInput
+  creditGrants?: Prisma.CompanyCreditGrantUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUpdateManyWithoutTeamNestedInput
   embedAccessTokens?: Prisma.EmbedAccessTokenUpdateManyWithoutTeamNestedInput
@@ -5407,6 +5702,7 @@ export type TeamUncheckedUpdateWithoutBillingAdjustmentsInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUncheckedUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
@@ -5414,6 +5710,7 @@ export type TeamUncheckedUpdateWithoutBillingAdjustmentsInput = {
   catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedUpdateManyWithoutTeamNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedUpdateManyWithoutTeamNestedInput
   catalogVersions?: Prisma.CatalogVersionUncheckedUpdateManyWithoutTeamNestedInput
   catalogConfigs?: Prisma.CatalogConfigUncheckedUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUncheckedUpdateManyWithoutTeamNestedInput
@@ -5437,6 +5734,7 @@ export type TeamUncheckedUpdateWithoutBillingAdjustmentsInput = {
   supportTickets?: Prisma.SupportTicketUncheckedUpdateManyWithoutTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedUpdateManyWithoutTeamNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedUpdateManyWithoutTeamNestedInput
+  creditGrants?: Prisma.CompanyCreditGrantUncheckedUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedUpdateManyWithoutTeamNestedInput
   embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedUpdateManyWithoutTeamNestedInput
@@ -5456,6 +5754,7 @@ export type TeamCreateWithoutBillingBalancesInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
@@ -5463,6 +5762,7 @@ export type TeamCreateWithoutBillingBalancesInput = {
   catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeCreateNestedManyWithoutTeamInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryCreateNestedManyWithoutTeamInput
   catalogVersions?: Prisma.CatalogVersionCreateNestedManyWithoutTeamInput
   catalogConfigs?: Prisma.CatalogConfigCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateCreateNestedManyWithoutTeamInput
@@ -5486,6 +5786,7 @@ export type TeamCreateWithoutBillingBalancesInput = {
   supportTickets?: Prisma.SupportTicketCreateNestedManyWithoutTeamInput
   arcenCompanies?: Prisma.ArcenCompanyCreateNestedManyWithoutTeamInput
   addOnGrants?: Prisma.CompanyAddOnGrantCreateNestedManyWithoutTeamInput
+  creditGrants?: Prisma.CompanyCreditGrantCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyCreateNestedManyWithoutTeamInput
   embedAccessTokens?: Prisma.EmbedAccessTokenCreateNestedManyWithoutTeamInput
@@ -5505,6 +5806,7 @@ export type TeamUncheckedCreateWithoutBillingBalancesInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileUncheckedCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
@@ -5512,6 +5814,7 @@ export type TeamUncheckedCreateWithoutBillingBalancesInput = {
   catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedCreateNestedManyWithoutTeamInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedCreateNestedManyWithoutTeamInput
   catalogVersions?: Prisma.CatalogVersionUncheckedCreateNestedManyWithoutTeamInput
   catalogConfigs?: Prisma.CatalogConfigUncheckedCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateUncheckedCreateNestedManyWithoutTeamInput
@@ -5535,6 +5838,7 @@ export type TeamUncheckedCreateWithoutBillingBalancesInput = {
   supportTickets?: Prisma.SupportTicketUncheckedCreateNestedManyWithoutTeamInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedCreateNestedManyWithoutTeamInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedCreateNestedManyWithoutTeamInput
+  creditGrants?: Prisma.CompanyCreditGrantUncheckedCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedCreateNestedManyWithoutTeamInput
   embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedCreateNestedManyWithoutTeamInput
@@ -5570,6 +5874,7 @@ export type TeamUpdateWithoutBillingBalancesInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
@@ -5577,6 +5882,7 @@ export type TeamUpdateWithoutBillingBalancesInput = {
   catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUpdateManyWithoutTeamNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUpdateManyWithoutTeamNestedInput
   catalogVersions?: Prisma.CatalogVersionUpdateManyWithoutTeamNestedInput
   catalogConfigs?: Prisma.CatalogConfigUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUpdateManyWithoutTeamNestedInput
@@ -5600,6 +5906,7 @@ export type TeamUpdateWithoutBillingBalancesInput = {
   supportTickets?: Prisma.SupportTicketUpdateManyWithoutTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUpdateManyWithoutTeamNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUpdateManyWithoutTeamNestedInput
+  creditGrants?: Prisma.CompanyCreditGrantUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUpdateManyWithoutTeamNestedInput
   embedAccessTokens?: Prisma.EmbedAccessTokenUpdateManyWithoutTeamNestedInput
@@ -5619,6 +5926,7 @@ export type TeamUncheckedUpdateWithoutBillingBalancesInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUncheckedUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
@@ -5626,6 +5934,7 @@ export type TeamUncheckedUpdateWithoutBillingBalancesInput = {
   catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedUpdateManyWithoutTeamNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedUpdateManyWithoutTeamNestedInput
   catalogVersions?: Prisma.CatalogVersionUncheckedUpdateManyWithoutTeamNestedInput
   catalogConfigs?: Prisma.CatalogConfigUncheckedUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUncheckedUpdateManyWithoutTeamNestedInput
@@ -5649,6 +5958,7 @@ export type TeamUncheckedUpdateWithoutBillingBalancesInput = {
   supportTickets?: Prisma.SupportTicketUncheckedUpdateManyWithoutTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedUpdateManyWithoutTeamNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedUpdateManyWithoutTeamNestedInput
+  creditGrants?: Prisma.CompanyCreditGrantUncheckedUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedUpdateManyWithoutTeamNestedInput
   embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedUpdateManyWithoutTeamNestedInput
@@ -5668,6 +5978,7 @@ export type TeamCreateWithoutRefundsInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
@@ -5675,6 +5986,7 @@ export type TeamCreateWithoutRefundsInput = {
   catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeCreateNestedManyWithoutTeamInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryCreateNestedManyWithoutTeamInput
   catalogVersions?: Prisma.CatalogVersionCreateNestedManyWithoutTeamInput
   catalogConfigs?: Prisma.CatalogConfigCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateCreateNestedManyWithoutTeamInput
@@ -5698,6 +6010,7 @@ export type TeamCreateWithoutRefundsInput = {
   supportTickets?: Prisma.SupportTicketCreateNestedManyWithoutTeamInput
   arcenCompanies?: Prisma.ArcenCompanyCreateNestedManyWithoutTeamInput
   addOnGrants?: Prisma.CompanyAddOnGrantCreateNestedManyWithoutTeamInput
+  creditGrants?: Prisma.CompanyCreditGrantCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyCreateNestedManyWithoutTeamInput
   embedAccessTokens?: Prisma.EmbedAccessTokenCreateNestedManyWithoutTeamInput
@@ -5717,6 +6030,7 @@ export type TeamUncheckedCreateWithoutRefundsInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileUncheckedCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
@@ -5724,6 +6038,7 @@ export type TeamUncheckedCreateWithoutRefundsInput = {
   catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedCreateNestedManyWithoutTeamInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedCreateNestedManyWithoutTeamInput
   catalogVersions?: Prisma.CatalogVersionUncheckedCreateNestedManyWithoutTeamInput
   catalogConfigs?: Prisma.CatalogConfigUncheckedCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateUncheckedCreateNestedManyWithoutTeamInput
@@ -5747,6 +6062,7 @@ export type TeamUncheckedCreateWithoutRefundsInput = {
   supportTickets?: Prisma.SupportTicketUncheckedCreateNestedManyWithoutTeamInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedCreateNestedManyWithoutTeamInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedCreateNestedManyWithoutTeamInput
+  creditGrants?: Prisma.CompanyCreditGrantUncheckedCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedCreateNestedManyWithoutTeamInput
   embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedCreateNestedManyWithoutTeamInput
@@ -5782,6 +6098,7 @@ export type TeamUpdateWithoutRefundsInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
@@ -5789,6 +6106,7 @@ export type TeamUpdateWithoutRefundsInput = {
   catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUpdateManyWithoutTeamNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUpdateManyWithoutTeamNestedInput
   catalogVersions?: Prisma.CatalogVersionUpdateManyWithoutTeamNestedInput
   catalogConfigs?: Prisma.CatalogConfigUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUpdateManyWithoutTeamNestedInput
@@ -5812,6 +6130,7 @@ export type TeamUpdateWithoutRefundsInput = {
   supportTickets?: Prisma.SupportTicketUpdateManyWithoutTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUpdateManyWithoutTeamNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUpdateManyWithoutTeamNestedInput
+  creditGrants?: Prisma.CompanyCreditGrantUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUpdateManyWithoutTeamNestedInput
   embedAccessTokens?: Prisma.EmbedAccessTokenUpdateManyWithoutTeamNestedInput
@@ -5831,6 +6150,7 @@ export type TeamUncheckedUpdateWithoutRefundsInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUncheckedUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
@@ -5838,6 +6158,7 @@ export type TeamUncheckedUpdateWithoutRefundsInput = {
   catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedUpdateManyWithoutTeamNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedUpdateManyWithoutTeamNestedInput
   catalogVersions?: Prisma.CatalogVersionUncheckedUpdateManyWithoutTeamNestedInput
   catalogConfigs?: Prisma.CatalogConfigUncheckedUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUncheckedUpdateManyWithoutTeamNestedInput
@@ -5861,6 +6182,7 @@ export type TeamUncheckedUpdateWithoutRefundsInput = {
   supportTickets?: Prisma.SupportTicketUncheckedUpdateManyWithoutTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedUpdateManyWithoutTeamNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedUpdateManyWithoutTeamNestedInput
+  creditGrants?: Prisma.CompanyCreditGrantUncheckedUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedUpdateManyWithoutTeamNestedInput
   embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedUpdateManyWithoutTeamNestedInput
@@ -5880,6 +6202,7 @@ export type TeamCreateWithoutBillingRecoveryTasksInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
@@ -5887,6 +6210,7 @@ export type TeamCreateWithoutBillingRecoveryTasksInput = {
   catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeCreateNestedManyWithoutTeamInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryCreateNestedManyWithoutTeamInput
   catalogVersions?: Prisma.CatalogVersionCreateNestedManyWithoutTeamInput
   catalogConfigs?: Prisma.CatalogConfigCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateCreateNestedManyWithoutTeamInput
@@ -5910,6 +6234,7 @@ export type TeamCreateWithoutBillingRecoveryTasksInput = {
   supportTickets?: Prisma.SupportTicketCreateNestedManyWithoutTeamInput
   arcenCompanies?: Prisma.ArcenCompanyCreateNestedManyWithoutTeamInput
   addOnGrants?: Prisma.CompanyAddOnGrantCreateNestedManyWithoutTeamInput
+  creditGrants?: Prisma.CompanyCreditGrantCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyCreateNestedManyWithoutTeamInput
   embedAccessTokens?: Prisma.EmbedAccessTokenCreateNestedManyWithoutTeamInput
@@ -5929,6 +6254,7 @@ export type TeamUncheckedCreateWithoutBillingRecoveryTasksInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileUncheckedCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
@@ -5936,6 +6262,7 @@ export type TeamUncheckedCreateWithoutBillingRecoveryTasksInput = {
   catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedCreateNestedManyWithoutTeamInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedCreateNestedManyWithoutTeamInput
   catalogVersions?: Prisma.CatalogVersionUncheckedCreateNestedManyWithoutTeamInput
   catalogConfigs?: Prisma.CatalogConfigUncheckedCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateUncheckedCreateNestedManyWithoutTeamInput
@@ -5959,6 +6286,7 @@ export type TeamUncheckedCreateWithoutBillingRecoveryTasksInput = {
   supportTickets?: Prisma.SupportTicketUncheckedCreateNestedManyWithoutTeamInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedCreateNestedManyWithoutTeamInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedCreateNestedManyWithoutTeamInput
+  creditGrants?: Prisma.CompanyCreditGrantUncheckedCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedCreateNestedManyWithoutTeamInput
   embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedCreateNestedManyWithoutTeamInput
@@ -5994,6 +6322,7 @@ export type TeamUpdateWithoutBillingRecoveryTasksInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
@@ -6001,6 +6330,7 @@ export type TeamUpdateWithoutBillingRecoveryTasksInput = {
   catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUpdateManyWithoutTeamNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUpdateManyWithoutTeamNestedInput
   catalogVersions?: Prisma.CatalogVersionUpdateManyWithoutTeamNestedInput
   catalogConfigs?: Prisma.CatalogConfigUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUpdateManyWithoutTeamNestedInput
@@ -6024,6 +6354,7 @@ export type TeamUpdateWithoutBillingRecoveryTasksInput = {
   supportTickets?: Prisma.SupportTicketUpdateManyWithoutTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUpdateManyWithoutTeamNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUpdateManyWithoutTeamNestedInput
+  creditGrants?: Prisma.CompanyCreditGrantUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUpdateManyWithoutTeamNestedInput
   embedAccessTokens?: Prisma.EmbedAccessTokenUpdateManyWithoutTeamNestedInput
@@ -6043,6 +6374,7 @@ export type TeamUncheckedUpdateWithoutBillingRecoveryTasksInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUncheckedUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
@@ -6050,6 +6382,7 @@ export type TeamUncheckedUpdateWithoutBillingRecoveryTasksInput = {
   catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedUpdateManyWithoutTeamNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedUpdateManyWithoutTeamNestedInput
   catalogVersions?: Prisma.CatalogVersionUncheckedUpdateManyWithoutTeamNestedInput
   catalogConfigs?: Prisma.CatalogConfigUncheckedUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUncheckedUpdateManyWithoutTeamNestedInput
@@ -6073,6 +6406,7 @@ export type TeamUncheckedUpdateWithoutBillingRecoveryTasksInput = {
   supportTickets?: Prisma.SupportTicketUncheckedUpdateManyWithoutTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedUpdateManyWithoutTeamNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedUpdateManyWithoutTeamNestedInput
+  creditGrants?: Prisma.CompanyCreditGrantUncheckedUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedUpdateManyWithoutTeamNestedInput
   embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedUpdateManyWithoutTeamNestedInput
@@ -6092,6 +6426,7 @@ export type TeamCreateWithoutWebhookDeliveriesInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
@@ -6099,6 +6434,7 @@ export type TeamCreateWithoutWebhookDeliveriesInput = {
   catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeCreateNestedManyWithoutTeamInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryCreateNestedManyWithoutTeamInput
   catalogVersions?: Prisma.CatalogVersionCreateNestedManyWithoutTeamInput
   catalogConfigs?: Prisma.CatalogConfigCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateCreateNestedManyWithoutTeamInput
@@ -6122,6 +6458,7 @@ export type TeamCreateWithoutWebhookDeliveriesInput = {
   supportTickets?: Prisma.SupportTicketCreateNestedManyWithoutTeamInput
   arcenCompanies?: Prisma.ArcenCompanyCreateNestedManyWithoutTeamInput
   addOnGrants?: Prisma.CompanyAddOnGrantCreateNestedManyWithoutTeamInput
+  creditGrants?: Prisma.CompanyCreditGrantCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyCreateNestedManyWithoutTeamInput
   embedAccessTokens?: Prisma.EmbedAccessTokenCreateNestedManyWithoutTeamInput
@@ -6141,6 +6478,7 @@ export type TeamUncheckedCreateWithoutWebhookDeliveriesInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileUncheckedCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
@@ -6148,6 +6486,7 @@ export type TeamUncheckedCreateWithoutWebhookDeliveriesInput = {
   catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedCreateNestedManyWithoutTeamInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedCreateNestedManyWithoutTeamInput
   catalogVersions?: Prisma.CatalogVersionUncheckedCreateNestedManyWithoutTeamInput
   catalogConfigs?: Prisma.CatalogConfigUncheckedCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateUncheckedCreateNestedManyWithoutTeamInput
@@ -6171,6 +6510,7 @@ export type TeamUncheckedCreateWithoutWebhookDeliveriesInput = {
   supportTickets?: Prisma.SupportTicketUncheckedCreateNestedManyWithoutTeamInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedCreateNestedManyWithoutTeamInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedCreateNestedManyWithoutTeamInput
+  creditGrants?: Prisma.CompanyCreditGrantUncheckedCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedCreateNestedManyWithoutTeamInput
   embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedCreateNestedManyWithoutTeamInput
@@ -6206,6 +6546,7 @@ export type TeamUpdateWithoutWebhookDeliveriesInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
@@ -6213,6 +6554,7 @@ export type TeamUpdateWithoutWebhookDeliveriesInput = {
   catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUpdateManyWithoutTeamNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUpdateManyWithoutTeamNestedInput
   catalogVersions?: Prisma.CatalogVersionUpdateManyWithoutTeamNestedInput
   catalogConfigs?: Prisma.CatalogConfigUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUpdateManyWithoutTeamNestedInput
@@ -6236,6 +6578,7 @@ export type TeamUpdateWithoutWebhookDeliveriesInput = {
   supportTickets?: Prisma.SupportTicketUpdateManyWithoutTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUpdateManyWithoutTeamNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUpdateManyWithoutTeamNestedInput
+  creditGrants?: Prisma.CompanyCreditGrantUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUpdateManyWithoutTeamNestedInput
   embedAccessTokens?: Prisma.EmbedAccessTokenUpdateManyWithoutTeamNestedInput
@@ -6255,6 +6598,7 @@ export type TeamUncheckedUpdateWithoutWebhookDeliveriesInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUncheckedUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
@@ -6262,6 +6606,7 @@ export type TeamUncheckedUpdateWithoutWebhookDeliveriesInput = {
   catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedUpdateManyWithoutTeamNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedUpdateManyWithoutTeamNestedInput
   catalogVersions?: Prisma.CatalogVersionUncheckedUpdateManyWithoutTeamNestedInput
   catalogConfigs?: Prisma.CatalogConfigUncheckedUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUncheckedUpdateManyWithoutTeamNestedInput
@@ -6285,6 +6630,7 @@ export type TeamUncheckedUpdateWithoutWebhookDeliveriesInput = {
   supportTickets?: Prisma.SupportTicketUncheckedUpdateManyWithoutTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedUpdateManyWithoutTeamNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedUpdateManyWithoutTeamNestedInput
+  creditGrants?: Prisma.CompanyCreditGrantUncheckedUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedUpdateManyWithoutTeamNestedInput
   embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedUpdateManyWithoutTeamNestedInput
@@ -6304,6 +6650,7 @@ export type TeamCreateWithoutGasSpendsInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
@@ -6311,6 +6658,7 @@ export type TeamCreateWithoutGasSpendsInput = {
   catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeCreateNestedManyWithoutTeamInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryCreateNestedManyWithoutTeamInput
   catalogVersions?: Prisma.CatalogVersionCreateNestedManyWithoutTeamInput
   catalogConfigs?: Prisma.CatalogConfigCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateCreateNestedManyWithoutTeamInput
@@ -6334,6 +6682,7 @@ export type TeamCreateWithoutGasSpendsInput = {
   supportTickets?: Prisma.SupportTicketCreateNestedManyWithoutTeamInput
   arcenCompanies?: Prisma.ArcenCompanyCreateNestedManyWithoutTeamInput
   addOnGrants?: Prisma.CompanyAddOnGrantCreateNestedManyWithoutTeamInput
+  creditGrants?: Prisma.CompanyCreditGrantCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyCreateNestedManyWithoutTeamInput
   embedAccessTokens?: Prisma.EmbedAccessTokenCreateNestedManyWithoutTeamInput
@@ -6353,6 +6702,7 @@ export type TeamUncheckedCreateWithoutGasSpendsInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileUncheckedCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
@@ -6360,6 +6710,7 @@ export type TeamUncheckedCreateWithoutGasSpendsInput = {
   catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedCreateNestedManyWithoutTeamInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedCreateNestedManyWithoutTeamInput
   catalogVersions?: Prisma.CatalogVersionUncheckedCreateNestedManyWithoutTeamInput
   catalogConfigs?: Prisma.CatalogConfigUncheckedCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateUncheckedCreateNestedManyWithoutTeamInput
@@ -6383,6 +6734,7 @@ export type TeamUncheckedCreateWithoutGasSpendsInput = {
   supportTickets?: Prisma.SupportTicketUncheckedCreateNestedManyWithoutTeamInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedCreateNestedManyWithoutTeamInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedCreateNestedManyWithoutTeamInput
+  creditGrants?: Prisma.CompanyCreditGrantUncheckedCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedCreateNestedManyWithoutTeamInput
   embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedCreateNestedManyWithoutTeamInput
@@ -6418,6 +6770,7 @@ export type TeamUpdateWithoutGasSpendsInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
@@ -6425,6 +6778,7 @@ export type TeamUpdateWithoutGasSpendsInput = {
   catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUpdateManyWithoutTeamNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUpdateManyWithoutTeamNestedInput
   catalogVersions?: Prisma.CatalogVersionUpdateManyWithoutTeamNestedInput
   catalogConfigs?: Prisma.CatalogConfigUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUpdateManyWithoutTeamNestedInput
@@ -6448,6 +6802,7 @@ export type TeamUpdateWithoutGasSpendsInput = {
   supportTickets?: Prisma.SupportTicketUpdateManyWithoutTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUpdateManyWithoutTeamNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUpdateManyWithoutTeamNestedInput
+  creditGrants?: Prisma.CompanyCreditGrantUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUpdateManyWithoutTeamNestedInput
   embedAccessTokens?: Prisma.EmbedAccessTokenUpdateManyWithoutTeamNestedInput
@@ -6467,6 +6822,7 @@ export type TeamUncheckedUpdateWithoutGasSpendsInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUncheckedUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
@@ -6474,6 +6830,7 @@ export type TeamUncheckedUpdateWithoutGasSpendsInput = {
   catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedUpdateManyWithoutTeamNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedUpdateManyWithoutTeamNestedInput
   catalogVersions?: Prisma.CatalogVersionUncheckedUpdateManyWithoutTeamNestedInput
   catalogConfigs?: Prisma.CatalogConfigUncheckedUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUncheckedUpdateManyWithoutTeamNestedInput
@@ -6497,6 +6854,7 @@ export type TeamUncheckedUpdateWithoutGasSpendsInput = {
   supportTickets?: Prisma.SupportTicketUncheckedUpdateManyWithoutTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedUpdateManyWithoutTeamNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedUpdateManyWithoutTeamNestedInput
+  creditGrants?: Prisma.CompanyCreditGrantUncheckedUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedUpdateManyWithoutTeamNestedInput
   embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedUpdateManyWithoutTeamNestedInput
@@ -6516,6 +6874,7 @@ export type TeamCreateWithoutTierHistoryInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
@@ -6523,6 +6882,7 @@ export type TeamCreateWithoutTierHistoryInput = {
   catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeCreateNestedManyWithoutTeamInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryCreateNestedManyWithoutTeamInput
   catalogVersions?: Prisma.CatalogVersionCreateNestedManyWithoutTeamInput
   catalogConfigs?: Prisma.CatalogConfigCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateCreateNestedManyWithoutTeamInput
@@ -6546,6 +6906,7 @@ export type TeamCreateWithoutTierHistoryInput = {
   supportTickets?: Prisma.SupportTicketCreateNestedManyWithoutTeamInput
   arcenCompanies?: Prisma.ArcenCompanyCreateNestedManyWithoutTeamInput
   addOnGrants?: Prisma.CompanyAddOnGrantCreateNestedManyWithoutTeamInput
+  creditGrants?: Prisma.CompanyCreditGrantCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyCreateNestedManyWithoutTeamInput
   embedAccessTokens?: Prisma.EmbedAccessTokenCreateNestedManyWithoutTeamInput
@@ -6565,6 +6926,7 @@ export type TeamUncheckedCreateWithoutTierHistoryInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileUncheckedCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
@@ -6572,6 +6934,7 @@ export type TeamUncheckedCreateWithoutTierHistoryInput = {
   catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedCreateNestedManyWithoutTeamInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedCreateNestedManyWithoutTeamInput
   catalogVersions?: Prisma.CatalogVersionUncheckedCreateNestedManyWithoutTeamInput
   catalogConfigs?: Prisma.CatalogConfigUncheckedCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateUncheckedCreateNestedManyWithoutTeamInput
@@ -6595,6 +6958,7 @@ export type TeamUncheckedCreateWithoutTierHistoryInput = {
   supportTickets?: Prisma.SupportTicketUncheckedCreateNestedManyWithoutTeamInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedCreateNestedManyWithoutTeamInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedCreateNestedManyWithoutTeamInput
+  creditGrants?: Prisma.CompanyCreditGrantUncheckedCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedCreateNestedManyWithoutTeamInput
   embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedCreateNestedManyWithoutTeamInput
@@ -6630,6 +6994,7 @@ export type TeamUpdateWithoutTierHistoryInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
@@ -6637,6 +7002,7 @@ export type TeamUpdateWithoutTierHistoryInput = {
   catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUpdateManyWithoutTeamNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUpdateManyWithoutTeamNestedInput
   catalogVersions?: Prisma.CatalogVersionUpdateManyWithoutTeamNestedInput
   catalogConfigs?: Prisma.CatalogConfigUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUpdateManyWithoutTeamNestedInput
@@ -6660,6 +7026,7 @@ export type TeamUpdateWithoutTierHistoryInput = {
   supportTickets?: Prisma.SupportTicketUpdateManyWithoutTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUpdateManyWithoutTeamNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUpdateManyWithoutTeamNestedInput
+  creditGrants?: Prisma.CompanyCreditGrantUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUpdateManyWithoutTeamNestedInput
   embedAccessTokens?: Prisma.EmbedAccessTokenUpdateManyWithoutTeamNestedInput
@@ -6679,6 +7046,7 @@ export type TeamUncheckedUpdateWithoutTierHistoryInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUncheckedUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
@@ -6686,6 +7054,7 @@ export type TeamUncheckedUpdateWithoutTierHistoryInput = {
   catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedUpdateManyWithoutTeamNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedUpdateManyWithoutTeamNestedInput
   catalogVersions?: Prisma.CatalogVersionUncheckedUpdateManyWithoutTeamNestedInput
   catalogConfigs?: Prisma.CatalogConfigUncheckedUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUncheckedUpdateManyWithoutTeamNestedInput
@@ -6709,6 +7078,7 @@ export type TeamUncheckedUpdateWithoutTierHistoryInput = {
   supportTickets?: Prisma.SupportTicketUncheckedUpdateManyWithoutTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedUpdateManyWithoutTeamNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedUpdateManyWithoutTeamNestedInput
+  creditGrants?: Prisma.CompanyCreditGrantUncheckedUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedUpdateManyWithoutTeamNestedInput
   embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedUpdateManyWithoutTeamNestedInput
@@ -6728,6 +7098,7 @@ export type TeamCreateWithoutSupportTicketsInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
@@ -6735,6 +7106,7 @@ export type TeamCreateWithoutSupportTicketsInput = {
   catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeCreateNestedManyWithoutTeamInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryCreateNestedManyWithoutTeamInput
   catalogVersions?: Prisma.CatalogVersionCreateNestedManyWithoutTeamInput
   catalogConfigs?: Prisma.CatalogConfigCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateCreateNestedManyWithoutTeamInput
@@ -6758,6 +7130,7 @@ export type TeamCreateWithoutSupportTicketsInput = {
   tierHistory?: Prisma.TierUpgradeHistoryCreateNestedManyWithoutTeamInput
   arcenCompanies?: Prisma.ArcenCompanyCreateNestedManyWithoutTeamInput
   addOnGrants?: Prisma.CompanyAddOnGrantCreateNestedManyWithoutTeamInput
+  creditGrants?: Prisma.CompanyCreditGrantCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyCreateNestedManyWithoutTeamInput
   embedAccessTokens?: Prisma.EmbedAccessTokenCreateNestedManyWithoutTeamInput
@@ -6777,6 +7150,7 @@ export type TeamUncheckedCreateWithoutSupportTicketsInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileUncheckedCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
@@ -6784,6 +7158,7 @@ export type TeamUncheckedCreateWithoutSupportTicketsInput = {
   catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedCreateNestedManyWithoutTeamInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedCreateNestedManyWithoutTeamInput
   catalogVersions?: Prisma.CatalogVersionUncheckedCreateNestedManyWithoutTeamInput
   catalogConfigs?: Prisma.CatalogConfigUncheckedCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateUncheckedCreateNestedManyWithoutTeamInput
@@ -6807,6 +7182,7 @@ export type TeamUncheckedCreateWithoutSupportTicketsInput = {
   tierHistory?: Prisma.TierUpgradeHistoryUncheckedCreateNestedManyWithoutTeamInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedCreateNestedManyWithoutTeamInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedCreateNestedManyWithoutTeamInput
+  creditGrants?: Prisma.CompanyCreditGrantUncheckedCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedCreateNestedManyWithoutTeamInput
   embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedCreateNestedManyWithoutTeamInput
@@ -6842,6 +7218,7 @@ export type TeamUpdateWithoutSupportTicketsInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
@@ -6849,6 +7226,7 @@ export type TeamUpdateWithoutSupportTicketsInput = {
   catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUpdateManyWithoutTeamNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUpdateManyWithoutTeamNestedInput
   catalogVersions?: Prisma.CatalogVersionUpdateManyWithoutTeamNestedInput
   catalogConfigs?: Prisma.CatalogConfigUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUpdateManyWithoutTeamNestedInput
@@ -6872,6 +7250,7 @@ export type TeamUpdateWithoutSupportTicketsInput = {
   tierHistory?: Prisma.TierUpgradeHistoryUpdateManyWithoutTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUpdateManyWithoutTeamNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUpdateManyWithoutTeamNestedInput
+  creditGrants?: Prisma.CompanyCreditGrantUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUpdateManyWithoutTeamNestedInput
   embedAccessTokens?: Prisma.EmbedAccessTokenUpdateManyWithoutTeamNestedInput
@@ -6891,6 +7270,7 @@ export type TeamUncheckedUpdateWithoutSupportTicketsInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUncheckedUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
@@ -6898,6 +7278,7 @@ export type TeamUncheckedUpdateWithoutSupportTicketsInput = {
   catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedUpdateManyWithoutTeamNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedUpdateManyWithoutTeamNestedInput
   catalogVersions?: Prisma.CatalogVersionUncheckedUpdateManyWithoutTeamNestedInput
   catalogConfigs?: Prisma.CatalogConfigUncheckedUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUncheckedUpdateManyWithoutTeamNestedInput
@@ -6921,6 +7302,7 @@ export type TeamUncheckedUpdateWithoutSupportTicketsInput = {
   tierHistory?: Prisma.TierUpgradeHistoryUncheckedUpdateManyWithoutTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedUpdateManyWithoutTeamNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedUpdateManyWithoutTeamNestedInput
+  creditGrants?: Prisma.CompanyCreditGrantUncheckedUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedUpdateManyWithoutTeamNestedInput
   embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedUpdateManyWithoutTeamNestedInput
@@ -6940,6 +7322,7 @@ export type TeamCreateWithoutArcenCompaniesInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
@@ -6947,6 +7330,7 @@ export type TeamCreateWithoutArcenCompaniesInput = {
   catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeCreateNestedManyWithoutTeamInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryCreateNestedManyWithoutTeamInput
   catalogVersions?: Prisma.CatalogVersionCreateNestedManyWithoutTeamInput
   catalogConfigs?: Prisma.CatalogConfigCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateCreateNestedManyWithoutTeamInput
@@ -6970,6 +7354,7 @@ export type TeamCreateWithoutArcenCompaniesInput = {
   tierHistory?: Prisma.TierUpgradeHistoryCreateNestedManyWithoutTeamInput
   supportTickets?: Prisma.SupportTicketCreateNestedManyWithoutTeamInput
   addOnGrants?: Prisma.CompanyAddOnGrantCreateNestedManyWithoutTeamInput
+  creditGrants?: Prisma.CompanyCreditGrantCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyCreateNestedManyWithoutTeamInput
   embedAccessTokens?: Prisma.EmbedAccessTokenCreateNestedManyWithoutTeamInput
@@ -6989,6 +7374,7 @@ export type TeamUncheckedCreateWithoutArcenCompaniesInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileUncheckedCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
@@ -6996,6 +7382,7 @@ export type TeamUncheckedCreateWithoutArcenCompaniesInput = {
   catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedCreateNestedManyWithoutTeamInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedCreateNestedManyWithoutTeamInput
   catalogVersions?: Prisma.CatalogVersionUncheckedCreateNestedManyWithoutTeamInput
   catalogConfigs?: Prisma.CatalogConfigUncheckedCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateUncheckedCreateNestedManyWithoutTeamInput
@@ -7019,6 +7406,7 @@ export type TeamUncheckedCreateWithoutArcenCompaniesInput = {
   tierHistory?: Prisma.TierUpgradeHistoryUncheckedCreateNestedManyWithoutTeamInput
   supportTickets?: Prisma.SupportTicketUncheckedCreateNestedManyWithoutTeamInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedCreateNestedManyWithoutTeamInput
+  creditGrants?: Prisma.CompanyCreditGrantUncheckedCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedCreateNestedManyWithoutTeamInput
   embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedCreateNestedManyWithoutTeamInput
@@ -7054,6 +7442,7 @@ export type TeamUpdateWithoutArcenCompaniesInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
@@ -7061,6 +7450,7 @@ export type TeamUpdateWithoutArcenCompaniesInput = {
   catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUpdateManyWithoutTeamNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUpdateManyWithoutTeamNestedInput
   catalogVersions?: Prisma.CatalogVersionUpdateManyWithoutTeamNestedInput
   catalogConfigs?: Prisma.CatalogConfigUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUpdateManyWithoutTeamNestedInput
@@ -7084,6 +7474,7 @@ export type TeamUpdateWithoutArcenCompaniesInput = {
   tierHistory?: Prisma.TierUpgradeHistoryUpdateManyWithoutTeamNestedInput
   supportTickets?: Prisma.SupportTicketUpdateManyWithoutTeamNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUpdateManyWithoutTeamNestedInput
+  creditGrants?: Prisma.CompanyCreditGrantUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUpdateManyWithoutTeamNestedInput
   embedAccessTokens?: Prisma.EmbedAccessTokenUpdateManyWithoutTeamNestedInput
@@ -7103,6 +7494,7 @@ export type TeamUncheckedUpdateWithoutArcenCompaniesInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUncheckedUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
@@ -7110,6 +7502,7 @@ export type TeamUncheckedUpdateWithoutArcenCompaniesInput = {
   catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedUpdateManyWithoutTeamNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedUpdateManyWithoutTeamNestedInput
   catalogVersions?: Prisma.CatalogVersionUncheckedUpdateManyWithoutTeamNestedInput
   catalogConfigs?: Prisma.CatalogConfigUncheckedUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUncheckedUpdateManyWithoutTeamNestedInput
@@ -7133,6 +7526,7 @@ export type TeamUncheckedUpdateWithoutArcenCompaniesInput = {
   tierHistory?: Prisma.TierUpgradeHistoryUncheckedUpdateManyWithoutTeamNestedInput
   supportTickets?: Prisma.SupportTicketUncheckedUpdateManyWithoutTeamNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedUpdateManyWithoutTeamNestedInput
+  creditGrants?: Prisma.CompanyCreditGrantUncheckedUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedUpdateManyWithoutTeamNestedInput
   embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedUpdateManyWithoutTeamNestedInput
@@ -7152,6 +7546,7 @@ export type TeamCreateWithoutAddOnGrantsInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
@@ -7159,6 +7554,7 @@ export type TeamCreateWithoutAddOnGrantsInput = {
   catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeCreateNestedManyWithoutTeamInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryCreateNestedManyWithoutTeamInput
   catalogVersions?: Prisma.CatalogVersionCreateNestedManyWithoutTeamInput
   catalogConfigs?: Prisma.CatalogConfigCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateCreateNestedManyWithoutTeamInput
@@ -7182,6 +7578,7 @@ export type TeamCreateWithoutAddOnGrantsInput = {
   tierHistory?: Prisma.TierUpgradeHistoryCreateNestedManyWithoutTeamInput
   supportTickets?: Prisma.SupportTicketCreateNestedManyWithoutTeamInput
   arcenCompanies?: Prisma.ArcenCompanyCreateNestedManyWithoutTeamInput
+  creditGrants?: Prisma.CompanyCreditGrantCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyCreateNestedManyWithoutTeamInput
   embedAccessTokens?: Prisma.EmbedAccessTokenCreateNestedManyWithoutTeamInput
@@ -7201,6 +7598,7 @@ export type TeamUncheckedCreateWithoutAddOnGrantsInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileUncheckedCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
@@ -7208,6 +7606,7 @@ export type TeamUncheckedCreateWithoutAddOnGrantsInput = {
   catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedCreateNestedManyWithoutTeamInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedCreateNestedManyWithoutTeamInput
   catalogVersions?: Prisma.CatalogVersionUncheckedCreateNestedManyWithoutTeamInput
   catalogConfigs?: Prisma.CatalogConfigUncheckedCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateUncheckedCreateNestedManyWithoutTeamInput
@@ -7231,6 +7630,7 @@ export type TeamUncheckedCreateWithoutAddOnGrantsInput = {
   tierHistory?: Prisma.TierUpgradeHistoryUncheckedCreateNestedManyWithoutTeamInput
   supportTickets?: Prisma.SupportTicketUncheckedCreateNestedManyWithoutTeamInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedCreateNestedManyWithoutTeamInput
+  creditGrants?: Prisma.CompanyCreditGrantUncheckedCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedCreateNestedManyWithoutTeamInput
   embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedCreateNestedManyWithoutTeamInput
@@ -7266,6 +7666,455 @@ export type TeamUpdateWithoutAddOnGrantsInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
+  providerProfiles?: Prisma.ProviderProfileUpdateManyWithoutTeamNestedInput
+  invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
+  environments?: Prisma.WorkspaceEnvironmentUpdateManyWithoutTeamNestedInput
+  catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutTeamNestedInput
+  catalogAddOns?: Prisma.CatalogAddOnUpdateManyWithoutTeamNestedInput
+  catalogCreditTypes?: Prisma.CatalogCreditTypeUpdateManyWithoutTeamNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUpdateManyWithoutTeamNestedInput
+  catalogVersions?: Prisma.CatalogVersionUpdateManyWithoutTeamNestedInput
+  catalogConfigs?: Prisma.CatalogConfigUpdateManyWithoutTeamNestedInput
+  billingTemplates?: Prisma.BillingTemplateUpdateManyWithoutTeamNestedInput
+  templateInstalls?: Prisma.TemplateInstallUpdateManyWithoutTeamNestedInput
+  invoices?: Prisma.InvoiceUpdateManyWithoutTeamNestedInput
+  payments?: Prisma.PaymentUpdateManyWithoutTeamNestedInput
+  paymentLinks?: Prisma.PaymentLinkUpdateManyWithoutTeamNestedInput
+  checkoutSessions?: Prisma.CheckoutSessionUpdateManyWithoutTeamNestedInput
+  billingBalances?: Prisma.BillingBalanceUpdateManyWithoutTeamNestedInput
+  refunds?: Prisma.RefundUpdateManyWithoutTeamNestedInput
+  billingAdjustments?: Prisma.BillingAdjustmentUpdateManyWithoutTeamNestedInput
+  subscriptionStates?: Prisma.SubscriptionStateUpdateManyWithoutTeamNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUpdateManyWithoutTeamNestedInput
+  billingRecoveryTasks?: Prisma.BillingRecoveryTaskUpdateManyWithoutTeamNestedInput
+  taxProfile?: Prisma.TaxProfileUpdateOneWithoutTeamNestedInput
+  invoiceSequences?: Prisma.InvoiceSequenceUpdateManyWithoutTeamNestedInput
+  auditEvents?: Prisma.AuditEventUpdateManyWithoutTeamNestedInput
+  billingEvents?: Prisma.BillingEventUpdateManyWithoutTeamNestedInput
+  webhookDeliveries?: Prisma.WebhookDeliveryUpdateManyWithoutTeamNestedInput
+  gasSpends?: Prisma.GasSpendUpdateManyWithoutTeamNestedInput
+  tierHistory?: Prisma.TierUpgradeHistoryUpdateManyWithoutTeamNestedInput
+  supportTickets?: Prisma.SupportTicketUpdateManyWithoutTeamNestedInput
+  arcenCompanies?: Prisma.ArcenCompanyUpdateManyWithoutTeamNestedInput
+  creditGrants?: Prisma.CompanyCreditGrantUpdateManyWithoutTeamNestedInput
+  featureFlags?: Prisma.CatalogFeatureFlagUpdateManyWithoutTeamNestedInput
+  arcenApiKeys?: Prisma.ArcenApiKeyUpdateManyWithoutTeamNestedInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUpdateManyWithoutTeamNestedInput
+  embedComponents?: Prisma.EmbedComponentUpdateManyWithoutTeamNestedInput
+  agentConfig?: Prisma.ArcenAgentConfigUpdateOneWithoutTeamNestedInput
+  dispatchRequests?: Prisma.ArcenDispatchRequestUpdateManyWithoutTeamNestedInput
+}
+
+export type TeamUncheckedUpdateWithoutAddOnGrantsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  slug?: Prisma.StringFieldUpdateOperationsInput | string
+  environmentMode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
+  invoicePrefix?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
+  tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
+  providerProfiles?: Prisma.ProviderProfileUncheckedUpdateManyWithoutTeamNestedInput
+  invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
+  environments?: Prisma.WorkspaceEnvironmentUncheckedUpdateManyWithoutTeamNestedInput
+  catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutTeamNestedInput
+  catalogAddOns?: Prisma.CatalogAddOnUncheckedUpdateManyWithoutTeamNestedInput
+  catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedUpdateManyWithoutTeamNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedUpdateManyWithoutTeamNestedInput
+  catalogVersions?: Prisma.CatalogVersionUncheckedUpdateManyWithoutTeamNestedInput
+  catalogConfigs?: Prisma.CatalogConfigUncheckedUpdateManyWithoutTeamNestedInput
+  billingTemplates?: Prisma.BillingTemplateUncheckedUpdateManyWithoutTeamNestedInput
+  templateInstalls?: Prisma.TemplateInstallUncheckedUpdateManyWithoutTeamNestedInput
+  invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutTeamNestedInput
+  payments?: Prisma.PaymentUncheckedUpdateManyWithoutTeamNestedInput
+  paymentLinks?: Prisma.PaymentLinkUncheckedUpdateManyWithoutTeamNestedInput
+  checkoutSessions?: Prisma.CheckoutSessionUncheckedUpdateManyWithoutTeamNestedInput
+  billingBalances?: Prisma.BillingBalanceUncheckedUpdateManyWithoutTeamNestedInput
+  refunds?: Prisma.RefundUncheckedUpdateManyWithoutTeamNestedInput
+  billingAdjustments?: Prisma.BillingAdjustmentUncheckedUpdateManyWithoutTeamNestedInput
+  subscriptionStates?: Prisma.SubscriptionStateUncheckedUpdateManyWithoutTeamNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedUpdateManyWithoutTeamNestedInput
+  billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedUpdateManyWithoutTeamNestedInput
+  taxProfile?: Prisma.TaxProfileUncheckedUpdateOneWithoutTeamNestedInput
+  invoiceSequences?: Prisma.InvoiceSequenceUncheckedUpdateManyWithoutTeamNestedInput
+  auditEvents?: Prisma.AuditEventUncheckedUpdateManyWithoutTeamNestedInput
+  billingEvents?: Prisma.BillingEventUncheckedUpdateManyWithoutTeamNestedInput
+  webhookDeliveries?: Prisma.WebhookDeliveryUncheckedUpdateManyWithoutTeamNestedInput
+  gasSpends?: Prisma.GasSpendUncheckedUpdateManyWithoutTeamNestedInput
+  tierHistory?: Prisma.TierUpgradeHistoryUncheckedUpdateManyWithoutTeamNestedInput
+  supportTickets?: Prisma.SupportTicketUncheckedUpdateManyWithoutTeamNestedInput
+  arcenCompanies?: Prisma.ArcenCompanyUncheckedUpdateManyWithoutTeamNestedInput
+  creditGrants?: Prisma.CompanyCreditGrantUncheckedUpdateManyWithoutTeamNestedInput
+  featureFlags?: Prisma.CatalogFeatureFlagUncheckedUpdateManyWithoutTeamNestedInput
+  arcenApiKeys?: Prisma.ArcenApiKeyUncheckedUpdateManyWithoutTeamNestedInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedUpdateManyWithoutTeamNestedInput
+  embedComponents?: Prisma.EmbedComponentUncheckedUpdateManyWithoutTeamNestedInput
+  agentConfig?: Prisma.ArcenAgentConfigUncheckedUpdateOneWithoutTeamNestedInput
+  dispatchRequests?: Prisma.ArcenDispatchRequestUncheckedUpdateManyWithoutTeamNestedInput
+}
+
+export type TeamCreateWithoutCreditGrantsInput = {
+  id?: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  name: string
+  slug: string
+  environmentMode?: $Enums.EnvironmentMode
+  invoicePrefix?: string | null
+  platformTier?: $Enums.PlatformTier
+  tierExpiresAt?: Date | string | null
+  tierSubscriptionId?: string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
+  providerProfiles?: Prisma.ProviderProfileCreateNestedManyWithoutTeamInput
+  invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
+  environments?: Prisma.WorkspaceEnvironmentCreateNestedManyWithoutTeamInput
+  catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutTeamInput
+  catalogAddOns?: Prisma.CatalogAddOnCreateNestedManyWithoutTeamInput
+  catalogCreditTypes?: Prisma.CatalogCreditTypeCreateNestedManyWithoutTeamInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryCreateNestedManyWithoutTeamInput
+  catalogVersions?: Prisma.CatalogVersionCreateNestedManyWithoutTeamInput
+  catalogConfigs?: Prisma.CatalogConfigCreateNestedManyWithoutTeamInput
+  billingTemplates?: Prisma.BillingTemplateCreateNestedManyWithoutTeamInput
+  templateInstalls?: Prisma.TemplateInstallCreateNestedManyWithoutTeamInput
+  invoices?: Prisma.InvoiceCreateNestedManyWithoutTeamInput
+  payments?: Prisma.PaymentCreateNestedManyWithoutTeamInput
+  paymentLinks?: Prisma.PaymentLinkCreateNestedManyWithoutTeamInput
+  checkoutSessions?: Prisma.CheckoutSessionCreateNestedManyWithoutTeamInput
+  billingBalances?: Prisma.BillingBalanceCreateNestedManyWithoutTeamInput
+  refunds?: Prisma.RefundCreateNestedManyWithoutTeamInput
+  billingAdjustments?: Prisma.BillingAdjustmentCreateNestedManyWithoutTeamInput
+  subscriptionStates?: Prisma.SubscriptionStateCreateNestedManyWithoutTeamInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestCreateNestedManyWithoutTeamInput
+  billingRecoveryTasks?: Prisma.BillingRecoveryTaskCreateNestedManyWithoutTeamInput
+  taxProfile?: Prisma.TaxProfileCreateNestedOneWithoutTeamInput
+  invoiceSequences?: Prisma.InvoiceSequenceCreateNestedManyWithoutTeamInput
+  auditEvents?: Prisma.AuditEventCreateNestedManyWithoutTeamInput
+  billingEvents?: Prisma.BillingEventCreateNestedManyWithoutTeamInput
+  webhookDeliveries?: Prisma.WebhookDeliveryCreateNestedManyWithoutTeamInput
+  gasSpends?: Prisma.GasSpendCreateNestedManyWithoutTeamInput
+  tierHistory?: Prisma.TierUpgradeHistoryCreateNestedManyWithoutTeamInput
+  supportTickets?: Prisma.SupportTicketCreateNestedManyWithoutTeamInput
+  arcenCompanies?: Prisma.ArcenCompanyCreateNestedManyWithoutTeamInput
+  addOnGrants?: Prisma.CompanyAddOnGrantCreateNestedManyWithoutTeamInput
+  featureFlags?: Prisma.CatalogFeatureFlagCreateNestedManyWithoutTeamInput
+  arcenApiKeys?: Prisma.ArcenApiKeyCreateNestedManyWithoutTeamInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenCreateNestedManyWithoutTeamInput
+  embedComponents?: Prisma.EmbedComponentCreateNestedManyWithoutTeamInput
+  agentConfig?: Prisma.ArcenAgentConfigCreateNestedOneWithoutTeamInput
+  dispatchRequests?: Prisma.ArcenDispatchRequestCreateNestedManyWithoutTeamInput
+}
+
+export type TeamUncheckedCreateWithoutCreditGrantsInput = {
+  id?: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  name: string
+  slug: string
+  environmentMode?: $Enums.EnvironmentMode
+  invoicePrefix?: string | null
+  platformTier?: $Enums.PlatformTier
+  tierExpiresAt?: Date | string | null
+  tierSubscriptionId?: string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
+  providerProfiles?: Prisma.ProviderProfileUncheckedCreateNestedManyWithoutTeamInput
+  invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
+  environments?: Prisma.WorkspaceEnvironmentUncheckedCreateNestedManyWithoutTeamInput
+  catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutTeamInput
+  catalogAddOns?: Prisma.CatalogAddOnUncheckedCreateNestedManyWithoutTeamInput
+  catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedCreateNestedManyWithoutTeamInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedCreateNestedManyWithoutTeamInput
+  catalogVersions?: Prisma.CatalogVersionUncheckedCreateNestedManyWithoutTeamInput
+  catalogConfigs?: Prisma.CatalogConfigUncheckedCreateNestedManyWithoutTeamInput
+  billingTemplates?: Prisma.BillingTemplateUncheckedCreateNestedManyWithoutTeamInput
+  templateInstalls?: Prisma.TemplateInstallUncheckedCreateNestedManyWithoutTeamInput
+  invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutTeamInput
+  payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutTeamInput
+  paymentLinks?: Prisma.PaymentLinkUncheckedCreateNestedManyWithoutTeamInput
+  checkoutSessions?: Prisma.CheckoutSessionUncheckedCreateNestedManyWithoutTeamInput
+  billingBalances?: Prisma.BillingBalanceUncheckedCreateNestedManyWithoutTeamInput
+  refunds?: Prisma.RefundUncheckedCreateNestedManyWithoutTeamInput
+  billingAdjustments?: Prisma.BillingAdjustmentUncheckedCreateNestedManyWithoutTeamInput
+  subscriptionStates?: Prisma.SubscriptionStateUncheckedCreateNestedManyWithoutTeamInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedCreateNestedManyWithoutTeamInput
+  billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedCreateNestedManyWithoutTeamInput
+  taxProfile?: Prisma.TaxProfileUncheckedCreateNestedOneWithoutTeamInput
+  invoiceSequences?: Prisma.InvoiceSequenceUncheckedCreateNestedManyWithoutTeamInput
+  auditEvents?: Prisma.AuditEventUncheckedCreateNestedManyWithoutTeamInput
+  billingEvents?: Prisma.BillingEventUncheckedCreateNestedManyWithoutTeamInput
+  webhookDeliveries?: Prisma.WebhookDeliveryUncheckedCreateNestedManyWithoutTeamInput
+  gasSpends?: Prisma.GasSpendUncheckedCreateNestedManyWithoutTeamInput
+  tierHistory?: Prisma.TierUpgradeHistoryUncheckedCreateNestedManyWithoutTeamInput
+  supportTickets?: Prisma.SupportTicketUncheckedCreateNestedManyWithoutTeamInput
+  arcenCompanies?: Prisma.ArcenCompanyUncheckedCreateNestedManyWithoutTeamInput
+  addOnGrants?: Prisma.CompanyAddOnGrantUncheckedCreateNestedManyWithoutTeamInput
+  featureFlags?: Prisma.CatalogFeatureFlagUncheckedCreateNestedManyWithoutTeamInput
+  arcenApiKeys?: Prisma.ArcenApiKeyUncheckedCreateNestedManyWithoutTeamInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedCreateNestedManyWithoutTeamInput
+  embedComponents?: Prisma.EmbedComponentUncheckedCreateNestedManyWithoutTeamInput
+  agentConfig?: Prisma.ArcenAgentConfigUncheckedCreateNestedOneWithoutTeamInput
+  dispatchRequests?: Prisma.ArcenDispatchRequestUncheckedCreateNestedManyWithoutTeamInput
+}
+
+export type TeamCreateOrConnectWithoutCreditGrantsInput = {
+  where: Prisma.TeamWhereUniqueInput
+  create: Prisma.XOR<Prisma.TeamCreateWithoutCreditGrantsInput, Prisma.TeamUncheckedCreateWithoutCreditGrantsInput>
+}
+
+export type TeamUpsertWithoutCreditGrantsInput = {
+  update: Prisma.XOR<Prisma.TeamUpdateWithoutCreditGrantsInput, Prisma.TeamUncheckedUpdateWithoutCreditGrantsInput>
+  create: Prisma.XOR<Prisma.TeamCreateWithoutCreditGrantsInput, Prisma.TeamUncheckedCreateWithoutCreditGrantsInput>
+  where?: Prisma.TeamWhereInput
+}
+
+export type TeamUpdateToOneWithWhereWithoutCreditGrantsInput = {
+  where?: Prisma.TeamWhereInput
+  data: Prisma.XOR<Prisma.TeamUpdateWithoutCreditGrantsInput, Prisma.TeamUncheckedUpdateWithoutCreditGrantsInput>
+}
+
+export type TeamUpdateWithoutCreditGrantsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  slug?: Prisma.StringFieldUpdateOperationsInput | string
+  environmentMode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
+  invoicePrefix?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
+  tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
+  providerProfiles?: Prisma.ProviderProfileUpdateManyWithoutTeamNestedInput
+  invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
+  environments?: Prisma.WorkspaceEnvironmentUpdateManyWithoutTeamNestedInput
+  catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutTeamNestedInput
+  catalogAddOns?: Prisma.CatalogAddOnUpdateManyWithoutTeamNestedInput
+  catalogCreditTypes?: Prisma.CatalogCreditTypeUpdateManyWithoutTeamNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUpdateManyWithoutTeamNestedInput
+  catalogVersions?: Prisma.CatalogVersionUpdateManyWithoutTeamNestedInput
+  catalogConfigs?: Prisma.CatalogConfigUpdateManyWithoutTeamNestedInput
+  billingTemplates?: Prisma.BillingTemplateUpdateManyWithoutTeamNestedInput
+  templateInstalls?: Prisma.TemplateInstallUpdateManyWithoutTeamNestedInput
+  invoices?: Prisma.InvoiceUpdateManyWithoutTeamNestedInput
+  payments?: Prisma.PaymentUpdateManyWithoutTeamNestedInput
+  paymentLinks?: Prisma.PaymentLinkUpdateManyWithoutTeamNestedInput
+  checkoutSessions?: Prisma.CheckoutSessionUpdateManyWithoutTeamNestedInput
+  billingBalances?: Prisma.BillingBalanceUpdateManyWithoutTeamNestedInput
+  refunds?: Prisma.RefundUpdateManyWithoutTeamNestedInput
+  billingAdjustments?: Prisma.BillingAdjustmentUpdateManyWithoutTeamNestedInput
+  subscriptionStates?: Prisma.SubscriptionStateUpdateManyWithoutTeamNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUpdateManyWithoutTeamNestedInput
+  billingRecoveryTasks?: Prisma.BillingRecoveryTaskUpdateManyWithoutTeamNestedInput
+  taxProfile?: Prisma.TaxProfileUpdateOneWithoutTeamNestedInput
+  invoiceSequences?: Prisma.InvoiceSequenceUpdateManyWithoutTeamNestedInput
+  auditEvents?: Prisma.AuditEventUpdateManyWithoutTeamNestedInput
+  billingEvents?: Prisma.BillingEventUpdateManyWithoutTeamNestedInput
+  webhookDeliveries?: Prisma.WebhookDeliveryUpdateManyWithoutTeamNestedInput
+  gasSpends?: Prisma.GasSpendUpdateManyWithoutTeamNestedInput
+  tierHistory?: Prisma.TierUpgradeHistoryUpdateManyWithoutTeamNestedInput
+  supportTickets?: Prisma.SupportTicketUpdateManyWithoutTeamNestedInput
+  arcenCompanies?: Prisma.ArcenCompanyUpdateManyWithoutTeamNestedInput
+  addOnGrants?: Prisma.CompanyAddOnGrantUpdateManyWithoutTeamNestedInput
+  featureFlags?: Prisma.CatalogFeatureFlagUpdateManyWithoutTeamNestedInput
+  arcenApiKeys?: Prisma.ArcenApiKeyUpdateManyWithoutTeamNestedInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUpdateManyWithoutTeamNestedInput
+  embedComponents?: Prisma.EmbedComponentUpdateManyWithoutTeamNestedInput
+  agentConfig?: Prisma.ArcenAgentConfigUpdateOneWithoutTeamNestedInput
+  dispatchRequests?: Prisma.ArcenDispatchRequestUpdateManyWithoutTeamNestedInput
+}
+
+export type TeamUncheckedUpdateWithoutCreditGrantsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  slug?: Prisma.StringFieldUpdateOperationsInput | string
+  environmentMode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
+  invoicePrefix?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
+  tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
+  providerProfiles?: Prisma.ProviderProfileUncheckedUpdateManyWithoutTeamNestedInput
+  invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
+  environments?: Prisma.WorkspaceEnvironmentUncheckedUpdateManyWithoutTeamNestedInput
+  catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutTeamNestedInput
+  catalogAddOns?: Prisma.CatalogAddOnUncheckedUpdateManyWithoutTeamNestedInput
+  catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedUpdateManyWithoutTeamNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedUpdateManyWithoutTeamNestedInput
+  catalogVersions?: Prisma.CatalogVersionUncheckedUpdateManyWithoutTeamNestedInput
+  catalogConfigs?: Prisma.CatalogConfigUncheckedUpdateManyWithoutTeamNestedInput
+  billingTemplates?: Prisma.BillingTemplateUncheckedUpdateManyWithoutTeamNestedInput
+  templateInstalls?: Prisma.TemplateInstallUncheckedUpdateManyWithoutTeamNestedInput
+  invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutTeamNestedInput
+  payments?: Prisma.PaymentUncheckedUpdateManyWithoutTeamNestedInput
+  paymentLinks?: Prisma.PaymentLinkUncheckedUpdateManyWithoutTeamNestedInput
+  checkoutSessions?: Prisma.CheckoutSessionUncheckedUpdateManyWithoutTeamNestedInput
+  billingBalances?: Prisma.BillingBalanceUncheckedUpdateManyWithoutTeamNestedInput
+  refunds?: Prisma.RefundUncheckedUpdateManyWithoutTeamNestedInput
+  billingAdjustments?: Prisma.BillingAdjustmentUncheckedUpdateManyWithoutTeamNestedInput
+  subscriptionStates?: Prisma.SubscriptionStateUncheckedUpdateManyWithoutTeamNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedUpdateManyWithoutTeamNestedInput
+  billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedUpdateManyWithoutTeamNestedInput
+  taxProfile?: Prisma.TaxProfileUncheckedUpdateOneWithoutTeamNestedInput
+  invoiceSequences?: Prisma.InvoiceSequenceUncheckedUpdateManyWithoutTeamNestedInput
+  auditEvents?: Prisma.AuditEventUncheckedUpdateManyWithoutTeamNestedInput
+  billingEvents?: Prisma.BillingEventUncheckedUpdateManyWithoutTeamNestedInput
+  webhookDeliveries?: Prisma.WebhookDeliveryUncheckedUpdateManyWithoutTeamNestedInput
+  gasSpends?: Prisma.GasSpendUncheckedUpdateManyWithoutTeamNestedInput
+  tierHistory?: Prisma.TierUpgradeHistoryUncheckedUpdateManyWithoutTeamNestedInput
+  supportTickets?: Prisma.SupportTicketUncheckedUpdateManyWithoutTeamNestedInput
+  arcenCompanies?: Prisma.ArcenCompanyUncheckedUpdateManyWithoutTeamNestedInput
+  addOnGrants?: Prisma.CompanyAddOnGrantUncheckedUpdateManyWithoutTeamNestedInput
+  featureFlags?: Prisma.CatalogFeatureFlagUncheckedUpdateManyWithoutTeamNestedInput
+  arcenApiKeys?: Prisma.ArcenApiKeyUncheckedUpdateManyWithoutTeamNestedInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedUpdateManyWithoutTeamNestedInput
+  embedComponents?: Prisma.EmbedComponentUncheckedUpdateManyWithoutTeamNestedInput
+  agentConfig?: Prisma.ArcenAgentConfigUncheckedUpdateOneWithoutTeamNestedInput
+  dispatchRequests?: Prisma.ArcenDispatchRequestUncheckedUpdateManyWithoutTeamNestedInput
+}
+
+export type TeamCreateWithoutCreditLedgerEntriesInput = {
+  id?: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  name: string
+  slug: string
+  environmentMode?: $Enums.EnvironmentMode
+  invoicePrefix?: string | null
+  platformTier?: $Enums.PlatformTier
+  tierExpiresAt?: Date | string | null
+  tierSubscriptionId?: string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
+  providerProfiles?: Prisma.ProviderProfileCreateNestedManyWithoutTeamInput
+  invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
+  environments?: Prisma.WorkspaceEnvironmentCreateNestedManyWithoutTeamInput
+  catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutTeamInput
+  catalogAddOns?: Prisma.CatalogAddOnCreateNestedManyWithoutTeamInput
+  catalogCreditTypes?: Prisma.CatalogCreditTypeCreateNestedManyWithoutTeamInput
+  catalogVersions?: Prisma.CatalogVersionCreateNestedManyWithoutTeamInput
+  catalogConfigs?: Prisma.CatalogConfigCreateNestedManyWithoutTeamInput
+  billingTemplates?: Prisma.BillingTemplateCreateNestedManyWithoutTeamInput
+  templateInstalls?: Prisma.TemplateInstallCreateNestedManyWithoutTeamInput
+  invoices?: Prisma.InvoiceCreateNestedManyWithoutTeamInput
+  payments?: Prisma.PaymentCreateNestedManyWithoutTeamInput
+  paymentLinks?: Prisma.PaymentLinkCreateNestedManyWithoutTeamInput
+  checkoutSessions?: Prisma.CheckoutSessionCreateNestedManyWithoutTeamInput
+  billingBalances?: Prisma.BillingBalanceCreateNestedManyWithoutTeamInput
+  refunds?: Prisma.RefundCreateNestedManyWithoutTeamInput
+  billingAdjustments?: Prisma.BillingAdjustmentCreateNestedManyWithoutTeamInput
+  subscriptionStates?: Prisma.SubscriptionStateCreateNestedManyWithoutTeamInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestCreateNestedManyWithoutTeamInput
+  billingRecoveryTasks?: Prisma.BillingRecoveryTaskCreateNestedManyWithoutTeamInput
+  taxProfile?: Prisma.TaxProfileCreateNestedOneWithoutTeamInput
+  invoiceSequences?: Prisma.InvoiceSequenceCreateNestedManyWithoutTeamInput
+  auditEvents?: Prisma.AuditEventCreateNestedManyWithoutTeamInput
+  billingEvents?: Prisma.BillingEventCreateNestedManyWithoutTeamInput
+  webhookDeliveries?: Prisma.WebhookDeliveryCreateNestedManyWithoutTeamInput
+  gasSpends?: Prisma.GasSpendCreateNestedManyWithoutTeamInput
+  tierHistory?: Prisma.TierUpgradeHistoryCreateNestedManyWithoutTeamInput
+  supportTickets?: Prisma.SupportTicketCreateNestedManyWithoutTeamInput
+  arcenCompanies?: Prisma.ArcenCompanyCreateNestedManyWithoutTeamInput
+  addOnGrants?: Prisma.CompanyAddOnGrantCreateNestedManyWithoutTeamInput
+  creditGrants?: Prisma.CompanyCreditGrantCreateNestedManyWithoutTeamInput
+  featureFlags?: Prisma.CatalogFeatureFlagCreateNestedManyWithoutTeamInput
+  arcenApiKeys?: Prisma.ArcenApiKeyCreateNestedManyWithoutTeamInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenCreateNestedManyWithoutTeamInput
+  embedComponents?: Prisma.EmbedComponentCreateNestedManyWithoutTeamInput
+  agentConfig?: Prisma.ArcenAgentConfigCreateNestedOneWithoutTeamInput
+  dispatchRequests?: Prisma.ArcenDispatchRequestCreateNestedManyWithoutTeamInput
+}
+
+export type TeamUncheckedCreateWithoutCreditLedgerEntriesInput = {
+  id?: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  name: string
+  slug: string
+  environmentMode?: $Enums.EnvironmentMode
+  invoicePrefix?: string | null
+  platformTier?: $Enums.PlatformTier
+  tierExpiresAt?: Date | string | null
+  tierSubscriptionId?: string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
+  providerProfiles?: Prisma.ProviderProfileUncheckedCreateNestedManyWithoutTeamInput
+  invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
+  environments?: Prisma.WorkspaceEnvironmentUncheckedCreateNestedManyWithoutTeamInput
+  catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutTeamInput
+  catalogAddOns?: Prisma.CatalogAddOnUncheckedCreateNestedManyWithoutTeamInput
+  catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedCreateNestedManyWithoutTeamInput
+  catalogVersions?: Prisma.CatalogVersionUncheckedCreateNestedManyWithoutTeamInput
+  catalogConfigs?: Prisma.CatalogConfigUncheckedCreateNestedManyWithoutTeamInput
+  billingTemplates?: Prisma.BillingTemplateUncheckedCreateNestedManyWithoutTeamInput
+  templateInstalls?: Prisma.TemplateInstallUncheckedCreateNestedManyWithoutTeamInput
+  invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutTeamInput
+  payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutTeamInput
+  paymentLinks?: Prisma.PaymentLinkUncheckedCreateNestedManyWithoutTeamInput
+  checkoutSessions?: Prisma.CheckoutSessionUncheckedCreateNestedManyWithoutTeamInput
+  billingBalances?: Prisma.BillingBalanceUncheckedCreateNestedManyWithoutTeamInput
+  refunds?: Prisma.RefundUncheckedCreateNestedManyWithoutTeamInput
+  billingAdjustments?: Prisma.BillingAdjustmentUncheckedCreateNestedManyWithoutTeamInput
+  subscriptionStates?: Prisma.SubscriptionStateUncheckedCreateNestedManyWithoutTeamInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedCreateNestedManyWithoutTeamInput
+  billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedCreateNestedManyWithoutTeamInput
+  taxProfile?: Prisma.TaxProfileUncheckedCreateNestedOneWithoutTeamInput
+  invoiceSequences?: Prisma.InvoiceSequenceUncheckedCreateNestedManyWithoutTeamInput
+  auditEvents?: Prisma.AuditEventUncheckedCreateNestedManyWithoutTeamInput
+  billingEvents?: Prisma.BillingEventUncheckedCreateNestedManyWithoutTeamInput
+  webhookDeliveries?: Prisma.WebhookDeliveryUncheckedCreateNestedManyWithoutTeamInput
+  gasSpends?: Prisma.GasSpendUncheckedCreateNestedManyWithoutTeamInput
+  tierHistory?: Prisma.TierUpgradeHistoryUncheckedCreateNestedManyWithoutTeamInput
+  supportTickets?: Prisma.SupportTicketUncheckedCreateNestedManyWithoutTeamInput
+  arcenCompanies?: Prisma.ArcenCompanyUncheckedCreateNestedManyWithoutTeamInput
+  addOnGrants?: Prisma.CompanyAddOnGrantUncheckedCreateNestedManyWithoutTeamInput
+  creditGrants?: Prisma.CompanyCreditGrantUncheckedCreateNestedManyWithoutTeamInput
+  featureFlags?: Prisma.CatalogFeatureFlagUncheckedCreateNestedManyWithoutTeamInput
+  arcenApiKeys?: Prisma.ArcenApiKeyUncheckedCreateNestedManyWithoutTeamInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedCreateNestedManyWithoutTeamInput
+  embedComponents?: Prisma.EmbedComponentUncheckedCreateNestedManyWithoutTeamInput
+  agentConfig?: Prisma.ArcenAgentConfigUncheckedCreateNestedOneWithoutTeamInput
+  dispatchRequests?: Prisma.ArcenDispatchRequestUncheckedCreateNestedManyWithoutTeamInput
+}
+
+export type TeamCreateOrConnectWithoutCreditLedgerEntriesInput = {
+  where: Prisma.TeamWhereUniqueInput
+  create: Prisma.XOR<Prisma.TeamCreateWithoutCreditLedgerEntriesInput, Prisma.TeamUncheckedCreateWithoutCreditLedgerEntriesInput>
+}
+
+export type TeamUpsertWithoutCreditLedgerEntriesInput = {
+  update: Prisma.XOR<Prisma.TeamUpdateWithoutCreditLedgerEntriesInput, Prisma.TeamUncheckedUpdateWithoutCreditLedgerEntriesInput>
+  create: Prisma.XOR<Prisma.TeamCreateWithoutCreditLedgerEntriesInput, Prisma.TeamUncheckedCreateWithoutCreditLedgerEntriesInput>
+  where?: Prisma.TeamWhereInput
+}
+
+export type TeamUpdateToOneWithWhereWithoutCreditLedgerEntriesInput = {
+  where?: Prisma.TeamWhereInput
+  data: Prisma.XOR<Prisma.TeamUpdateWithoutCreditLedgerEntriesInput, Prisma.TeamUncheckedUpdateWithoutCreditLedgerEntriesInput>
+}
+
+export type TeamUpdateWithoutCreditLedgerEntriesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  slug?: Prisma.StringFieldUpdateOperationsInput | string
+  environmentMode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
+  invoicePrefix?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
+  tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
@@ -7296,6 +8145,8 @@ export type TeamUpdateWithoutAddOnGrantsInput = {
   tierHistory?: Prisma.TierUpgradeHistoryUpdateManyWithoutTeamNestedInput
   supportTickets?: Prisma.SupportTicketUpdateManyWithoutTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUpdateManyWithoutTeamNestedInput
+  addOnGrants?: Prisma.CompanyAddOnGrantUpdateManyWithoutTeamNestedInput
+  creditGrants?: Prisma.CompanyCreditGrantUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUpdateManyWithoutTeamNestedInput
   embedAccessTokens?: Prisma.EmbedAccessTokenUpdateManyWithoutTeamNestedInput
@@ -7304,7 +8155,7 @@ export type TeamUpdateWithoutAddOnGrantsInput = {
   dispatchRequests?: Prisma.ArcenDispatchRequestUpdateManyWithoutTeamNestedInput
 }
 
-export type TeamUncheckedUpdateWithoutAddOnGrantsInput = {
+export type TeamUncheckedUpdateWithoutCreditLedgerEntriesInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -7315,6 +8166,7 @@ export type TeamUncheckedUpdateWithoutAddOnGrantsInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUncheckedUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
@@ -7345,6 +8197,8 @@ export type TeamUncheckedUpdateWithoutAddOnGrantsInput = {
   tierHistory?: Prisma.TierUpgradeHistoryUncheckedUpdateManyWithoutTeamNestedInput
   supportTickets?: Prisma.SupportTicketUncheckedUpdateManyWithoutTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedUpdateManyWithoutTeamNestedInput
+  addOnGrants?: Prisma.CompanyAddOnGrantUncheckedUpdateManyWithoutTeamNestedInput
+  creditGrants?: Prisma.CompanyCreditGrantUncheckedUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedUpdateManyWithoutTeamNestedInput
   embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedUpdateManyWithoutTeamNestedInput
@@ -7364,6 +8218,7 @@ export type TeamCreateWithoutPaymentLinksInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
@@ -7371,6 +8226,7 @@ export type TeamCreateWithoutPaymentLinksInput = {
   catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeCreateNestedManyWithoutTeamInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryCreateNestedManyWithoutTeamInput
   catalogVersions?: Prisma.CatalogVersionCreateNestedManyWithoutTeamInput
   catalogConfigs?: Prisma.CatalogConfigCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateCreateNestedManyWithoutTeamInput
@@ -7394,6 +8250,7 @@ export type TeamCreateWithoutPaymentLinksInput = {
   supportTickets?: Prisma.SupportTicketCreateNestedManyWithoutTeamInput
   arcenCompanies?: Prisma.ArcenCompanyCreateNestedManyWithoutTeamInput
   addOnGrants?: Prisma.CompanyAddOnGrantCreateNestedManyWithoutTeamInput
+  creditGrants?: Prisma.CompanyCreditGrantCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyCreateNestedManyWithoutTeamInput
   embedAccessTokens?: Prisma.EmbedAccessTokenCreateNestedManyWithoutTeamInput
@@ -7413,6 +8270,7 @@ export type TeamUncheckedCreateWithoutPaymentLinksInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileUncheckedCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
@@ -7420,6 +8278,7 @@ export type TeamUncheckedCreateWithoutPaymentLinksInput = {
   catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedCreateNestedManyWithoutTeamInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedCreateNestedManyWithoutTeamInput
   catalogVersions?: Prisma.CatalogVersionUncheckedCreateNestedManyWithoutTeamInput
   catalogConfigs?: Prisma.CatalogConfigUncheckedCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateUncheckedCreateNestedManyWithoutTeamInput
@@ -7443,6 +8302,7 @@ export type TeamUncheckedCreateWithoutPaymentLinksInput = {
   supportTickets?: Prisma.SupportTicketUncheckedCreateNestedManyWithoutTeamInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedCreateNestedManyWithoutTeamInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedCreateNestedManyWithoutTeamInput
+  creditGrants?: Prisma.CompanyCreditGrantUncheckedCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedCreateNestedManyWithoutTeamInput
   embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedCreateNestedManyWithoutTeamInput
@@ -7478,6 +8338,7 @@ export type TeamUpdateWithoutPaymentLinksInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
@@ -7485,6 +8346,7 @@ export type TeamUpdateWithoutPaymentLinksInput = {
   catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUpdateManyWithoutTeamNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUpdateManyWithoutTeamNestedInput
   catalogVersions?: Prisma.CatalogVersionUpdateManyWithoutTeamNestedInput
   catalogConfigs?: Prisma.CatalogConfigUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUpdateManyWithoutTeamNestedInput
@@ -7508,6 +8370,7 @@ export type TeamUpdateWithoutPaymentLinksInput = {
   supportTickets?: Prisma.SupportTicketUpdateManyWithoutTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUpdateManyWithoutTeamNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUpdateManyWithoutTeamNestedInput
+  creditGrants?: Prisma.CompanyCreditGrantUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUpdateManyWithoutTeamNestedInput
   embedAccessTokens?: Prisma.EmbedAccessTokenUpdateManyWithoutTeamNestedInput
@@ -7527,6 +8390,7 @@ export type TeamUncheckedUpdateWithoutPaymentLinksInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUncheckedUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
@@ -7534,6 +8398,7 @@ export type TeamUncheckedUpdateWithoutPaymentLinksInput = {
   catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedUpdateManyWithoutTeamNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedUpdateManyWithoutTeamNestedInput
   catalogVersions?: Prisma.CatalogVersionUncheckedUpdateManyWithoutTeamNestedInput
   catalogConfigs?: Prisma.CatalogConfigUncheckedUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUncheckedUpdateManyWithoutTeamNestedInput
@@ -7557,6 +8422,7 @@ export type TeamUncheckedUpdateWithoutPaymentLinksInput = {
   supportTickets?: Prisma.SupportTicketUncheckedUpdateManyWithoutTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedUpdateManyWithoutTeamNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedUpdateManyWithoutTeamNestedInput
+  creditGrants?: Prisma.CompanyCreditGrantUncheckedUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedUpdateManyWithoutTeamNestedInput
   embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedUpdateManyWithoutTeamNestedInput
@@ -7576,6 +8442,7 @@ export type TeamCreateWithoutCheckoutSessionsInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
@@ -7583,6 +8450,7 @@ export type TeamCreateWithoutCheckoutSessionsInput = {
   catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeCreateNestedManyWithoutTeamInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryCreateNestedManyWithoutTeamInput
   catalogVersions?: Prisma.CatalogVersionCreateNestedManyWithoutTeamInput
   catalogConfigs?: Prisma.CatalogConfigCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateCreateNestedManyWithoutTeamInput
@@ -7606,6 +8474,7 @@ export type TeamCreateWithoutCheckoutSessionsInput = {
   supportTickets?: Prisma.SupportTicketCreateNestedManyWithoutTeamInput
   arcenCompanies?: Prisma.ArcenCompanyCreateNestedManyWithoutTeamInput
   addOnGrants?: Prisma.CompanyAddOnGrantCreateNestedManyWithoutTeamInput
+  creditGrants?: Prisma.CompanyCreditGrantCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyCreateNestedManyWithoutTeamInput
   embedAccessTokens?: Prisma.EmbedAccessTokenCreateNestedManyWithoutTeamInput
@@ -7625,6 +8494,7 @@ export type TeamUncheckedCreateWithoutCheckoutSessionsInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileUncheckedCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
@@ -7632,6 +8502,7 @@ export type TeamUncheckedCreateWithoutCheckoutSessionsInput = {
   catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedCreateNestedManyWithoutTeamInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedCreateNestedManyWithoutTeamInput
   catalogVersions?: Prisma.CatalogVersionUncheckedCreateNestedManyWithoutTeamInput
   catalogConfigs?: Prisma.CatalogConfigUncheckedCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateUncheckedCreateNestedManyWithoutTeamInput
@@ -7655,6 +8526,7 @@ export type TeamUncheckedCreateWithoutCheckoutSessionsInput = {
   supportTickets?: Prisma.SupportTicketUncheckedCreateNestedManyWithoutTeamInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedCreateNestedManyWithoutTeamInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedCreateNestedManyWithoutTeamInput
+  creditGrants?: Prisma.CompanyCreditGrantUncheckedCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedCreateNestedManyWithoutTeamInput
   embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedCreateNestedManyWithoutTeamInput
@@ -7690,6 +8562,7 @@ export type TeamUpdateWithoutCheckoutSessionsInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
@@ -7697,6 +8570,7 @@ export type TeamUpdateWithoutCheckoutSessionsInput = {
   catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUpdateManyWithoutTeamNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUpdateManyWithoutTeamNestedInput
   catalogVersions?: Prisma.CatalogVersionUpdateManyWithoutTeamNestedInput
   catalogConfigs?: Prisma.CatalogConfigUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUpdateManyWithoutTeamNestedInput
@@ -7720,6 +8594,7 @@ export type TeamUpdateWithoutCheckoutSessionsInput = {
   supportTickets?: Prisma.SupportTicketUpdateManyWithoutTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUpdateManyWithoutTeamNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUpdateManyWithoutTeamNestedInput
+  creditGrants?: Prisma.CompanyCreditGrantUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUpdateManyWithoutTeamNestedInput
   embedAccessTokens?: Prisma.EmbedAccessTokenUpdateManyWithoutTeamNestedInput
@@ -7739,6 +8614,7 @@ export type TeamUncheckedUpdateWithoutCheckoutSessionsInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUncheckedUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
@@ -7746,6 +8622,7 @@ export type TeamUncheckedUpdateWithoutCheckoutSessionsInput = {
   catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedUpdateManyWithoutTeamNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedUpdateManyWithoutTeamNestedInput
   catalogVersions?: Prisma.CatalogVersionUncheckedUpdateManyWithoutTeamNestedInput
   catalogConfigs?: Prisma.CatalogConfigUncheckedUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUncheckedUpdateManyWithoutTeamNestedInput
@@ -7769,6 +8646,7 @@ export type TeamUncheckedUpdateWithoutCheckoutSessionsInput = {
   supportTickets?: Prisma.SupportTicketUncheckedUpdateManyWithoutTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedUpdateManyWithoutTeamNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedUpdateManyWithoutTeamNestedInput
+  creditGrants?: Prisma.CompanyCreditGrantUncheckedUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedUpdateManyWithoutTeamNestedInput
   embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedUpdateManyWithoutTeamNestedInput
@@ -7788,6 +8666,7 @@ export type TeamCreateWithoutFeatureFlagsInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
@@ -7795,6 +8674,7 @@ export type TeamCreateWithoutFeatureFlagsInput = {
   catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeCreateNestedManyWithoutTeamInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryCreateNestedManyWithoutTeamInput
   catalogVersions?: Prisma.CatalogVersionCreateNestedManyWithoutTeamInput
   catalogConfigs?: Prisma.CatalogConfigCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateCreateNestedManyWithoutTeamInput
@@ -7819,6 +8699,7 @@ export type TeamCreateWithoutFeatureFlagsInput = {
   supportTickets?: Prisma.SupportTicketCreateNestedManyWithoutTeamInput
   arcenCompanies?: Prisma.ArcenCompanyCreateNestedManyWithoutTeamInput
   addOnGrants?: Prisma.CompanyAddOnGrantCreateNestedManyWithoutTeamInput
+  creditGrants?: Prisma.CompanyCreditGrantCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyCreateNestedManyWithoutTeamInput
   embedAccessTokens?: Prisma.EmbedAccessTokenCreateNestedManyWithoutTeamInput
   embedComponents?: Prisma.EmbedComponentCreateNestedManyWithoutTeamInput
@@ -7837,6 +8718,7 @@ export type TeamUncheckedCreateWithoutFeatureFlagsInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileUncheckedCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
@@ -7844,6 +8726,7 @@ export type TeamUncheckedCreateWithoutFeatureFlagsInput = {
   catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedCreateNestedManyWithoutTeamInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedCreateNestedManyWithoutTeamInput
   catalogVersions?: Prisma.CatalogVersionUncheckedCreateNestedManyWithoutTeamInput
   catalogConfigs?: Prisma.CatalogConfigUncheckedCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateUncheckedCreateNestedManyWithoutTeamInput
@@ -7868,6 +8751,7 @@ export type TeamUncheckedCreateWithoutFeatureFlagsInput = {
   supportTickets?: Prisma.SupportTicketUncheckedCreateNestedManyWithoutTeamInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedCreateNestedManyWithoutTeamInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedCreateNestedManyWithoutTeamInput
+  creditGrants?: Prisma.CompanyCreditGrantUncheckedCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedCreateNestedManyWithoutTeamInput
   embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedCreateNestedManyWithoutTeamInput
   embedComponents?: Prisma.EmbedComponentUncheckedCreateNestedManyWithoutTeamInput
@@ -7902,6 +8786,7 @@ export type TeamUpdateWithoutFeatureFlagsInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
@@ -7909,6 +8794,7 @@ export type TeamUpdateWithoutFeatureFlagsInput = {
   catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUpdateManyWithoutTeamNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUpdateManyWithoutTeamNestedInput
   catalogVersions?: Prisma.CatalogVersionUpdateManyWithoutTeamNestedInput
   catalogConfigs?: Prisma.CatalogConfigUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUpdateManyWithoutTeamNestedInput
@@ -7933,6 +8819,7 @@ export type TeamUpdateWithoutFeatureFlagsInput = {
   supportTickets?: Prisma.SupportTicketUpdateManyWithoutTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUpdateManyWithoutTeamNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUpdateManyWithoutTeamNestedInput
+  creditGrants?: Prisma.CompanyCreditGrantUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUpdateManyWithoutTeamNestedInput
   embedAccessTokens?: Prisma.EmbedAccessTokenUpdateManyWithoutTeamNestedInput
   embedComponents?: Prisma.EmbedComponentUpdateManyWithoutTeamNestedInput
@@ -7951,6 +8838,7 @@ export type TeamUncheckedUpdateWithoutFeatureFlagsInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUncheckedUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
@@ -7958,6 +8846,7 @@ export type TeamUncheckedUpdateWithoutFeatureFlagsInput = {
   catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedUpdateManyWithoutTeamNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedUpdateManyWithoutTeamNestedInput
   catalogVersions?: Prisma.CatalogVersionUncheckedUpdateManyWithoutTeamNestedInput
   catalogConfigs?: Prisma.CatalogConfigUncheckedUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUncheckedUpdateManyWithoutTeamNestedInput
@@ -7982,6 +8871,7 @@ export type TeamUncheckedUpdateWithoutFeatureFlagsInput = {
   supportTickets?: Prisma.SupportTicketUncheckedUpdateManyWithoutTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedUpdateManyWithoutTeamNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedUpdateManyWithoutTeamNestedInput
+  creditGrants?: Prisma.CompanyCreditGrantUncheckedUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedUpdateManyWithoutTeamNestedInput
   embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedUpdateManyWithoutTeamNestedInput
   embedComponents?: Prisma.EmbedComponentUncheckedUpdateManyWithoutTeamNestedInput
@@ -8000,6 +8890,7 @@ export type TeamCreateWithoutEmbedAccessTokensInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
@@ -8007,6 +8898,7 @@ export type TeamCreateWithoutEmbedAccessTokensInput = {
   catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeCreateNestedManyWithoutTeamInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryCreateNestedManyWithoutTeamInput
   catalogVersions?: Prisma.CatalogVersionCreateNestedManyWithoutTeamInput
   catalogConfigs?: Prisma.CatalogConfigCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateCreateNestedManyWithoutTeamInput
@@ -8031,6 +8923,7 @@ export type TeamCreateWithoutEmbedAccessTokensInput = {
   supportTickets?: Prisma.SupportTicketCreateNestedManyWithoutTeamInput
   arcenCompanies?: Prisma.ArcenCompanyCreateNestedManyWithoutTeamInput
   addOnGrants?: Prisma.CompanyAddOnGrantCreateNestedManyWithoutTeamInput
+  creditGrants?: Prisma.CompanyCreditGrantCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyCreateNestedManyWithoutTeamInput
   embedComponents?: Prisma.EmbedComponentCreateNestedManyWithoutTeamInput
@@ -8049,6 +8942,7 @@ export type TeamUncheckedCreateWithoutEmbedAccessTokensInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileUncheckedCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
@@ -8056,6 +8950,7 @@ export type TeamUncheckedCreateWithoutEmbedAccessTokensInput = {
   catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedCreateNestedManyWithoutTeamInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedCreateNestedManyWithoutTeamInput
   catalogVersions?: Prisma.CatalogVersionUncheckedCreateNestedManyWithoutTeamInput
   catalogConfigs?: Prisma.CatalogConfigUncheckedCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateUncheckedCreateNestedManyWithoutTeamInput
@@ -8080,6 +8975,7 @@ export type TeamUncheckedCreateWithoutEmbedAccessTokensInput = {
   supportTickets?: Prisma.SupportTicketUncheckedCreateNestedManyWithoutTeamInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedCreateNestedManyWithoutTeamInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedCreateNestedManyWithoutTeamInput
+  creditGrants?: Prisma.CompanyCreditGrantUncheckedCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedCreateNestedManyWithoutTeamInput
   embedComponents?: Prisma.EmbedComponentUncheckedCreateNestedManyWithoutTeamInput
@@ -8114,6 +9010,7 @@ export type TeamUpdateWithoutEmbedAccessTokensInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
@@ -8121,6 +9018,7 @@ export type TeamUpdateWithoutEmbedAccessTokensInput = {
   catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUpdateManyWithoutTeamNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUpdateManyWithoutTeamNestedInput
   catalogVersions?: Prisma.CatalogVersionUpdateManyWithoutTeamNestedInput
   catalogConfigs?: Prisma.CatalogConfigUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUpdateManyWithoutTeamNestedInput
@@ -8145,6 +9043,7 @@ export type TeamUpdateWithoutEmbedAccessTokensInput = {
   supportTickets?: Prisma.SupportTicketUpdateManyWithoutTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUpdateManyWithoutTeamNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUpdateManyWithoutTeamNestedInput
+  creditGrants?: Prisma.CompanyCreditGrantUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUpdateManyWithoutTeamNestedInput
   embedComponents?: Prisma.EmbedComponentUpdateManyWithoutTeamNestedInput
@@ -8163,6 +9062,7 @@ export type TeamUncheckedUpdateWithoutEmbedAccessTokensInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUncheckedUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
@@ -8170,6 +9070,7 @@ export type TeamUncheckedUpdateWithoutEmbedAccessTokensInput = {
   catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedUpdateManyWithoutTeamNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedUpdateManyWithoutTeamNestedInput
   catalogVersions?: Prisma.CatalogVersionUncheckedUpdateManyWithoutTeamNestedInput
   catalogConfigs?: Prisma.CatalogConfigUncheckedUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUncheckedUpdateManyWithoutTeamNestedInput
@@ -8194,6 +9095,7 @@ export type TeamUncheckedUpdateWithoutEmbedAccessTokensInput = {
   supportTickets?: Prisma.SupportTicketUncheckedUpdateManyWithoutTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedUpdateManyWithoutTeamNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedUpdateManyWithoutTeamNestedInput
+  creditGrants?: Prisma.CompanyCreditGrantUncheckedUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedUpdateManyWithoutTeamNestedInput
   embedComponents?: Prisma.EmbedComponentUncheckedUpdateManyWithoutTeamNestedInput
@@ -8212,6 +9114,7 @@ export type TeamCreateWithoutArcenApiKeysInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
@@ -8219,6 +9122,7 @@ export type TeamCreateWithoutArcenApiKeysInput = {
   catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeCreateNestedManyWithoutTeamInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryCreateNestedManyWithoutTeamInput
   catalogVersions?: Prisma.CatalogVersionCreateNestedManyWithoutTeamInput
   catalogConfigs?: Prisma.CatalogConfigCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateCreateNestedManyWithoutTeamInput
@@ -8243,6 +9147,7 @@ export type TeamCreateWithoutArcenApiKeysInput = {
   supportTickets?: Prisma.SupportTicketCreateNestedManyWithoutTeamInput
   arcenCompanies?: Prisma.ArcenCompanyCreateNestedManyWithoutTeamInput
   addOnGrants?: Prisma.CompanyAddOnGrantCreateNestedManyWithoutTeamInput
+  creditGrants?: Prisma.CompanyCreditGrantCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagCreateNestedManyWithoutTeamInput
   embedAccessTokens?: Prisma.EmbedAccessTokenCreateNestedManyWithoutTeamInput
   embedComponents?: Prisma.EmbedComponentCreateNestedManyWithoutTeamInput
@@ -8261,6 +9166,7 @@ export type TeamUncheckedCreateWithoutArcenApiKeysInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileUncheckedCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
@@ -8268,6 +9174,7 @@ export type TeamUncheckedCreateWithoutArcenApiKeysInput = {
   catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedCreateNestedManyWithoutTeamInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedCreateNestedManyWithoutTeamInput
   catalogVersions?: Prisma.CatalogVersionUncheckedCreateNestedManyWithoutTeamInput
   catalogConfigs?: Prisma.CatalogConfigUncheckedCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateUncheckedCreateNestedManyWithoutTeamInput
@@ -8292,6 +9199,7 @@ export type TeamUncheckedCreateWithoutArcenApiKeysInput = {
   supportTickets?: Prisma.SupportTicketUncheckedCreateNestedManyWithoutTeamInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedCreateNestedManyWithoutTeamInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedCreateNestedManyWithoutTeamInput
+  creditGrants?: Prisma.CompanyCreditGrantUncheckedCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedCreateNestedManyWithoutTeamInput
   embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedCreateNestedManyWithoutTeamInput
   embedComponents?: Prisma.EmbedComponentUncheckedCreateNestedManyWithoutTeamInput
@@ -8326,6 +9234,7 @@ export type TeamUpdateWithoutArcenApiKeysInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
@@ -8333,6 +9242,7 @@ export type TeamUpdateWithoutArcenApiKeysInput = {
   catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUpdateManyWithoutTeamNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUpdateManyWithoutTeamNestedInput
   catalogVersions?: Prisma.CatalogVersionUpdateManyWithoutTeamNestedInput
   catalogConfigs?: Prisma.CatalogConfigUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUpdateManyWithoutTeamNestedInput
@@ -8357,6 +9267,7 @@ export type TeamUpdateWithoutArcenApiKeysInput = {
   supportTickets?: Prisma.SupportTicketUpdateManyWithoutTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUpdateManyWithoutTeamNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUpdateManyWithoutTeamNestedInput
+  creditGrants?: Prisma.CompanyCreditGrantUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUpdateManyWithoutTeamNestedInput
   embedAccessTokens?: Prisma.EmbedAccessTokenUpdateManyWithoutTeamNestedInput
   embedComponents?: Prisma.EmbedComponentUpdateManyWithoutTeamNestedInput
@@ -8375,6 +9286,7 @@ export type TeamUncheckedUpdateWithoutArcenApiKeysInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUncheckedUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
@@ -8382,6 +9294,7 @@ export type TeamUncheckedUpdateWithoutArcenApiKeysInput = {
   catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedUpdateManyWithoutTeamNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedUpdateManyWithoutTeamNestedInput
   catalogVersions?: Prisma.CatalogVersionUncheckedUpdateManyWithoutTeamNestedInput
   catalogConfigs?: Prisma.CatalogConfigUncheckedUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUncheckedUpdateManyWithoutTeamNestedInput
@@ -8406,6 +9319,7 @@ export type TeamUncheckedUpdateWithoutArcenApiKeysInput = {
   supportTickets?: Prisma.SupportTicketUncheckedUpdateManyWithoutTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedUpdateManyWithoutTeamNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedUpdateManyWithoutTeamNestedInput
+  creditGrants?: Prisma.CompanyCreditGrantUncheckedUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedUpdateManyWithoutTeamNestedInput
   embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedUpdateManyWithoutTeamNestedInput
   embedComponents?: Prisma.EmbedComponentUncheckedUpdateManyWithoutTeamNestedInput
@@ -8424,6 +9338,7 @@ export type TeamCreateWithoutEmbedComponentsInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
@@ -8431,6 +9346,7 @@ export type TeamCreateWithoutEmbedComponentsInput = {
   catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeCreateNestedManyWithoutTeamInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryCreateNestedManyWithoutTeamInput
   catalogVersions?: Prisma.CatalogVersionCreateNestedManyWithoutTeamInput
   catalogConfigs?: Prisma.CatalogConfigCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateCreateNestedManyWithoutTeamInput
@@ -8455,6 +9371,7 @@ export type TeamCreateWithoutEmbedComponentsInput = {
   supportTickets?: Prisma.SupportTicketCreateNestedManyWithoutTeamInput
   arcenCompanies?: Prisma.ArcenCompanyCreateNestedManyWithoutTeamInput
   addOnGrants?: Prisma.CompanyAddOnGrantCreateNestedManyWithoutTeamInput
+  creditGrants?: Prisma.CompanyCreditGrantCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyCreateNestedManyWithoutTeamInput
   embedAccessTokens?: Prisma.EmbedAccessTokenCreateNestedManyWithoutTeamInput
@@ -8473,6 +9390,7 @@ export type TeamUncheckedCreateWithoutEmbedComponentsInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileUncheckedCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
@@ -8480,6 +9398,7 @@ export type TeamUncheckedCreateWithoutEmbedComponentsInput = {
   catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedCreateNestedManyWithoutTeamInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedCreateNestedManyWithoutTeamInput
   catalogVersions?: Prisma.CatalogVersionUncheckedCreateNestedManyWithoutTeamInput
   catalogConfigs?: Prisma.CatalogConfigUncheckedCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateUncheckedCreateNestedManyWithoutTeamInput
@@ -8504,6 +9423,7 @@ export type TeamUncheckedCreateWithoutEmbedComponentsInput = {
   supportTickets?: Prisma.SupportTicketUncheckedCreateNestedManyWithoutTeamInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedCreateNestedManyWithoutTeamInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedCreateNestedManyWithoutTeamInput
+  creditGrants?: Prisma.CompanyCreditGrantUncheckedCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedCreateNestedManyWithoutTeamInput
   embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedCreateNestedManyWithoutTeamInput
@@ -8538,6 +9458,7 @@ export type TeamUpdateWithoutEmbedComponentsInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
@@ -8545,6 +9466,7 @@ export type TeamUpdateWithoutEmbedComponentsInput = {
   catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUpdateManyWithoutTeamNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUpdateManyWithoutTeamNestedInput
   catalogVersions?: Prisma.CatalogVersionUpdateManyWithoutTeamNestedInput
   catalogConfigs?: Prisma.CatalogConfigUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUpdateManyWithoutTeamNestedInput
@@ -8569,6 +9491,7 @@ export type TeamUpdateWithoutEmbedComponentsInput = {
   supportTickets?: Prisma.SupportTicketUpdateManyWithoutTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUpdateManyWithoutTeamNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUpdateManyWithoutTeamNestedInput
+  creditGrants?: Prisma.CompanyCreditGrantUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUpdateManyWithoutTeamNestedInput
   embedAccessTokens?: Prisma.EmbedAccessTokenUpdateManyWithoutTeamNestedInput
@@ -8587,6 +9510,7 @@ export type TeamUncheckedUpdateWithoutEmbedComponentsInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUncheckedUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
@@ -8594,6 +9518,7 @@ export type TeamUncheckedUpdateWithoutEmbedComponentsInput = {
   catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedUpdateManyWithoutTeamNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedUpdateManyWithoutTeamNestedInput
   catalogVersions?: Prisma.CatalogVersionUncheckedUpdateManyWithoutTeamNestedInput
   catalogConfigs?: Prisma.CatalogConfigUncheckedUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUncheckedUpdateManyWithoutTeamNestedInput
@@ -8618,6 +9543,7 @@ export type TeamUncheckedUpdateWithoutEmbedComponentsInput = {
   supportTickets?: Prisma.SupportTicketUncheckedUpdateManyWithoutTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedUpdateManyWithoutTeamNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedUpdateManyWithoutTeamNestedInput
+  creditGrants?: Prisma.CompanyCreditGrantUncheckedUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedUpdateManyWithoutTeamNestedInput
   embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedUpdateManyWithoutTeamNestedInput
@@ -8636,6 +9562,7 @@ export type TeamCreateWithoutAgentConfigInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
@@ -8643,6 +9570,7 @@ export type TeamCreateWithoutAgentConfigInput = {
   catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeCreateNestedManyWithoutTeamInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryCreateNestedManyWithoutTeamInput
   catalogVersions?: Prisma.CatalogVersionCreateNestedManyWithoutTeamInput
   catalogConfigs?: Prisma.CatalogConfigCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateCreateNestedManyWithoutTeamInput
@@ -8667,6 +9595,7 @@ export type TeamCreateWithoutAgentConfigInput = {
   supportTickets?: Prisma.SupportTicketCreateNestedManyWithoutTeamInput
   arcenCompanies?: Prisma.ArcenCompanyCreateNestedManyWithoutTeamInput
   addOnGrants?: Prisma.CompanyAddOnGrantCreateNestedManyWithoutTeamInput
+  creditGrants?: Prisma.CompanyCreditGrantCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyCreateNestedManyWithoutTeamInput
   embedAccessTokens?: Prisma.EmbedAccessTokenCreateNestedManyWithoutTeamInput
@@ -8685,6 +9614,7 @@ export type TeamUncheckedCreateWithoutAgentConfigInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileUncheckedCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
@@ -8692,6 +9622,7 @@ export type TeamUncheckedCreateWithoutAgentConfigInput = {
   catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedCreateNestedManyWithoutTeamInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedCreateNestedManyWithoutTeamInput
   catalogVersions?: Prisma.CatalogVersionUncheckedCreateNestedManyWithoutTeamInput
   catalogConfigs?: Prisma.CatalogConfigUncheckedCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateUncheckedCreateNestedManyWithoutTeamInput
@@ -8716,6 +9647,7 @@ export type TeamUncheckedCreateWithoutAgentConfigInput = {
   supportTickets?: Prisma.SupportTicketUncheckedCreateNestedManyWithoutTeamInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedCreateNestedManyWithoutTeamInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedCreateNestedManyWithoutTeamInput
+  creditGrants?: Prisma.CompanyCreditGrantUncheckedCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedCreateNestedManyWithoutTeamInput
   embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedCreateNestedManyWithoutTeamInput
@@ -8750,6 +9682,7 @@ export type TeamUpdateWithoutAgentConfigInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
@@ -8757,6 +9690,7 @@ export type TeamUpdateWithoutAgentConfigInput = {
   catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUpdateManyWithoutTeamNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUpdateManyWithoutTeamNestedInput
   catalogVersions?: Prisma.CatalogVersionUpdateManyWithoutTeamNestedInput
   catalogConfigs?: Prisma.CatalogConfigUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUpdateManyWithoutTeamNestedInput
@@ -8781,6 +9715,7 @@ export type TeamUpdateWithoutAgentConfigInput = {
   supportTickets?: Prisma.SupportTicketUpdateManyWithoutTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUpdateManyWithoutTeamNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUpdateManyWithoutTeamNestedInput
+  creditGrants?: Prisma.CompanyCreditGrantUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUpdateManyWithoutTeamNestedInput
   embedAccessTokens?: Prisma.EmbedAccessTokenUpdateManyWithoutTeamNestedInput
@@ -8799,6 +9734,7 @@ export type TeamUncheckedUpdateWithoutAgentConfigInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUncheckedUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
@@ -8806,6 +9742,7 @@ export type TeamUncheckedUpdateWithoutAgentConfigInput = {
   catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedUpdateManyWithoutTeamNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedUpdateManyWithoutTeamNestedInput
   catalogVersions?: Prisma.CatalogVersionUncheckedUpdateManyWithoutTeamNestedInput
   catalogConfigs?: Prisma.CatalogConfigUncheckedUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUncheckedUpdateManyWithoutTeamNestedInput
@@ -8830,6 +9767,7 @@ export type TeamUncheckedUpdateWithoutAgentConfigInput = {
   supportTickets?: Prisma.SupportTicketUncheckedUpdateManyWithoutTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedUpdateManyWithoutTeamNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedUpdateManyWithoutTeamNestedInput
+  creditGrants?: Prisma.CompanyCreditGrantUncheckedUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedUpdateManyWithoutTeamNestedInput
   embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedUpdateManyWithoutTeamNestedInput
@@ -8848,6 +9786,7 @@ export type TeamCreateWithoutDispatchRequestsInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
@@ -8855,6 +9794,7 @@ export type TeamCreateWithoutDispatchRequestsInput = {
   catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeCreateNestedManyWithoutTeamInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryCreateNestedManyWithoutTeamInput
   catalogVersions?: Prisma.CatalogVersionCreateNestedManyWithoutTeamInput
   catalogConfigs?: Prisma.CatalogConfigCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateCreateNestedManyWithoutTeamInput
@@ -8879,6 +9819,7 @@ export type TeamCreateWithoutDispatchRequestsInput = {
   supportTickets?: Prisma.SupportTicketCreateNestedManyWithoutTeamInput
   arcenCompanies?: Prisma.ArcenCompanyCreateNestedManyWithoutTeamInput
   addOnGrants?: Prisma.CompanyAddOnGrantCreateNestedManyWithoutTeamInput
+  creditGrants?: Prisma.CompanyCreditGrantCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyCreateNestedManyWithoutTeamInput
   embedAccessTokens?: Prisma.EmbedAccessTokenCreateNestedManyWithoutTeamInput
@@ -8897,6 +9838,7 @@ export type TeamUncheckedCreateWithoutDispatchRequestsInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileUncheckedCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
@@ -8904,6 +9846,7 @@ export type TeamUncheckedCreateWithoutDispatchRequestsInput = {
   catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedCreateNestedManyWithoutTeamInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedCreateNestedManyWithoutTeamInput
   catalogVersions?: Prisma.CatalogVersionUncheckedCreateNestedManyWithoutTeamInput
   catalogConfigs?: Prisma.CatalogConfigUncheckedCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateUncheckedCreateNestedManyWithoutTeamInput
@@ -8928,6 +9871,7 @@ export type TeamUncheckedCreateWithoutDispatchRequestsInput = {
   supportTickets?: Prisma.SupportTicketUncheckedCreateNestedManyWithoutTeamInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedCreateNestedManyWithoutTeamInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedCreateNestedManyWithoutTeamInput
+  creditGrants?: Prisma.CompanyCreditGrantUncheckedCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedCreateNestedManyWithoutTeamInput
   embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedCreateNestedManyWithoutTeamInput
@@ -8962,6 +9906,7 @@ export type TeamUpdateWithoutDispatchRequestsInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
@@ -8969,6 +9914,7 @@ export type TeamUpdateWithoutDispatchRequestsInput = {
   catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUpdateManyWithoutTeamNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUpdateManyWithoutTeamNestedInput
   catalogVersions?: Prisma.CatalogVersionUpdateManyWithoutTeamNestedInput
   catalogConfigs?: Prisma.CatalogConfigUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUpdateManyWithoutTeamNestedInput
@@ -8993,6 +9939,7 @@ export type TeamUpdateWithoutDispatchRequestsInput = {
   supportTickets?: Prisma.SupportTicketUpdateManyWithoutTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUpdateManyWithoutTeamNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUpdateManyWithoutTeamNestedInput
+  creditGrants?: Prisma.CompanyCreditGrantUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUpdateManyWithoutTeamNestedInput
   embedAccessTokens?: Prisma.EmbedAccessTokenUpdateManyWithoutTeamNestedInput
@@ -9011,6 +9958,7 @@ export type TeamUncheckedUpdateWithoutDispatchRequestsInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUncheckedUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
@@ -9018,6 +9966,7 @@ export type TeamUncheckedUpdateWithoutDispatchRequestsInput = {
   catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedUpdateManyWithoutTeamNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedUpdateManyWithoutTeamNestedInput
   catalogVersions?: Prisma.CatalogVersionUncheckedUpdateManyWithoutTeamNestedInput
   catalogConfigs?: Prisma.CatalogConfigUncheckedUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUncheckedUpdateManyWithoutTeamNestedInput
@@ -9042,6 +9991,7 @@ export type TeamUncheckedUpdateWithoutDispatchRequestsInput = {
   supportTickets?: Prisma.SupportTicketUncheckedUpdateManyWithoutTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedUpdateManyWithoutTeamNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedUpdateManyWithoutTeamNestedInput
+  creditGrants?: Prisma.CompanyCreditGrantUncheckedUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedUpdateManyWithoutTeamNestedInput
   embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedUpdateManyWithoutTeamNestedInput
@@ -9062,6 +10012,7 @@ export type TeamCountOutputType = {
   catalogPlans: number
   catalogAddOns: number
   catalogCreditTypes: number
+  creditLedgerEntries: number
   catalogVersions: number
   catalogConfigs: number
   billingTemplates: number
@@ -9085,6 +10036,7 @@ export type TeamCountOutputType = {
   supportTickets: number
   arcenCompanies: number
   addOnGrants: number
+  creditGrants: number
   featureFlags: number
   arcenApiKeys: number
   embedAccessTokens: number
@@ -9100,6 +10052,7 @@ export type TeamCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.I
   catalogPlans?: boolean | TeamCountOutputTypeCountCatalogPlansArgs
   catalogAddOns?: boolean | TeamCountOutputTypeCountCatalogAddOnsArgs
   catalogCreditTypes?: boolean | TeamCountOutputTypeCountCatalogCreditTypesArgs
+  creditLedgerEntries?: boolean | TeamCountOutputTypeCountCreditLedgerEntriesArgs
   catalogVersions?: boolean | TeamCountOutputTypeCountCatalogVersionsArgs
   catalogConfigs?: boolean | TeamCountOutputTypeCountCatalogConfigsArgs
   billingTemplates?: boolean | TeamCountOutputTypeCountBillingTemplatesArgs
@@ -9123,6 +10076,7 @@ export type TeamCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.I
   supportTickets?: boolean | TeamCountOutputTypeCountSupportTicketsArgs
   arcenCompanies?: boolean | TeamCountOutputTypeCountArcenCompaniesArgs
   addOnGrants?: boolean | TeamCountOutputTypeCountAddOnGrantsArgs
+  creditGrants?: boolean | TeamCountOutputTypeCountCreditGrantsArgs
   featureFlags?: boolean | TeamCountOutputTypeCountFeatureFlagsArgs
   arcenApiKeys?: boolean | TeamCountOutputTypeCountArcenApiKeysArgs
   embedAccessTokens?: boolean | TeamCountOutputTypeCountEmbedAccessTokensArgs
@@ -9187,6 +10141,13 @@ export type TeamCountOutputTypeCountCatalogAddOnsArgs<ExtArgs extends runtime.Ty
  */
 export type TeamCountOutputTypeCountCatalogCreditTypesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   where?: Prisma.CatalogCreditTypeWhereInput
+}
+
+/**
+ * TeamCountOutputType without action
+ */
+export type TeamCountOutputTypeCountCreditLedgerEntriesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.CreditLedgerEntryWhereInput
 }
 
 /**
@@ -9353,6 +10314,13 @@ export type TeamCountOutputTypeCountAddOnGrantsArgs<ExtArgs extends runtime.Type
 /**
  * TeamCountOutputType without action
  */
+export type TeamCountOutputTypeCountCreditGrantsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.CompanyCreditGrantWhereInput
+}
+
+/**
+ * TeamCountOutputType without action
+ */
 export type TeamCountOutputTypeCountFeatureFlagsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   where?: Prisma.CatalogFeatureFlagWhereInput
 }
@@ -9397,6 +10365,7 @@ export type TeamSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = r
   platformTier?: boolean
   tierExpiresAt?: boolean
   tierSubscriptionId?: boolean
+  profileData?: boolean
   members?: boolean | Prisma.Team$membersArgs<ExtArgs>
   providerProfiles?: boolean | Prisma.Team$providerProfilesArgs<ExtArgs>
   invitations?: boolean | Prisma.Team$invitationsArgs<ExtArgs>
@@ -9404,6 +10373,7 @@ export type TeamSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = r
   catalogPlans?: boolean | Prisma.Team$catalogPlansArgs<ExtArgs>
   catalogAddOns?: boolean | Prisma.Team$catalogAddOnsArgs<ExtArgs>
   catalogCreditTypes?: boolean | Prisma.Team$catalogCreditTypesArgs<ExtArgs>
+  creditLedgerEntries?: boolean | Prisma.Team$creditLedgerEntriesArgs<ExtArgs>
   catalogVersions?: boolean | Prisma.Team$catalogVersionsArgs<ExtArgs>
   catalogConfigs?: boolean | Prisma.Team$catalogConfigsArgs<ExtArgs>
   billingTemplates?: boolean | Prisma.Team$billingTemplatesArgs<ExtArgs>
@@ -9428,6 +10398,7 @@ export type TeamSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = r
   supportTickets?: boolean | Prisma.Team$supportTicketsArgs<ExtArgs>
   arcenCompanies?: boolean | Prisma.Team$arcenCompaniesArgs<ExtArgs>
   addOnGrants?: boolean | Prisma.Team$addOnGrantsArgs<ExtArgs>
+  creditGrants?: boolean | Prisma.Team$creditGrantsArgs<ExtArgs>
   featureFlags?: boolean | Prisma.Team$featureFlagsArgs<ExtArgs>
   arcenApiKeys?: boolean | Prisma.Team$arcenApiKeysArgs<ExtArgs>
   embedAccessTokens?: boolean | Prisma.Team$embedAccessTokensArgs<ExtArgs>
@@ -9448,6 +10419,7 @@ export type TeamSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensio
   platformTier?: boolean
   tierExpiresAt?: boolean
   tierSubscriptionId?: boolean
+  profileData?: boolean
 }, ExtArgs["result"]["team"]>
 
 export type TeamSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -9461,6 +10433,7 @@ export type TeamSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensio
   platformTier?: boolean
   tierExpiresAt?: boolean
   tierSubscriptionId?: boolean
+  profileData?: boolean
 }, ExtArgs["result"]["team"]>
 
 export type TeamSelectScalar = {
@@ -9474,9 +10447,10 @@ export type TeamSelectScalar = {
   platformTier?: boolean
   tierExpiresAt?: boolean
   tierSubscriptionId?: boolean
+  profileData?: boolean
 }
 
-export type TeamOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "createdAt" | "updatedAt" | "name" | "slug" | "environmentMode" | "invoicePrefix" | "platformTier" | "tierExpiresAt" | "tierSubscriptionId", ExtArgs["result"]["team"]>
+export type TeamOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "createdAt" | "updatedAt" | "name" | "slug" | "environmentMode" | "invoicePrefix" | "platformTier" | "tierExpiresAt" | "tierSubscriptionId" | "profileData", ExtArgs["result"]["team"]>
 export type TeamInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   members?: boolean | Prisma.Team$membersArgs<ExtArgs>
   providerProfiles?: boolean | Prisma.Team$providerProfilesArgs<ExtArgs>
@@ -9485,6 +10459,7 @@ export type TeamInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = 
   catalogPlans?: boolean | Prisma.Team$catalogPlansArgs<ExtArgs>
   catalogAddOns?: boolean | Prisma.Team$catalogAddOnsArgs<ExtArgs>
   catalogCreditTypes?: boolean | Prisma.Team$catalogCreditTypesArgs<ExtArgs>
+  creditLedgerEntries?: boolean | Prisma.Team$creditLedgerEntriesArgs<ExtArgs>
   catalogVersions?: boolean | Prisma.Team$catalogVersionsArgs<ExtArgs>
   catalogConfigs?: boolean | Prisma.Team$catalogConfigsArgs<ExtArgs>
   billingTemplates?: boolean | Prisma.Team$billingTemplatesArgs<ExtArgs>
@@ -9509,6 +10484,7 @@ export type TeamInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = 
   supportTickets?: boolean | Prisma.Team$supportTicketsArgs<ExtArgs>
   arcenCompanies?: boolean | Prisma.Team$arcenCompaniesArgs<ExtArgs>
   addOnGrants?: boolean | Prisma.Team$addOnGrantsArgs<ExtArgs>
+  creditGrants?: boolean | Prisma.Team$creditGrantsArgs<ExtArgs>
   featureFlags?: boolean | Prisma.Team$featureFlagsArgs<ExtArgs>
   arcenApiKeys?: boolean | Prisma.Team$arcenApiKeysArgs<ExtArgs>
   embedAccessTokens?: boolean | Prisma.Team$embedAccessTokensArgs<ExtArgs>
@@ -9530,6 +10506,7 @@ export type $TeamPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs =
     catalogPlans: Prisma.$CatalogPlanPayload<ExtArgs>[]
     catalogAddOns: Prisma.$CatalogAddOnPayload<ExtArgs>[]
     catalogCreditTypes: Prisma.$CatalogCreditTypePayload<ExtArgs>[]
+    creditLedgerEntries: Prisma.$CreditLedgerEntryPayload<ExtArgs>[]
     catalogVersions: Prisma.$CatalogVersionPayload<ExtArgs>[]
     catalogConfigs: Prisma.$CatalogConfigPayload<ExtArgs>[]
     billingTemplates: Prisma.$BillingTemplatePayload<ExtArgs>[]
@@ -9554,6 +10531,7 @@ export type $TeamPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs =
     supportTickets: Prisma.$SupportTicketPayload<ExtArgs>[]
     arcenCompanies: Prisma.$ArcenCompanyPayload<ExtArgs>[]
     addOnGrants: Prisma.$CompanyAddOnGrantPayload<ExtArgs>[]
+    creditGrants: Prisma.$CompanyCreditGrantPayload<ExtArgs>[]
     featureFlags: Prisma.$CatalogFeatureFlagPayload<ExtArgs>[]
     arcenApiKeys: Prisma.$ArcenApiKeyPayload<ExtArgs>[]
     embedAccessTokens: Prisma.$EmbedAccessTokenPayload<ExtArgs>[]
@@ -9572,6 +10550,7 @@ export type $TeamPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs =
     platformTier: $Enums.PlatformTier
     tierExpiresAt: Date | null
     tierSubscriptionId: string | null
+    profileData: runtime.JsonValue | null
   }, ExtArgs["result"]["team"]>
   composites: {}
 }
@@ -9973,6 +10952,7 @@ export interface Prisma__TeamClient<T, Null = never, ExtArgs extends runtime.Typ
   catalogPlans<T extends Prisma.Team$catalogPlansArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Team$catalogPlansArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$CatalogPlanPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   catalogAddOns<T extends Prisma.Team$catalogAddOnsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Team$catalogAddOnsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$CatalogAddOnPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   catalogCreditTypes<T extends Prisma.Team$catalogCreditTypesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Team$catalogCreditTypesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$CatalogCreditTypePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  creditLedgerEntries<T extends Prisma.Team$creditLedgerEntriesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Team$creditLedgerEntriesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$CreditLedgerEntryPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   catalogVersions<T extends Prisma.Team$catalogVersionsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Team$catalogVersionsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$CatalogVersionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   catalogConfigs<T extends Prisma.Team$catalogConfigsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Team$catalogConfigsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$CatalogConfigPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   billingTemplates<T extends Prisma.Team$billingTemplatesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Team$billingTemplatesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$BillingTemplatePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
@@ -9997,6 +10977,7 @@ export interface Prisma__TeamClient<T, Null = never, ExtArgs extends runtime.Typ
   supportTickets<T extends Prisma.Team$supportTicketsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Team$supportTicketsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$SupportTicketPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   arcenCompanies<T extends Prisma.Team$arcenCompaniesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Team$arcenCompaniesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ArcenCompanyPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   addOnGrants<T extends Prisma.Team$addOnGrantsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Team$addOnGrantsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$CompanyAddOnGrantPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  creditGrants<T extends Prisma.Team$creditGrantsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Team$creditGrantsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$CompanyCreditGrantPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   featureFlags<T extends Prisma.Team$featureFlagsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Team$featureFlagsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$CatalogFeatureFlagPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   arcenApiKeys<T extends Prisma.Team$arcenApiKeysArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Team$arcenApiKeysArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ArcenApiKeyPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   embedAccessTokens<T extends Prisma.Team$embedAccessTokensArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Team$embedAccessTokensArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$EmbedAccessTokenPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
@@ -10042,6 +11023,7 @@ export interface TeamFieldRefs {
   readonly platformTier: Prisma.FieldRef<"Team", 'PlatformTier'>
   readonly tierExpiresAt: Prisma.FieldRef<"Team", 'DateTime'>
   readonly tierSubscriptionId: Prisma.FieldRef<"Team", 'String'>
+  readonly profileData: Prisma.FieldRef<"Team", 'Json'>
 }
     
 
@@ -10595,6 +11577,30 @@ export type Team$catalogCreditTypesArgs<ExtArgs extends runtime.Types.Extensions
   take?: number
   skip?: number
   distinct?: Prisma.CatalogCreditTypeScalarFieldEnum | Prisma.CatalogCreditTypeScalarFieldEnum[]
+}
+
+/**
+ * Team.creditLedgerEntries
+ */
+export type Team$creditLedgerEntriesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the CreditLedgerEntry
+   */
+  select?: Prisma.CreditLedgerEntrySelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the CreditLedgerEntry
+   */
+  omit?: Prisma.CreditLedgerEntryOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.CreditLedgerEntryInclude<ExtArgs> | null
+  where?: Prisma.CreditLedgerEntryWhereInput
+  orderBy?: Prisma.CreditLedgerEntryOrderByWithRelationInput | Prisma.CreditLedgerEntryOrderByWithRelationInput[]
+  cursor?: Prisma.CreditLedgerEntryWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.CreditLedgerEntryScalarFieldEnum | Prisma.CreditLedgerEntryScalarFieldEnum[]
 }
 
 /**
@@ -11166,6 +12172,30 @@ export type Team$addOnGrantsArgs<ExtArgs extends runtime.Types.Extensions.Intern
   take?: number
   skip?: number
   distinct?: Prisma.CompanyAddOnGrantScalarFieldEnum | Prisma.CompanyAddOnGrantScalarFieldEnum[]
+}
+
+/**
+ * Team.creditGrants
+ */
+export type Team$creditGrantsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the CompanyCreditGrant
+   */
+  select?: Prisma.CompanyCreditGrantSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the CompanyCreditGrant
+   */
+  omit?: Prisma.CompanyCreditGrantOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.CompanyCreditGrantInclude<ExtArgs> | null
+  where?: Prisma.CompanyCreditGrantWhereInput
+  orderBy?: Prisma.CompanyCreditGrantOrderByWithRelationInput | Prisma.CompanyCreditGrantOrderByWithRelationInput[]
+  cursor?: Prisma.CompanyCreditGrantWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.CompanyCreditGrantScalarFieldEnum | Prisma.CompanyCreditGrantScalarFieldEnum[]
 }
 
 /**

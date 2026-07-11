@@ -1,6 +1,7 @@
 import type { Prisma } from "../../generated/client/client.js";
 import { db } from "../../db.js";
 import { toPrismaJson } from "../../utils/prisma-json.js";
+import { grantAddOnCreditsForCompany } from "../billing/usage-credits.js";
 
 type AddOnGrantDb = Pick<
   typeof db,
@@ -105,6 +106,33 @@ export async function grantCompanyAddOn(input: {
       });
 
   await syncCompanyAddOnCache(input.teamId, input.companyId, client);
+
+  // Retrieve environmentId from the company to properly scope the credit grant
+  const company = await db.arcenCompany.findFirst({
+    where: { id: input.companyId, teamId: input.teamId },
+    select: { environmentId: true },
+  });
+  const environmentId = company?.environmentId ?? null;
+
+  try {
+    // Use the global `db` client here — the local `client` argument is narrowly typed
+    // as AddOnGrantDb and lacks the models (catalogAddOn, catalogCreditType,
+    // companyCreditGrant, creditLedgerEntry) that grantAddOnCreditsForCompany needs.
+    await grantAddOnCreditsForCompany({
+      teamId: input.teamId,
+      environmentId,
+      companyId: input.companyId,
+      catalogAddOnId: input.catalogAddOnId,
+      expiresAt: input.expiresAt,
+      metadata: {
+        companyAddOnGrantId: grant.id,
+      },
+    });
+  } catch (err) {
+    // Log error but do not block the primary add-on grant transaction
+    console.error("Failed to auto-grant credits for add-on:", err);
+  }
+
   return grant;
 }
 

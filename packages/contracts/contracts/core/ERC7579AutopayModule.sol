@@ -84,15 +84,6 @@ contract ERC7579AutopayModule is
     /// @notice Account => pending dispatch (stores latest failure per account)
     mapping(address => PendingDispatch) private _pendingDispatches;
 
-    /// @notice Emitted when cross-chain dispatch fails (non-reverting)
-    event CrossChainDispatchFailed(address indexed account, uint256 destinationChainId);
-
-    /// @notice Emitted when an account state is imported during migration
-    event AccountStateImported(address indexed account, uint256 indexed planId, uint64 lastPullTime);
-
-    /// @notice Emitted when migration imports are permanently disabled
-    event MigrationFinalized();
-
     bool public migrationEnabled;
 
     // ============================================================

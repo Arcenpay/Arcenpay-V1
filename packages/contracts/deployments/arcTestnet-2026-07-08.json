@@ -1,0 +1,31 @@
+{
+  "network": "arcTestnet",
+  "chainId": 5042002,
+  "deployer": "0x38f62CCfD6F771eF9E48e3bb86a3E0413aE5319B",
+  "deploymentKind": "uups",
+  "contracts": {
+    "PlanFactory": "0xD9cbc3479557cC3C41Cc23c5bbAC17697b122e25",
+    "FeeCollector": "0x6CF2777Ed84ae15D5814CE7022b546dE2e55301a",
+    "SubscriptionRegistry": "0x6F590e66B83D8A29A106C1274D6CB66DAc1666F7",
+    "SessionVault": "0x84f973E334034f8f6b821a8E4c0Ec2f8Df238b33",
+    "ZKUsageVerifier": "0x6404826D859efF7fcaef26F316dD55C0e83E0418",
+    "ERC7579AutopayModule": "0xF18E8F80e4E917912235e035999E49c7B429608b",
+    "MirrorRegistry": "0xE4b4820058a351cD21d208605F2c44715DB424Ab"
+  },
+  "implementations": {
+    "PlanFactory": "0xA9f4ae69AFb4Cc41e3dc5257e8e1833D56E02E6B",
+    "FeeCollector": "0x193b5E8bcC297472A7Ad3dc26e7283C24B1F0529",
+    "SubscriptionRegistry": "0x18898e9c7EE0ed4FD35DdBee6aD69AD4Ca4b09B8",
+    "SessionVault": "0xFD41337c63cd12F2297aF02fBD4222deB1b1A712",
+    "ZKUsageVerifier": "0x48C5119Bd82A475fc18f0EEc94e3D83833480972",
+    "ERC7579AutopayModule": "0x76bBbEd500b304B36D9E012CB8291344c60d088c",
+    "MirrorRegistry": "0x08ebeD7d6bCbA5cD00CEc2aA179067eE6D0097b9"
+  },
+  "config": {
+    "USDC": "0x3600000000000000000000000000000000000000",
+    "treasury": "0x38f62CCfD6F771eF9E48e3bb86a3E0413aE5319B",
+    "owner": "0x38f62CCfD6F771eF9E48e3bb86a3E0413aE5319B",
+    "admin": "0x38f62CCfD6F771eF9E48e3bb86a3E0413aE5319B"
+  },
+  "deployedAt": "2026-07-08T12:51:39.045Z"
+}

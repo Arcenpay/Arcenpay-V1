@@ -17,18 +17,8 @@ import {
 } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 import { sepolia, baseSepolia, base } from 'viem/chains';
-import { arcTestnet } from '@arcenpay/internal-core';
-import type { X402Response, X402PaymentHeader } from '@arcenpay/internal-core';
-import { X402_VERSION, X402_SCHEME, SessionVaultABI, getContractAddresses, getTokenAddress } from '@arcenpay/internal-core';
-import type {
-  AutoTopUpConfig,
-  DispatchConfig,
-  DispatchProvider,
-  DispatchProviderType,
-  TopUpRequest,
-  PersistentAgentState,
-  PersistentStore,
-} from '@arcenpay/internal-core';
+import { arcTestnet, X402_VERSION, X402_SCHEME, SessionVaultABI, getContractAddresses, getTokenAddress } from './internal/core';
+import type { X402Response, X402PaymentHeader, AutoTopUpConfig, AutoTopUpMode, DispatchConfig, DispatchProvider, DispatchProviderType, TopUpRequest, PersistentAgentState, PersistentStore } from './internal/core';
 
 // ─── Re-exported types ───────────────────────────────────────────
 export type {
@@ -40,7 +30,7 @@ export type {
   TopUpRequest,
   PersistentAgentState,
   PersistentStore,
-} from '@arcenpay/internal-core';
+} from './internal/core';
 
 // ─── Config ───────────────────────────────────────────────────────
 

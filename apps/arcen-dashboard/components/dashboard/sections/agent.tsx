@@ -38,6 +38,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { getUsdcAddress } from "@/lib/contracts";
+import { SkeletonList, SkeletonTable } from "@/components/ui/skeleton";
 
 const ERC20_APPROVE_ABI = [{
   type: "function",
@@ -140,11 +141,11 @@ function CodeBlock({ code, lang = "typescript" }: { code: string; lang?: string 
       <div className="flex items-center justify-between px-4 py-2 border-b border-border/50 bg-[#111]">
         <span className="text-xs text-muted-foreground font-mono">{lang}</span>
         <button onClick={copy} className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors">
-          {copied ? <Check className="w-3.5 h-3.5 text-green-400" /> : <Copy className="w-3.5 h-3.5" />}
+          {copied ? <Check className="w-3.5 h-3.5 text-foreground" /> : <Copy className="w-3.5 h-3.5" />}
           {copied ? "Copied" : "Copy"}
         </button>
       </div>
-      <pre className="p-4 text-xs leading-relaxed text-green-300 font-mono overflow-x-auto whitespace-pre">{code}</pre>
+      <pre className="p-4 text-xs leading-relaxed text-foreground font-mono overflow-x-auto whitespace-pre">{code}</pre>
     </div>
   );
 }
@@ -219,15 +220,15 @@ function ApiKeysTab() {
 
       {/* Revealed key banner */}
       {createdKey && (
-        <div className="p-4 rounded-lg border border-amber-500/30 bg-amber-500/5">
+        <div className="p-4 rounded-lg border border-border bg-secondary">
           <div className="flex items-start gap-3">
-            <Shield className="w-4 h-4 text-amber-400 mt-0.5 shrink-0" />
+            <Shield className="w-4 h-4 text-foreground mt-0.5 shrink-0" />
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-amber-400">Save your key — it won't be shown again</p>
+              <p className="text-sm font-medium text-foreground">Save your key — it won't be shown again</p>
               <div className="flex items-center gap-2 mt-2">
                 <code className="text-xs font-mono bg-background/50 px-2 py-1 rounded text-foreground flex-1 truncate">{createdKey}</code>
                 <button onClick={() => copyKey(createdKey, "new")} className="shrink-0">
-                  {copiedId === "new" ? <Check className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4 text-muted-foreground hover:text-foreground" />}
+                  {copiedId === "new" ? <Check className="w-4 h-4 text-foreground" /> : <Copy className="w-4 h-4 text-muted-foreground hover:text-foreground" />}
                 </button>
               </div>
             </div>
@@ -238,7 +239,7 @@ function ApiKeysTab() {
 
       {/* Keys list */}
       {loading ? (
-        <div className="text-sm text-muted-foreground">Loading…</div>
+        <SkeletonList items={3} />
       ) : keys.length === 0 ? (
         <div className="text-center py-10 border border-dashed border-border rounded-lg">
           <Key className="w-8 h-8 text-muted-foreground/40 mx-auto mb-2" />
@@ -267,11 +268,11 @@ function ApiKeysTab() {
                   className="p-1.5 rounded hover:bg-secondary transition-colors"
                   title="Copy prefix"
                 >
-                  {copiedId === key.id ? <Check className="w-3.5 h-3.5 text-green-400" /> : <Copy className="w-3.5 h-3.5 text-muted-foreground" />}
+                  {copiedId === key.id ? <Check className="w-3.5 h-3.5 text-foreground" /> : <Copy className="w-3.5 h-3.5 text-muted-foreground" />}
                 </button>
                 <button
                   onClick={() => handleDelete(key.id)}
-                  className="p-1.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+                  className="p-1.5 rounded hover:bg-secondary text-muted-foreground hover:text-destructive transition-colors"
                   title="Revoke key"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
@@ -356,13 +357,13 @@ function SessionsTab() {
         </p>
       </div>
       {warning && (
-        <div className="rounded-lg border border-warning/20 bg-warning/5 px-3 py-2 text-xs text-muted-foreground">
+        <div className="rounded-lg border border-border bg-secondary px-3 py-2 text-xs text-muted-foreground">
           {warning}
         </div>
       )}
 
       {loading ? (
-        <div className="text-sm text-muted-foreground">Loading…</div>
+        <SkeletonTable rows={3} cols={7} />
       ) : sessions.length === 0 ? (
         <div className="text-center py-10 border border-dashed border-border rounded-lg">
           <Database className="w-8 h-8 text-muted-foreground/40 mx-auto mb-2" />
@@ -371,19 +372,20 @@ function SessionsTab() {
         </div>
       ) : (
         <div className="border border-border rounded-lg overflow-hidden">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border bg-secondary/30">
-                <th className="text-left px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Session</th>
-                <th className="text-left px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Agent</th>
-                <th className="text-right px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Funded</th>
-                <th className="text-right px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Settled</th>
-                <th className="text-right px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Withdrawn</th>
-                <th className="text-right px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Balance</th>
-                <th className="text-center px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Status</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border bg-secondary/30">
+                  <th className="text-left px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Session</th>
+                  <th className="text-left px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Agent</th>
+                  <th className="text-right px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Funded</th>
+                  <th className="text-right px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Settled</th>
+                  <th className="text-right px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Withdrawn</th>
+                  <th className="text-right px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Balance</th>
+                  <th className="text-center px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
               {sessions.map((s) => (
                 <React.Fragment key={s.id}>
                   <tr
@@ -401,7 +403,7 @@ function SessionsTab() {
                     <td className="px-4 py-3 text-right text-muted-foreground">{formatUsdc(s.totalWithdrawn)}</td>
                     <td className="px-4 py-3 text-right font-medium">{formatUsdc(s.currentBalance)}</td>
                     <td className="px-4 py-3 text-center">
-                      <Badge variant={BigInt(s.currentBalance) > 0n ? "default" : "secondary"} className={cn("text-xs", BigInt(s.currentBalance) > 0n && "bg-green-500/15 text-green-500 border-green-500/20")}>
+                      <Badge variant={BigInt(s.currentBalance) > 0n ? "default" : "secondary"} className={cn("text-xs", BigInt(s.currentBalance) > 0n && "bg-secondary text-foreground border-border")}>
                         {BigInt(s.currentBalance) > 0n ? "Active" : "Closed"}
                       </Badge>
                     </td>
@@ -426,6 +428,7 @@ function SessionsTab() {
               ))}
             </tbody>
           </table>
+          </div>
         </div>
       )}
     </div>
@@ -844,9 +847,9 @@ function PermissionsTab() {
       </div>
 
       {/* Agent Wallet */}
-      <div className="space-y-4 p-5 rounded-lg border border-amber-500/20 bg-amber-500/5">
+      <div className="space-y-4 p-5 rounded-lg border border-border bg-secondary">
         <div className="flex items-center gap-2">
-          <Wallet className="w-4 h-4 text-amber-400" />
+          <Wallet className="w-4 h-4 text-foreground" />
           <h4 className="text-sm font-semibold text-foreground">Step 1: Create Agent Wallet</h4>
         </div>
         <p className="text-xs text-muted-foreground">
@@ -854,23 +857,23 @@ function PermissionsTab() {
         </p>
 
         {agentWallet ? (
-          <div className="flex items-center gap-3 p-3 rounded border border-green-500/20 bg-green-500/5">
-            <Wallet className="w-4 h-4 text-green-400 shrink-0" />
+          <div className="flex items-center gap-3 p-3 rounded border border-border bg-secondary">
+            <Wallet className="w-4 h-4 text-foreground shrink-0" />
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-green-400">Agent Wallet Active</p>
+              <p className="text-sm font-medium text-foreground">Agent Wallet Active</p>
               <code className="text-xs font-mono text-foreground block truncate">{agentWallet}</code>
             </div>
-            <Badge variant="outline" className="text-xs text-green-500 border-green-500/30 bg-green-500/5 shrink-0">
+            <Badge variant="outline" className="text-xs text-foreground border-border bg-secondary shrink-0">
               Active
             </Badge>
           </div>
         ) : generatedAddress ? (
           <div className="space-y-3">
-            <div className="p-4 rounded-lg border border-amber-500/30 bg-amber-500/5">
+            <div className="p-4 rounded-lg border border-border bg-secondary">
               <div className="flex items-start gap-3">
-                <Shield className="w-4 h-4 text-amber-400 mt-0.5 shrink-0" />
+                <Shield className="w-4 h-4 text-foreground mt-0.5 shrink-0" />
                 <div className="flex-1 min-w-0 space-y-2">
-                  <p className="text-sm font-medium text-amber-400">Save your private key — it won&apos;t be shown again</p>
+                  <p className="text-sm font-medium text-foreground">Save your private key — it won&apos;t be shown again</p>
                   <div>
                     <p className="text-xs text-muted-foreground mb-1">Address</p>
                     <div className="flex items-center gap-2">
@@ -897,14 +900,14 @@ function PermissionsTab() {
                       Cancel
                     </Button>
                   </div>
-                  {saveError && <p className="text-xs text-red-400">{saveError}</p>}
+                  {saveError && <p className="text-xs text-foreground">{saveError}</p>}
                 </div>
               </div>
             </div>
           </div>
         ) : (
-          <div className="text-center py-6 border border-dashed border-amber-500/30 rounded-lg">
-            <Wallet className="w-8 h-8 text-amber-400/40 mx-auto mb-2" />
+          <div className="text-center py-6 border border-dashed border-border rounded-lg">
+            <Wallet className="w-8 h-8 text-foreground/40 mx-auto mb-2" />
             <p className="text-sm text-muted-foreground">No agent wallet yet</p>
             <p className="text-xs text-muted-foreground/60 mt-1 mb-3">Generate one to get started — your agent needs it to sign payments</p>
             <Button onClick={handleGenerateWallet} className="gap-1.5">
@@ -1022,7 +1025,7 @@ function PermissionsTab() {
               {approving || approveTxHash ? "Approving…" : `Approve $${approveAmount} USDC`}
             </Button>
           ) : (
-            <p className="text-xs text-amber-400 pb-1">Connect your wallet to approve</p>
+            <p className="text-xs text-foreground pb-1">Connect your wallet to approve</p>
           )}
         </div>
         {isConnected && (
@@ -1092,7 +1095,7 @@ function PermissionsTab() {
                     >
                       {testingIdx === i ? "Sending…" : "Test"}
                     </Button>
-                    <button onClick={() => removeProvider(i)} className="p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive">
+                    <button onClick={() => removeProvider(i)} className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-destructive">
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
                   </div>
@@ -1102,7 +1105,7 @@ function PermissionsTab() {
             {testResult && (
               <div className={cn(
                 "text-xs px-3 py-2 rounded",
-                testResult.ok ? "bg-green-500/10 text-green-400 border border-green-500/20" : "bg-red-500/10 text-red-400 border border-red-500/20"
+                testResult.ok ? "bg-secondary text-foreground border border-border" : "bg-secondary text-foreground border border-border"
               )}>
                 {testResult.message}
               </div>
@@ -1149,8 +1152,8 @@ function PermissionsTab() {
         <Button onClick={savePermissions} disabled={saving || loading}>
           {loading ? "Loading…" : saving ? "Saving…" : saved ? "Saved ✓" : "Save Permissions"}
         </Button>
-        {saved && <span className="text-xs text-green-500">Settings saved</span>}
-        {saveError && <span className="text-xs text-red-500">{saveError}</span>}
+        {saved && <span className="text-xs text-foreground">Settings saved</span>}
+        {saveError && <span className="text-xs text-foreground">{saveError}</span>}
       </div>
 
       {/* Add Provider Dialog */}
@@ -1279,9 +1282,9 @@ function DispatchHistoryTab() {
 
   const statusBadge = (status: string) => {
     const variants: Record<string, { color: string; label: string }> = {
-      pending: { color: "bg-yellow-500/15 text-yellow-500 border-yellow-500/20", label: "Pending" },
-      approved: { color: "bg-green-500/15 text-green-500 border-green-500/20", label: "Approved" },
-      denied: { color: "bg-red-500/15 text-red-500 border-red-500/20", label: "Denied" },
+      pending: { color: "bg-secondary text-foreground border-border", label: "Pending" },
+      approved: { color: "bg-secondary text-foreground border-border", label: "Approved" },
+      denied: { color: "bg-secondary text-foreground border-border", label: "Denied" },
       expired: { color: "bg-muted text-muted-foreground border-border", label: "Expired" },
     };
     const v = variants[status] ?? variants.expired;
@@ -1298,7 +1301,7 @@ function DispatchHistoryTab() {
       </div>
 
       {loading ? (
-        <div className="text-sm text-muted-foreground">Loading…</div>
+        <SkeletonTable rows={3} cols={5} />
       ) : requests.length === 0 ? (
         <div className="text-center py-10 border border-dashed border-border rounded-lg">
           <Clock className="w-8 h-8 text-muted-foreground/40 mx-auto mb-2" />
@@ -1366,8 +1369,8 @@ export function AgentSection() {
       <div className="px-6 pt-6 pb-0 border-b border-border">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500/20 to-blue-500/20 border border-violet-500/20 flex items-center justify-center">
-              <Bot className="w-4 h-4 text-violet-400" />
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500/20 to-blue-500/20 border border-border flex items-center justify-center">
+              <Bot className="w-4 h-4 text-foreground" />
             </div>
             <div>
               <h1 className="text-xl font-bold text-foreground">Agent</h1>
@@ -1375,7 +1378,7 @@ export function AgentSection() {
             </div>
           </div>
           {isConnected && (
-            <Badge variant="outline" className="text-xs gap-1 text-green-500 border-green-500/30 bg-green-500/5">
+            <Badge variant="outline" className="text-xs gap-1 text-foreground border-border bg-secondary">
               <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
               Wallet connected
             </Badge>

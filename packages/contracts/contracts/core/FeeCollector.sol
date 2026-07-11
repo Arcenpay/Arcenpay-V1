@@ -65,6 +65,11 @@ contract FeeCollector is
 
     // Events ProviderFeeRateSet and ProviderTierSynced are inherited from IFeeCollector
 
+    event TreasuryUpdated(address indexed newTreasury);
+    event CollectorAuthorized(address indexed collector);
+    event CollectorRevoked(address indexed collector);
+    event TierFeeRatesSet(uint8 indexed tier, uint256 subFeeBps, uint256 settleFeeBps);
+
     // ============================================================
     //                        CONSTRUCTOR
     // ============================================================
@@ -111,17 +116,20 @@ contract FeeCollector is
     function setTreasury(address _treasury) external onlyOwner {
         require(_treasury != address(0), "FeeCollector: zero treasury");
         treasury = _treasury;
+        emit TreasuryUpdated(_treasury);
     }
 
     /// @notice Authorizes a contract to collect fees
     function authorizeCollector(address collector) external onlyOwner {
         require(collector != address(0), "FeeCollector: zero collector");
         authorizedCollectors[collector] = true;
+        emit CollectorAuthorized(collector);
     }
 
     /// @notice Revokes a collector's authorization
     function revokeCollector(address collector) external onlyOwner {
         authorizedCollectors[collector] = false;
+        emit CollectorRevoked(collector);
     }
 
     /// @notice Sets fee rate overrides for a specific provider (tier-based)
@@ -175,6 +183,7 @@ contract FeeCollector is
         require(settleFeeBps <= 1000, "FeeCollector: settle fee > 10%");
         tierSubFeeBps[tier] = subFeeBps;
         tierSettleFeeBps[tier] = settleFeeBps;
+        emit TierFeeRatesSet(tier, subFeeBps, settleFeeBps);
     }
 
     /// @notice Syncs a provider's fee rates based on their platform tier.

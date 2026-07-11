@@ -3,10 +3,15 @@ import { z } from "zod";
 import { db } from "../../../db.js";
 import { requirePermission, isErrorResponse } from "../../../lib/auth/api-auth.js";
 import { writeAuditEvent } from "../../../lib/platform/audit.js";
+import { toPrismaNullableJson } from "../../../utils/prisma-json.js";
 
 const creditGrantSchema = z.object({
   creditTypeId: z.string().min(1),
-  amount: z.coerce.number().positive(),
+  amount: z.coerce.number().int().positive(),
+  resetPeriod: z
+    .enum(["plan_period", "monthly", "yearly", "never"])
+    .default("plan_period"),
+  autoTopUp: z.boolean().default(false),
 });
 
 function getCreditGrants(metadata: unknown): z.infer<typeof creditGrantSchema>[] {
@@ -31,6 +36,7 @@ async function enrichCreditGrants(
       name: true,
       code: true,
       unitName: true,
+      metadata: true,
     },
   });
   const creditTypeById = new Map(
@@ -44,6 +50,15 @@ async function enrichCreditGrants(
       name: creditType?.name ?? grant.creditTypeId,
       code: creditType?.code ?? null,
       unitName: creditType?.unitName ?? "credits",
+      unitNamePlural:
+        creditType?.metadata &&
+        typeof creditType.metadata === "object" &&
+        !Array.isArray(creditType.metadata) &&
+        typeof (creditType.metadata as Record<string, unknown>).unitNamePlural ===
+          "string"
+          ? ((creditType.metadata as Record<string, unknown>)
+              .unitNamePlural as string)
+          : creditType?.unitName ?? "credits",
     };
   });
 }
@@ -87,6 +102,21 @@ export async function addPlanCreditGrant(c: Context) {
     return c.json({ error: "Invalid request", details: parsed.error.flatten().fieldErrors }, 400 as any);
   }
 
+  const creditType = await db.catalogCreditType.findFirst({
+    where: {
+      id: parsed.data.creditTypeId,
+      teamId: auth.team.teamId,
+      ...(plan.environmentId ? { environmentId: plan.environmentId } : {}),
+    },
+    select: { id: true, status: true, active: true },
+  });
+  if (!creditType) {
+    return c.json({ error: "Credit type not found in this plan environment" }, 404 as any);
+  }
+  if (!creditType.active || creditType.status === "ARCHIVED") {
+    return c.json({ error: "Archived or inactive credit types cannot be granted to plans" }, 409 as any);
+  }
+
   const existing = getCreditGrants(plan.metadata);
   if (existing.some((e) => e.creditTypeId === parsed.data.creditTypeId)) {
     return c.json({ error: "Credit type already granted on this plan" }, 409 as any);
@@ -100,7 +130,7 @@ export async function addPlanCreditGrant(c: Context) {
 
   const updated = await db.catalogPlan.update({
     where: { id: plan.id },
-    data: { metadata: updatedMeta },
+    data: { metadata: toPrismaNullableJson(updatedMeta) },
   });
 
   await writeAuditEvent({
@@ -155,7 +185,7 @@ export async function deletePlanCreditGrant(c: Context) {
 
   await db.catalogPlan.update({
     where: { id: plan.id },
-    data: { metadata: updatedMeta },
+    data: { metadata: toPrismaNullableJson(updatedMeta) },
   });
 
   await writeAuditEvent({

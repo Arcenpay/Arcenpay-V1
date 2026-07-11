@@ -188,6 +188,93 @@ export interface CreateCheckoutSessionInput {
   expiresAt?: string;
 }
 
+export interface ChargeCustomerInput {
+  /** Amount in USDC (e.g., 49.99) */
+  amount: number;
+  /** Wallet address that receives the payment */
+  recipientWallet: string;
+  /** Display name for the payment link */
+  name: string;
+  /** Optional description shown on checkout */
+  description?: string;
+  /** Company to associate this charge with */
+  company?: {
+    id?: string;
+    name?: string;
+    email?: string;
+    wallet?: string;
+  };
+  /** Customer receiving the checkout link */
+  customer?: {
+    email?: string;
+    wallet?: string;
+    name?: string;
+  };
+  /** URL to redirect after successful payment */
+  successUrl?: string;
+  /** URL to redirect if customer cancels */
+  cancelUrl?: string;
+  /** Checkout page appearance customization */
+  appearance?: {
+    title?: string;
+    description?: string;
+    brandName?: string;
+    recipientName?: string;
+    buttonLabel?: string;
+    accentColor?: string;
+    logoUrl?: string;
+  };
+  /** Session expiration in seconds (default: 3600 = 1 hour) */
+  expiresInSeconds?: number;
+  /** Unique key to prevent duplicate charges */
+  idempotencyKey?: string;
+}
+
+export interface ChargeCustomerResult {
+  /** The hosted checkout URL the customer should visit */
+  checkoutUrl: string;
+  /** The payment link ID for reference */
+  paymentLinkId: string;
+  /** The checkout session ID */
+  sessionId: string;
+  /** When this session expires */
+  expiresAt: string;
+  /** The payment link slug */
+  slug: string;
+  /** Idempotency key used for this charge */
+  idempotencyKey: string;
+}
+
+export interface HostedCheckoutInput {
+  /** Payment link slug or ID */
+  paymentLinkSlug?: string;
+  paymentLinkId?: string;
+  /** Customer details */
+  customer?: {
+    email?: string;
+    wallet?: string;
+    name?: string;
+  };
+  /** Override success/cancel URLs for this session */
+  successUrl?: string;
+  cancelUrl?: string;
+  /** Session expiration in seconds (default: 3600 = 1 hour) */
+  expiresInSeconds?: number;
+  /** Unique key to prevent duplicate checkouts */
+  idempotencyKey?: string;
+}
+
+export interface HostedCheckoutResult {
+  /** Full URL to redirect the customer to */
+  checkoutUrl: string;
+  /** Session ID for status tracking */
+  sessionId: string;
+  /** When this session expires */
+  expiresAt: string;
+  /** Idempotency key used for this checkout */
+  idempotencyKey: string;
+}
+
 // Shape of the raw API response from /api/v1/access-tokens
 interface AccessTokenApiResponse {
   token: string;
@@ -542,6 +629,134 @@ export class ArcenClient {
       useApiKey: true,
       body: input,
     });
+  }
+
+  async chargeCustomer(
+    input: ChargeCustomerInput,
+  ): Promise<ChargeCustomerResult> {
+    const idempotencyKey = input.idempotencyKey || `idem_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+
+    const appearanceMeta: Record<string, unknown> = {};
+    if (input.appearance) {
+      const appearance: Record<string, unknown> = {};
+      if (input.appearance.title) appearance.title = input.appearance.title;
+      if (input.appearance.description) appearance.description = input.appearance.description;
+      if (input.appearance.brandName) appearance.brandName = input.appearance.brandName;
+      if (input.appearance.recipientName) appearance.recipientName = input.appearance.recipientName;
+      if (input.appearance.buttonLabel) appearance.buttonLabel = input.appearance.buttonLabel;
+      if (input.appearance.accentColor) appearance.accentColor = input.appearance.accentColor;
+      if (input.appearance.logoUrl) appearance.logoUrl = input.appearance.logoUrl;
+      if (Object.keys(appearance).length > 0) {
+        appearanceMeta.checkoutPage = appearance;
+      }
+    }
+    appearanceMeta.idempotencyKey = idempotencyKey;
+
+    const linkRes = await this.createPaymentLink({
+      kind: "CUSTOM",
+      name: input.name,
+      description: input.description,
+      amount: input.amount,
+      recipientWallet: input.recipientWallet,
+      companyId: input.company?.id,
+      successUrl: input.successUrl,
+      cancelUrl: input.cancelUrl,
+      metadata: Object.keys(appearanceMeta).length > 0 ? appearanceMeta : undefined,
+    });
+
+    const sessionRes = await this.createCheckoutSession({
+      paymentLinkId: linkRes.paymentLink.id,
+      purpose: "CUSTOM",
+      customerEmail: input.customer?.email,
+      customerWallet: input.customer?.wallet,
+      customerName: input.customer?.name,
+      amount: input.amount,
+      recipientWallet: input.recipientWallet,
+      companyId: input.company?.id,
+      successUrl: input.successUrl,
+      cancelUrl: input.cancelUrl,
+      expiresAt: input.expiresInSeconds
+        ? new Date(Date.now() + input.expiresInSeconds * 1000).toISOString()
+        : undefined,
+    });
+
+    return {
+      checkoutUrl: `${this.baseUrl}/pay/${linkRes.paymentLink.slug}?session=${sessionRes.checkoutSession.id}`,
+      paymentLinkId: linkRes.paymentLink.id,
+      sessionId: sessionRes.checkoutSession.id,
+      expiresAt: sessionRes.checkoutSession.createdAt
+        ? new Date(new Date(sessionRes.checkoutSession.createdAt).getTime() + (input.expiresInSeconds ?? 3600) * 1000).toISOString()
+        : new Date(Date.now() + (input.expiresInSeconds ?? 3600) * 1000).toISOString(),
+      slug: linkRes.paymentLink.slug,
+      idempotencyKey,
+    };
+  }
+
+  async createHostedCheckout(
+    input: HostedCheckoutInput,
+  ): Promise<HostedCheckoutResult> {
+    const idempotencyKey = input.idempotencyKey || `idem_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+
+    let slug = input.paymentLinkSlug;
+
+    if (!slug && input.paymentLinkId) {
+      const link = await this.getPaymentLink(input.paymentLinkId);
+      slug = link.paymentLink.slug;
+    }
+
+    if (!slug) {
+      throw new ArcenApiError("Either paymentLinkSlug or paymentLinkId is required", 400);
+    }
+
+    const sessionRes = await this.createCheckoutSession({
+      paymentLinkId: input.paymentLinkId,
+      purpose: "CUSTOM",
+      customerEmail: input.customer?.email,
+      customerWallet: input.customer?.wallet,
+      customerName: input.customer?.name,
+      successUrl: input.successUrl,
+      cancelUrl: input.cancelUrl,
+      expiresAt: input.expiresInSeconds
+        ? new Date(Date.now() + input.expiresInSeconds * 1000).toISOString()
+        : undefined,
+    });
+
+    return {
+      checkoutUrl: `${this.baseUrl}/pay/${slug}?session=${sessionRes.checkoutSession.id}`,
+      sessionId: sessionRes.checkoutSession.id,
+      expiresAt: sessionRes.checkoutSession.createdAt
+        ? new Date(new Date(sessionRes.checkoutSession.createdAt).getTime() + (input.expiresInSeconds ?? 3600) * 1000).toISOString()
+        : new Date(Date.now() + (input.expiresInSeconds ?? 3600) * 1000).toISOString(),
+      idempotencyKey,
+    };
+  }
+
+  async getCheckoutSessionStatus(
+    sessionId: string,
+  ): Promise<{ status: string; expiresAt?: string; paidAt?: string }> {
+    const res = await this.getCheckoutSession(sessionId);
+    return {
+      status: res.checkoutSession.status,
+      expiresAt: res.checkoutSession.createdAt,
+      paidAt: res.checkoutSession.paidAt ?? undefined,
+    };
+  }
+
+  async regenerateCheckoutSession(
+    paymentLinkId: string,
+    options?: { expiresInSeconds?: number },
+  ): Promise<HostedCheckoutResult> {
+    const idempotencyKey = `idem_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+    const link = await this.getPaymentLink(paymentLinkId);
+    const result = await this.createHostedCheckout({
+      paymentLinkSlug: link.paymentLink.slug,
+      paymentLinkId,
+      expiresInSeconds: options?.expiresInSeconds ?? 3600,
+    });
+    return {
+      ...result,
+      idempotencyKey,
+    };
   }
 
   async setCompanyOverride(

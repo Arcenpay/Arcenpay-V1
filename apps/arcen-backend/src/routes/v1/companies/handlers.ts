@@ -3,6 +3,7 @@ import { db } from "../../../db.js";
 import { apiError } from "../../../utils/api-response.js";
 import { Prisma } from "../../../generated/client/client.js";
 import { requireAnyAuth, isAnyAuthError } from "../../../lib/auth/require-any-auth.js";
+import { YEARLY_INTERVAL } from "@arcenpay/internal-core";
 
 function asRecord(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== "object" || Array.isArray(value)) return {};
@@ -101,7 +102,7 @@ export async function listCompanies(c: Context) {
       const billingPeriod =
         normalizeBillingPeriod(traits.billingPeriod) ??
         (activePlan?.billingInterval &&
-        Number(activePlan.billingInterval) >= 31_536_000
+        Number(activePlan.billingInterval) >= YEARLY_INTERVAL
           ? "annual"
           : "monthly");
 

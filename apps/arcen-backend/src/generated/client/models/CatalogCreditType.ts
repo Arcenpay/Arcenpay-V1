@@ -350,6 +350,8 @@ export type CatalogCreditTypeWhereInput = {
   chainSyncedAt?: Prisma.DateTimeNullableFilter<"CatalogCreditType"> | Date | string | null
   team?: Prisma.XOR<Prisma.TeamScalarRelationFilter, Prisma.TeamWhereInput>
   environment?: Prisma.XOR<Prisma.WorkspaceEnvironmentNullableScalarRelationFilter, Prisma.WorkspaceEnvironmentWhereInput> | null
+  companyGrants?: Prisma.CompanyCreditGrantListRelationFilter
+  ledgerEntries?: Prisma.CreditLedgerEntryListRelationFilter
 }
 
 export type CatalogCreditTypeOrderByWithRelationInput = {
@@ -376,6 +378,8 @@ export type CatalogCreditTypeOrderByWithRelationInput = {
   chainSyncedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   team?: Prisma.TeamOrderByWithRelationInput
   environment?: Prisma.WorkspaceEnvironmentOrderByWithRelationInput
+  companyGrants?: Prisma.CompanyCreditGrantOrderByRelationAggregateInput
+  ledgerEntries?: Prisma.CreditLedgerEntryOrderByRelationAggregateInput
 }
 
 export type CatalogCreditTypeWhereUniqueInput = Prisma.AtLeast<{
@@ -406,6 +410,8 @@ export type CatalogCreditTypeWhereUniqueInput = Prisma.AtLeast<{
   chainSyncedAt?: Prisma.DateTimeNullableFilter<"CatalogCreditType"> | Date | string | null
   team?: Prisma.XOR<Prisma.TeamScalarRelationFilter, Prisma.TeamWhereInput>
   environment?: Prisma.XOR<Prisma.WorkspaceEnvironmentNullableScalarRelationFilter, Prisma.WorkspaceEnvironmentWhereInput> | null
+  companyGrants?: Prisma.CompanyCreditGrantListRelationFilter
+  ledgerEntries?: Prisma.CreditLedgerEntryListRelationFilter
 }, "id" | "teamId_code_environmentMode">
 
 export type CatalogCreditTypeOrderByWithAggregationInput = {
@@ -486,6 +492,8 @@ export type CatalogCreditTypeCreateInput = {
   chainSyncedAt?: Date | string | null
   team: Prisma.TeamCreateNestedOneWithoutCatalogCreditTypesInput
   environment?: Prisma.WorkspaceEnvironmentCreateNestedOneWithoutCatalogCreditTypesInput
+  companyGrants?: Prisma.CompanyCreditGrantCreateNestedManyWithoutCreditTypeInput
+  ledgerEntries?: Prisma.CreditLedgerEntryCreateNestedManyWithoutCreditTypeInput
 }
 
 export type CatalogCreditTypeUncheckedCreateInput = {
@@ -510,6 +518,8 @@ export type CatalogCreditTypeUncheckedCreateInput = {
   chainTxHash?: string | null
   chainSyncError?: string | null
   chainSyncedAt?: Date | string | null
+  companyGrants?: Prisma.CompanyCreditGrantUncheckedCreateNestedManyWithoutCreditTypeInput
+  ledgerEntries?: Prisma.CreditLedgerEntryUncheckedCreateNestedManyWithoutCreditTypeInput
 }
 
 export type CatalogCreditTypeUpdateInput = {
@@ -534,6 +544,8 @@ export type CatalogCreditTypeUpdateInput = {
   chainSyncedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   team?: Prisma.TeamUpdateOneRequiredWithoutCatalogCreditTypesNestedInput
   environment?: Prisma.WorkspaceEnvironmentUpdateOneWithoutCatalogCreditTypesNestedInput
+  companyGrants?: Prisma.CompanyCreditGrantUpdateManyWithoutCreditTypeNestedInput
+  ledgerEntries?: Prisma.CreditLedgerEntryUpdateManyWithoutCreditTypeNestedInput
 }
 
 export type CatalogCreditTypeUncheckedUpdateInput = {
@@ -558,6 +570,8 @@ export type CatalogCreditTypeUncheckedUpdateInput = {
   chainTxHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   chainSyncError?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   chainSyncedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  companyGrants?: Prisma.CompanyCreditGrantUncheckedUpdateManyWithoutCreditTypeNestedInput
+  ledgerEntries?: Prisma.CreditLedgerEntryUncheckedUpdateManyWithoutCreditTypeNestedInput
 }
 
 export type CatalogCreditTypeCreateManyInput = {
@@ -728,6 +742,11 @@ export type CatalogCreditTypeSumOrderByAggregateInput = {
   version?: Prisma.SortOrder
 }
 
+export type CatalogCreditTypeScalarRelationFilter = {
+  is?: Prisma.CatalogCreditTypeWhereInput
+  isNot?: Prisma.CatalogCreditTypeWhereInput
+}
+
 export type CatalogCreditTypeCreateNestedManyWithoutTeamInput = {
   create?: Prisma.XOR<Prisma.CatalogCreditTypeCreateWithoutTeamInput, Prisma.CatalogCreditTypeUncheckedCreateWithoutTeamInput> | Prisma.CatalogCreditTypeCreateWithoutTeamInput[] | Prisma.CatalogCreditTypeUncheckedCreateWithoutTeamInput[]
   connectOrCreate?: Prisma.CatalogCreditTypeCreateOrConnectWithoutTeamInput | Prisma.CatalogCreditTypeCreateOrConnectWithoutTeamInput[]
@@ -812,6 +831,34 @@ export type CatalogCreditTypeUncheckedUpdateManyWithoutEnvironmentNestedInput = 
   deleteMany?: Prisma.CatalogCreditTypeScalarWhereInput | Prisma.CatalogCreditTypeScalarWhereInput[]
 }
 
+export type CatalogCreditTypeCreateNestedOneWithoutCompanyGrantsInput = {
+  create?: Prisma.XOR<Prisma.CatalogCreditTypeCreateWithoutCompanyGrantsInput, Prisma.CatalogCreditTypeUncheckedCreateWithoutCompanyGrantsInput>
+  connectOrCreate?: Prisma.CatalogCreditTypeCreateOrConnectWithoutCompanyGrantsInput
+  connect?: Prisma.CatalogCreditTypeWhereUniqueInput
+}
+
+export type CatalogCreditTypeUpdateOneRequiredWithoutCompanyGrantsNestedInput = {
+  create?: Prisma.XOR<Prisma.CatalogCreditTypeCreateWithoutCompanyGrantsInput, Prisma.CatalogCreditTypeUncheckedCreateWithoutCompanyGrantsInput>
+  connectOrCreate?: Prisma.CatalogCreditTypeCreateOrConnectWithoutCompanyGrantsInput
+  upsert?: Prisma.CatalogCreditTypeUpsertWithoutCompanyGrantsInput
+  connect?: Prisma.CatalogCreditTypeWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.CatalogCreditTypeUpdateToOneWithWhereWithoutCompanyGrantsInput, Prisma.CatalogCreditTypeUpdateWithoutCompanyGrantsInput>, Prisma.CatalogCreditTypeUncheckedUpdateWithoutCompanyGrantsInput>
+}
+
+export type CatalogCreditTypeCreateNestedOneWithoutLedgerEntriesInput = {
+  create?: Prisma.XOR<Prisma.CatalogCreditTypeCreateWithoutLedgerEntriesInput, Prisma.CatalogCreditTypeUncheckedCreateWithoutLedgerEntriesInput>
+  connectOrCreate?: Prisma.CatalogCreditTypeCreateOrConnectWithoutLedgerEntriesInput
+  connect?: Prisma.CatalogCreditTypeWhereUniqueInput
+}
+
+export type CatalogCreditTypeUpdateOneRequiredWithoutLedgerEntriesNestedInput = {
+  create?: Prisma.XOR<Prisma.CatalogCreditTypeCreateWithoutLedgerEntriesInput, Prisma.CatalogCreditTypeUncheckedCreateWithoutLedgerEntriesInput>
+  connectOrCreate?: Prisma.CatalogCreditTypeCreateOrConnectWithoutLedgerEntriesInput
+  upsert?: Prisma.CatalogCreditTypeUpsertWithoutLedgerEntriesInput
+  connect?: Prisma.CatalogCreditTypeWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.CatalogCreditTypeUpdateToOneWithWhereWithoutLedgerEntriesInput, Prisma.CatalogCreditTypeUpdateWithoutLedgerEntriesInput>, Prisma.CatalogCreditTypeUncheckedUpdateWithoutLedgerEntriesInput>
+}
+
 export type CatalogCreditTypeCreateWithoutTeamInput = {
   id?: string
   createdAt?: Date | string
@@ -833,6 +880,8 @@ export type CatalogCreditTypeCreateWithoutTeamInput = {
   chainSyncError?: string | null
   chainSyncedAt?: Date | string | null
   environment?: Prisma.WorkspaceEnvironmentCreateNestedOneWithoutCatalogCreditTypesInput
+  companyGrants?: Prisma.CompanyCreditGrantCreateNestedManyWithoutCreditTypeInput
+  ledgerEntries?: Prisma.CreditLedgerEntryCreateNestedManyWithoutCreditTypeInput
 }
 
 export type CatalogCreditTypeUncheckedCreateWithoutTeamInput = {
@@ -856,6 +905,8 @@ export type CatalogCreditTypeUncheckedCreateWithoutTeamInput = {
   chainTxHash?: string | null
   chainSyncError?: string | null
   chainSyncedAt?: Date | string | null
+  companyGrants?: Prisma.CompanyCreditGrantUncheckedCreateNestedManyWithoutCreditTypeInput
+  ledgerEntries?: Prisma.CreditLedgerEntryUncheckedCreateNestedManyWithoutCreditTypeInput
 }
 
 export type CatalogCreditTypeCreateOrConnectWithoutTeamInput = {
@@ -932,6 +983,8 @@ export type CatalogCreditTypeCreateWithoutEnvironmentInput = {
   chainSyncError?: string | null
   chainSyncedAt?: Date | string | null
   team: Prisma.TeamCreateNestedOneWithoutCatalogCreditTypesInput
+  companyGrants?: Prisma.CompanyCreditGrantCreateNestedManyWithoutCreditTypeInput
+  ledgerEntries?: Prisma.CreditLedgerEntryCreateNestedManyWithoutCreditTypeInput
 }
 
 export type CatalogCreditTypeUncheckedCreateWithoutEnvironmentInput = {
@@ -955,6 +1008,8 @@ export type CatalogCreditTypeUncheckedCreateWithoutEnvironmentInput = {
   chainTxHash?: string | null
   chainSyncError?: string | null
   chainSyncedAt?: Date | string | null
+  companyGrants?: Prisma.CompanyCreditGrantUncheckedCreateNestedManyWithoutCreditTypeInput
+  ledgerEntries?: Prisma.CreditLedgerEntryUncheckedCreateNestedManyWithoutCreditTypeInput
 }
 
 export type CatalogCreditTypeCreateOrConnectWithoutEnvironmentInput = {
@@ -981,6 +1036,238 @@ export type CatalogCreditTypeUpdateWithWhereUniqueWithoutEnvironmentInput = {
 export type CatalogCreditTypeUpdateManyWithWhereWithoutEnvironmentInput = {
   where: Prisma.CatalogCreditTypeScalarWhereInput
   data: Prisma.XOR<Prisma.CatalogCreditTypeUpdateManyMutationInput, Prisma.CatalogCreditTypeUncheckedUpdateManyWithoutEnvironmentInput>
+}
+
+export type CatalogCreditTypeCreateWithoutCompanyGrantsInput = {
+  id?: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  environmentMode?: $Enums.EnvironmentMode
+  status?: $Enums.CatalogStatus
+  name: string
+  code: string
+  unitName: string
+  unitsPerPack: number
+  price: runtime.Decimal | runtime.DecimalJsLike | number | string
+  acceptedToken: string
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  active?: boolean
+  version?: number
+  publishedAt?: Date | string | null
+  chainSyncStatus?: $Enums.ChainSyncStatus
+  chainTxHash?: string | null
+  chainSyncError?: string | null
+  chainSyncedAt?: Date | string | null
+  team: Prisma.TeamCreateNestedOneWithoutCatalogCreditTypesInput
+  environment?: Prisma.WorkspaceEnvironmentCreateNestedOneWithoutCatalogCreditTypesInput
+  ledgerEntries?: Prisma.CreditLedgerEntryCreateNestedManyWithoutCreditTypeInput
+}
+
+export type CatalogCreditTypeUncheckedCreateWithoutCompanyGrantsInput = {
+  id?: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  teamId: string
+  environmentId?: string | null
+  environmentMode?: $Enums.EnvironmentMode
+  status?: $Enums.CatalogStatus
+  name: string
+  code: string
+  unitName: string
+  unitsPerPack: number
+  price: runtime.Decimal | runtime.DecimalJsLike | number | string
+  acceptedToken: string
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  active?: boolean
+  version?: number
+  publishedAt?: Date | string | null
+  chainSyncStatus?: $Enums.ChainSyncStatus
+  chainTxHash?: string | null
+  chainSyncError?: string | null
+  chainSyncedAt?: Date | string | null
+  ledgerEntries?: Prisma.CreditLedgerEntryUncheckedCreateNestedManyWithoutCreditTypeInput
+}
+
+export type CatalogCreditTypeCreateOrConnectWithoutCompanyGrantsInput = {
+  where: Prisma.CatalogCreditTypeWhereUniqueInput
+  create: Prisma.XOR<Prisma.CatalogCreditTypeCreateWithoutCompanyGrantsInput, Prisma.CatalogCreditTypeUncheckedCreateWithoutCompanyGrantsInput>
+}
+
+export type CatalogCreditTypeUpsertWithoutCompanyGrantsInput = {
+  update: Prisma.XOR<Prisma.CatalogCreditTypeUpdateWithoutCompanyGrantsInput, Prisma.CatalogCreditTypeUncheckedUpdateWithoutCompanyGrantsInput>
+  create: Prisma.XOR<Prisma.CatalogCreditTypeCreateWithoutCompanyGrantsInput, Prisma.CatalogCreditTypeUncheckedCreateWithoutCompanyGrantsInput>
+  where?: Prisma.CatalogCreditTypeWhereInput
+}
+
+export type CatalogCreditTypeUpdateToOneWithWhereWithoutCompanyGrantsInput = {
+  where?: Prisma.CatalogCreditTypeWhereInput
+  data: Prisma.XOR<Prisma.CatalogCreditTypeUpdateWithoutCompanyGrantsInput, Prisma.CatalogCreditTypeUncheckedUpdateWithoutCompanyGrantsInput>
+}
+
+export type CatalogCreditTypeUpdateWithoutCompanyGrantsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  environmentMode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
+  status?: Prisma.EnumCatalogStatusFieldUpdateOperationsInput | $Enums.CatalogStatus
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  code?: Prisma.StringFieldUpdateOperationsInput | string
+  unitName?: Prisma.StringFieldUpdateOperationsInput | string
+  unitsPerPack?: Prisma.IntFieldUpdateOperationsInput | number
+  price?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  acceptedToken?: Prisma.StringFieldUpdateOperationsInput | string
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  active?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  version?: Prisma.IntFieldUpdateOperationsInput | number
+  publishedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  chainSyncStatus?: Prisma.EnumChainSyncStatusFieldUpdateOperationsInput | $Enums.ChainSyncStatus
+  chainTxHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  chainSyncError?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  chainSyncedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  team?: Prisma.TeamUpdateOneRequiredWithoutCatalogCreditTypesNestedInput
+  environment?: Prisma.WorkspaceEnvironmentUpdateOneWithoutCatalogCreditTypesNestedInput
+  ledgerEntries?: Prisma.CreditLedgerEntryUpdateManyWithoutCreditTypeNestedInput
+}
+
+export type CatalogCreditTypeUncheckedUpdateWithoutCompanyGrantsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  teamId?: Prisma.StringFieldUpdateOperationsInput | string
+  environmentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  environmentMode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
+  status?: Prisma.EnumCatalogStatusFieldUpdateOperationsInput | $Enums.CatalogStatus
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  code?: Prisma.StringFieldUpdateOperationsInput | string
+  unitName?: Prisma.StringFieldUpdateOperationsInput | string
+  unitsPerPack?: Prisma.IntFieldUpdateOperationsInput | number
+  price?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  acceptedToken?: Prisma.StringFieldUpdateOperationsInput | string
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  active?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  version?: Prisma.IntFieldUpdateOperationsInput | number
+  publishedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  chainSyncStatus?: Prisma.EnumChainSyncStatusFieldUpdateOperationsInput | $Enums.ChainSyncStatus
+  chainTxHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  chainSyncError?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  chainSyncedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  ledgerEntries?: Prisma.CreditLedgerEntryUncheckedUpdateManyWithoutCreditTypeNestedInput
+}
+
+export type CatalogCreditTypeCreateWithoutLedgerEntriesInput = {
+  id?: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  environmentMode?: $Enums.EnvironmentMode
+  status?: $Enums.CatalogStatus
+  name: string
+  code: string
+  unitName: string
+  unitsPerPack: number
+  price: runtime.Decimal | runtime.DecimalJsLike | number | string
+  acceptedToken: string
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  active?: boolean
+  version?: number
+  publishedAt?: Date | string | null
+  chainSyncStatus?: $Enums.ChainSyncStatus
+  chainTxHash?: string | null
+  chainSyncError?: string | null
+  chainSyncedAt?: Date | string | null
+  team: Prisma.TeamCreateNestedOneWithoutCatalogCreditTypesInput
+  environment?: Prisma.WorkspaceEnvironmentCreateNestedOneWithoutCatalogCreditTypesInput
+  companyGrants?: Prisma.CompanyCreditGrantCreateNestedManyWithoutCreditTypeInput
+}
+
+export type CatalogCreditTypeUncheckedCreateWithoutLedgerEntriesInput = {
+  id?: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  teamId: string
+  environmentId?: string | null
+  environmentMode?: $Enums.EnvironmentMode
+  status?: $Enums.CatalogStatus
+  name: string
+  code: string
+  unitName: string
+  unitsPerPack: number
+  price: runtime.Decimal | runtime.DecimalJsLike | number | string
+  acceptedToken: string
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  active?: boolean
+  version?: number
+  publishedAt?: Date | string | null
+  chainSyncStatus?: $Enums.ChainSyncStatus
+  chainTxHash?: string | null
+  chainSyncError?: string | null
+  chainSyncedAt?: Date | string | null
+  companyGrants?: Prisma.CompanyCreditGrantUncheckedCreateNestedManyWithoutCreditTypeInput
+}
+
+export type CatalogCreditTypeCreateOrConnectWithoutLedgerEntriesInput = {
+  where: Prisma.CatalogCreditTypeWhereUniqueInput
+  create: Prisma.XOR<Prisma.CatalogCreditTypeCreateWithoutLedgerEntriesInput, Prisma.CatalogCreditTypeUncheckedCreateWithoutLedgerEntriesInput>
+}
+
+export type CatalogCreditTypeUpsertWithoutLedgerEntriesInput = {
+  update: Prisma.XOR<Prisma.CatalogCreditTypeUpdateWithoutLedgerEntriesInput, Prisma.CatalogCreditTypeUncheckedUpdateWithoutLedgerEntriesInput>
+  create: Prisma.XOR<Prisma.CatalogCreditTypeCreateWithoutLedgerEntriesInput, Prisma.CatalogCreditTypeUncheckedCreateWithoutLedgerEntriesInput>
+  where?: Prisma.CatalogCreditTypeWhereInput
+}
+
+export type CatalogCreditTypeUpdateToOneWithWhereWithoutLedgerEntriesInput = {
+  where?: Prisma.CatalogCreditTypeWhereInput
+  data: Prisma.XOR<Prisma.CatalogCreditTypeUpdateWithoutLedgerEntriesInput, Prisma.CatalogCreditTypeUncheckedUpdateWithoutLedgerEntriesInput>
+}
+
+export type CatalogCreditTypeUpdateWithoutLedgerEntriesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  environmentMode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
+  status?: Prisma.EnumCatalogStatusFieldUpdateOperationsInput | $Enums.CatalogStatus
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  code?: Prisma.StringFieldUpdateOperationsInput | string
+  unitName?: Prisma.StringFieldUpdateOperationsInput | string
+  unitsPerPack?: Prisma.IntFieldUpdateOperationsInput | number
+  price?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  acceptedToken?: Prisma.StringFieldUpdateOperationsInput | string
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  active?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  version?: Prisma.IntFieldUpdateOperationsInput | number
+  publishedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  chainSyncStatus?: Prisma.EnumChainSyncStatusFieldUpdateOperationsInput | $Enums.ChainSyncStatus
+  chainTxHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  chainSyncError?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  chainSyncedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  team?: Prisma.TeamUpdateOneRequiredWithoutCatalogCreditTypesNestedInput
+  environment?: Prisma.WorkspaceEnvironmentUpdateOneWithoutCatalogCreditTypesNestedInput
+  companyGrants?: Prisma.CompanyCreditGrantUpdateManyWithoutCreditTypeNestedInput
+}
+
+export type CatalogCreditTypeUncheckedUpdateWithoutLedgerEntriesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  teamId?: Prisma.StringFieldUpdateOperationsInput | string
+  environmentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  environmentMode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
+  status?: Prisma.EnumCatalogStatusFieldUpdateOperationsInput | $Enums.CatalogStatus
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  code?: Prisma.StringFieldUpdateOperationsInput | string
+  unitName?: Prisma.StringFieldUpdateOperationsInput | string
+  unitsPerPack?: Prisma.IntFieldUpdateOperationsInput | number
+  price?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  acceptedToken?: Prisma.StringFieldUpdateOperationsInput | string
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  active?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  version?: Prisma.IntFieldUpdateOperationsInput | number
+  publishedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  chainSyncStatus?: Prisma.EnumChainSyncStatusFieldUpdateOperationsInput | $Enums.ChainSyncStatus
+  chainTxHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  chainSyncError?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  chainSyncedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  companyGrants?: Prisma.CompanyCreditGrantUncheckedUpdateManyWithoutCreditTypeNestedInput
 }
 
 export type CatalogCreditTypeCreateManyTeamInput = {
@@ -1027,6 +1314,8 @@ export type CatalogCreditTypeUpdateWithoutTeamInput = {
   chainSyncError?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   chainSyncedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   environment?: Prisma.WorkspaceEnvironmentUpdateOneWithoutCatalogCreditTypesNestedInput
+  companyGrants?: Prisma.CompanyCreditGrantUpdateManyWithoutCreditTypeNestedInput
+  ledgerEntries?: Prisma.CreditLedgerEntryUpdateManyWithoutCreditTypeNestedInput
 }
 
 export type CatalogCreditTypeUncheckedUpdateWithoutTeamInput = {
@@ -1050,6 +1339,8 @@ export type CatalogCreditTypeUncheckedUpdateWithoutTeamInput = {
   chainTxHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   chainSyncError?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   chainSyncedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  companyGrants?: Prisma.CompanyCreditGrantUncheckedUpdateManyWithoutCreditTypeNestedInput
+  ledgerEntries?: Prisma.CreditLedgerEntryUncheckedUpdateManyWithoutCreditTypeNestedInput
 }
 
 export type CatalogCreditTypeUncheckedUpdateManyWithoutTeamInput = {
@@ -1119,6 +1410,8 @@ export type CatalogCreditTypeUpdateWithoutEnvironmentInput = {
   chainSyncError?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   chainSyncedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   team?: Prisma.TeamUpdateOneRequiredWithoutCatalogCreditTypesNestedInput
+  companyGrants?: Prisma.CompanyCreditGrantUpdateManyWithoutCreditTypeNestedInput
+  ledgerEntries?: Prisma.CreditLedgerEntryUpdateManyWithoutCreditTypeNestedInput
 }
 
 export type CatalogCreditTypeUncheckedUpdateWithoutEnvironmentInput = {
@@ -1142,6 +1435,8 @@ export type CatalogCreditTypeUncheckedUpdateWithoutEnvironmentInput = {
   chainTxHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   chainSyncError?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   chainSyncedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  companyGrants?: Prisma.CompanyCreditGrantUncheckedUpdateManyWithoutCreditTypeNestedInput
+  ledgerEntries?: Prisma.CreditLedgerEntryUncheckedUpdateManyWithoutCreditTypeNestedInput
 }
 
 export type CatalogCreditTypeUncheckedUpdateManyWithoutEnvironmentInput = {
@@ -1168,6 +1463,44 @@ export type CatalogCreditTypeUncheckedUpdateManyWithoutEnvironmentInput = {
 }
 
 
+/**
+ * Count Type CatalogCreditTypeCountOutputType
+ */
+
+export type CatalogCreditTypeCountOutputType = {
+  companyGrants: number
+  ledgerEntries: number
+}
+
+export type CatalogCreditTypeCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  companyGrants?: boolean | CatalogCreditTypeCountOutputTypeCountCompanyGrantsArgs
+  ledgerEntries?: boolean | CatalogCreditTypeCountOutputTypeCountLedgerEntriesArgs
+}
+
+/**
+ * CatalogCreditTypeCountOutputType without action
+ */
+export type CatalogCreditTypeCountOutputTypeDefaultArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the CatalogCreditTypeCountOutputType
+   */
+  select?: Prisma.CatalogCreditTypeCountOutputTypeSelect<ExtArgs> | null
+}
+
+/**
+ * CatalogCreditTypeCountOutputType without action
+ */
+export type CatalogCreditTypeCountOutputTypeCountCompanyGrantsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.CompanyCreditGrantWhereInput
+}
+
+/**
+ * CatalogCreditTypeCountOutputType without action
+ */
+export type CatalogCreditTypeCountOutputTypeCountLedgerEntriesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.CreditLedgerEntryWhereInput
+}
+
 
 export type CatalogCreditTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
@@ -1193,6 +1526,9 @@ export type CatalogCreditTypeSelect<ExtArgs extends runtime.Types.Extensions.Int
   chainSyncedAt?: boolean
   team?: boolean | Prisma.TeamDefaultArgs<ExtArgs>
   environment?: boolean | Prisma.CatalogCreditType$environmentArgs<ExtArgs>
+  companyGrants?: boolean | Prisma.CatalogCreditType$companyGrantsArgs<ExtArgs>
+  ledgerEntries?: boolean | Prisma.CatalogCreditType$ledgerEntriesArgs<ExtArgs>
+  _count?: boolean | Prisma.CatalogCreditTypeCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["catalogCreditType"]>
 
 export type CatalogCreditTypeSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -1275,6 +1611,9 @@ export type CatalogCreditTypeOmit<ExtArgs extends runtime.Types.Extensions.Inter
 export type CatalogCreditTypeInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   team?: boolean | Prisma.TeamDefaultArgs<ExtArgs>
   environment?: boolean | Prisma.CatalogCreditType$environmentArgs<ExtArgs>
+  companyGrants?: boolean | Prisma.CatalogCreditType$companyGrantsArgs<ExtArgs>
+  ledgerEntries?: boolean | Prisma.CatalogCreditType$ledgerEntriesArgs<ExtArgs>
+  _count?: boolean | Prisma.CatalogCreditTypeCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type CatalogCreditTypeIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   team?: boolean | Prisma.TeamDefaultArgs<ExtArgs>
@@ -1290,6 +1629,8 @@ export type $CatalogCreditTypePayload<ExtArgs extends runtime.Types.Extensions.I
   objects: {
     team: Prisma.$TeamPayload<ExtArgs>
     environment: Prisma.$WorkspaceEnvironmentPayload<ExtArgs> | null
+    companyGrants: Prisma.$CompanyCreditGrantPayload<ExtArgs>[]
+    ledgerEntries: Prisma.$CreditLedgerEntryPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
@@ -1709,6 +2050,8 @@ export interface Prisma__CatalogCreditTypeClient<T, Null = never, ExtArgs extend
   readonly [Symbol.toStringTag]: "PrismaPromise"
   team<T extends Prisma.TeamDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.TeamDefaultArgs<ExtArgs>>): Prisma.Prisma__TeamClient<runtime.Types.Result.GetResult<Prisma.$TeamPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   environment<T extends Prisma.CatalogCreditType$environmentArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.CatalogCreditType$environmentArgs<ExtArgs>>): Prisma.Prisma__WorkspaceEnvironmentClient<runtime.Types.Result.GetResult<Prisma.$WorkspaceEnvironmentPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+  companyGrants<T extends Prisma.CatalogCreditType$companyGrantsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.CatalogCreditType$companyGrantsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$CompanyCreditGrantPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  ledgerEntries<T extends Prisma.CatalogCreditType$ledgerEntriesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.CatalogCreditType$ledgerEntriesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$CreditLedgerEntryPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -2171,6 +2514,54 @@ export type CatalogCreditType$environmentArgs<ExtArgs extends runtime.Types.Exte
    */
   include?: Prisma.WorkspaceEnvironmentInclude<ExtArgs> | null
   where?: Prisma.WorkspaceEnvironmentWhereInput
+}
+
+/**
+ * CatalogCreditType.companyGrants
+ */
+export type CatalogCreditType$companyGrantsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the CompanyCreditGrant
+   */
+  select?: Prisma.CompanyCreditGrantSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the CompanyCreditGrant
+   */
+  omit?: Prisma.CompanyCreditGrantOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.CompanyCreditGrantInclude<ExtArgs> | null
+  where?: Prisma.CompanyCreditGrantWhereInput
+  orderBy?: Prisma.CompanyCreditGrantOrderByWithRelationInput | Prisma.CompanyCreditGrantOrderByWithRelationInput[]
+  cursor?: Prisma.CompanyCreditGrantWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.CompanyCreditGrantScalarFieldEnum | Prisma.CompanyCreditGrantScalarFieldEnum[]
+}
+
+/**
+ * CatalogCreditType.ledgerEntries
+ */
+export type CatalogCreditType$ledgerEntriesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the CreditLedgerEntry
+   */
+  select?: Prisma.CreditLedgerEntrySelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the CreditLedgerEntry
+   */
+  omit?: Prisma.CreditLedgerEntryOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.CreditLedgerEntryInclude<ExtArgs> | null
+  where?: Prisma.CreditLedgerEntryWhereInput
+  orderBy?: Prisma.CreditLedgerEntryOrderByWithRelationInput | Prisma.CreditLedgerEntryOrderByWithRelationInput[]
+  cursor?: Prisma.CreditLedgerEntryWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.CreditLedgerEntryScalarFieldEnum | Prisma.CreditLedgerEntryScalarFieldEnum[]
 }
 
 /**

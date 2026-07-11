@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { SkeletonTable, SkeletonMetricGrid, SkeletonList } from "@/components/ui/skeleton";
 import {
   Dialog,
   DialogContent,
@@ -124,17 +125,6 @@ type SessionsPayload = {
     subgraphEnvKeys: string[];
   };
 };
-
-function SkeletonCard() {
-  return (
-    <Card className="border-border bg-card">
-      <CardContent className="p-4">
-        <div className="h-5 bg-secondary/80 rounded animate-pulse w-24 mb-2" />
-        <div className="h-7 bg-secondary/80 rounded animate-pulse w-20" />
-      </CardContent>
-    </Card>
-  );
-}
 
 export function SessionsSection() {
   const { isConnected } = useAccount();
@@ -295,7 +285,7 @@ export function SessionsSection() {
   return (
     <div className="space-y-6">
       {mounted && !isConnected && (
-        <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-warning/5 border border-warning/20 animate-in fade-in slide-in-from-top-2 duration-300">
+        <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-secondary border border-border animate-in fade-in slide-in-from-top-2 duration-300">
           <AlertTriangle className="w-4 h-4 text-warning shrink-0" />
           <p className="text-sm text-muted-foreground">
             Wallet is disconnected. Showing workspace default chain data.
@@ -304,7 +294,7 @@ export function SessionsSection() {
       )}
 
       {chainMismatch && (
-        <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-warning/5 border border-warning/20 animate-in fade-in slide-in-from-top-2 duration-300">
+        <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-secondary border border-border animate-in fade-in slide-in-from-top-2 duration-300">
           <AlertTriangle className="w-4 h-4 text-warning shrink-0" />
           <p className="text-sm text-muted-foreground">
             {payload?.activeProofs.message ??
@@ -313,7 +303,7 @@ export function SessionsSection() {
         </div>
       )}
       {degraded && !chainMismatch && (
-        <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-warning/5 border border-warning/20 animate-in fade-in slide-in-from-top-2 duration-300">
+        <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-secondary border border-border animate-in fade-in slide-in-from-top-2 duration-300">
           <AlertTriangle className="w-4 h-4 text-warning shrink-0" />
           <p className="text-sm text-muted-foreground">
             Some session data sources are temporarily unavailable. Empty proof or session lists may reflect an upstream outage, not a true zero state.
@@ -341,7 +331,7 @@ export function SessionsSection() {
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {sessionsLoading
-          ? Array.from({ length: 3 }).map((_, i) => <SkeletonCard key={i} />)
+          ? <SkeletonMetricGrid count={3} />
           : [
               {
                 label: "Active Sessions",
@@ -391,7 +381,7 @@ export function SessionsSection() {
 
       {/* Error */}
       {sessionsError && (
-        <div className="flex items-center gap-3 p-4 rounded-xl bg-destructive/5 border border-destructive/20">
+        <div className="flex items-center gap-3 p-4 rounded-xl bg-secondary border border-border">
           <AlertCircle className="w-4 h-4 text-destructive shrink-0" />
           <p className="text-sm text-muted-foreground flex-1">
             {sessionsError}
@@ -429,17 +419,13 @@ export function SessionsSection() {
               </tr>
             </thead>
             <tbody>
-              {sessionsLoading &&
-                Array.from({ length: 3 }).map((_, i) => (
-                  <tr key={i} className="border-b border-border">
-                    {Array.from({ length: 4 }).map((__, j) => (
-                      <td key={j} className="py-3 px-4">
-                        <div className="h-4 bg-secondary/80 rounded animate-pulse w-24" />
-                      </td>
-                    ))}
-                    <td className="py-3 px-4" />
-                  </tr>
-                ))}
+              {sessionsLoading && (
+                <tr>
+                  <td colSpan={5}>
+                    <SkeletonTable rows={3} cols={4} />
+                  </td>
+                </tr>
+              )}
               {!sessionsLoading &&
                 sessions.map((session, index) => {
                   const lastSettlement = session.settlements?.[0];
@@ -551,7 +537,7 @@ export function SessionsSection() {
                   ? "text-success"
                   : job.status === "failed"
                     ? "text-destructive"
-                    : "text-yellow-500";
+                    : "text-foreground";
               return (
                 <div
                   key={job.sessionId}
@@ -584,10 +570,10 @@ export function SessionsSection() {
                     variant="secondary"
                     className={`text-xs capitalize ${
                       job.status === "done"
-                        ? "bg-success/10 text-success border-success/20"
+                        ? "bg-secondary text-foreground border-border"
                         : job.status === "failed"
-                          ? "bg-destructive/10 text-destructive border-destructive/20"
-                          : "bg-yellow-500/10 text-yellow-600 border-yellow-500/20"
+                          ? "bg-secondary text-foreground border-border"
+                          : "bg-secondary text-foreground border-border"
                     }`}
                   >
                     {job.status}
@@ -610,16 +596,7 @@ export function SessionsSection() {
           </p>
         </div>
 
-        {sessionsLoading && (
-          <div className="space-y-2">
-            {Array.from({ length: 3 }).map((_, i) => (
-              <div
-                key={i}
-                className="h-12 bg-secondary/50 rounded-lg animate-pulse"
-              />
-            ))}
-          </div>
-        )}
+        {sessionsLoading && <SkeletonList items={3} />}
 
         {!sessionsLoading && proofs.length === 0 && (
           <div className="flex flex-col items-center justify-center py-10 text-center">
@@ -645,7 +622,7 @@ export function SessionsSection() {
                 <div className="flex items-center gap-4">
                   <Badge
                     variant="secondary"
-                    className="text-xs bg-success/10 text-success border-success/20"
+                    className="text-xs bg-secondary text-foreground border-border"
                   >
                     Settled
                   </Badge>

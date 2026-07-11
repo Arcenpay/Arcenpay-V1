@@ -8,6 +8,10 @@ export async function getActiveProofs(c: Context) {
     return c.json({ error: "Unauthorized" }, 401 as any);
   }
 
+  if (!session.currentTeamId) {
+    return c.json({ error: "No active team selected" }, 400 as any);
+  }
+
   try {
     const upstream = await fetch(`${FACILITATOR_URL}/api/proofs/active`, {
       method: "GET",
