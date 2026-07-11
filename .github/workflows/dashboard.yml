@@ -49,10 +49,6 @@ jobs:
           npm run build --workspace=@arcenpay/internal-core
           npm run build --workspace=@arcenpay/react
 
-      - name: Generate Prisma client
-        working-directory: apps/arcen-dashboard
-        run: npx prisma generate
-
       - name: Typecheck dashboard
         run: npm run typecheck --workspace=@arcenpay/dashboard
 
