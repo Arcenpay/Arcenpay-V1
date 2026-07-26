@@ -10,6 +10,7 @@ import {
   recordSuccessfulPayment,
   upsertSubscriptionLedgerState,
 } from "./billing-ledger.js";
+import { projectPlatformBillingEntitlement } from "./platform-billing-customer.js";
 
 export type BillingEventType =
   | "SUBSCRIPTION_MINTED"
@@ -476,6 +477,37 @@ async function processStoredBillingEvent(
         canonicalEventName: options.canonicalEventName,
         ...payload,
       },
+    });
+  }
+
+  if (event.eventType === "SUBSCRIPTION_CANCELLED") {
+    await upsertSubscriptionLedgerState({
+      teamId: event.teamId,
+      environmentId: payloadEnvironmentId,
+      companyId,
+      walletAddress: customerWallet,
+      status: "CANCELLED",
+      catalogPlanId,
+      onChainPlanId,
+      onChainTokenId,
+      cancelAtPeriodEnd: false,
+      cancelledAt: occurredAt,
+      lastEvent: options.canonicalEventName,
+      lastEventAt: occurredAt,
+      lastSourceTxHash: typeof payload.txHash === "string" ? payload.txHash : null,
+      metadata: {
+        source: "billing-event",
+        billingEventId: event.id,
+      },
+    });
+  }
+
+  // A first-party platform subscription is otherwise an ordinary customer
+  // subscription. Project it only after its canonical ledger mutation succeeds.
+  if (companyId) {
+    await projectPlatformBillingEntitlement({
+      providerTeamId: event.teamId,
+      companyId,
     });
   }
 

@@ -6,6 +6,7 @@ import { createCheckoutSession } from "../../lib/payments/checkout-sessions.js";
 import { getPaymentLinkById } from "../../lib/payments/payment-links.js";
 import { RUNTIME_CHAIN_ID } from "../../lib/platform/runtime-chain.js";
 import { requireResolvedActiveEnvironment } from "../../lib/environments/workspace-environments.js";
+import { assertCanCreateCheckoutSession } from "../../lib/catalog/tier-guard.js";
 
 const createSchema = z
   .object({
@@ -84,6 +85,10 @@ export async function POST(c: Context) {
   const auth = await requireAnyAuth(c);
   if (isAnyAuthError(auth)) return c.json({ ok: false, error: auth.error }, auth.status as any as any);
 
+  const checkoutSessionGuard = await assertCanCreateCheckoutSession(auth.teamId);
+  if (!checkoutSessionGuard.allowed) {
+    return c.json({ ok: false, error: checkoutSessionGuard.reason }, 403 as any);
+  }
 
 
   const activeEnvironment =

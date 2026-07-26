@@ -208,6 +208,16 @@ export type PlatformTierConfig = Prisma.PlatformTierConfigModel
  */
 export type PlatformBillingPlan = Prisma.PlatformBillingPlanModel
 /**
+ * Model PlatformBillingAccount
+ * 
+ */
+export type PlatformBillingAccount = Prisma.PlatformBillingAccountModel
+/**
+ * Model PlatformBillingCustomer
+ * 
+ */
+export type PlatformBillingCustomer = Prisma.PlatformBillingCustomerModel
+/**
  * Model GasSpend
  * 
  */

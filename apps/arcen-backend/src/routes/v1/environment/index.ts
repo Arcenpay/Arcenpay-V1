@@ -173,6 +173,23 @@ async function createEnvironment(c: Context) {
     );
   }
 
+  const usedChains = await db.workspaceEnvironment.findMany({
+    where: { teamId: auth.team.teamId },
+    select: { chainId: true },
+    distinct: ["chainId"],
+  });
+  const isNewChain = !usedChains.some((e) => e.chainId === parsed.data.chainId);
+  if (isNewChain && usedChains.length >= limits.maxChains) {
+    return c.json(
+      {
+        error: `Chain limit reached. Your plan supports up to ${limits.maxChains} chain(s).`,
+        limit: limits.maxChains,
+        current: usedChains.length,
+      },
+      409 as any,
+    );
+  }
+
   const limit =
     parsed.data.mode === "DEVELOPMENT"
       ? limits.maxDevelopmentEnvironments

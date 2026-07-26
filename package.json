@@ -36,7 +36,8 @@
     "verify:billing:baseline": "npx tsx scripts/verify-billing-hybrid.ts baseline",
     "verify:billing:env": "npx tsx scripts/verify-billing-hybrid.ts env",
     "verify:billing:live": "npx tsx scripts/verify-billing-hybrid.ts live",
-    "verify:billing:all": "npx tsx scripts/verify-billing-hybrid.ts all"
+    "verify:billing:all": "npx tsx scripts/verify-billing-hybrid.ts all",
+    "setup:billing": "cd apps/arcen-backend && npm run setup:platform-billing"
   },
   "devDependencies": {
     "@types/node": "^22.19.19",

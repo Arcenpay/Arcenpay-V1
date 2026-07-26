@@ -27,6 +27,8 @@ import {
 } from "./billing-ledger.js";
 import { deliverWebhook } from "../webhooks/deliver-webhook.js";
 import { TIER_PRICING } from "../catalog/tier-guard.js";
+import { sendPaidInvoiceReceipt } from "./invoice-notifications.js";
+import { syncEntitlementsToFlagRules } from "../entitlements/sync-entitlements.js";
 import {
   PLATFORM_BILLING_ACCEPTED_TOKEN,
   PLATFORM_BILLING_CHAIN_ID,
@@ -364,6 +366,23 @@ export async function bootstrapPlatformBillingPlans(): Promise<{
         syncedAt: new Date(),
       },
     });
+
+    // Sync onChainPlanId to all matching CatalogPlan entries
+    const planName = tierPlanName(tier);
+    await db.catalogPlan.updateMany({
+      where: {
+        name: planName,
+        active: true,
+        chainSyncStatus: { not: "SYNCED" },
+      },
+      data: {
+        onChainPlanId,
+        chainId: PLATFORM_BILLING_CHAIN_ID,
+        chainSyncStatus: "SYNCED",
+        acceptedToken: platformBillingToken(),
+      },
+    });
+
     results.push({ tier, onChainPlanId, syncStatus: "SYNCED", txHash });
   }
 
@@ -390,6 +409,8 @@ export async function preparePlatformTierActivation(input: {
   acceptedToken: `0x${string}`;
   merchantAddress: `0x${string}`;
   autopayAddress: `0x${string}`;
+  autopayStartTime: number;
+  autopaySetupMode: "install" | "update";
   preparedTransactions: {
     install: { target: `0x${string}`; data: `0x${string}`; value: "0" };
     approve: { target: `0x${string}`; data: `0x${string}`; value: "0" };
@@ -414,12 +435,13 @@ export async function preparePlatformTierActivation(input: {
   }
 
   const chargeAmount = BigInt(plan.priceMicros);
+  const autopayStartTime = Math.floor(Date.now() / 1000) + 30;
   const config = {
     merchant: plan.treasuryWallet as `0x${string}`,
     maxAmount: chargeAmount,
     token: plan.acceptedToken as `0x${string}`,
     interval: plan.billingIntervalSeconds,
-    startTime: BigInt(Math.floor(Date.now() / 1000) + 30),
+    startTime: BigInt(autopayStartTime),
     planId: BigInt(plan.onChainPlanId),
     maxTotalAmount: 0n,
   };
@@ -442,6 +464,14 @@ export async function preparePlatformTierActivation(input: {
     ],
     [config],
   );
+  const isAutopayInitialized = Boolean(await platformClients(
+    PLATFORM_BILLING_CHAIN_ID,
+  ).publicClient.readContract({
+    address: autopayAddress,
+    abi: ERC7579AutopayModuleABI,
+    functionName: "isInitialized",
+    args: [paymentAccount],
+  }));
 
   return {
     chainId: PLATFORM_BILLING_CHAIN_ID,
@@ -452,14 +482,22 @@ export async function preparePlatformTierActivation(input: {
     acceptedToken: plan.acceptedToken as `0x${string}`,
     merchantAddress: plan.treasuryWallet as `0x${string}`,
     autopayAddress,
+    autopayStartTime,
+    autopaySetupMode: isAutopayInitialized ? "update" : "install",
     preparedTransactions: {
       install: {
         target: autopayAddress,
-        data: encodeFunctionData({
-          abi: ERC7579AutopayModuleABI,
-          functionName: "onInstall",
-          args: [encodedConfig],
-        }),
+        data: isAutopayInitialized
+          ? encodeFunctionData({
+              abi: ERC7579AutopayModuleABI,
+              functionName: "updateConfig",
+              args: [config],
+            })
+          : encodeFunctionData({
+              abi: ERC7579AutopayModuleABI,
+              functionName: "onInstall",
+              args: [encodedConfig],
+            }),
         value: "0",
       },
       approve: {
@@ -495,7 +533,7 @@ export async function preparePlatformTierActivation(input: {
   };
 }
 
-async function ensurePlatformSubscriptionCompany(
+export async function ensurePlatformSubscriptionCompany(
   teamId: string,
   walletAddress?: string,
 ) {
@@ -523,14 +561,127 @@ async function ensurePlatformSubscriptionCompany(
   return company;
 }
 
-async function ensureTierCatalogPlan(
+const PLATFORM_TIER_FEATURES: Record<PlatformTier, string[]> = {
+  FREE: [
+    "Dapps / Applications linked: 1",
+    "Webhooks: 1 endpoint (all events, HMAC-SHA256 signed)",
+    "Payment links: Up to 3 active links",
+    "SDK access: 1 API key (Node + React SDK)",
+    "Plans: Up to 3 active plans",
+    "Subscribers: Up to 200",
+    "Chains: 1 chain",
+    "Environments: 2 dev + 2 prod",
+    "Team members: 3",
+    "Feature flags: 5 (boolean only)",
+    "Billing intervals: Monthly only",
+    "ZK settlement (ZKVUB): Yes",
+    "Agent payments (x402): Yes",
+    "Support: Community",
+    "Platform fee: 2.0%",
+  ],
+  PLUS: [
+    "Dapps / Applications linked: 10",
+    "Webhooks: Unlimited endpoints (per-event preferences)",
+    "Payment links: Up to 50 active links",
+    "SDK access: Multiple API keys",
+    "Plans: Up to 15 active plans",
+    "Subscribers: Up to 50,000",
+    "Chains: Unlimited",
+    "Environments: 10 dev + 10 prod",
+    "Team members: 10",
+    "Feature flags: 999 (all types)",
+    "Billing intervals: Monthly + Annual",
+    "ZK settlement (ZKVUB): Yes",
+    "Agent payments (x402): Yes",
+    "Coupons: Up to 10 active coupons",
+    "Add-ons: Up to 10 active add-ons",
+    "Credit types: Up to 5 active credit types",
+    "Usage metering & credit-burn: Yes",
+    "Custom branding: Yes",
+    "ISO 20022 export: Yes",
+    "Support: Priority email",
+    "Platform fee: 1.0%",
+  ],
+  PRO: [
+    "Dapps / Applications linked: Unlimited",
+    "Webhooks: Unlimited endpoints",
+    "Payment links: Unlimited",
+    "SDK access: Unlimited keys + Agent SDK",
+    "Plans: Unlimited",
+    "Subscribers: Unlimited",
+    "Chains: Unlimited",
+    "Environments: Unlimited",
+    "Team members: Unlimited",
+    "Feature flags: Unlimited (all types)",
+    "Coupons: Unlimited",
+    "Add-ons: Unlimited",
+    "Credit types: Unlimited",
+    "Usage metering & credit-burn: Yes",
+    "Custom branding: Full whitelabel",
+    "Agent payments (x402 protocol): Yes",
+    "ZK settlement (ZKVUB): Yes",
+    "Cross-chain mirroring (Axelar + CCIP): Yes",
+    "Tableland + Lit Protocol integration: Yes",
+    "Support: Dedicated + white-glove onboarding",
+    "Platform fee: 0.5%",
+  ],
+};
+
+export function buildPlatformTierEntitlements(tier: PlatformTier): Array<{
+  featureKey: string;
+  featureName: string;
+  type: "BOOLEAN";
+  value: boolean;
+  enabled: boolean;
+  icon: string;
+}> {
+  const features = PLATFORM_TIER_FEATURES[tier];
+
+  function resolveIcon(text: string): string {
+    if (text.startsWith("Dapps") || text.startsWith("Dapps / Applications")) return "lucide:layers";
+    if (text.startsWith("Webhooks")) return "lucide:webhook";
+    if (text.startsWith("Payment links")) return "lucide:link";
+    if (text.startsWith("SDK access")) return "lucide:key";
+    if (text.startsWith("Plans:")) return "lucide:clipboard-list";
+    if (text.startsWith("Subscribers")) return "lucide:users";
+    if (text.startsWith("Chains")) return "lucide:git-branch";
+    if (text.startsWith("Environments")) return "lucide:container";
+    if (text.startsWith("Team members")) return "lucide:user-plus";
+    if (text.startsWith("Feature flags")) return "lucide:flag";
+    if (text.startsWith("Billing intervals")) return "lucide:calendar";
+    if (text.startsWith("ZK settlement")) return "lucide:shield-check";
+    if (text.startsWith("Agent payments")) return "lucide:bot";
+    if (text.startsWith("Add-ons")) return "lucide:puzzle";
+    if (text.startsWith("Credit types")) return "lucide:coins";
+    if (text.startsWith("Coupons")) return "lucide:ticket";
+    if (text.startsWith("Usage metering")) return "lucide:gauge";
+    if (text.startsWith("Custom branding")) return "lucide:palette";
+    if (text.startsWith("ISO 20022")) return "lucide:file-text";
+    if (text.startsWith("Cross-chain")) return "lucide:arrow-left-right";
+    if (text.startsWith("Tableland")) return "lucide:database";
+    if (text.startsWith("Support")) return "lucide:headphones";
+    if (text.startsWith("Platform fee")) return "lucide:percent";
+    return "lucide:check";
+  }
+
+  return features.map((featureText, idx) => ({
+    featureKey: `platform_tier_feat_${idx}`,
+    featureName: featureText,
+    type: "BOOLEAN" as const,
+    value: true,
+    enabled: true,
+    icon: resolveIcon(featureText),
+  }));
+}
+
+export async function ensureTierCatalogPlan(
   teamId: string,
   tier: PlatformTier,
 ): Promise<string | null> {
   if (TIER_PLAN_IDS[tier]) return TIER_PLAN_IDS[tier];
 
   const planName = `ArcenPay ${tier === "PRO" ? "Enterprise" : tier === "PLUS" ? "Pro" : "Free"} Plan`;
-  const { amountMicros } = tierPricing(tier);
+  const { priceUsdPerMonth } = tierPricing(tier);
 
   let plan = await db.catalogPlan.findFirst({
     where: {
@@ -541,6 +692,13 @@ async function ensureTierCatalogPlan(
     select: { id: true },
   });
 
+  const entitlements = buildPlatformTierEntitlements(tier);
+  const metadata = {
+    isPlatformTierPlan: true,
+    tier,
+    entitlements,
+  };
+
   if (!plan) {
     plan = await db.catalogPlan.create({
       data: {
@@ -550,16 +708,53 @@ async function ensureTierCatalogPlan(
         description: `ArcenPay platform ${tier} tier subscription`,
         status: "PUBLISHED",
         active: true,
-        price: tier === "FREE" ? "0" : tier === "PLUS" ? "29" : "99",
+        price: tier === "FREE" ? "0" : String(priceUsdPerMonth),
+        annualPrice: tier === "FREE" ? "0" : tier === "PLUS" ? "95" : "4788",
         billingInterval: 2_592_000,
         acceptedToken: "0x0000000000000000000000000000000000000000",
-        metadata: toPrismaJson({
-          isPlatformTierPlan: true,
-          tier,
-        }),
+        metadata: toPrismaJson(metadata),
       },
       select: { id: true },
     });
+  } else {
+    await db.catalogPlan.update({
+      where: { id: plan.id },
+      data: {
+        metadata: toPrismaJson(metadata),
+        price: tier === "FREE" ? "0" : String(priceUsdPerMonth),
+        annualPrice: tier === "FREE" ? "0" : tier === "PLUS" ? "95" : "4788",
+      },
+    });
+  }
+
+  if (entitlements.length > 0) {
+    syncEntitlementsToFlagRules(teamId, plan.id, entitlements).catch((err) => {
+      console.warn("[platform-tier-billing] Failed to sync tier entitlements:", err);
+    });
+  }
+
+  // Sync onChainPlanId from bootstrapped platform billing plan
+  if (tier !== "FREE") {
+    const onChainPlan = await db.platformBillingPlan.findFirst({
+      where: {
+        chainId: PLATFORM_BILLING_CHAIN_ID,
+        tier,
+        syncStatus: "SYNCED",
+      },
+      select: { onChainPlanId: true },
+    });
+
+    if (onChainPlan?.onChainPlanId) {
+      await db.catalogPlan.update({
+        where: { id: plan.id },
+        data: {
+          onChainPlanId: onChainPlan.onChainPlanId,
+          chainId: PLATFORM_BILLING_CHAIN_ID,
+          chainSyncStatus: "SYNCED",
+          acceptedToken: platformBillingToken(),
+        },
+      });
+    }
   }
 
   TIER_PLAN_IDS[tier] = plan.id;
@@ -774,7 +969,7 @@ export async function activateTeamPlatformTier(input: {
     return { ok: true, subscriptionStateId: null, invoiceId: null, paymentId: null };
   }
 
-  const { amountMicros } = tierPricing(targetTier);
+  const { amountMicros, priceUsdPerMonth } = tierPricing(targetTier);
 
   // Use proper 4-arg idempotency key when paymentAccount and txHash are available,
   // otherwise fall back to a simpler key for legacy/downgrade flows.
@@ -813,6 +1008,13 @@ export async function activateTeamPlatformTier(input: {
     };
   }
 
+  // Look up team owner email for invoice + receipt delivery
+  const teamOwner = await db.teamMember.findFirst({
+    where: { teamId, role: "OWNER" },
+    include: { user: { select: { email: true } } },
+  });
+  const ownerEmail = teamOwner?.user?.email ?? null;
+
   const now = new Date();
   const periodEnd = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
 
@@ -824,9 +1026,10 @@ export async function activateTeamPlatformTier(input: {
       number: invoiceNumber,
       status: "PAID",
       currency: "USDC",
-      subtotal: toSix(amountMicros),
-      total: toSix(amountMicros),
-      amountPaid: toSix(amountMicros),
+      customerEmail: ownerEmail,
+      subtotal: toSix(priceUsdPerMonth),
+      total: toSix(priceUsdPerMonth),
+      amountPaid: toSix(priceUsdPerMonth),
       amountOutstanding: "0.000000",
       planId: catalogPlanId,
       companyId: company.id,
@@ -841,9 +1044,9 @@ export async function activateTeamPlatformTier(input: {
         create: {
           description: `ArcenPay ${targetTier} Tier — Monthly Subscription`,
           quantity: 1,
-          unitAmount: toSix(amountMicros),
-          lineSubtotal: toSix(amountMicros),
-          lineTotal: toSix(amountMicros),
+          unitAmount: toSix(priceUsdPerMonth),
+          lineSubtotal: toSix(priceUsdPerMonth),
+          lineTotal: toSix(priceUsdPerMonth),
           metadata: toPrismaJson({ tier: targetTier }),
         },
       },
@@ -857,7 +1060,7 @@ export async function activateTeamPlatformTier(input: {
     companyId: company.id,
     invoiceId: invoice.id,
     kind: "SUBSCRIPTION_ACTIVATION",
-    amount: amountMicros,
+    amount: priceUsdPerMonth,
     currency: "USDC",
     txHash: txHash ?? null,
     occurredAt: now,
@@ -902,6 +1105,15 @@ export async function activateTeamPlatformTier(input: {
     effectiveAt: now.toISOString(),
   }).catch((err) => {
     console.warn("[platform-tier-billing] Failed to deliver activation webhook:", err);
+  });
+
+  // Fire-and-forget: send invoice + receipt email to team owner
+  sendPaidInvoiceReceipt({
+    teamId,
+    invoiceId: invoice.id,
+    txHash: txHash ?? null,
+  }).catch((err) => {
+    console.warn("[platform-tier-billing] Failed to send invoice receipt email:", err);
   });
 
   return {
@@ -954,7 +1166,7 @@ export async function renewTeamPlatformTier(input: {
     };
   }
 
-  const { amountMicros } = tierPricing(team.platformTier);
+  const { amountMicros, priceUsdPerMonth } = tierPricing(team.platformTier);
   const idempotencyKey = buildTierRenewalIdempotencyKey(
     teamId,
     team.platformTier,
@@ -986,6 +1198,13 @@ export async function renewTeamPlatformTier(input: {
     };
   }
 
+  // Look up team owner email for invoice + receipt delivery
+  const teamOwner = await db.teamMember.findFirst({
+    where: { teamId, role: "OWNER" },
+    include: { user: { select: { email: true } } },
+  });
+  const ownerEmail = teamOwner?.user?.email ?? null;
+
   const periodStart = subscriptionState.currentPeriodEnd ?? now;
   const periodEnd = new Date(periodStart.getTime() + 30 * 24 * 60 * 60 * 1000);
   const invoiceNumber = await allocateInvoiceNumber(teamId, "AP", now);
@@ -996,9 +1215,10 @@ export async function renewTeamPlatformTier(input: {
       number: invoiceNumber,
       status: "PAID",
       currency: "USDC",
-      subtotal: toSix(amountMicros),
-      total: toSix(amountMicros),
-      amountPaid: toSix(amountMicros),
+      customerEmail: ownerEmail,
+      subtotal: toSix(priceUsdPerMonth),
+      total: toSix(priceUsdPerMonth),
+      amountPaid: toSix(priceUsdPerMonth),
       amountOutstanding: "0.000000",
       planId,
       companyId: company.id,
@@ -1012,9 +1232,9 @@ export async function renewTeamPlatformTier(input: {
         create: {
           description: `ArcenPay ${team.platformTier} Tier — Monthly Renewal`,
           quantity: 1,
-          unitAmount: toSix(amountMicros),
-          lineSubtotal: toSix(amountMicros),
-          lineTotal: toSix(amountMicros),
+          unitAmount: toSix(priceUsdPerMonth),
+          lineSubtotal: toSix(priceUsdPerMonth),
+          lineTotal: toSix(priceUsdPerMonth),
           metadata: toPrismaJson({ tier: team.platformTier }),
         },
       },
@@ -1028,7 +1248,7 @@ export async function renewTeamPlatformTier(input: {
     companyId: company.id,
     invoiceId: invoice.id,
     kind: "SUBSCRIPTION_RENEWAL",
-    amount: amountMicros,
+    amount: priceUsdPerMonth,
     currency: "USDC",
     occurredAt: now,
     settledAt: now,
@@ -1065,6 +1285,14 @@ export async function renewTeamPlatformTier(input: {
     nextPeriodEnd: periodEnd.toISOString(),
   }).catch((err) => {
     console.warn("[platform-tier-billing] Failed to deliver renewal webhook:", err);
+  });
+
+  // Fire-and-forget: send invoice + receipt email to team owner
+  sendPaidInvoiceReceipt({
+    teamId,
+    invoiceId: invoice.id,
+  }).catch((err) => {
+    console.warn("[platform-tier-billing] Failed to send renewal receipt email:", err);
   });
 
   return {
@@ -1162,7 +1390,7 @@ export async function getTeamPlatformSubscription(teamId: string): Promise<{
 
   if (!state) return null;
 
-  const { amountMicros } = tierPricing(team.platformTier);
+  const { priceUsdPerMonth } = tierPricing(team.platformTier);
 
   return {
     status: state.status,
@@ -1171,7 +1399,7 @@ export async function getTeamPlatformSubscription(teamId: string): Promise<{
     pastDueAt: state.pastDueAt,
     graceEndsAt: state.graceEndsAt,
     tier: team.platformTier,
-    amountMicros,
+    amountMicros: priceUsdPerMonth,
   };
 }
 

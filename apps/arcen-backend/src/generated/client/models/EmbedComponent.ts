@@ -200,6 +200,7 @@ export type EmbedComponentWhereInput = {
   design?: Prisma.JsonFilter<"EmbedComponent">
   team?: Prisma.XOR<Prisma.TeamScalarRelationFilter, Prisma.TeamWhereInput>
   environment?: Prisma.XOR<Prisma.WorkspaceEnvironmentNullableScalarRelationFilter, Prisma.WorkspaceEnvironmentWhereInput> | null
+  platformBillingPortalAccount?: Prisma.XOR<Prisma.PlatformBillingAccountNullableScalarRelationFilter, Prisma.PlatformBillingAccountWhereInput> | null
 }
 
 export type EmbedComponentOrderByWithRelationInput = {
@@ -213,6 +214,7 @@ export type EmbedComponentOrderByWithRelationInput = {
   design?: Prisma.SortOrder
   team?: Prisma.TeamOrderByWithRelationInput
   environment?: Prisma.WorkspaceEnvironmentOrderByWithRelationInput
+  platformBillingPortalAccount?: Prisma.PlatformBillingAccountOrderByWithRelationInput
 }
 
 export type EmbedComponentWhereUniqueInput = Prisma.AtLeast<{
@@ -229,6 +231,7 @@ export type EmbedComponentWhereUniqueInput = Prisma.AtLeast<{
   design?: Prisma.JsonFilter<"EmbedComponent">
   team?: Prisma.XOR<Prisma.TeamScalarRelationFilter, Prisma.TeamWhereInput>
   environment?: Prisma.XOR<Prisma.WorkspaceEnvironmentNullableScalarRelationFilter, Prisma.WorkspaceEnvironmentWhereInput> | null
+  platformBillingPortalAccount?: Prisma.XOR<Prisma.PlatformBillingAccountNullableScalarRelationFilter, Prisma.PlatformBillingAccountWhereInput> | null
 }, "id">
 
 export type EmbedComponentOrderByWithAggregationInput = {
@@ -268,6 +271,7 @@ export type EmbedComponentCreateInput = {
   design?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   team: Prisma.TeamCreateNestedOneWithoutEmbedComponentsInput
   environment?: Prisma.WorkspaceEnvironmentCreateNestedOneWithoutEmbedComponentsInput
+  platformBillingPortalAccount?: Prisma.PlatformBillingAccountCreateNestedOneWithoutPortalComponentInput
 }
 
 export type EmbedComponentUncheckedCreateInput = {
@@ -279,6 +283,7 @@ export type EmbedComponentUncheckedCreateInput = {
   name: string
   elements?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   design?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  platformBillingPortalAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedOneWithoutPortalComponentInput
 }
 
 export type EmbedComponentUpdateInput = {
@@ -290,6 +295,7 @@ export type EmbedComponentUpdateInput = {
   design?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   team?: Prisma.TeamUpdateOneRequiredWithoutEmbedComponentsNestedInput
   environment?: Prisma.WorkspaceEnvironmentUpdateOneWithoutEmbedComponentsNestedInput
+  platformBillingPortalAccount?: Prisma.PlatformBillingAccountUpdateOneWithoutPortalComponentNestedInput
 }
 
 export type EmbedComponentUncheckedUpdateInput = {
@@ -301,6 +307,7 @@ export type EmbedComponentUncheckedUpdateInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   elements?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   design?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  platformBillingPortalAccount?: Prisma.PlatformBillingAccountUncheckedUpdateOneWithoutPortalComponentNestedInput
 }
 
 export type EmbedComponentCreateManyInput = {
@@ -342,6 +349,11 @@ export type EmbedComponentListRelationFilter = {
 
 export type EmbedComponentOrderByRelationAggregateInput = {
   _count?: Prisma.SortOrder
+}
+
+export type EmbedComponentNullableScalarRelationFilter = {
+  is?: Prisma.EmbedComponentWhereInput | null
+  isNot?: Prisma.EmbedComponentWhereInput | null
 }
 
 export type EmbedComponentCountOrderByAggregateInput = {
@@ -457,6 +469,22 @@ export type EmbedComponentUncheckedUpdateManyWithoutEnvironmentNestedInput = {
   deleteMany?: Prisma.EmbedComponentScalarWhereInput | Prisma.EmbedComponentScalarWhereInput[]
 }
 
+export type EmbedComponentCreateNestedOneWithoutPlatformBillingPortalAccountInput = {
+  create?: Prisma.XOR<Prisma.EmbedComponentCreateWithoutPlatformBillingPortalAccountInput, Prisma.EmbedComponentUncheckedCreateWithoutPlatformBillingPortalAccountInput>
+  connectOrCreate?: Prisma.EmbedComponentCreateOrConnectWithoutPlatformBillingPortalAccountInput
+  connect?: Prisma.EmbedComponentWhereUniqueInput
+}
+
+export type EmbedComponentUpdateOneWithoutPlatformBillingPortalAccountNestedInput = {
+  create?: Prisma.XOR<Prisma.EmbedComponentCreateWithoutPlatformBillingPortalAccountInput, Prisma.EmbedComponentUncheckedCreateWithoutPlatformBillingPortalAccountInput>
+  connectOrCreate?: Prisma.EmbedComponentCreateOrConnectWithoutPlatformBillingPortalAccountInput
+  upsert?: Prisma.EmbedComponentUpsertWithoutPlatformBillingPortalAccountInput
+  disconnect?: Prisma.EmbedComponentWhereInput | boolean
+  delete?: Prisma.EmbedComponentWhereInput | boolean
+  connect?: Prisma.EmbedComponentWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.EmbedComponentUpdateToOneWithWhereWithoutPlatformBillingPortalAccountInput, Prisma.EmbedComponentUpdateWithoutPlatformBillingPortalAccountInput>, Prisma.EmbedComponentUncheckedUpdateWithoutPlatformBillingPortalAccountInput>
+}
+
 export type EmbedComponentCreateWithoutTeamInput = {
   id?: string
   createdAt?: Date | string
@@ -465,6 +493,7 @@ export type EmbedComponentCreateWithoutTeamInput = {
   elements?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   design?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   environment?: Prisma.WorkspaceEnvironmentCreateNestedOneWithoutEmbedComponentsInput
+  platformBillingPortalAccount?: Prisma.PlatformBillingAccountCreateNestedOneWithoutPortalComponentInput
 }
 
 export type EmbedComponentUncheckedCreateWithoutTeamInput = {
@@ -475,6 +504,7 @@ export type EmbedComponentUncheckedCreateWithoutTeamInput = {
   name: string
   elements?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   design?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  platformBillingPortalAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedOneWithoutPortalComponentInput
 }
 
 export type EmbedComponentCreateOrConnectWithoutTeamInput = {
@@ -525,6 +555,7 @@ export type EmbedComponentCreateWithoutEnvironmentInput = {
   elements?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   design?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   team: Prisma.TeamCreateNestedOneWithoutEmbedComponentsInput
+  platformBillingPortalAccount?: Prisma.PlatformBillingAccountCreateNestedOneWithoutPortalComponentInput
 }
 
 export type EmbedComponentUncheckedCreateWithoutEnvironmentInput = {
@@ -535,6 +566,7 @@ export type EmbedComponentUncheckedCreateWithoutEnvironmentInput = {
   name: string
   elements?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   design?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  platformBillingPortalAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedOneWithoutPortalComponentInput
 }
 
 export type EmbedComponentCreateOrConnectWithoutEnvironmentInput = {
@@ -563,6 +595,66 @@ export type EmbedComponentUpdateManyWithWhereWithoutEnvironmentInput = {
   data: Prisma.XOR<Prisma.EmbedComponentUpdateManyMutationInput, Prisma.EmbedComponentUncheckedUpdateManyWithoutEnvironmentInput>
 }
 
+export type EmbedComponentCreateWithoutPlatformBillingPortalAccountInput = {
+  id?: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  name: string
+  elements?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  design?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  team: Prisma.TeamCreateNestedOneWithoutEmbedComponentsInput
+  environment?: Prisma.WorkspaceEnvironmentCreateNestedOneWithoutEmbedComponentsInput
+}
+
+export type EmbedComponentUncheckedCreateWithoutPlatformBillingPortalAccountInput = {
+  id?: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  teamId: string
+  environmentId?: string | null
+  name: string
+  elements?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  design?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+}
+
+export type EmbedComponentCreateOrConnectWithoutPlatformBillingPortalAccountInput = {
+  where: Prisma.EmbedComponentWhereUniqueInput
+  create: Prisma.XOR<Prisma.EmbedComponentCreateWithoutPlatformBillingPortalAccountInput, Prisma.EmbedComponentUncheckedCreateWithoutPlatformBillingPortalAccountInput>
+}
+
+export type EmbedComponentUpsertWithoutPlatformBillingPortalAccountInput = {
+  update: Prisma.XOR<Prisma.EmbedComponentUpdateWithoutPlatformBillingPortalAccountInput, Prisma.EmbedComponentUncheckedUpdateWithoutPlatformBillingPortalAccountInput>
+  create: Prisma.XOR<Prisma.EmbedComponentCreateWithoutPlatformBillingPortalAccountInput, Prisma.EmbedComponentUncheckedCreateWithoutPlatformBillingPortalAccountInput>
+  where?: Prisma.EmbedComponentWhereInput
+}
+
+export type EmbedComponentUpdateToOneWithWhereWithoutPlatformBillingPortalAccountInput = {
+  where?: Prisma.EmbedComponentWhereInput
+  data: Prisma.XOR<Prisma.EmbedComponentUpdateWithoutPlatformBillingPortalAccountInput, Prisma.EmbedComponentUncheckedUpdateWithoutPlatformBillingPortalAccountInput>
+}
+
+export type EmbedComponentUpdateWithoutPlatformBillingPortalAccountInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  elements?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  design?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  team?: Prisma.TeamUpdateOneRequiredWithoutEmbedComponentsNestedInput
+  environment?: Prisma.WorkspaceEnvironmentUpdateOneWithoutEmbedComponentsNestedInput
+}
+
+export type EmbedComponentUncheckedUpdateWithoutPlatformBillingPortalAccountInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  teamId?: Prisma.StringFieldUpdateOperationsInput | string
+  environmentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  elements?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  design?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+}
+
 export type EmbedComponentCreateManyTeamInput = {
   id?: string
   createdAt?: Date | string
@@ -581,6 +673,7 @@ export type EmbedComponentUpdateWithoutTeamInput = {
   elements?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   design?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   environment?: Prisma.WorkspaceEnvironmentUpdateOneWithoutEmbedComponentsNestedInput
+  platformBillingPortalAccount?: Prisma.PlatformBillingAccountUpdateOneWithoutPortalComponentNestedInput
 }
 
 export type EmbedComponentUncheckedUpdateWithoutTeamInput = {
@@ -591,6 +684,7 @@ export type EmbedComponentUncheckedUpdateWithoutTeamInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   elements?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   design?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  platformBillingPortalAccount?: Prisma.PlatformBillingAccountUncheckedUpdateOneWithoutPortalComponentNestedInput
 }
 
 export type EmbedComponentUncheckedUpdateManyWithoutTeamInput = {
@@ -621,6 +715,7 @@ export type EmbedComponentUpdateWithoutEnvironmentInput = {
   elements?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   design?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   team?: Prisma.TeamUpdateOneRequiredWithoutEmbedComponentsNestedInput
+  platformBillingPortalAccount?: Prisma.PlatformBillingAccountUpdateOneWithoutPortalComponentNestedInput
 }
 
 export type EmbedComponentUncheckedUpdateWithoutEnvironmentInput = {
@@ -631,6 +726,7 @@ export type EmbedComponentUncheckedUpdateWithoutEnvironmentInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   elements?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   design?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  platformBillingPortalAccount?: Prisma.PlatformBillingAccountUncheckedUpdateOneWithoutPortalComponentNestedInput
 }
 
 export type EmbedComponentUncheckedUpdateManyWithoutEnvironmentInput = {
@@ -656,6 +752,7 @@ export type EmbedComponentSelect<ExtArgs extends runtime.Types.Extensions.Intern
   design?: boolean
   team?: boolean | Prisma.TeamDefaultArgs<ExtArgs>
   environment?: boolean | Prisma.EmbedComponent$environmentArgs<ExtArgs>
+  platformBillingPortalAccount?: boolean | Prisma.EmbedComponent$platformBillingPortalAccountArgs<ExtArgs>
 }, ExtArgs["result"]["embedComponent"]>
 
 export type EmbedComponentSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -699,6 +796,7 @@ export type EmbedComponentOmit<ExtArgs extends runtime.Types.Extensions.Internal
 export type EmbedComponentInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   team?: boolean | Prisma.TeamDefaultArgs<ExtArgs>
   environment?: boolean | Prisma.EmbedComponent$environmentArgs<ExtArgs>
+  platformBillingPortalAccount?: boolean | Prisma.EmbedComponent$platformBillingPortalAccountArgs<ExtArgs>
 }
 export type EmbedComponentIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   team?: boolean | Prisma.TeamDefaultArgs<ExtArgs>
@@ -714,6 +812,7 @@ export type $EmbedComponentPayload<ExtArgs extends runtime.Types.Extensions.Inte
   objects: {
     team: Prisma.$TeamPayload<ExtArgs>
     environment: Prisma.$WorkspaceEnvironmentPayload<ExtArgs> | null
+    platformBillingPortalAccount: Prisma.$PlatformBillingAccountPayload<ExtArgs> | null
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
@@ -1120,6 +1219,7 @@ export interface Prisma__EmbedComponentClient<T, Null = never, ExtArgs extends r
   readonly [Symbol.toStringTag]: "PrismaPromise"
   team<T extends Prisma.TeamDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.TeamDefaultArgs<ExtArgs>>): Prisma.Prisma__TeamClient<runtime.Types.Result.GetResult<Prisma.$TeamPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   environment<T extends Prisma.EmbedComponent$environmentArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.EmbedComponent$environmentArgs<ExtArgs>>): Prisma.Prisma__WorkspaceEnvironmentClient<runtime.Types.Result.GetResult<Prisma.$WorkspaceEnvironmentPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+  platformBillingPortalAccount<T extends Prisma.EmbedComponent$platformBillingPortalAccountArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.EmbedComponent$platformBillingPortalAccountArgs<ExtArgs>>): Prisma.Prisma__PlatformBillingAccountClient<runtime.Types.Result.GetResult<Prisma.$PlatformBillingAccountPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -1569,6 +1669,25 @@ export type EmbedComponent$environmentArgs<ExtArgs extends runtime.Types.Extensi
    */
   include?: Prisma.WorkspaceEnvironmentInclude<ExtArgs> | null
   where?: Prisma.WorkspaceEnvironmentWhereInput
+}
+
+/**
+ * EmbedComponent.platformBillingPortalAccount
+ */
+export type EmbedComponent$platformBillingPortalAccountArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the PlatformBillingAccount
+   */
+  select?: Prisma.PlatformBillingAccountSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the PlatformBillingAccount
+   */
+  omit?: Prisma.PlatformBillingAccountOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.PlatformBillingAccountInclude<ExtArgs> | null
+  where?: Prisma.PlatformBillingAccountWhereInput
 }
 
 /**

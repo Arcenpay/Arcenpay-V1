@@ -255,6 +255,8 @@ export type WorkspaceEnvironmentWhereInput = {
   arcenCompanies?: Prisma.ArcenCompanyListRelationFilter
   arcenUsers?: Prisma.ArcenUserListRelationFilter
   arcenEvents?: Prisma.ArcenEventListRelationFilter
+  platformBillingAccount?: Prisma.XOR<Prisma.PlatformBillingAccountNullableScalarRelationFilter, Prisma.PlatformBillingAccountWhereInput> | null
+  platformBillingCustomers?: Prisma.PlatformBillingCustomerListRelationFilter
 }
 
 export type WorkspaceEnvironmentOrderByWithRelationInput = {
@@ -288,6 +290,8 @@ export type WorkspaceEnvironmentOrderByWithRelationInput = {
   arcenCompanies?: Prisma.ArcenCompanyOrderByRelationAggregateInput
   arcenUsers?: Prisma.ArcenUserOrderByRelationAggregateInput
   arcenEvents?: Prisma.ArcenEventOrderByRelationAggregateInput
+  platformBillingAccount?: Prisma.PlatformBillingAccountOrderByWithRelationInput
+  platformBillingCustomers?: Prisma.PlatformBillingCustomerOrderByRelationAggregateInput
 }
 
 export type WorkspaceEnvironmentWhereUniqueInput = Prisma.AtLeast<{
@@ -325,6 +329,8 @@ export type WorkspaceEnvironmentWhereUniqueInput = Prisma.AtLeast<{
   arcenCompanies?: Prisma.ArcenCompanyListRelationFilter
   arcenUsers?: Prisma.ArcenUserListRelationFilter
   arcenEvents?: Prisma.ArcenEventListRelationFilter
+  platformBillingAccount?: Prisma.XOR<Prisma.PlatformBillingAccountNullableScalarRelationFilter, Prisma.PlatformBillingAccountWhereInput> | null
+  platformBillingCustomers?: Prisma.PlatformBillingCustomerListRelationFilter
 }, "id" | "teamId_name">
 
 export type WorkspaceEnvironmentOrderByWithAggregationInput = {
@@ -385,6 +391,8 @@ export type WorkspaceEnvironmentCreateInput = {
   arcenCompanies?: Prisma.ArcenCompanyCreateNestedManyWithoutEnvironmentInput
   arcenUsers?: Prisma.ArcenUserCreateNestedManyWithoutEnvironmentInput
   arcenEvents?: Prisma.ArcenEventCreateNestedManyWithoutEnvironmentInput
+  platformBillingAccount?: Prisma.PlatformBillingAccountCreateNestedOneWithoutEnvironmentInput
+  platformBillingCustomers?: Prisma.PlatformBillingCustomerCreateNestedManyWithoutEnvironmentInput
 }
 
 export type WorkspaceEnvironmentUncheckedCreateInput = {
@@ -417,6 +425,8 @@ export type WorkspaceEnvironmentUncheckedCreateInput = {
   arcenCompanies?: Prisma.ArcenCompanyUncheckedCreateNestedManyWithoutEnvironmentInput
   arcenUsers?: Prisma.ArcenUserUncheckedCreateNestedManyWithoutEnvironmentInput
   arcenEvents?: Prisma.ArcenEventUncheckedCreateNestedManyWithoutEnvironmentInput
+  platformBillingAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedOneWithoutEnvironmentInput
+  platformBillingCustomers?: Prisma.PlatformBillingCustomerUncheckedCreateNestedManyWithoutEnvironmentInput
 }
 
 export type WorkspaceEnvironmentUpdateInput = {
@@ -449,6 +459,8 @@ export type WorkspaceEnvironmentUpdateInput = {
   arcenCompanies?: Prisma.ArcenCompanyUpdateManyWithoutEnvironmentNestedInput
   arcenUsers?: Prisma.ArcenUserUpdateManyWithoutEnvironmentNestedInput
   arcenEvents?: Prisma.ArcenEventUpdateManyWithoutEnvironmentNestedInput
+  platformBillingAccount?: Prisma.PlatformBillingAccountUpdateOneWithoutEnvironmentNestedInput
+  platformBillingCustomers?: Prisma.PlatformBillingCustomerUpdateManyWithoutEnvironmentNestedInput
 }
 
 export type WorkspaceEnvironmentUncheckedUpdateInput = {
@@ -481,6 +493,8 @@ export type WorkspaceEnvironmentUncheckedUpdateInput = {
   arcenCompanies?: Prisma.ArcenCompanyUncheckedUpdateManyWithoutEnvironmentNestedInput
   arcenUsers?: Prisma.ArcenUserUncheckedUpdateManyWithoutEnvironmentNestedInput
   arcenEvents?: Prisma.ArcenEventUncheckedUpdateManyWithoutEnvironmentNestedInput
+  platformBillingAccount?: Prisma.PlatformBillingAccountUncheckedUpdateOneWithoutEnvironmentNestedInput
+  platformBillingCustomers?: Prisma.PlatformBillingCustomerUncheckedUpdateManyWithoutEnvironmentNestedInput
 }
 
 export type WorkspaceEnvironmentCreateManyInput = {
@@ -568,6 +582,11 @@ export type WorkspaceEnvironmentMinOrderByAggregateInput = {
 
 export type WorkspaceEnvironmentSumOrderByAggregateInput = {
   chainId?: Prisma.SortOrder
+}
+
+export type WorkspaceEnvironmentScalarRelationFilter = {
+  is?: Prisma.WorkspaceEnvironmentWhereInput
+  isNot?: Prisma.WorkspaceEnvironmentWhereInput
 }
 
 export type WorkspaceEnvironmentCreateNestedOneWithoutAuthSessionsInput = {
@@ -804,6 +823,34 @@ export type WorkspaceEnvironmentUpdateOneWithoutPaymentsNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.WorkspaceEnvironmentUpdateToOneWithWhereWithoutPaymentsInput, Prisma.WorkspaceEnvironmentUpdateWithoutPaymentsInput>, Prisma.WorkspaceEnvironmentUncheckedUpdateWithoutPaymentsInput>
 }
 
+export type WorkspaceEnvironmentCreateNestedOneWithoutPlatformBillingAccountInput = {
+  create?: Prisma.XOR<Prisma.WorkspaceEnvironmentCreateWithoutPlatformBillingAccountInput, Prisma.WorkspaceEnvironmentUncheckedCreateWithoutPlatformBillingAccountInput>
+  connectOrCreate?: Prisma.WorkspaceEnvironmentCreateOrConnectWithoutPlatformBillingAccountInput
+  connect?: Prisma.WorkspaceEnvironmentWhereUniqueInput
+}
+
+export type WorkspaceEnvironmentUpdateOneRequiredWithoutPlatformBillingAccountNestedInput = {
+  create?: Prisma.XOR<Prisma.WorkspaceEnvironmentCreateWithoutPlatformBillingAccountInput, Prisma.WorkspaceEnvironmentUncheckedCreateWithoutPlatformBillingAccountInput>
+  connectOrCreate?: Prisma.WorkspaceEnvironmentCreateOrConnectWithoutPlatformBillingAccountInput
+  upsert?: Prisma.WorkspaceEnvironmentUpsertWithoutPlatformBillingAccountInput
+  connect?: Prisma.WorkspaceEnvironmentWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.WorkspaceEnvironmentUpdateToOneWithWhereWithoutPlatformBillingAccountInput, Prisma.WorkspaceEnvironmentUpdateWithoutPlatformBillingAccountInput>, Prisma.WorkspaceEnvironmentUncheckedUpdateWithoutPlatformBillingAccountInput>
+}
+
+export type WorkspaceEnvironmentCreateNestedOneWithoutPlatformBillingCustomersInput = {
+  create?: Prisma.XOR<Prisma.WorkspaceEnvironmentCreateWithoutPlatformBillingCustomersInput, Prisma.WorkspaceEnvironmentUncheckedCreateWithoutPlatformBillingCustomersInput>
+  connectOrCreate?: Prisma.WorkspaceEnvironmentCreateOrConnectWithoutPlatformBillingCustomersInput
+  connect?: Prisma.WorkspaceEnvironmentWhereUniqueInput
+}
+
+export type WorkspaceEnvironmentUpdateOneRequiredWithoutPlatformBillingCustomersNestedInput = {
+  create?: Prisma.XOR<Prisma.WorkspaceEnvironmentCreateWithoutPlatformBillingCustomersInput, Prisma.WorkspaceEnvironmentUncheckedCreateWithoutPlatformBillingCustomersInput>
+  connectOrCreate?: Prisma.WorkspaceEnvironmentCreateOrConnectWithoutPlatformBillingCustomersInput
+  upsert?: Prisma.WorkspaceEnvironmentUpsertWithoutPlatformBillingCustomersInput
+  connect?: Prisma.WorkspaceEnvironmentWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.WorkspaceEnvironmentUpdateToOneWithWhereWithoutPlatformBillingCustomersInput, Prisma.WorkspaceEnvironmentUpdateWithoutPlatformBillingCustomersInput>, Prisma.WorkspaceEnvironmentUncheckedUpdateWithoutPlatformBillingCustomersInput>
+}
+
 export type WorkspaceEnvironmentCreateNestedOneWithoutArcenCompaniesInput = {
   create?: Prisma.XOR<Prisma.WorkspaceEnvironmentCreateWithoutArcenCompaniesInput, Prisma.WorkspaceEnvironmentUncheckedCreateWithoutArcenCompaniesInput>
   connectOrCreate?: Prisma.WorkspaceEnvironmentCreateOrConnectWithoutArcenCompaniesInput
@@ -993,6 +1040,8 @@ export type WorkspaceEnvironmentCreateWithoutAuthSessionsInput = {
   arcenCompanies?: Prisma.ArcenCompanyCreateNestedManyWithoutEnvironmentInput
   arcenUsers?: Prisma.ArcenUserCreateNestedManyWithoutEnvironmentInput
   arcenEvents?: Prisma.ArcenEventCreateNestedManyWithoutEnvironmentInput
+  platformBillingAccount?: Prisma.PlatformBillingAccountCreateNestedOneWithoutEnvironmentInput
+  platformBillingCustomers?: Prisma.PlatformBillingCustomerCreateNestedManyWithoutEnvironmentInput
 }
 
 export type WorkspaceEnvironmentUncheckedCreateWithoutAuthSessionsInput = {
@@ -1024,6 +1073,8 @@ export type WorkspaceEnvironmentUncheckedCreateWithoutAuthSessionsInput = {
   arcenCompanies?: Prisma.ArcenCompanyUncheckedCreateNestedManyWithoutEnvironmentInput
   arcenUsers?: Prisma.ArcenUserUncheckedCreateNestedManyWithoutEnvironmentInput
   arcenEvents?: Prisma.ArcenEventUncheckedCreateNestedManyWithoutEnvironmentInput
+  platformBillingAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedOneWithoutEnvironmentInput
+  platformBillingCustomers?: Prisma.PlatformBillingCustomerUncheckedCreateNestedManyWithoutEnvironmentInput
 }
 
 export type WorkspaceEnvironmentCreateOrConnectWithoutAuthSessionsInput = {
@@ -1071,6 +1122,8 @@ export type WorkspaceEnvironmentUpdateWithoutAuthSessionsInput = {
   arcenCompanies?: Prisma.ArcenCompanyUpdateManyWithoutEnvironmentNestedInput
   arcenUsers?: Prisma.ArcenUserUpdateManyWithoutEnvironmentNestedInput
   arcenEvents?: Prisma.ArcenEventUpdateManyWithoutEnvironmentNestedInput
+  platformBillingAccount?: Prisma.PlatformBillingAccountUpdateOneWithoutEnvironmentNestedInput
+  platformBillingCustomers?: Prisma.PlatformBillingCustomerUpdateManyWithoutEnvironmentNestedInput
 }
 
 export type WorkspaceEnvironmentUncheckedUpdateWithoutAuthSessionsInput = {
@@ -1102,6 +1155,8 @@ export type WorkspaceEnvironmentUncheckedUpdateWithoutAuthSessionsInput = {
   arcenCompanies?: Prisma.ArcenCompanyUncheckedUpdateManyWithoutEnvironmentNestedInput
   arcenUsers?: Prisma.ArcenUserUncheckedUpdateManyWithoutEnvironmentNestedInput
   arcenEvents?: Prisma.ArcenEventUncheckedUpdateManyWithoutEnvironmentNestedInput
+  platformBillingAccount?: Prisma.PlatformBillingAccountUncheckedUpdateOneWithoutEnvironmentNestedInput
+  platformBillingCustomers?: Prisma.PlatformBillingCustomerUncheckedUpdateManyWithoutEnvironmentNestedInput
 }
 
 export type WorkspaceEnvironmentCreateWithoutTeamInput = {
@@ -1133,6 +1188,8 @@ export type WorkspaceEnvironmentCreateWithoutTeamInput = {
   arcenCompanies?: Prisma.ArcenCompanyCreateNestedManyWithoutEnvironmentInput
   arcenUsers?: Prisma.ArcenUserCreateNestedManyWithoutEnvironmentInput
   arcenEvents?: Prisma.ArcenEventCreateNestedManyWithoutEnvironmentInput
+  platformBillingAccount?: Prisma.PlatformBillingAccountCreateNestedOneWithoutEnvironmentInput
+  platformBillingCustomers?: Prisma.PlatformBillingCustomerCreateNestedManyWithoutEnvironmentInput
 }
 
 export type WorkspaceEnvironmentUncheckedCreateWithoutTeamInput = {
@@ -1164,6 +1221,8 @@ export type WorkspaceEnvironmentUncheckedCreateWithoutTeamInput = {
   arcenCompanies?: Prisma.ArcenCompanyUncheckedCreateNestedManyWithoutEnvironmentInput
   arcenUsers?: Prisma.ArcenUserUncheckedCreateNestedManyWithoutEnvironmentInput
   arcenEvents?: Prisma.ArcenEventUncheckedCreateNestedManyWithoutEnvironmentInput
+  platformBillingAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedOneWithoutEnvironmentInput
+  platformBillingCustomers?: Prisma.PlatformBillingCustomerUncheckedCreateNestedManyWithoutEnvironmentInput
 }
 
 export type WorkspaceEnvironmentCreateOrConnectWithoutTeamInput = {
@@ -1234,6 +1293,8 @@ export type WorkspaceEnvironmentCreateWithoutProviderProfilesInput = {
   arcenCompanies?: Prisma.ArcenCompanyCreateNestedManyWithoutEnvironmentInput
   arcenUsers?: Prisma.ArcenUserCreateNestedManyWithoutEnvironmentInput
   arcenEvents?: Prisma.ArcenEventCreateNestedManyWithoutEnvironmentInput
+  platformBillingAccount?: Prisma.PlatformBillingAccountCreateNestedOneWithoutEnvironmentInput
+  platformBillingCustomers?: Prisma.PlatformBillingCustomerCreateNestedManyWithoutEnvironmentInput
 }
 
 export type WorkspaceEnvironmentUncheckedCreateWithoutProviderProfilesInput = {
@@ -1265,6 +1326,8 @@ export type WorkspaceEnvironmentUncheckedCreateWithoutProviderProfilesInput = {
   arcenCompanies?: Prisma.ArcenCompanyUncheckedCreateNestedManyWithoutEnvironmentInput
   arcenUsers?: Prisma.ArcenUserUncheckedCreateNestedManyWithoutEnvironmentInput
   arcenEvents?: Prisma.ArcenEventUncheckedCreateNestedManyWithoutEnvironmentInput
+  platformBillingAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedOneWithoutEnvironmentInput
+  platformBillingCustomers?: Prisma.PlatformBillingCustomerUncheckedCreateNestedManyWithoutEnvironmentInput
 }
 
 export type WorkspaceEnvironmentCreateOrConnectWithoutProviderProfilesInput = {
@@ -1312,6 +1375,8 @@ export type WorkspaceEnvironmentUpdateWithoutProviderProfilesInput = {
   arcenCompanies?: Prisma.ArcenCompanyUpdateManyWithoutEnvironmentNestedInput
   arcenUsers?: Prisma.ArcenUserUpdateManyWithoutEnvironmentNestedInput
   arcenEvents?: Prisma.ArcenEventUpdateManyWithoutEnvironmentNestedInput
+  platformBillingAccount?: Prisma.PlatformBillingAccountUpdateOneWithoutEnvironmentNestedInput
+  platformBillingCustomers?: Prisma.PlatformBillingCustomerUpdateManyWithoutEnvironmentNestedInput
 }
 
 export type WorkspaceEnvironmentUncheckedUpdateWithoutProviderProfilesInput = {
@@ -1343,6 +1408,8 @@ export type WorkspaceEnvironmentUncheckedUpdateWithoutProviderProfilesInput = {
   arcenCompanies?: Prisma.ArcenCompanyUncheckedUpdateManyWithoutEnvironmentNestedInput
   arcenUsers?: Prisma.ArcenUserUncheckedUpdateManyWithoutEnvironmentNestedInput
   arcenEvents?: Prisma.ArcenEventUncheckedUpdateManyWithoutEnvironmentNestedInput
+  platformBillingAccount?: Prisma.PlatformBillingAccountUncheckedUpdateOneWithoutEnvironmentNestedInput
+  platformBillingCustomers?: Prisma.PlatformBillingCustomerUncheckedUpdateManyWithoutEnvironmentNestedInput
 }
 
 export type WorkspaceEnvironmentCreateWithoutCatalogPlansInput = {
@@ -1374,6 +1441,8 @@ export type WorkspaceEnvironmentCreateWithoutCatalogPlansInput = {
   arcenCompanies?: Prisma.ArcenCompanyCreateNestedManyWithoutEnvironmentInput
   arcenUsers?: Prisma.ArcenUserCreateNestedManyWithoutEnvironmentInput
   arcenEvents?: Prisma.ArcenEventCreateNestedManyWithoutEnvironmentInput
+  platformBillingAccount?: Prisma.PlatformBillingAccountCreateNestedOneWithoutEnvironmentInput
+  platformBillingCustomers?: Prisma.PlatformBillingCustomerCreateNestedManyWithoutEnvironmentInput
 }
 
 export type WorkspaceEnvironmentUncheckedCreateWithoutCatalogPlansInput = {
@@ -1405,6 +1474,8 @@ export type WorkspaceEnvironmentUncheckedCreateWithoutCatalogPlansInput = {
   arcenCompanies?: Prisma.ArcenCompanyUncheckedCreateNestedManyWithoutEnvironmentInput
   arcenUsers?: Prisma.ArcenUserUncheckedCreateNestedManyWithoutEnvironmentInput
   arcenEvents?: Prisma.ArcenEventUncheckedCreateNestedManyWithoutEnvironmentInput
+  platformBillingAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedOneWithoutEnvironmentInput
+  platformBillingCustomers?: Prisma.PlatformBillingCustomerUncheckedCreateNestedManyWithoutEnvironmentInput
 }
 
 export type WorkspaceEnvironmentCreateOrConnectWithoutCatalogPlansInput = {
@@ -1452,6 +1523,8 @@ export type WorkspaceEnvironmentUpdateWithoutCatalogPlansInput = {
   arcenCompanies?: Prisma.ArcenCompanyUpdateManyWithoutEnvironmentNestedInput
   arcenUsers?: Prisma.ArcenUserUpdateManyWithoutEnvironmentNestedInput
   arcenEvents?: Prisma.ArcenEventUpdateManyWithoutEnvironmentNestedInput
+  platformBillingAccount?: Prisma.PlatformBillingAccountUpdateOneWithoutEnvironmentNestedInput
+  platformBillingCustomers?: Prisma.PlatformBillingCustomerUpdateManyWithoutEnvironmentNestedInput
 }
 
 export type WorkspaceEnvironmentUncheckedUpdateWithoutCatalogPlansInput = {
@@ -1483,6 +1556,8 @@ export type WorkspaceEnvironmentUncheckedUpdateWithoutCatalogPlansInput = {
   arcenCompanies?: Prisma.ArcenCompanyUncheckedUpdateManyWithoutEnvironmentNestedInput
   arcenUsers?: Prisma.ArcenUserUncheckedUpdateManyWithoutEnvironmentNestedInput
   arcenEvents?: Prisma.ArcenEventUncheckedUpdateManyWithoutEnvironmentNestedInput
+  platformBillingAccount?: Prisma.PlatformBillingAccountUncheckedUpdateOneWithoutEnvironmentNestedInput
+  platformBillingCustomers?: Prisma.PlatformBillingCustomerUncheckedUpdateManyWithoutEnvironmentNestedInput
 }
 
 export type WorkspaceEnvironmentCreateWithoutCatalogAddOnsInput = {
@@ -1514,6 +1589,8 @@ export type WorkspaceEnvironmentCreateWithoutCatalogAddOnsInput = {
   arcenCompanies?: Prisma.ArcenCompanyCreateNestedManyWithoutEnvironmentInput
   arcenUsers?: Prisma.ArcenUserCreateNestedManyWithoutEnvironmentInput
   arcenEvents?: Prisma.ArcenEventCreateNestedManyWithoutEnvironmentInput
+  platformBillingAccount?: Prisma.PlatformBillingAccountCreateNestedOneWithoutEnvironmentInput
+  platformBillingCustomers?: Prisma.PlatformBillingCustomerCreateNestedManyWithoutEnvironmentInput
 }
 
 export type WorkspaceEnvironmentUncheckedCreateWithoutCatalogAddOnsInput = {
@@ -1545,6 +1622,8 @@ export type WorkspaceEnvironmentUncheckedCreateWithoutCatalogAddOnsInput = {
   arcenCompanies?: Prisma.ArcenCompanyUncheckedCreateNestedManyWithoutEnvironmentInput
   arcenUsers?: Prisma.ArcenUserUncheckedCreateNestedManyWithoutEnvironmentInput
   arcenEvents?: Prisma.ArcenEventUncheckedCreateNestedManyWithoutEnvironmentInput
+  platformBillingAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedOneWithoutEnvironmentInput
+  platformBillingCustomers?: Prisma.PlatformBillingCustomerUncheckedCreateNestedManyWithoutEnvironmentInput
 }
 
 export type WorkspaceEnvironmentCreateOrConnectWithoutCatalogAddOnsInput = {
@@ -1592,6 +1671,8 @@ export type WorkspaceEnvironmentUpdateWithoutCatalogAddOnsInput = {
   arcenCompanies?: Prisma.ArcenCompanyUpdateManyWithoutEnvironmentNestedInput
   arcenUsers?: Prisma.ArcenUserUpdateManyWithoutEnvironmentNestedInput
   arcenEvents?: Prisma.ArcenEventUpdateManyWithoutEnvironmentNestedInput
+  platformBillingAccount?: Prisma.PlatformBillingAccountUpdateOneWithoutEnvironmentNestedInput
+  platformBillingCustomers?: Prisma.PlatformBillingCustomerUpdateManyWithoutEnvironmentNestedInput
 }
 
 export type WorkspaceEnvironmentUncheckedUpdateWithoutCatalogAddOnsInput = {
@@ -1623,6 +1704,8 @@ export type WorkspaceEnvironmentUncheckedUpdateWithoutCatalogAddOnsInput = {
   arcenCompanies?: Prisma.ArcenCompanyUncheckedUpdateManyWithoutEnvironmentNestedInput
   arcenUsers?: Prisma.ArcenUserUncheckedUpdateManyWithoutEnvironmentNestedInput
   arcenEvents?: Prisma.ArcenEventUncheckedUpdateManyWithoutEnvironmentNestedInput
+  platformBillingAccount?: Prisma.PlatformBillingAccountUncheckedUpdateOneWithoutEnvironmentNestedInput
+  platformBillingCustomers?: Prisma.PlatformBillingCustomerUncheckedUpdateManyWithoutEnvironmentNestedInput
 }
 
 export type WorkspaceEnvironmentCreateWithoutCatalogCreditTypesInput = {
@@ -1654,6 +1737,8 @@ export type WorkspaceEnvironmentCreateWithoutCatalogCreditTypesInput = {
   arcenCompanies?: Prisma.ArcenCompanyCreateNestedManyWithoutEnvironmentInput
   arcenUsers?: Prisma.ArcenUserCreateNestedManyWithoutEnvironmentInput
   arcenEvents?: Prisma.ArcenEventCreateNestedManyWithoutEnvironmentInput
+  platformBillingAccount?: Prisma.PlatformBillingAccountCreateNestedOneWithoutEnvironmentInput
+  platformBillingCustomers?: Prisma.PlatformBillingCustomerCreateNestedManyWithoutEnvironmentInput
 }
 
 export type WorkspaceEnvironmentUncheckedCreateWithoutCatalogCreditTypesInput = {
@@ -1685,6 +1770,8 @@ export type WorkspaceEnvironmentUncheckedCreateWithoutCatalogCreditTypesInput = 
   arcenCompanies?: Prisma.ArcenCompanyUncheckedCreateNestedManyWithoutEnvironmentInput
   arcenUsers?: Prisma.ArcenUserUncheckedCreateNestedManyWithoutEnvironmentInput
   arcenEvents?: Prisma.ArcenEventUncheckedCreateNestedManyWithoutEnvironmentInput
+  platformBillingAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedOneWithoutEnvironmentInput
+  platformBillingCustomers?: Prisma.PlatformBillingCustomerUncheckedCreateNestedManyWithoutEnvironmentInput
 }
 
 export type WorkspaceEnvironmentCreateOrConnectWithoutCatalogCreditTypesInput = {
@@ -1732,6 +1819,8 @@ export type WorkspaceEnvironmentUpdateWithoutCatalogCreditTypesInput = {
   arcenCompanies?: Prisma.ArcenCompanyUpdateManyWithoutEnvironmentNestedInput
   arcenUsers?: Prisma.ArcenUserUpdateManyWithoutEnvironmentNestedInput
   arcenEvents?: Prisma.ArcenEventUpdateManyWithoutEnvironmentNestedInput
+  platformBillingAccount?: Prisma.PlatformBillingAccountUpdateOneWithoutEnvironmentNestedInput
+  platformBillingCustomers?: Prisma.PlatformBillingCustomerUpdateManyWithoutEnvironmentNestedInput
 }
 
 export type WorkspaceEnvironmentUncheckedUpdateWithoutCatalogCreditTypesInput = {
@@ -1763,6 +1852,8 @@ export type WorkspaceEnvironmentUncheckedUpdateWithoutCatalogCreditTypesInput = 
   arcenCompanies?: Prisma.ArcenCompanyUncheckedUpdateManyWithoutEnvironmentNestedInput
   arcenUsers?: Prisma.ArcenUserUncheckedUpdateManyWithoutEnvironmentNestedInput
   arcenEvents?: Prisma.ArcenEventUncheckedUpdateManyWithoutEnvironmentNestedInput
+  platformBillingAccount?: Prisma.PlatformBillingAccountUncheckedUpdateOneWithoutEnvironmentNestedInput
+  platformBillingCustomers?: Prisma.PlatformBillingCustomerUncheckedUpdateManyWithoutEnvironmentNestedInput
 }
 
 export type WorkspaceEnvironmentCreateWithoutCatalogVersionsInput = {
@@ -1794,6 +1885,8 @@ export type WorkspaceEnvironmentCreateWithoutCatalogVersionsInput = {
   arcenCompanies?: Prisma.ArcenCompanyCreateNestedManyWithoutEnvironmentInput
   arcenUsers?: Prisma.ArcenUserCreateNestedManyWithoutEnvironmentInput
   arcenEvents?: Prisma.ArcenEventCreateNestedManyWithoutEnvironmentInput
+  platformBillingAccount?: Prisma.PlatformBillingAccountCreateNestedOneWithoutEnvironmentInput
+  platformBillingCustomers?: Prisma.PlatformBillingCustomerCreateNestedManyWithoutEnvironmentInput
 }
 
 export type WorkspaceEnvironmentUncheckedCreateWithoutCatalogVersionsInput = {
@@ -1825,6 +1918,8 @@ export type WorkspaceEnvironmentUncheckedCreateWithoutCatalogVersionsInput = {
   arcenCompanies?: Prisma.ArcenCompanyUncheckedCreateNestedManyWithoutEnvironmentInput
   arcenUsers?: Prisma.ArcenUserUncheckedCreateNestedManyWithoutEnvironmentInput
   arcenEvents?: Prisma.ArcenEventUncheckedCreateNestedManyWithoutEnvironmentInput
+  platformBillingAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedOneWithoutEnvironmentInput
+  platformBillingCustomers?: Prisma.PlatformBillingCustomerUncheckedCreateNestedManyWithoutEnvironmentInput
 }
 
 export type WorkspaceEnvironmentCreateOrConnectWithoutCatalogVersionsInput = {
@@ -1872,6 +1967,8 @@ export type WorkspaceEnvironmentUpdateWithoutCatalogVersionsInput = {
   arcenCompanies?: Prisma.ArcenCompanyUpdateManyWithoutEnvironmentNestedInput
   arcenUsers?: Prisma.ArcenUserUpdateManyWithoutEnvironmentNestedInput
   arcenEvents?: Prisma.ArcenEventUpdateManyWithoutEnvironmentNestedInput
+  platformBillingAccount?: Prisma.PlatformBillingAccountUpdateOneWithoutEnvironmentNestedInput
+  platformBillingCustomers?: Prisma.PlatformBillingCustomerUpdateManyWithoutEnvironmentNestedInput
 }
 
 export type WorkspaceEnvironmentUncheckedUpdateWithoutCatalogVersionsInput = {
@@ -1903,6 +2000,8 @@ export type WorkspaceEnvironmentUncheckedUpdateWithoutCatalogVersionsInput = {
   arcenCompanies?: Prisma.ArcenCompanyUncheckedUpdateManyWithoutEnvironmentNestedInput
   arcenUsers?: Prisma.ArcenUserUncheckedUpdateManyWithoutEnvironmentNestedInput
   arcenEvents?: Prisma.ArcenEventUncheckedUpdateManyWithoutEnvironmentNestedInput
+  platformBillingAccount?: Prisma.PlatformBillingAccountUncheckedUpdateOneWithoutEnvironmentNestedInput
+  platformBillingCustomers?: Prisma.PlatformBillingCustomerUncheckedUpdateManyWithoutEnvironmentNestedInput
 }
 
 export type WorkspaceEnvironmentCreateWithoutCatalogConfigsInput = {
@@ -1934,6 +2033,8 @@ export type WorkspaceEnvironmentCreateWithoutCatalogConfigsInput = {
   arcenCompanies?: Prisma.ArcenCompanyCreateNestedManyWithoutEnvironmentInput
   arcenUsers?: Prisma.ArcenUserCreateNestedManyWithoutEnvironmentInput
   arcenEvents?: Prisma.ArcenEventCreateNestedManyWithoutEnvironmentInput
+  platformBillingAccount?: Prisma.PlatformBillingAccountCreateNestedOneWithoutEnvironmentInput
+  platformBillingCustomers?: Prisma.PlatformBillingCustomerCreateNestedManyWithoutEnvironmentInput
 }
 
 export type WorkspaceEnvironmentUncheckedCreateWithoutCatalogConfigsInput = {
@@ -1965,6 +2066,8 @@ export type WorkspaceEnvironmentUncheckedCreateWithoutCatalogConfigsInput = {
   arcenCompanies?: Prisma.ArcenCompanyUncheckedCreateNestedManyWithoutEnvironmentInput
   arcenUsers?: Prisma.ArcenUserUncheckedCreateNestedManyWithoutEnvironmentInput
   arcenEvents?: Prisma.ArcenEventUncheckedCreateNestedManyWithoutEnvironmentInput
+  platformBillingAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedOneWithoutEnvironmentInput
+  platformBillingCustomers?: Prisma.PlatformBillingCustomerUncheckedCreateNestedManyWithoutEnvironmentInput
 }
 
 export type WorkspaceEnvironmentCreateOrConnectWithoutCatalogConfigsInput = {
@@ -2012,6 +2115,8 @@ export type WorkspaceEnvironmentUpdateWithoutCatalogConfigsInput = {
   arcenCompanies?: Prisma.ArcenCompanyUpdateManyWithoutEnvironmentNestedInput
   arcenUsers?: Prisma.ArcenUserUpdateManyWithoutEnvironmentNestedInput
   arcenEvents?: Prisma.ArcenEventUpdateManyWithoutEnvironmentNestedInput
+  platformBillingAccount?: Prisma.PlatformBillingAccountUpdateOneWithoutEnvironmentNestedInput
+  platformBillingCustomers?: Prisma.PlatformBillingCustomerUpdateManyWithoutEnvironmentNestedInput
 }
 
 export type WorkspaceEnvironmentUncheckedUpdateWithoutCatalogConfigsInput = {
@@ -2043,6 +2148,8 @@ export type WorkspaceEnvironmentUncheckedUpdateWithoutCatalogConfigsInput = {
   arcenCompanies?: Prisma.ArcenCompanyUncheckedUpdateManyWithoutEnvironmentNestedInput
   arcenUsers?: Prisma.ArcenUserUncheckedUpdateManyWithoutEnvironmentNestedInput
   arcenEvents?: Prisma.ArcenEventUncheckedUpdateManyWithoutEnvironmentNestedInput
+  platformBillingAccount?: Prisma.PlatformBillingAccountUncheckedUpdateOneWithoutEnvironmentNestedInput
+  platformBillingCustomers?: Prisma.PlatformBillingCustomerUncheckedUpdateManyWithoutEnvironmentNestedInput
 }
 
 export type WorkspaceEnvironmentCreateWithoutTemplateInstallsInput = {
@@ -2074,6 +2181,8 @@ export type WorkspaceEnvironmentCreateWithoutTemplateInstallsInput = {
   arcenCompanies?: Prisma.ArcenCompanyCreateNestedManyWithoutEnvironmentInput
   arcenUsers?: Prisma.ArcenUserCreateNestedManyWithoutEnvironmentInput
   arcenEvents?: Prisma.ArcenEventCreateNestedManyWithoutEnvironmentInput
+  platformBillingAccount?: Prisma.PlatformBillingAccountCreateNestedOneWithoutEnvironmentInput
+  platformBillingCustomers?: Prisma.PlatformBillingCustomerCreateNestedManyWithoutEnvironmentInput
 }
 
 export type WorkspaceEnvironmentUncheckedCreateWithoutTemplateInstallsInput = {
@@ -2105,6 +2214,8 @@ export type WorkspaceEnvironmentUncheckedCreateWithoutTemplateInstallsInput = {
   arcenCompanies?: Prisma.ArcenCompanyUncheckedCreateNestedManyWithoutEnvironmentInput
   arcenUsers?: Prisma.ArcenUserUncheckedCreateNestedManyWithoutEnvironmentInput
   arcenEvents?: Prisma.ArcenEventUncheckedCreateNestedManyWithoutEnvironmentInput
+  platformBillingAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedOneWithoutEnvironmentInput
+  platformBillingCustomers?: Prisma.PlatformBillingCustomerUncheckedCreateNestedManyWithoutEnvironmentInput
 }
 
 export type WorkspaceEnvironmentCreateOrConnectWithoutTemplateInstallsInput = {
@@ -2152,6 +2263,8 @@ export type WorkspaceEnvironmentUpdateWithoutTemplateInstallsInput = {
   arcenCompanies?: Prisma.ArcenCompanyUpdateManyWithoutEnvironmentNestedInput
   arcenUsers?: Prisma.ArcenUserUpdateManyWithoutEnvironmentNestedInput
   arcenEvents?: Prisma.ArcenEventUpdateManyWithoutEnvironmentNestedInput
+  platformBillingAccount?: Prisma.PlatformBillingAccountUpdateOneWithoutEnvironmentNestedInput
+  platformBillingCustomers?: Prisma.PlatformBillingCustomerUpdateManyWithoutEnvironmentNestedInput
 }
 
 export type WorkspaceEnvironmentUncheckedUpdateWithoutTemplateInstallsInput = {
@@ -2183,6 +2296,8 @@ export type WorkspaceEnvironmentUncheckedUpdateWithoutTemplateInstallsInput = {
   arcenCompanies?: Prisma.ArcenCompanyUncheckedUpdateManyWithoutEnvironmentNestedInput
   arcenUsers?: Prisma.ArcenUserUncheckedUpdateManyWithoutEnvironmentNestedInput
   arcenEvents?: Prisma.ArcenEventUncheckedUpdateManyWithoutEnvironmentNestedInput
+  platformBillingAccount?: Prisma.PlatformBillingAccountUncheckedUpdateOneWithoutEnvironmentNestedInput
+  platformBillingCustomers?: Prisma.PlatformBillingCustomerUncheckedUpdateManyWithoutEnvironmentNestedInput
 }
 
 export type WorkspaceEnvironmentCreateWithoutInvoicesInput = {
@@ -2214,6 +2329,8 @@ export type WorkspaceEnvironmentCreateWithoutInvoicesInput = {
   arcenCompanies?: Prisma.ArcenCompanyCreateNestedManyWithoutEnvironmentInput
   arcenUsers?: Prisma.ArcenUserCreateNestedManyWithoutEnvironmentInput
   arcenEvents?: Prisma.ArcenEventCreateNestedManyWithoutEnvironmentInput
+  platformBillingAccount?: Prisma.PlatformBillingAccountCreateNestedOneWithoutEnvironmentInput
+  platformBillingCustomers?: Prisma.PlatformBillingCustomerCreateNestedManyWithoutEnvironmentInput
 }
 
 export type WorkspaceEnvironmentUncheckedCreateWithoutInvoicesInput = {
@@ -2245,6 +2362,8 @@ export type WorkspaceEnvironmentUncheckedCreateWithoutInvoicesInput = {
   arcenCompanies?: Prisma.ArcenCompanyUncheckedCreateNestedManyWithoutEnvironmentInput
   arcenUsers?: Prisma.ArcenUserUncheckedCreateNestedManyWithoutEnvironmentInput
   arcenEvents?: Prisma.ArcenEventUncheckedCreateNestedManyWithoutEnvironmentInput
+  platformBillingAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedOneWithoutEnvironmentInput
+  platformBillingCustomers?: Prisma.PlatformBillingCustomerUncheckedCreateNestedManyWithoutEnvironmentInput
 }
 
 export type WorkspaceEnvironmentCreateOrConnectWithoutInvoicesInput = {
@@ -2292,6 +2411,8 @@ export type WorkspaceEnvironmentUpdateWithoutInvoicesInput = {
   arcenCompanies?: Prisma.ArcenCompanyUpdateManyWithoutEnvironmentNestedInput
   arcenUsers?: Prisma.ArcenUserUpdateManyWithoutEnvironmentNestedInput
   arcenEvents?: Prisma.ArcenEventUpdateManyWithoutEnvironmentNestedInput
+  platformBillingAccount?: Prisma.PlatformBillingAccountUpdateOneWithoutEnvironmentNestedInput
+  platformBillingCustomers?: Prisma.PlatformBillingCustomerUpdateManyWithoutEnvironmentNestedInput
 }
 
 export type WorkspaceEnvironmentUncheckedUpdateWithoutInvoicesInput = {
@@ -2323,6 +2444,8 @@ export type WorkspaceEnvironmentUncheckedUpdateWithoutInvoicesInput = {
   arcenCompanies?: Prisma.ArcenCompanyUncheckedUpdateManyWithoutEnvironmentNestedInput
   arcenUsers?: Prisma.ArcenUserUncheckedUpdateManyWithoutEnvironmentNestedInput
   arcenEvents?: Prisma.ArcenEventUncheckedUpdateManyWithoutEnvironmentNestedInput
+  platformBillingAccount?: Prisma.PlatformBillingAccountUncheckedUpdateOneWithoutEnvironmentNestedInput
+  platformBillingCustomers?: Prisma.PlatformBillingCustomerUncheckedUpdateManyWithoutEnvironmentNestedInput
 }
 
 export type WorkspaceEnvironmentCreateWithoutSubscriptionStatesInput = {
@@ -2354,6 +2477,8 @@ export type WorkspaceEnvironmentCreateWithoutSubscriptionStatesInput = {
   arcenCompanies?: Prisma.ArcenCompanyCreateNestedManyWithoutEnvironmentInput
   arcenUsers?: Prisma.ArcenUserCreateNestedManyWithoutEnvironmentInput
   arcenEvents?: Prisma.ArcenEventCreateNestedManyWithoutEnvironmentInput
+  platformBillingAccount?: Prisma.PlatformBillingAccountCreateNestedOneWithoutEnvironmentInput
+  platformBillingCustomers?: Prisma.PlatformBillingCustomerCreateNestedManyWithoutEnvironmentInput
 }
 
 export type WorkspaceEnvironmentUncheckedCreateWithoutSubscriptionStatesInput = {
@@ -2385,6 +2510,8 @@ export type WorkspaceEnvironmentUncheckedCreateWithoutSubscriptionStatesInput = 
   arcenCompanies?: Prisma.ArcenCompanyUncheckedCreateNestedManyWithoutEnvironmentInput
   arcenUsers?: Prisma.ArcenUserUncheckedCreateNestedManyWithoutEnvironmentInput
   arcenEvents?: Prisma.ArcenEventUncheckedCreateNestedManyWithoutEnvironmentInput
+  platformBillingAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedOneWithoutEnvironmentInput
+  platformBillingCustomers?: Prisma.PlatformBillingCustomerUncheckedCreateNestedManyWithoutEnvironmentInput
 }
 
 export type WorkspaceEnvironmentCreateOrConnectWithoutSubscriptionStatesInput = {
@@ -2432,6 +2559,8 @@ export type WorkspaceEnvironmentUpdateWithoutSubscriptionStatesInput = {
   arcenCompanies?: Prisma.ArcenCompanyUpdateManyWithoutEnvironmentNestedInput
   arcenUsers?: Prisma.ArcenUserUpdateManyWithoutEnvironmentNestedInput
   arcenEvents?: Prisma.ArcenEventUpdateManyWithoutEnvironmentNestedInput
+  platformBillingAccount?: Prisma.PlatformBillingAccountUpdateOneWithoutEnvironmentNestedInput
+  platformBillingCustomers?: Prisma.PlatformBillingCustomerUpdateManyWithoutEnvironmentNestedInput
 }
 
 export type WorkspaceEnvironmentUncheckedUpdateWithoutSubscriptionStatesInput = {
@@ -2463,6 +2592,8 @@ export type WorkspaceEnvironmentUncheckedUpdateWithoutSubscriptionStatesInput = 
   arcenCompanies?: Prisma.ArcenCompanyUncheckedUpdateManyWithoutEnvironmentNestedInput
   arcenUsers?: Prisma.ArcenUserUncheckedUpdateManyWithoutEnvironmentNestedInput
   arcenEvents?: Prisma.ArcenEventUncheckedUpdateManyWithoutEnvironmentNestedInput
+  platformBillingAccount?: Prisma.PlatformBillingAccountUncheckedUpdateOneWithoutEnvironmentNestedInput
+  platformBillingCustomers?: Prisma.PlatformBillingCustomerUncheckedUpdateManyWithoutEnvironmentNestedInput
 }
 
 export type WorkspaceEnvironmentCreateWithoutSubscriptionChangeRequestsInput = {
@@ -2494,6 +2625,8 @@ export type WorkspaceEnvironmentCreateWithoutSubscriptionChangeRequestsInput = {
   arcenCompanies?: Prisma.ArcenCompanyCreateNestedManyWithoutEnvironmentInput
   arcenUsers?: Prisma.ArcenUserCreateNestedManyWithoutEnvironmentInput
   arcenEvents?: Prisma.ArcenEventCreateNestedManyWithoutEnvironmentInput
+  platformBillingAccount?: Prisma.PlatformBillingAccountCreateNestedOneWithoutEnvironmentInput
+  platformBillingCustomers?: Prisma.PlatformBillingCustomerCreateNestedManyWithoutEnvironmentInput
 }
 
 export type WorkspaceEnvironmentUncheckedCreateWithoutSubscriptionChangeRequestsInput = {
@@ -2525,6 +2658,8 @@ export type WorkspaceEnvironmentUncheckedCreateWithoutSubscriptionChangeRequests
   arcenCompanies?: Prisma.ArcenCompanyUncheckedCreateNestedManyWithoutEnvironmentInput
   arcenUsers?: Prisma.ArcenUserUncheckedCreateNestedManyWithoutEnvironmentInput
   arcenEvents?: Prisma.ArcenEventUncheckedCreateNestedManyWithoutEnvironmentInput
+  platformBillingAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedOneWithoutEnvironmentInput
+  platformBillingCustomers?: Prisma.PlatformBillingCustomerUncheckedCreateNestedManyWithoutEnvironmentInput
 }
 
 export type WorkspaceEnvironmentCreateOrConnectWithoutSubscriptionChangeRequestsInput = {
@@ -2572,6 +2707,8 @@ export type WorkspaceEnvironmentUpdateWithoutSubscriptionChangeRequestsInput = {
   arcenCompanies?: Prisma.ArcenCompanyUpdateManyWithoutEnvironmentNestedInput
   arcenUsers?: Prisma.ArcenUserUpdateManyWithoutEnvironmentNestedInput
   arcenEvents?: Prisma.ArcenEventUpdateManyWithoutEnvironmentNestedInput
+  platformBillingAccount?: Prisma.PlatformBillingAccountUpdateOneWithoutEnvironmentNestedInput
+  platformBillingCustomers?: Prisma.PlatformBillingCustomerUpdateManyWithoutEnvironmentNestedInput
 }
 
 export type WorkspaceEnvironmentUncheckedUpdateWithoutSubscriptionChangeRequestsInput = {
@@ -2603,6 +2740,8 @@ export type WorkspaceEnvironmentUncheckedUpdateWithoutSubscriptionChangeRequests
   arcenCompanies?: Prisma.ArcenCompanyUncheckedUpdateManyWithoutEnvironmentNestedInput
   arcenUsers?: Prisma.ArcenUserUncheckedUpdateManyWithoutEnvironmentNestedInput
   arcenEvents?: Prisma.ArcenEventUncheckedUpdateManyWithoutEnvironmentNestedInput
+  platformBillingAccount?: Prisma.PlatformBillingAccountUncheckedUpdateOneWithoutEnvironmentNestedInput
+  platformBillingCustomers?: Prisma.PlatformBillingCustomerUncheckedUpdateManyWithoutEnvironmentNestedInput
 }
 
 export type WorkspaceEnvironmentCreateWithoutPaymentsInput = {
@@ -2634,6 +2773,8 @@ export type WorkspaceEnvironmentCreateWithoutPaymentsInput = {
   arcenCompanies?: Prisma.ArcenCompanyCreateNestedManyWithoutEnvironmentInput
   arcenUsers?: Prisma.ArcenUserCreateNestedManyWithoutEnvironmentInput
   arcenEvents?: Prisma.ArcenEventCreateNestedManyWithoutEnvironmentInput
+  platformBillingAccount?: Prisma.PlatformBillingAccountCreateNestedOneWithoutEnvironmentInput
+  platformBillingCustomers?: Prisma.PlatformBillingCustomerCreateNestedManyWithoutEnvironmentInput
 }
 
 export type WorkspaceEnvironmentUncheckedCreateWithoutPaymentsInput = {
@@ -2665,6 +2806,8 @@ export type WorkspaceEnvironmentUncheckedCreateWithoutPaymentsInput = {
   arcenCompanies?: Prisma.ArcenCompanyUncheckedCreateNestedManyWithoutEnvironmentInput
   arcenUsers?: Prisma.ArcenUserUncheckedCreateNestedManyWithoutEnvironmentInput
   arcenEvents?: Prisma.ArcenEventUncheckedCreateNestedManyWithoutEnvironmentInput
+  platformBillingAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedOneWithoutEnvironmentInput
+  platformBillingCustomers?: Prisma.PlatformBillingCustomerUncheckedCreateNestedManyWithoutEnvironmentInput
 }
 
 export type WorkspaceEnvironmentCreateOrConnectWithoutPaymentsInput = {
@@ -2712,6 +2855,8 @@ export type WorkspaceEnvironmentUpdateWithoutPaymentsInput = {
   arcenCompanies?: Prisma.ArcenCompanyUpdateManyWithoutEnvironmentNestedInput
   arcenUsers?: Prisma.ArcenUserUpdateManyWithoutEnvironmentNestedInput
   arcenEvents?: Prisma.ArcenEventUpdateManyWithoutEnvironmentNestedInput
+  platformBillingAccount?: Prisma.PlatformBillingAccountUpdateOneWithoutEnvironmentNestedInput
+  platformBillingCustomers?: Prisma.PlatformBillingCustomerUpdateManyWithoutEnvironmentNestedInput
 }
 
 export type WorkspaceEnvironmentUncheckedUpdateWithoutPaymentsInput = {
@@ -2743,6 +2888,304 @@ export type WorkspaceEnvironmentUncheckedUpdateWithoutPaymentsInput = {
   arcenCompanies?: Prisma.ArcenCompanyUncheckedUpdateManyWithoutEnvironmentNestedInput
   arcenUsers?: Prisma.ArcenUserUncheckedUpdateManyWithoutEnvironmentNestedInput
   arcenEvents?: Prisma.ArcenEventUncheckedUpdateManyWithoutEnvironmentNestedInput
+  platformBillingAccount?: Prisma.PlatformBillingAccountUncheckedUpdateOneWithoutEnvironmentNestedInput
+  platformBillingCustomers?: Prisma.PlatformBillingCustomerUncheckedUpdateManyWithoutEnvironmentNestedInput
+}
+
+export type WorkspaceEnvironmentCreateWithoutPlatformBillingAccountInput = {
+  id?: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  name: string
+  mode: $Enums.EnvironmentMode
+  chainId: number
+  team: Prisma.TeamCreateNestedOneWithoutEnvironmentsInput
+  authSessions?: Prisma.AuthSessionCreateNestedManyWithoutActiveEnvironmentInput
+  catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutEnvironmentInput
+  catalogAddOns?: Prisma.CatalogAddOnCreateNestedManyWithoutEnvironmentInput
+  catalogCreditTypes?: Prisma.CatalogCreditTypeCreateNestedManyWithoutEnvironmentInput
+  catalogVersions?: Prisma.CatalogVersionCreateNestedManyWithoutEnvironmentInput
+  catalogConfigs?: Prisma.CatalogConfigCreateNestedManyWithoutEnvironmentInput
+  companyCreditGrants?: Prisma.CompanyCreditGrantCreateNestedManyWithoutEnvironmentInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryCreateNestedManyWithoutEnvironmentInput
+  templateInstalls?: Prisma.TemplateInstallCreateNestedManyWithoutEnvironmentInput
+  invoices?: Prisma.InvoiceCreateNestedManyWithoutEnvironmentInput
+  subscriptionStates?: Prisma.SubscriptionStateCreateNestedManyWithoutEnvironmentInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestCreateNestedManyWithoutEnvironmentInput
+  payments?: Prisma.PaymentCreateNestedManyWithoutEnvironmentInput
+  paymentLinks?: Prisma.PaymentLinkCreateNestedManyWithoutEnvironmentInput
+  checkoutSessions?: Prisma.CheckoutSessionCreateNestedManyWithoutEnvironmentInput
+  providerProfiles?: Prisma.ProviderProfileCreateNestedManyWithoutEnvironmentInput
+  arcenApiKeys?: Prisma.ArcenApiKeyCreateNestedManyWithoutEnvironmentInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenCreateNestedManyWithoutEnvironmentInput
+  embedComponents?: Prisma.EmbedComponentCreateNestedManyWithoutEnvironmentInput
+  arcenCompanies?: Prisma.ArcenCompanyCreateNestedManyWithoutEnvironmentInput
+  arcenUsers?: Prisma.ArcenUserCreateNestedManyWithoutEnvironmentInput
+  arcenEvents?: Prisma.ArcenEventCreateNestedManyWithoutEnvironmentInput
+  platformBillingCustomers?: Prisma.PlatformBillingCustomerCreateNestedManyWithoutEnvironmentInput
+}
+
+export type WorkspaceEnvironmentUncheckedCreateWithoutPlatformBillingAccountInput = {
+  id?: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  teamId: string
+  name: string
+  mode: $Enums.EnvironmentMode
+  chainId: number
+  authSessions?: Prisma.AuthSessionUncheckedCreateNestedManyWithoutActiveEnvironmentInput
+  catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutEnvironmentInput
+  catalogAddOns?: Prisma.CatalogAddOnUncheckedCreateNestedManyWithoutEnvironmentInput
+  catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedCreateNestedManyWithoutEnvironmentInput
+  catalogVersions?: Prisma.CatalogVersionUncheckedCreateNestedManyWithoutEnvironmentInput
+  catalogConfigs?: Prisma.CatalogConfigUncheckedCreateNestedManyWithoutEnvironmentInput
+  companyCreditGrants?: Prisma.CompanyCreditGrantUncheckedCreateNestedManyWithoutEnvironmentInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedCreateNestedManyWithoutEnvironmentInput
+  templateInstalls?: Prisma.TemplateInstallUncheckedCreateNestedManyWithoutEnvironmentInput
+  invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutEnvironmentInput
+  subscriptionStates?: Prisma.SubscriptionStateUncheckedCreateNestedManyWithoutEnvironmentInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedCreateNestedManyWithoutEnvironmentInput
+  payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutEnvironmentInput
+  paymentLinks?: Prisma.PaymentLinkUncheckedCreateNestedManyWithoutEnvironmentInput
+  checkoutSessions?: Prisma.CheckoutSessionUncheckedCreateNestedManyWithoutEnvironmentInput
+  providerProfiles?: Prisma.ProviderProfileUncheckedCreateNestedManyWithoutEnvironmentInput
+  arcenApiKeys?: Prisma.ArcenApiKeyUncheckedCreateNestedManyWithoutEnvironmentInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedCreateNestedManyWithoutEnvironmentInput
+  embedComponents?: Prisma.EmbedComponentUncheckedCreateNestedManyWithoutEnvironmentInput
+  arcenCompanies?: Prisma.ArcenCompanyUncheckedCreateNestedManyWithoutEnvironmentInput
+  arcenUsers?: Prisma.ArcenUserUncheckedCreateNestedManyWithoutEnvironmentInput
+  arcenEvents?: Prisma.ArcenEventUncheckedCreateNestedManyWithoutEnvironmentInput
+  platformBillingCustomers?: Prisma.PlatformBillingCustomerUncheckedCreateNestedManyWithoutEnvironmentInput
+}
+
+export type WorkspaceEnvironmentCreateOrConnectWithoutPlatformBillingAccountInput = {
+  where: Prisma.WorkspaceEnvironmentWhereUniqueInput
+  create: Prisma.XOR<Prisma.WorkspaceEnvironmentCreateWithoutPlatformBillingAccountInput, Prisma.WorkspaceEnvironmentUncheckedCreateWithoutPlatformBillingAccountInput>
+}
+
+export type WorkspaceEnvironmentUpsertWithoutPlatformBillingAccountInput = {
+  update: Prisma.XOR<Prisma.WorkspaceEnvironmentUpdateWithoutPlatformBillingAccountInput, Prisma.WorkspaceEnvironmentUncheckedUpdateWithoutPlatformBillingAccountInput>
+  create: Prisma.XOR<Prisma.WorkspaceEnvironmentCreateWithoutPlatformBillingAccountInput, Prisma.WorkspaceEnvironmentUncheckedCreateWithoutPlatformBillingAccountInput>
+  where?: Prisma.WorkspaceEnvironmentWhereInput
+}
+
+export type WorkspaceEnvironmentUpdateToOneWithWhereWithoutPlatformBillingAccountInput = {
+  where?: Prisma.WorkspaceEnvironmentWhereInput
+  data: Prisma.XOR<Prisma.WorkspaceEnvironmentUpdateWithoutPlatformBillingAccountInput, Prisma.WorkspaceEnvironmentUncheckedUpdateWithoutPlatformBillingAccountInput>
+}
+
+export type WorkspaceEnvironmentUpdateWithoutPlatformBillingAccountInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  mode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
+  chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  team?: Prisma.TeamUpdateOneRequiredWithoutEnvironmentsNestedInput
+  authSessions?: Prisma.AuthSessionUpdateManyWithoutActiveEnvironmentNestedInput
+  catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutEnvironmentNestedInput
+  catalogAddOns?: Prisma.CatalogAddOnUpdateManyWithoutEnvironmentNestedInput
+  catalogCreditTypes?: Prisma.CatalogCreditTypeUpdateManyWithoutEnvironmentNestedInput
+  catalogVersions?: Prisma.CatalogVersionUpdateManyWithoutEnvironmentNestedInput
+  catalogConfigs?: Prisma.CatalogConfigUpdateManyWithoutEnvironmentNestedInput
+  companyCreditGrants?: Prisma.CompanyCreditGrantUpdateManyWithoutEnvironmentNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUpdateManyWithoutEnvironmentNestedInput
+  templateInstalls?: Prisma.TemplateInstallUpdateManyWithoutEnvironmentNestedInput
+  invoices?: Prisma.InvoiceUpdateManyWithoutEnvironmentNestedInput
+  subscriptionStates?: Prisma.SubscriptionStateUpdateManyWithoutEnvironmentNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUpdateManyWithoutEnvironmentNestedInput
+  payments?: Prisma.PaymentUpdateManyWithoutEnvironmentNestedInput
+  paymentLinks?: Prisma.PaymentLinkUpdateManyWithoutEnvironmentNestedInput
+  checkoutSessions?: Prisma.CheckoutSessionUpdateManyWithoutEnvironmentNestedInput
+  providerProfiles?: Prisma.ProviderProfileUpdateManyWithoutEnvironmentNestedInput
+  arcenApiKeys?: Prisma.ArcenApiKeyUpdateManyWithoutEnvironmentNestedInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUpdateManyWithoutEnvironmentNestedInput
+  embedComponents?: Prisma.EmbedComponentUpdateManyWithoutEnvironmentNestedInput
+  arcenCompanies?: Prisma.ArcenCompanyUpdateManyWithoutEnvironmentNestedInput
+  arcenUsers?: Prisma.ArcenUserUpdateManyWithoutEnvironmentNestedInput
+  arcenEvents?: Prisma.ArcenEventUpdateManyWithoutEnvironmentNestedInput
+  platformBillingCustomers?: Prisma.PlatformBillingCustomerUpdateManyWithoutEnvironmentNestedInput
+}
+
+export type WorkspaceEnvironmentUncheckedUpdateWithoutPlatformBillingAccountInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  teamId?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  mode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
+  chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  authSessions?: Prisma.AuthSessionUncheckedUpdateManyWithoutActiveEnvironmentNestedInput
+  catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutEnvironmentNestedInput
+  catalogAddOns?: Prisma.CatalogAddOnUncheckedUpdateManyWithoutEnvironmentNestedInput
+  catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedUpdateManyWithoutEnvironmentNestedInput
+  catalogVersions?: Prisma.CatalogVersionUncheckedUpdateManyWithoutEnvironmentNestedInput
+  catalogConfigs?: Prisma.CatalogConfigUncheckedUpdateManyWithoutEnvironmentNestedInput
+  companyCreditGrants?: Prisma.CompanyCreditGrantUncheckedUpdateManyWithoutEnvironmentNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedUpdateManyWithoutEnvironmentNestedInput
+  templateInstalls?: Prisma.TemplateInstallUncheckedUpdateManyWithoutEnvironmentNestedInput
+  invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutEnvironmentNestedInput
+  subscriptionStates?: Prisma.SubscriptionStateUncheckedUpdateManyWithoutEnvironmentNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedUpdateManyWithoutEnvironmentNestedInput
+  payments?: Prisma.PaymentUncheckedUpdateManyWithoutEnvironmentNestedInput
+  paymentLinks?: Prisma.PaymentLinkUncheckedUpdateManyWithoutEnvironmentNestedInput
+  checkoutSessions?: Prisma.CheckoutSessionUncheckedUpdateManyWithoutEnvironmentNestedInput
+  providerProfiles?: Prisma.ProviderProfileUncheckedUpdateManyWithoutEnvironmentNestedInput
+  arcenApiKeys?: Prisma.ArcenApiKeyUncheckedUpdateManyWithoutEnvironmentNestedInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedUpdateManyWithoutEnvironmentNestedInput
+  embedComponents?: Prisma.EmbedComponentUncheckedUpdateManyWithoutEnvironmentNestedInput
+  arcenCompanies?: Prisma.ArcenCompanyUncheckedUpdateManyWithoutEnvironmentNestedInput
+  arcenUsers?: Prisma.ArcenUserUncheckedUpdateManyWithoutEnvironmentNestedInput
+  arcenEvents?: Prisma.ArcenEventUncheckedUpdateManyWithoutEnvironmentNestedInput
+  platformBillingCustomers?: Prisma.PlatformBillingCustomerUncheckedUpdateManyWithoutEnvironmentNestedInput
+}
+
+export type WorkspaceEnvironmentCreateWithoutPlatformBillingCustomersInput = {
+  id?: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  name: string
+  mode: $Enums.EnvironmentMode
+  chainId: number
+  team: Prisma.TeamCreateNestedOneWithoutEnvironmentsInput
+  authSessions?: Prisma.AuthSessionCreateNestedManyWithoutActiveEnvironmentInput
+  catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutEnvironmentInput
+  catalogAddOns?: Prisma.CatalogAddOnCreateNestedManyWithoutEnvironmentInput
+  catalogCreditTypes?: Prisma.CatalogCreditTypeCreateNestedManyWithoutEnvironmentInput
+  catalogVersions?: Prisma.CatalogVersionCreateNestedManyWithoutEnvironmentInput
+  catalogConfigs?: Prisma.CatalogConfigCreateNestedManyWithoutEnvironmentInput
+  companyCreditGrants?: Prisma.CompanyCreditGrantCreateNestedManyWithoutEnvironmentInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryCreateNestedManyWithoutEnvironmentInput
+  templateInstalls?: Prisma.TemplateInstallCreateNestedManyWithoutEnvironmentInput
+  invoices?: Prisma.InvoiceCreateNestedManyWithoutEnvironmentInput
+  subscriptionStates?: Prisma.SubscriptionStateCreateNestedManyWithoutEnvironmentInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestCreateNestedManyWithoutEnvironmentInput
+  payments?: Prisma.PaymentCreateNestedManyWithoutEnvironmentInput
+  paymentLinks?: Prisma.PaymentLinkCreateNestedManyWithoutEnvironmentInput
+  checkoutSessions?: Prisma.CheckoutSessionCreateNestedManyWithoutEnvironmentInput
+  providerProfiles?: Prisma.ProviderProfileCreateNestedManyWithoutEnvironmentInput
+  arcenApiKeys?: Prisma.ArcenApiKeyCreateNestedManyWithoutEnvironmentInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenCreateNestedManyWithoutEnvironmentInput
+  embedComponents?: Prisma.EmbedComponentCreateNestedManyWithoutEnvironmentInput
+  arcenCompanies?: Prisma.ArcenCompanyCreateNestedManyWithoutEnvironmentInput
+  arcenUsers?: Prisma.ArcenUserCreateNestedManyWithoutEnvironmentInput
+  arcenEvents?: Prisma.ArcenEventCreateNestedManyWithoutEnvironmentInput
+  platformBillingAccount?: Prisma.PlatformBillingAccountCreateNestedOneWithoutEnvironmentInput
+}
+
+export type WorkspaceEnvironmentUncheckedCreateWithoutPlatformBillingCustomersInput = {
+  id?: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  teamId: string
+  name: string
+  mode: $Enums.EnvironmentMode
+  chainId: number
+  authSessions?: Prisma.AuthSessionUncheckedCreateNestedManyWithoutActiveEnvironmentInput
+  catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutEnvironmentInput
+  catalogAddOns?: Prisma.CatalogAddOnUncheckedCreateNestedManyWithoutEnvironmentInput
+  catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedCreateNestedManyWithoutEnvironmentInput
+  catalogVersions?: Prisma.CatalogVersionUncheckedCreateNestedManyWithoutEnvironmentInput
+  catalogConfigs?: Prisma.CatalogConfigUncheckedCreateNestedManyWithoutEnvironmentInput
+  companyCreditGrants?: Prisma.CompanyCreditGrantUncheckedCreateNestedManyWithoutEnvironmentInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedCreateNestedManyWithoutEnvironmentInput
+  templateInstalls?: Prisma.TemplateInstallUncheckedCreateNestedManyWithoutEnvironmentInput
+  invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutEnvironmentInput
+  subscriptionStates?: Prisma.SubscriptionStateUncheckedCreateNestedManyWithoutEnvironmentInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedCreateNestedManyWithoutEnvironmentInput
+  payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutEnvironmentInput
+  paymentLinks?: Prisma.PaymentLinkUncheckedCreateNestedManyWithoutEnvironmentInput
+  checkoutSessions?: Prisma.CheckoutSessionUncheckedCreateNestedManyWithoutEnvironmentInput
+  providerProfiles?: Prisma.ProviderProfileUncheckedCreateNestedManyWithoutEnvironmentInput
+  arcenApiKeys?: Prisma.ArcenApiKeyUncheckedCreateNestedManyWithoutEnvironmentInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedCreateNestedManyWithoutEnvironmentInput
+  embedComponents?: Prisma.EmbedComponentUncheckedCreateNestedManyWithoutEnvironmentInput
+  arcenCompanies?: Prisma.ArcenCompanyUncheckedCreateNestedManyWithoutEnvironmentInput
+  arcenUsers?: Prisma.ArcenUserUncheckedCreateNestedManyWithoutEnvironmentInput
+  arcenEvents?: Prisma.ArcenEventUncheckedCreateNestedManyWithoutEnvironmentInput
+  platformBillingAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedOneWithoutEnvironmentInput
+}
+
+export type WorkspaceEnvironmentCreateOrConnectWithoutPlatformBillingCustomersInput = {
+  where: Prisma.WorkspaceEnvironmentWhereUniqueInput
+  create: Prisma.XOR<Prisma.WorkspaceEnvironmentCreateWithoutPlatformBillingCustomersInput, Prisma.WorkspaceEnvironmentUncheckedCreateWithoutPlatformBillingCustomersInput>
+}
+
+export type WorkspaceEnvironmentUpsertWithoutPlatformBillingCustomersInput = {
+  update: Prisma.XOR<Prisma.WorkspaceEnvironmentUpdateWithoutPlatformBillingCustomersInput, Prisma.WorkspaceEnvironmentUncheckedUpdateWithoutPlatformBillingCustomersInput>
+  create: Prisma.XOR<Prisma.WorkspaceEnvironmentCreateWithoutPlatformBillingCustomersInput, Prisma.WorkspaceEnvironmentUncheckedCreateWithoutPlatformBillingCustomersInput>
+  where?: Prisma.WorkspaceEnvironmentWhereInput
+}
+
+export type WorkspaceEnvironmentUpdateToOneWithWhereWithoutPlatformBillingCustomersInput = {
+  where?: Prisma.WorkspaceEnvironmentWhereInput
+  data: Prisma.XOR<Prisma.WorkspaceEnvironmentUpdateWithoutPlatformBillingCustomersInput, Prisma.WorkspaceEnvironmentUncheckedUpdateWithoutPlatformBillingCustomersInput>
+}
+
+export type WorkspaceEnvironmentUpdateWithoutPlatformBillingCustomersInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  mode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
+  chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  team?: Prisma.TeamUpdateOneRequiredWithoutEnvironmentsNestedInput
+  authSessions?: Prisma.AuthSessionUpdateManyWithoutActiveEnvironmentNestedInput
+  catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutEnvironmentNestedInput
+  catalogAddOns?: Prisma.CatalogAddOnUpdateManyWithoutEnvironmentNestedInput
+  catalogCreditTypes?: Prisma.CatalogCreditTypeUpdateManyWithoutEnvironmentNestedInput
+  catalogVersions?: Prisma.CatalogVersionUpdateManyWithoutEnvironmentNestedInput
+  catalogConfigs?: Prisma.CatalogConfigUpdateManyWithoutEnvironmentNestedInput
+  companyCreditGrants?: Prisma.CompanyCreditGrantUpdateManyWithoutEnvironmentNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUpdateManyWithoutEnvironmentNestedInput
+  templateInstalls?: Prisma.TemplateInstallUpdateManyWithoutEnvironmentNestedInput
+  invoices?: Prisma.InvoiceUpdateManyWithoutEnvironmentNestedInput
+  subscriptionStates?: Prisma.SubscriptionStateUpdateManyWithoutEnvironmentNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUpdateManyWithoutEnvironmentNestedInput
+  payments?: Prisma.PaymentUpdateManyWithoutEnvironmentNestedInput
+  paymentLinks?: Prisma.PaymentLinkUpdateManyWithoutEnvironmentNestedInput
+  checkoutSessions?: Prisma.CheckoutSessionUpdateManyWithoutEnvironmentNestedInput
+  providerProfiles?: Prisma.ProviderProfileUpdateManyWithoutEnvironmentNestedInput
+  arcenApiKeys?: Prisma.ArcenApiKeyUpdateManyWithoutEnvironmentNestedInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUpdateManyWithoutEnvironmentNestedInput
+  embedComponents?: Prisma.EmbedComponentUpdateManyWithoutEnvironmentNestedInput
+  arcenCompanies?: Prisma.ArcenCompanyUpdateManyWithoutEnvironmentNestedInput
+  arcenUsers?: Prisma.ArcenUserUpdateManyWithoutEnvironmentNestedInput
+  arcenEvents?: Prisma.ArcenEventUpdateManyWithoutEnvironmentNestedInput
+  platformBillingAccount?: Prisma.PlatformBillingAccountUpdateOneWithoutEnvironmentNestedInput
+}
+
+export type WorkspaceEnvironmentUncheckedUpdateWithoutPlatformBillingCustomersInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  teamId?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  mode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
+  chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  authSessions?: Prisma.AuthSessionUncheckedUpdateManyWithoutActiveEnvironmentNestedInput
+  catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutEnvironmentNestedInput
+  catalogAddOns?: Prisma.CatalogAddOnUncheckedUpdateManyWithoutEnvironmentNestedInput
+  catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedUpdateManyWithoutEnvironmentNestedInput
+  catalogVersions?: Prisma.CatalogVersionUncheckedUpdateManyWithoutEnvironmentNestedInput
+  catalogConfigs?: Prisma.CatalogConfigUncheckedUpdateManyWithoutEnvironmentNestedInput
+  companyCreditGrants?: Prisma.CompanyCreditGrantUncheckedUpdateManyWithoutEnvironmentNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedUpdateManyWithoutEnvironmentNestedInput
+  templateInstalls?: Prisma.TemplateInstallUncheckedUpdateManyWithoutEnvironmentNestedInput
+  invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutEnvironmentNestedInput
+  subscriptionStates?: Prisma.SubscriptionStateUncheckedUpdateManyWithoutEnvironmentNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedUpdateManyWithoutEnvironmentNestedInput
+  payments?: Prisma.PaymentUncheckedUpdateManyWithoutEnvironmentNestedInput
+  paymentLinks?: Prisma.PaymentLinkUncheckedUpdateManyWithoutEnvironmentNestedInput
+  checkoutSessions?: Prisma.CheckoutSessionUncheckedUpdateManyWithoutEnvironmentNestedInput
+  providerProfiles?: Prisma.ProviderProfileUncheckedUpdateManyWithoutEnvironmentNestedInput
+  arcenApiKeys?: Prisma.ArcenApiKeyUncheckedUpdateManyWithoutEnvironmentNestedInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedUpdateManyWithoutEnvironmentNestedInput
+  embedComponents?: Prisma.EmbedComponentUncheckedUpdateManyWithoutEnvironmentNestedInput
+  arcenCompanies?: Prisma.ArcenCompanyUncheckedUpdateManyWithoutEnvironmentNestedInput
+  arcenUsers?: Prisma.ArcenUserUncheckedUpdateManyWithoutEnvironmentNestedInput
+  arcenEvents?: Prisma.ArcenEventUncheckedUpdateManyWithoutEnvironmentNestedInput
+  platformBillingAccount?: Prisma.PlatformBillingAccountUncheckedUpdateOneWithoutEnvironmentNestedInput
 }
 
 export type WorkspaceEnvironmentCreateWithoutArcenCompaniesInput = {
@@ -2774,6 +3217,8 @@ export type WorkspaceEnvironmentCreateWithoutArcenCompaniesInput = {
   embedComponents?: Prisma.EmbedComponentCreateNestedManyWithoutEnvironmentInput
   arcenUsers?: Prisma.ArcenUserCreateNestedManyWithoutEnvironmentInput
   arcenEvents?: Prisma.ArcenEventCreateNestedManyWithoutEnvironmentInput
+  platformBillingAccount?: Prisma.PlatformBillingAccountCreateNestedOneWithoutEnvironmentInput
+  platformBillingCustomers?: Prisma.PlatformBillingCustomerCreateNestedManyWithoutEnvironmentInput
 }
 
 export type WorkspaceEnvironmentUncheckedCreateWithoutArcenCompaniesInput = {
@@ -2805,6 +3250,8 @@ export type WorkspaceEnvironmentUncheckedCreateWithoutArcenCompaniesInput = {
   embedComponents?: Prisma.EmbedComponentUncheckedCreateNestedManyWithoutEnvironmentInput
   arcenUsers?: Prisma.ArcenUserUncheckedCreateNestedManyWithoutEnvironmentInput
   arcenEvents?: Prisma.ArcenEventUncheckedCreateNestedManyWithoutEnvironmentInput
+  platformBillingAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedOneWithoutEnvironmentInput
+  platformBillingCustomers?: Prisma.PlatformBillingCustomerUncheckedCreateNestedManyWithoutEnvironmentInput
 }
 
 export type WorkspaceEnvironmentCreateOrConnectWithoutArcenCompaniesInput = {
@@ -2852,6 +3299,8 @@ export type WorkspaceEnvironmentUpdateWithoutArcenCompaniesInput = {
   embedComponents?: Prisma.EmbedComponentUpdateManyWithoutEnvironmentNestedInput
   arcenUsers?: Prisma.ArcenUserUpdateManyWithoutEnvironmentNestedInput
   arcenEvents?: Prisma.ArcenEventUpdateManyWithoutEnvironmentNestedInput
+  platformBillingAccount?: Prisma.PlatformBillingAccountUpdateOneWithoutEnvironmentNestedInput
+  platformBillingCustomers?: Prisma.PlatformBillingCustomerUpdateManyWithoutEnvironmentNestedInput
 }
 
 export type WorkspaceEnvironmentUncheckedUpdateWithoutArcenCompaniesInput = {
@@ -2883,6 +3332,8 @@ export type WorkspaceEnvironmentUncheckedUpdateWithoutArcenCompaniesInput = {
   embedComponents?: Prisma.EmbedComponentUncheckedUpdateManyWithoutEnvironmentNestedInput
   arcenUsers?: Prisma.ArcenUserUncheckedUpdateManyWithoutEnvironmentNestedInput
   arcenEvents?: Prisma.ArcenEventUncheckedUpdateManyWithoutEnvironmentNestedInput
+  platformBillingAccount?: Prisma.PlatformBillingAccountUncheckedUpdateOneWithoutEnvironmentNestedInput
+  platformBillingCustomers?: Prisma.PlatformBillingCustomerUncheckedUpdateManyWithoutEnvironmentNestedInput
 }
 
 export type WorkspaceEnvironmentCreateWithoutArcenUsersInput = {
@@ -2914,6 +3365,8 @@ export type WorkspaceEnvironmentCreateWithoutArcenUsersInput = {
   embedComponents?: Prisma.EmbedComponentCreateNestedManyWithoutEnvironmentInput
   arcenCompanies?: Prisma.ArcenCompanyCreateNestedManyWithoutEnvironmentInput
   arcenEvents?: Prisma.ArcenEventCreateNestedManyWithoutEnvironmentInput
+  platformBillingAccount?: Prisma.PlatformBillingAccountCreateNestedOneWithoutEnvironmentInput
+  platformBillingCustomers?: Prisma.PlatformBillingCustomerCreateNestedManyWithoutEnvironmentInput
 }
 
 export type WorkspaceEnvironmentUncheckedCreateWithoutArcenUsersInput = {
@@ -2945,6 +3398,8 @@ export type WorkspaceEnvironmentUncheckedCreateWithoutArcenUsersInput = {
   embedComponents?: Prisma.EmbedComponentUncheckedCreateNestedManyWithoutEnvironmentInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedCreateNestedManyWithoutEnvironmentInput
   arcenEvents?: Prisma.ArcenEventUncheckedCreateNestedManyWithoutEnvironmentInput
+  platformBillingAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedOneWithoutEnvironmentInput
+  platformBillingCustomers?: Prisma.PlatformBillingCustomerUncheckedCreateNestedManyWithoutEnvironmentInput
 }
 
 export type WorkspaceEnvironmentCreateOrConnectWithoutArcenUsersInput = {
@@ -2992,6 +3447,8 @@ export type WorkspaceEnvironmentUpdateWithoutArcenUsersInput = {
   embedComponents?: Prisma.EmbedComponentUpdateManyWithoutEnvironmentNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUpdateManyWithoutEnvironmentNestedInput
   arcenEvents?: Prisma.ArcenEventUpdateManyWithoutEnvironmentNestedInput
+  platformBillingAccount?: Prisma.PlatformBillingAccountUpdateOneWithoutEnvironmentNestedInput
+  platformBillingCustomers?: Prisma.PlatformBillingCustomerUpdateManyWithoutEnvironmentNestedInput
 }
 
 export type WorkspaceEnvironmentUncheckedUpdateWithoutArcenUsersInput = {
@@ -3023,6 +3480,8 @@ export type WorkspaceEnvironmentUncheckedUpdateWithoutArcenUsersInput = {
   embedComponents?: Prisma.EmbedComponentUncheckedUpdateManyWithoutEnvironmentNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedUpdateManyWithoutEnvironmentNestedInput
   arcenEvents?: Prisma.ArcenEventUncheckedUpdateManyWithoutEnvironmentNestedInput
+  platformBillingAccount?: Prisma.PlatformBillingAccountUncheckedUpdateOneWithoutEnvironmentNestedInput
+  platformBillingCustomers?: Prisma.PlatformBillingCustomerUncheckedUpdateManyWithoutEnvironmentNestedInput
 }
 
 export type WorkspaceEnvironmentCreateWithoutArcenEventsInput = {
@@ -3054,6 +3513,8 @@ export type WorkspaceEnvironmentCreateWithoutArcenEventsInput = {
   embedComponents?: Prisma.EmbedComponentCreateNestedManyWithoutEnvironmentInput
   arcenCompanies?: Prisma.ArcenCompanyCreateNestedManyWithoutEnvironmentInput
   arcenUsers?: Prisma.ArcenUserCreateNestedManyWithoutEnvironmentInput
+  platformBillingAccount?: Prisma.PlatformBillingAccountCreateNestedOneWithoutEnvironmentInput
+  platformBillingCustomers?: Prisma.PlatformBillingCustomerCreateNestedManyWithoutEnvironmentInput
 }
 
 export type WorkspaceEnvironmentUncheckedCreateWithoutArcenEventsInput = {
@@ -3085,6 +3546,8 @@ export type WorkspaceEnvironmentUncheckedCreateWithoutArcenEventsInput = {
   embedComponents?: Prisma.EmbedComponentUncheckedCreateNestedManyWithoutEnvironmentInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedCreateNestedManyWithoutEnvironmentInput
   arcenUsers?: Prisma.ArcenUserUncheckedCreateNestedManyWithoutEnvironmentInput
+  platformBillingAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedOneWithoutEnvironmentInput
+  platformBillingCustomers?: Prisma.PlatformBillingCustomerUncheckedCreateNestedManyWithoutEnvironmentInput
 }
 
 export type WorkspaceEnvironmentCreateOrConnectWithoutArcenEventsInput = {
@@ -3132,6 +3595,8 @@ export type WorkspaceEnvironmentUpdateWithoutArcenEventsInput = {
   embedComponents?: Prisma.EmbedComponentUpdateManyWithoutEnvironmentNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUpdateManyWithoutEnvironmentNestedInput
   arcenUsers?: Prisma.ArcenUserUpdateManyWithoutEnvironmentNestedInput
+  platformBillingAccount?: Prisma.PlatformBillingAccountUpdateOneWithoutEnvironmentNestedInput
+  platformBillingCustomers?: Prisma.PlatformBillingCustomerUpdateManyWithoutEnvironmentNestedInput
 }
 
 export type WorkspaceEnvironmentUncheckedUpdateWithoutArcenEventsInput = {
@@ -3163,6 +3628,8 @@ export type WorkspaceEnvironmentUncheckedUpdateWithoutArcenEventsInput = {
   embedComponents?: Prisma.EmbedComponentUncheckedUpdateManyWithoutEnvironmentNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedUpdateManyWithoutEnvironmentNestedInput
   arcenUsers?: Prisma.ArcenUserUncheckedUpdateManyWithoutEnvironmentNestedInput
+  platformBillingAccount?: Prisma.PlatformBillingAccountUncheckedUpdateOneWithoutEnvironmentNestedInput
+  platformBillingCustomers?: Prisma.PlatformBillingCustomerUncheckedUpdateManyWithoutEnvironmentNestedInput
 }
 
 export type WorkspaceEnvironmentCreateWithoutCompanyCreditGrantsInput = {
@@ -3194,6 +3661,8 @@ export type WorkspaceEnvironmentCreateWithoutCompanyCreditGrantsInput = {
   arcenCompanies?: Prisma.ArcenCompanyCreateNestedManyWithoutEnvironmentInput
   arcenUsers?: Prisma.ArcenUserCreateNestedManyWithoutEnvironmentInput
   arcenEvents?: Prisma.ArcenEventCreateNestedManyWithoutEnvironmentInput
+  platformBillingAccount?: Prisma.PlatformBillingAccountCreateNestedOneWithoutEnvironmentInput
+  platformBillingCustomers?: Prisma.PlatformBillingCustomerCreateNestedManyWithoutEnvironmentInput
 }
 
 export type WorkspaceEnvironmentUncheckedCreateWithoutCompanyCreditGrantsInput = {
@@ -3225,6 +3694,8 @@ export type WorkspaceEnvironmentUncheckedCreateWithoutCompanyCreditGrantsInput =
   arcenCompanies?: Prisma.ArcenCompanyUncheckedCreateNestedManyWithoutEnvironmentInput
   arcenUsers?: Prisma.ArcenUserUncheckedCreateNestedManyWithoutEnvironmentInput
   arcenEvents?: Prisma.ArcenEventUncheckedCreateNestedManyWithoutEnvironmentInput
+  platformBillingAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedOneWithoutEnvironmentInput
+  platformBillingCustomers?: Prisma.PlatformBillingCustomerUncheckedCreateNestedManyWithoutEnvironmentInput
 }
 
 export type WorkspaceEnvironmentCreateOrConnectWithoutCompanyCreditGrantsInput = {
@@ -3272,6 +3743,8 @@ export type WorkspaceEnvironmentUpdateWithoutCompanyCreditGrantsInput = {
   arcenCompanies?: Prisma.ArcenCompanyUpdateManyWithoutEnvironmentNestedInput
   arcenUsers?: Prisma.ArcenUserUpdateManyWithoutEnvironmentNestedInput
   arcenEvents?: Prisma.ArcenEventUpdateManyWithoutEnvironmentNestedInput
+  platformBillingAccount?: Prisma.PlatformBillingAccountUpdateOneWithoutEnvironmentNestedInput
+  platformBillingCustomers?: Prisma.PlatformBillingCustomerUpdateManyWithoutEnvironmentNestedInput
 }
 
 export type WorkspaceEnvironmentUncheckedUpdateWithoutCompanyCreditGrantsInput = {
@@ -3303,6 +3776,8 @@ export type WorkspaceEnvironmentUncheckedUpdateWithoutCompanyCreditGrantsInput =
   arcenCompanies?: Prisma.ArcenCompanyUncheckedUpdateManyWithoutEnvironmentNestedInput
   arcenUsers?: Prisma.ArcenUserUncheckedUpdateManyWithoutEnvironmentNestedInput
   arcenEvents?: Prisma.ArcenEventUncheckedUpdateManyWithoutEnvironmentNestedInput
+  platformBillingAccount?: Prisma.PlatformBillingAccountUncheckedUpdateOneWithoutEnvironmentNestedInput
+  platformBillingCustomers?: Prisma.PlatformBillingCustomerUncheckedUpdateManyWithoutEnvironmentNestedInput
 }
 
 export type WorkspaceEnvironmentCreateWithoutCreditLedgerEntriesInput = {
@@ -3334,6 +3809,8 @@ export type WorkspaceEnvironmentCreateWithoutCreditLedgerEntriesInput = {
   arcenCompanies?: Prisma.ArcenCompanyCreateNestedManyWithoutEnvironmentInput
   arcenUsers?: Prisma.ArcenUserCreateNestedManyWithoutEnvironmentInput
   arcenEvents?: Prisma.ArcenEventCreateNestedManyWithoutEnvironmentInput
+  platformBillingAccount?: Prisma.PlatformBillingAccountCreateNestedOneWithoutEnvironmentInput
+  platformBillingCustomers?: Prisma.PlatformBillingCustomerCreateNestedManyWithoutEnvironmentInput
 }
 
 export type WorkspaceEnvironmentUncheckedCreateWithoutCreditLedgerEntriesInput = {
@@ -3365,6 +3842,8 @@ export type WorkspaceEnvironmentUncheckedCreateWithoutCreditLedgerEntriesInput =
   arcenCompanies?: Prisma.ArcenCompanyUncheckedCreateNestedManyWithoutEnvironmentInput
   arcenUsers?: Prisma.ArcenUserUncheckedCreateNestedManyWithoutEnvironmentInput
   arcenEvents?: Prisma.ArcenEventUncheckedCreateNestedManyWithoutEnvironmentInput
+  platformBillingAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedOneWithoutEnvironmentInput
+  platformBillingCustomers?: Prisma.PlatformBillingCustomerUncheckedCreateNestedManyWithoutEnvironmentInput
 }
 
 export type WorkspaceEnvironmentCreateOrConnectWithoutCreditLedgerEntriesInput = {
@@ -3412,6 +3891,8 @@ export type WorkspaceEnvironmentUpdateWithoutCreditLedgerEntriesInput = {
   arcenCompanies?: Prisma.ArcenCompanyUpdateManyWithoutEnvironmentNestedInput
   arcenUsers?: Prisma.ArcenUserUpdateManyWithoutEnvironmentNestedInput
   arcenEvents?: Prisma.ArcenEventUpdateManyWithoutEnvironmentNestedInput
+  platformBillingAccount?: Prisma.PlatformBillingAccountUpdateOneWithoutEnvironmentNestedInput
+  platformBillingCustomers?: Prisma.PlatformBillingCustomerUpdateManyWithoutEnvironmentNestedInput
 }
 
 export type WorkspaceEnvironmentUncheckedUpdateWithoutCreditLedgerEntriesInput = {
@@ -3443,6 +3924,8 @@ export type WorkspaceEnvironmentUncheckedUpdateWithoutCreditLedgerEntriesInput =
   arcenCompanies?: Prisma.ArcenCompanyUncheckedUpdateManyWithoutEnvironmentNestedInput
   arcenUsers?: Prisma.ArcenUserUncheckedUpdateManyWithoutEnvironmentNestedInput
   arcenEvents?: Prisma.ArcenEventUncheckedUpdateManyWithoutEnvironmentNestedInput
+  platformBillingAccount?: Prisma.PlatformBillingAccountUncheckedUpdateOneWithoutEnvironmentNestedInput
+  platformBillingCustomers?: Prisma.PlatformBillingCustomerUncheckedUpdateManyWithoutEnvironmentNestedInput
 }
 
 export type WorkspaceEnvironmentCreateWithoutPaymentLinksInput = {
@@ -3474,6 +3957,8 @@ export type WorkspaceEnvironmentCreateWithoutPaymentLinksInput = {
   arcenCompanies?: Prisma.ArcenCompanyCreateNestedManyWithoutEnvironmentInput
   arcenUsers?: Prisma.ArcenUserCreateNestedManyWithoutEnvironmentInput
   arcenEvents?: Prisma.ArcenEventCreateNestedManyWithoutEnvironmentInput
+  platformBillingAccount?: Prisma.PlatformBillingAccountCreateNestedOneWithoutEnvironmentInput
+  platformBillingCustomers?: Prisma.PlatformBillingCustomerCreateNestedManyWithoutEnvironmentInput
 }
 
 export type WorkspaceEnvironmentUncheckedCreateWithoutPaymentLinksInput = {
@@ -3505,6 +3990,8 @@ export type WorkspaceEnvironmentUncheckedCreateWithoutPaymentLinksInput = {
   arcenCompanies?: Prisma.ArcenCompanyUncheckedCreateNestedManyWithoutEnvironmentInput
   arcenUsers?: Prisma.ArcenUserUncheckedCreateNestedManyWithoutEnvironmentInput
   arcenEvents?: Prisma.ArcenEventUncheckedCreateNestedManyWithoutEnvironmentInput
+  platformBillingAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedOneWithoutEnvironmentInput
+  platformBillingCustomers?: Prisma.PlatformBillingCustomerUncheckedCreateNestedManyWithoutEnvironmentInput
 }
 
 export type WorkspaceEnvironmentCreateOrConnectWithoutPaymentLinksInput = {
@@ -3552,6 +4039,8 @@ export type WorkspaceEnvironmentUpdateWithoutPaymentLinksInput = {
   arcenCompanies?: Prisma.ArcenCompanyUpdateManyWithoutEnvironmentNestedInput
   arcenUsers?: Prisma.ArcenUserUpdateManyWithoutEnvironmentNestedInput
   arcenEvents?: Prisma.ArcenEventUpdateManyWithoutEnvironmentNestedInput
+  platformBillingAccount?: Prisma.PlatformBillingAccountUpdateOneWithoutEnvironmentNestedInput
+  platformBillingCustomers?: Prisma.PlatformBillingCustomerUpdateManyWithoutEnvironmentNestedInput
 }
 
 export type WorkspaceEnvironmentUncheckedUpdateWithoutPaymentLinksInput = {
@@ -3583,6 +4072,8 @@ export type WorkspaceEnvironmentUncheckedUpdateWithoutPaymentLinksInput = {
   arcenCompanies?: Prisma.ArcenCompanyUncheckedUpdateManyWithoutEnvironmentNestedInput
   arcenUsers?: Prisma.ArcenUserUncheckedUpdateManyWithoutEnvironmentNestedInput
   arcenEvents?: Prisma.ArcenEventUncheckedUpdateManyWithoutEnvironmentNestedInput
+  platformBillingAccount?: Prisma.PlatformBillingAccountUncheckedUpdateOneWithoutEnvironmentNestedInput
+  platformBillingCustomers?: Prisma.PlatformBillingCustomerUncheckedUpdateManyWithoutEnvironmentNestedInput
 }
 
 export type WorkspaceEnvironmentCreateWithoutCheckoutSessionsInput = {
@@ -3614,6 +4105,8 @@ export type WorkspaceEnvironmentCreateWithoutCheckoutSessionsInput = {
   arcenCompanies?: Prisma.ArcenCompanyCreateNestedManyWithoutEnvironmentInput
   arcenUsers?: Prisma.ArcenUserCreateNestedManyWithoutEnvironmentInput
   arcenEvents?: Prisma.ArcenEventCreateNestedManyWithoutEnvironmentInput
+  platformBillingAccount?: Prisma.PlatformBillingAccountCreateNestedOneWithoutEnvironmentInput
+  platformBillingCustomers?: Prisma.PlatformBillingCustomerCreateNestedManyWithoutEnvironmentInput
 }
 
 export type WorkspaceEnvironmentUncheckedCreateWithoutCheckoutSessionsInput = {
@@ -3645,6 +4138,8 @@ export type WorkspaceEnvironmentUncheckedCreateWithoutCheckoutSessionsInput = {
   arcenCompanies?: Prisma.ArcenCompanyUncheckedCreateNestedManyWithoutEnvironmentInput
   arcenUsers?: Prisma.ArcenUserUncheckedCreateNestedManyWithoutEnvironmentInput
   arcenEvents?: Prisma.ArcenEventUncheckedCreateNestedManyWithoutEnvironmentInput
+  platformBillingAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedOneWithoutEnvironmentInput
+  platformBillingCustomers?: Prisma.PlatformBillingCustomerUncheckedCreateNestedManyWithoutEnvironmentInput
 }
 
 export type WorkspaceEnvironmentCreateOrConnectWithoutCheckoutSessionsInput = {
@@ -3692,6 +4187,8 @@ export type WorkspaceEnvironmentUpdateWithoutCheckoutSessionsInput = {
   arcenCompanies?: Prisma.ArcenCompanyUpdateManyWithoutEnvironmentNestedInput
   arcenUsers?: Prisma.ArcenUserUpdateManyWithoutEnvironmentNestedInput
   arcenEvents?: Prisma.ArcenEventUpdateManyWithoutEnvironmentNestedInput
+  platformBillingAccount?: Prisma.PlatformBillingAccountUpdateOneWithoutEnvironmentNestedInput
+  platformBillingCustomers?: Prisma.PlatformBillingCustomerUpdateManyWithoutEnvironmentNestedInput
 }
 
 export type WorkspaceEnvironmentUncheckedUpdateWithoutCheckoutSessionsInput = {
@@ -3723,6 +4220,8 @@ export type WorkspaceEnvironmentUncheckedUpdateWithoutCheckoutSessionsInput = {
   arcenCompanies?: Prisma.ArcenCompanyUncheckedUpdateManyWithoutEnvironmentNestedInput
   arcenUsers?: Prisma.ArcenUserUncheckedUpdateManyWithoutEnvironmentNestedInput
   arcenEvents?: Prisma.ArcenEventUncheckedUpdateManyWithoutEnvironmentNestedInput
+  platformBillingAccount?: Prisma.PlatformBillingAccountUncheckedUpdateOneWithoutEnvironmentNestedInput
+  platformBillingCustomers?: Prisma.PlatformBillingCustomerUncheckedUpdateManyWithoutEnvironmentNestedInput
 }
 
 export type WorkspaceEnvironmentCreateWithoutEmbedAccessTokensInput = {
@@ -3754,6 +4253,8 @@ export type WorkspaceEnvironmentCreateWithoutEmbedAccessTokensInput = {
   arcenCompanies?: Prisma.ArcenCompanyCreateNestedManyWithoutEnvironmentInput
   arcenUsers?: Prisma.ArcenUserCreateNestedManyWithoutEnvironmentInput
   arcenEvents?: Prisma.ArcenEventCreateNestedManyWithoutEnvironmentInput
+  platformBillingAccount?: Prisma.PlatformBillingAccountCreateNestedOneWithoutEnvironmentInput
+  platformBillingCustomers?: Prisma.PlatformBillingCustomerCreateNestedManyWithoutEnvironmentInput
 }
 
 export type WorkspaceEnvironmentUncheckedCreateWithoutEmbedAccessTokensInput = {
@@ -3785,6 +4286,8 @@ export type WorkspaceEnvironmentUncheckedCreateWithoutEmbedAccessTokensInput = {
   arcenCompanies?: Prisma.ArcenCompanyUncheckedCreateNestedManyWithoutEnvironmentInput
   arcenUsers?: Prisma.ArcenUserUncheckedCreateNestedManyWithoutEnvironmentInput
   arcenEvents?: Prisma.ArcenEventUncheckedCreateNestedManyWithoutEnvironmentInput
+  platformBillingAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedOneWithoutEnvironmentInput
+  platformBillingCustomers?: Prisma.PlatformBillingCustomerUncheckedCreateNestedManyWithoutEnvironmentInput
 }
 
 export type WorkspaceEnvironmentCreateOrConnectWithoutEmbedAccessTokensInput = {
@@ -3832,6 +4335,8 @@ export type WorkspaceEnvironmentUpdateWithoutEmbedAccessTokensInput = {
   arcenCompanies?: Prisma.ArcenCompanyUpdateManyWithoutEnvironmentNestedInput
   arcenUsers?: Prisma.ArcenUserUpdateManyWithoutEnvironmentNestedInput
   arcenEvents?: Prisma.ArcenEventUpdateManyWithoutEnvironmentNestedInput
+  platformBillingAccount?: Prisma.PlatformBillingAccountUpdateOneWithoutEnvironmentNestedInput
+  platformBillingCustomers?: Prisma.PlatformBillingCustomerUpdateManyWithoutEnvironmentNestedInput
 }
 
 export type WorkspaceEnvironmentUncheckedUpdateWithoutEmbedAccessTokensInput = {
@@ -3863,6 +4368,8 @@ export type WorkspaceEnvironmentUncheckedUpdateWithoutEmbedAccessTokensInput = {
   arcenCompanies?: Prisma.ArcenCompanyUncheckedUpdateManyWithoutEnvironmentNestedInput
   arcenUsers?: Prisma.ArcenUserUncheckedUpdateManyWithoutEnvironmentNestedInput
   arcenEvents?: Prisma.ArcenEventUncheckedUpdateManyWithoutEnvironmentNestedInput
+  platformBillingAccount?: Prisma.PlatformBillingAccountUncheckedUpdateOneWithoutEnvironmentNestedInput
+  platformBillingCustomers?: Prisma.PlatformBillingCustomerUncheckedUpdateManyWithoutEnvironmentNestedInput
 }
 
 export type WorkspaceEnvironmentCreateWithoutArcenApiKeysInput = {
@@ -3894,6 +4401,8 @@ export type WorkspaceEnvironmentCreateWithoutArcenApiKeysInput = {
   arcenCompanies?: Prisma.ArcenCompanyCreateNestedManyWithoutEnvironmentInput
   arcenUsers?: Prisma.ArcenUserCreateNestedManyWithoutEnvironmentInput
   arcenEvents?: Prisma.ArcenEventCreateNestedManyWithoutEnvironmentInput
+  platformBillingAccount?: Prisma.PlatformBillingAccountCreateNestedOneWithoutEnvironmentInput
+  platformBillingCustomers?: Prisma.PlatformBillingCustomerCreateNestedManyWithoutEnvironmentInput
 }
 
 export type WorkspaceEnvironmentUncheckedCreateWithoutArcenApiKeysInput = {
@@ -3925,6 +4434,8 @@ export type WorkspaceEnvironmentUncheckedCreateWithoutArcenApiKeysInput = {
   arcenCompanies?: Prisma.ArcenCompanyUncheckedCreateNestedManyWithoutEnvironmentInput
   arcenUsers?: Prisma.ArcenUserUncheckedCreateNestedManyWithoutEnvironmentInput
   arcenEvents?: Prisma.ArcenEventUncheckedCreateNestedManyWithoutEnvironmentInput
+  platformBillingAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedOneWithoutEnvironmentInput
+  platformBillingCustomers?: Prisma.PlatformBillingCustomerUncheckedCreateNestedManyWithoutEnvironmentInput
 }
 
 export type WorkspaceEnvironmentCreateOrConnectWithoutArcenApiKeysInput = {
@@ -3972,6 +4483,8 @@ export type WorkspaceEnvironmentUpdateWithoutArcenApiKeysInput = {
   arcenCompanies?: Prisma.ArcenCompanyUpdateManyWithoutEnvironmentNestedInput
   arcenUsers?: Prisma.ArcenUserUpdateManyWithoutEnvironmentNestedInput
   arcenEvents?: Prisma.ArcenEventUpdateManyWithoutEnvironmentNestedInput
+  platformBillingAccount?: Prisma.PlatformBillingAccountUpdateOneWithoutEnvironmentNestedInput
+  platformBillingCustomers?: Prisma.PlatformBillingCustomerUpdateManyWithoutEnvironmentNestedInput
 }
 
 export type WorkspaceEnvironmentUncheckedUpdateWithoutArcenApiKeysInput = {
@@ -4003,6 +4516,8 @@ export type WorkspaceEnvironmentUncheckedUpdateWithoutArcenApiKeysInput = {
   arcenCompanies?: Prisma.ArcenCompanyUncheckedUpdateManyWithoutEnvironmentNestedInput
   arcenUsers?: Prisma.ArcenUserUncheckedUpdateManyWithoutEnvironmentNestedInput
   arcenEvents?: Prisma.ArcenEventUncheckedUpdateManyWithoutEnvironmentNestedInput
+  platformBillingAccount?: Prisma.PlatformBillingAccountUncheckedUpdateOneWithoutEnvironmentNestedInput
+  platformBillingCustomers?: Prisma.PlatformBillingCustomerUncheckedUpdateManyWithoutEnvironmentNestedInput
 }
 
 export type WorkspaceEnvironmentCreateWithoutEmbedComponentsInput = {
@@ -4034,6 +4549,8 @@ export type WorkspaceEnvironmentCreateWithoutEmbedComponentsInput = {
   arcenCompanies?: Prisma.ArcenCompanyCreateNestedManyWithoutEnvironmentInput
   arcenUsers?: Prisma.ArcenUserCreateNestedManyWithoutEnvironmentInput
   arcenEvents?: Prisma.ArcenEventCreateNestedManyWithoutEnvironmentInput
+  platformBillingAccount?: Prisma.PlatformBillingAccountCreateNestedOneWithoutEnvironmentInput
+  platformBillingCustomers?: Prisma.PlatformBillingCustomerCreateNestedManyWithoutEnvironmentInput
 }
 
 export type WorkspaceEnvironmentUncheckedCreateWithoutEmbedComponentsInput = {
@@ -4065,6 +4582,8 @@ export type WorkspaceEnvironmentUncheckedCreateWithoutEmbedComponentsInput = {
   arcenCompanies?: Prisma.ArcenCompanyUncheckedCreateNestedManyWithoutEnvironmentInput
   arcenUsers?: Prisma.ArcenUserUncheckedCreateNestedManyWithoutEnvironmentInput
   arcenEvents?: Prisma.ArcenEventUncheckedCreateNestedManyWithoutEnvironmentInput
+  platformBillingAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedOneWithoutEnvironmentInput
+  platformBillingCustomers?: Prisma.PlatformBillingCustomerUncheckedCreateNestedManyWithoutEnvironmentInput
 }
 
 export type WorkspaceEnvironmentCreateOrConnectWithoutEmbedComponentsInput = {
@@ -4112,6 +4631,8 @@ export type WorkspaceEnvironmentUpdateWithoutEmbedComponentsInput = {
   arcenCompanies?: Prisma.ArcenCompanyUpdateManyWithoutEnvironmentNestedInput
   arcenUsers?: Prisma.ArcenUserUpdateManyWithoutEnvironmentNestedInput
   arcenEvents?: Prisma.ArcenEventUpdateManyWithoutEnvironmentNestedInput
+  platformBillingAccount?: Prisma.PlatformBillingAccountUpdateOneWithoutEnvironmentNestedInput
+  platformBillingCustomers?: Prisma.PlatformBillingCustomerUpdateManyWithoutEnvironmentNestedInput
 }
 
 export type WorkspaceEnvironmentUncheckedUpdateWithoutEmbedComponentsInput = {
@@ -4143,6 +4664,8 @@ export type WorkspaceEnvironmentUncheckedUpdateWithoutEmbedComponentsInput = {
   arcenCompanies?: Prisma.ArcenCompanyUncheckedUpdateManyWithoutEnvironmentNestedInput
   arcenUsers?: Prisma.ArcenUserUncheckedUpdateManyWithoutEnvironmentNestedInput
   arcenEvents?: Prisma.ArcenEventUncheckedUpdateManyWithoutEnvironmentNestedInput
+  platformBillingAccount?: Prisma.PlatformBillingAccountUncheckedUpdateOneWithoutEnvironmentNestedInput
+  platformBillingCustomers?: Prisma.PlatformBillingCustomerUncheckedUpdateManyWithoutEnvironmentNestedInput
 }
 
 export type WorkspaceEnvironmentCreateManyTeamInput = {
@@ -4183,6 +4706,8 @@ export type WorkspaceEnvironmentUpdateWithoutTeamInput = {
   arcenCompanies?: Prisma.ArcenCompanyUpdateManyWithoutEnvironmentNestedInput
   arcenUsers?: Prisma.ArcenUserUpdateManyWithoutEnvironmentNestedInput
   arcenEvents?: Prisma.ArcenEventUpdateManyWithoutEnvironmentNestedInput
+  platformBillingAccount?: Prisma.PlatformBillingAccountUpdateOneWithoutEnvironmentNestedInput
+  platformBillingCustomers?: Prisma.PlatformBillingCustomerUpdateManyWithoutEnvironmentNestedInput
 }
 
 export type WorkspaceEnvironmentUncheckedUpdateWithoutTeamInput = {
@@ -4214,6 +4739,8 @@ export type WorkspaceEnvironmentUncheckedUpdateWithoutTeamInput = {
   arcenCompanies?: Prisma.ArcenCompanyUncheckedUpdateManyWithoutEnvironmentNestedInput
   arcenUsers?: Prisma.ArcenUserUncheckedUpdateManyWithoutEnvironmentNestedInput
   arcenEvents?: Prisma.ArcenEventUncheckedUpdateManyWithoutEnvironmentNestedInput
+  platformBillingAccount?: Prisma.PlatformBillingAccountUncheckedUpdateOneWithoutEnvironmentNestedInput
+  platformBillingCustomers?: Prisma.PlatformBillingCustomerUncheckedUpdateManyWithoutEnvironmentNestedInput
 }
 
 export type WorkspaceEnvironmentUncheckedUpdateManyWithoutTeamInput = {
@@ -4253,6 +4780,7 @@ export type WorkspaceEnvironmentCountOutputType = {
   arcenCompanies: number
   arcenUsers: number
   arcenEvents: number
+  platformBillingCustomers: number
 }
 
 export type WorkspaceEnvironmentCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -4278,6 +4806,7 @@ export type WorkspaceEnvironmentCountOutputTypeSelect<ExtArgs extends runtime.Ty
   arcenCompanies?: boolean | WorkspaceEnvironmentCountOutputTypeCountArcenCompaniesArgs
   arcenUsers?: boolean | WorkspaceEnvironmentCountOutputTypeCountArcenUsersArgs
   arcenEvents?: boolean | WorkspaceEnvironmentCountOutputTypeCountArcenEventsArgs
+  platformBillingCustomers?: boolean | WorkspaceEnvironmentCountOutputTypeCountPlatformBillingCustomersArgs
 }
 
 /**
@@ -4444,6 +4973,13 @@ export type WorkspaceEnvironmentCountOutputTypeCountArcenEventsArgs<ExtArgs exte
   where?: Prisma.ArcenEventWhereInput
 }
 
+/**
+ * WorkspaceEnvironmentCountOutputType without action
+ */
+export type WorkspaceEnvironmentCountOutputTypeCountPlatformBillingCustomersArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.PlatformBillingCustomerWhereInput
+}
+
 
 export type WorkspaceEnvironmentSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
@@ -4476,6 +5012,8 @@ export type WorkspaceEnvironmentSelect<ExtArgs extends runtime.Types.Extensions.
   arcenCompanies?: boolean | Prisma.WorkspaceEnvironment$arcenCompaniesArgs<ExtArgs>
   arcenUsers?: boolean | Prisma.WorkspaceEnvironment$arcenUsersArgs<ExtArgs>
   arcenEvents?: boolean | Prisma.WorkspaceEnvironment$arcenEventsArgs<ExtArgs>
+  platformBillingAccount?: boolean | Prisma.WorkspaceEnvironment$platformBillingAccountArgs<ExtArgs>
+  platformBillingCustomers?: boolean | Prisma.WorkspaceEnvironment$platformBillingCustomersArgs<ExtArgs>
   _count?: boolean | Prisma.WorkspaceEnvironmentCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["workspaceEnvironment"]>
 
@@ -4536,6 +5074,8 @@ export type WorkspaceEnvironmentInclude<ExtArgs extends runtime.Types.Extensions
   arcenCompanies?: boolean | Prisma.WorkspaceEnvironment$arcenCompaniesArgs<ExtArgs>
   arcenUsers?: boolean | Prisma.WorkspaceEnvironment$arcenUsersArgs<ExtArgs>
   arcenEvents?: boolean | Prisma.WorkspaceEnvironment$arcenEventsArgs<ExtArgs>
+  platformBillingAccount?: boolean | Prisma.WorkspaceEnvironment$platformBillingAccountArgs<ExtArgs>
+  platformBillingCustomers?: boolean | Prisma.WorkspaceEnvironment$platformBillingCustomersArgs<ExtArgs>
   _count?: boolean | Prisma.WorkspaceEnvironmentCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type WorkspaceEnvironmentIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -4571,6 +5111,8 @@ export type $WorkspaceEnvironmentPayload<ExtArgs extends runtime.Types.Extension
     arcenCompanies: Prisma.$ArcenCompanyPayload<ExtArgs>[]
     arcenUsers: Prisma.$ArcenUserPayload<ExtArgs>[]
     arcenEvents: Prisma.$ArcenEventPayload<ExtArgs>[]
+    platformBillingAccount: Prisma.$PlatformBillingAccountPayload<ExtArgs> | null
+    platformBillingCustomers: Prisma.$PlatformBillingCustomerPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
@@ -4997,6 +5539,8 @@ export interface Prisma__WorkspaceEnvironmentClient<T, Null = never, ExtArgs ext
   arcenCompanies<T extends Prisma.WorkspaceEnvironment$arcenCompaniesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.WorkspaceEnvironment$arcenCompaniesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ArcenCompanyPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   arcenUsers<T extends Prisma.WorkspaceEnvironment$arcenUsersArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.WorkspaceEnvironment$arcenUsersArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ArcenUserPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   arcenEvents<T extends Prisma.WorkspaceEnvironment$arcenEventsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.WorkspaceEnvironment$arcenEventsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ArcenEventPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  platformBillingAccount<T extends Prisma.WorkspaceEnvironment$platformBillingAccountArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.WorkspaceEnvironment$platformBillingAccountArgs<ExtArgs>>): Prisma.Prisma__PlatformBillingAccountClient<runtime.Types.Result.GetResult<Prisma.$PlatformBillingAccountPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+  platformBillingCustomers<T extends Prisma.WorkspaceEnvironment$platformBillingCustomersArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.WorkspaceEnvironment$platformBillingCustomersArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$PlatformBillingCustomerPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -5954,6 +6498,49 @@ export type WorkspaceEnvironment$arcenEventsArgs<ExtArgs extends runtime.Types.E
   take?: number
   skip?: number
   distinct?: Prisma.ArcenEventScalarFieldEnum | Prisma.ArcenEventScalarFieldEnum[]
+}
+
+/**
+ * WorkspaceEnvironment.platformBillingAccount
+ */
+export type WorkspaceEnvironment$platformBillingAccountArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the PlatformBillingAccount
+   */
+  select?: Prisma.PlatformBillingAccountSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the PlatformBillingAccount
+   */
+  omit?: Prisma.PlatformBillingAccountOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.PlatformBillingAccountInclude<ExtArgs> | null
+  where?: Prisma.PlatformBillingAccountWhereInput
+}
+
+/**
+ * WorkspaceEnvironment.platformBillingCustomers
+ */
+export type WorkspaceEnvironment$platformBillingCustomersArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the PlatformBillingCustomer
+   */
+  select?: Prisma.PlatformBillingCustomerSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the PlatformBillingCustomer
+   */
+  omit?: Prisma.PlatformBillingCustomerOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.PlatformBillingCustomerInclude<ExtArgs> | null
+  where?: Prisma.PlatformBillingCustomerWhereInput
+  orderBy?: Prisma.PlatformBillingCustomerOrderByWithRelationInput | Prisma.PlatformBillingCustomerOrderByWithRelationInput[]
+  cursor?: Prisma.PlatformBillingCustomerWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.PlatformBillingCustomerScalarFieldEnum | Prisma.PlatformBillingCustomerScalarFieldEnum[]
 }
 
 /**

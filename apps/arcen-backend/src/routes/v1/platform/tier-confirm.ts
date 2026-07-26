@@ -48,17 +48,31 @@ export async function postTierConfirm(c: Context) {
   // Check current tier — block if already on this or higher tier (idempotency)
   const currentTeam = await db.team.findUnique({
     where: { id: teamId },
-    select: { platformTier: true },
+    select: { id: true, platformTier: true, tierExpiresAt: true, tierSubscriptionId: true },
   });
   if (!currentTeam) {
     return c.json({ ok: false, error: "Team not found" }, 404 as any);
   }
 
   const tierOrder: Record<string, number> = { FREE: 0, PLUS: 1, PRO: 2 };
-  if (tierOrder[currentTeam.platformTier] >= tierOrder[targetTier]) {
+  if (currentTeam.platformTier === targetTier) {
+    return c.json({
+      ok: true,
+      deduped: true,
+      team: currentTeam,
+      billing: {
+        subscriptionStateId: null,
+        invoiceId: null,
+        paymentId: null,
+      },
+      message: `Already on ${targetTier} tier.`,
+    });
+  }
+
+  if (tierOrder[currentTeam.platformTier] > tierOrder[targetTier]) {
     return c.json({
       ok: false,
-      error: "Team is already on this tier or higher. No upgrade needed.",
+      error: "Team is already on a higher tier. No upgrade needed.",
     }, 409 as any);
   }
 

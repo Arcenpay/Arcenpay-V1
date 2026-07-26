@@ -89,6 +89,8 @@ export const ModelName = {
   WebhookDelivery: 'WebhookDelivery',
   PlatformTierConfig: 'PlatformTierConfig',
   PlatformBillingPlan: 'PlatformBillingPlan',
+  PlatformBillingAccount: 'PlatformBillingAccount',
+  PlatformBillingCustomer: 'PlatformBillingCustomer',
   GasSpend: 'GasSpend',
   TierUpgradeHistory: 'TierUpgradeHistory',
   SupportTicket: 'SupportTicket',
@@ -877,6 +879,31 @@ export const PlatformBillingPlanScalarFieldEnum = {
 } as const
 
 export type PlatformBillingPlanScalarFieldEnum = (typeof PlatformBillingPlanScalarFieldEnum)[keyof typeof PlatformBillingPlanScalarFieldEnum]
+
+
+export const PlatformBillingAccountScalarFieldEnum = {
+  id: 'id',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt',
+  providerTeamId: 'providerTeamId',
+  environmentId: 'environmentId',
+  portalComponentId: 'portalComponentId'
+} as const
+
+export type PlatformBillingAccountScalarFieldEnum = (typeof PlatformBillingAccountScalarFieldEnum)[keyof typeof PlatformBillingAccountScalarFieldEnum]
+
+
+export const PlatformBillingCustomerScalarFieldEnum = {
+  id: 'id',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt',
+  workspaceTeamId: 'workspaceTeamId',
+  providerTeamId: 'providerTeamId',
+  environmentId: 'environmentId',
+  companyId: 'companyId'
+} as const
+
+export type PlatformBillingCustomerScalarFieldEnum = (typeof PlatformBillingCustomerScalarFieldEnum)[keyof typeof PlatformBillingCustomerScalarFieldEnum]
 
 
 export const GasSpendScalarFieldEnum = {

@@ -373,6 +373,9 @@ model Team {
   gasSpends         GasSpend[]
   tierHistory       TierUpgradeHistory[]
   supportTickets    SupportTicket[]
+  platformBillingProviderAccount PlatformBillingAccount? @relation("PlatformBillingProviderAccount")
+  platformBillingProviderCustomers PlatformBillingCustomer[] @relation("PlatformBillingProviderCustomers")
+  platformBillingWorkspaceCustomer PlatformBillingCustomer? @relation("PlatformBillingWorkspaceCustomer")
 
   // Web3 ArcenPay Protocol Layer
   arcenCompanies    ArcenCompany[]
@@ -422,6 +425,8 @@ model WorkspaceEnvironment {
   arcenCompanies             ArcenCompany[]
   arcenUsers                 ArcenUser[]
   arcenEvents                ArcenEvent[]
+  platformBillingAccount     PlatformBillingAccount?
+  platformBillingCustomers   PlatformBillingCustomer[]
 
   @@unique([teamId, name])
   @@index([teamId, mode])
@@ -1282,6 +1287,43 @@ model PlatformBillingPlan {
   @@index([syncStatus])
 }
 
+// First-party ArcenPay provider configuration. This makes the platform bill
+// workspaces through the same provider/customer model as every other tenant.
+model PlatformBillingAccount {
+  id        String   @id @default("default")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  providerTeamId    String @unique
+  environmentId     String @unique
+  portalComponentId String? @unique
+
+  providerTeam Team                 @relation("PlatformBillingProviderAccount", fields: [providerTeamId], references: [id], onDelete: Restrict)
+  environment  WorkspaceEnvironment @relation(fields: [environmentId], references: [id], onDelete: Restrict)
+  portalComponent EmbedComponent?   @relation(fields: [portalComponentId], references: [id], onDelete: SetNull)
+}
+
+// Maps each customer workspace to its company record in the first-party
+// provider account. The workspace tier is a projection of that subscription.
+model PlatformBillingCustomer {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  workspaceTeamId String @unique
+  providerTeamId  String
+  environmentId   String
+  companyId       String @unique
+
+  workspaceTeam Team                 @relation("PlatformBillingWorkspaceCustomer", fields: [workspaceTeamId], references: [id], onDelete: Cascade)
+  providerTeam  Team                 @relation("PlatformBillingProviderCustomers", fields: [providerTeamId], references: [id], onDelete: Cascade)
+  environment   WorkspaceEnvironment @relation(fields: [environmentId], references: [id], onDelete: Restrict)
+  company       ArcenCompany         @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([providerTeamId, environmentId])
+  @@unique([providerTeamId, companyId])
+}
+
 // ─── Gas Sponsorship Tracking ─────────────────────────────────────────────────
 
 model GasSpend {
@@ -1383,6 +1425,7 @@ model ArcenCompany {
   creditLedgerEntries        CreditLedgerEntry[]
   paymentLinks               PaymentLink[]
   checkoutSessions           CheckoutSession[]
+  platformBillingCustomer    PlatformBillingCustomer?
 
   @@unique([teamId, environmentId, walletAddress])
   @@unique([teamId, environmentId, externalId])
@@ -1799,6 +1842,7 @@ model EmbedComponent {
 
   team        Team                  @relation(fields: [teamId], references: [id], onDelete: Cascade)
   environment WorkspaceEnvironment? @relation(fields: [environmentId], references: [id], onDelete: SetNull)
+  platformBillingPortalAccount PlatformBillingAccount?
 
   @@index([teamId])
   @@index([teamId, environmentId])

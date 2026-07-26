@@ -14,6 +14,7 @@ export interface PlanEntitlement {
   value: boolean | number | null;
   valueUnit?: string | null;
   enabled: boolean;
+  icon?: string | null;
 }
 
 function toFeatureType(type: PlanEntitlement["type"]): string {
@@ -54,6 +55,7 @@ export async function syncEntitlementsToFlagRules(
         name: entitlement.featureName,
         featureType: toFeatureType(entitlement.type),
         eventKey: entitlement.type !== "BOOLEAN" ? entitlement.featureKey : undefined,
+        icon: entitlement.icon ?? undefined,
       },
       create: {
         teamId,
@@ -62,6 +64,7 @@ export async function syncEntitlementsToFlagRules(
         featureType: toFeatureType(entitlement.type),
         defaultValue: false,
         eventKey: entitlement.type !== "BOOLEAN" ? entitlement.featureKey : undefined,
+        icon: entitlement.icon ?? null,
       },
     });
 

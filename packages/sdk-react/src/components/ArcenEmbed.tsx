@@ -88,6 +88,8 @@ export interface ArcenEmbedProps {
   onViewChange?: (view: PortalView) => void;
   onPlanChange?: (planId: string) => void;
   mode?: "inline" | "modal";
+  /** Hides the "Secured by Arcenpay" branding footer. Use for first-party/white-label embeds. */
+  hideBranding?: boolean;
 }
 
 function isSvgFeatureIcon(icon: string | null | undefined) {
@@ -2855,6 +2857,8 @@ export function renderElement(
   onResumeSubscription: () => void,
   allowPlanChanges = true,
   allowCancellation = true,
+  showAllFeatures = false,
+  toggleShowAllFeatures?: () => void,
 ): React.ReactNode {
   const prop = (key: string) =>
     el[key] ?? (el.config as Record<string, unknown> | undefined)?.[key];
@@ -3038,39 +3042,75 @@ export function renderElement(
               </div>
             ) : (
               <>
-                {boolFeats.map((e, i) => (
-                  <div
-                    key={e.featureKey}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      padding: "10px 0",
-                      borderBottom:
-                        i < boolFeats.length - 1
-                          ? "1px solid #f5f5f5"
-                          : undefined,
-                    }}
-                  >
-                    <div
-                      style={{ display: "flex", alignItems: "center", gap: 10 }}
-                    >
-                      <FeatureIcon>
-                        {featureIconNode(e) || DOC_ICON}
-                      </FeatureIcon>
-                      <span
-                        style={{
-                          fontSize: tokens.size,
-                          fontWeight: 500,
-                          color: tokens.textColor,
-                        }}
-                      >
-                        {e.name ?? e.featureKey}
-                      </span>
-                    </div>
-                    <span style={{ fontWeight: 700, color: "#16a34a" }}>✓</span>
-                  </div>
-                ))}
+                {(() => {
+                  const visibleFeats = showAllFeatures
+                    ? boolFeats
+                    : boolFeats.slice(0, 5);
+                  return (
+                    <>
+                      {visibleFeats.map((e, i) => (
+                        <div
+                          key={e.featureKey}
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "space-between",
+                            padding: "10px 0",
+                            borderBottom:
+                              i < visibleFeats.length - 1 ||
+                              boolFeats.length > 5
+                                ? "1px solid #f5f5f5"
+                                : undefined,
+                          }}
+                        >
+                          <div
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 10,
+                            }}
+                          >
+                            <FeatureIcon>
+                              {featureIconNode(e) || DOC_ICON}
+                            </FeatureIcon>
+                            <span
+                              style={{
+                                fontSize: tokens.size,
+                                fontWeight: 500,
+                                color: tokens.textColor,
+                              }}
+                            >
+                              {e.name ?? e.featureKey}
+                            </span>
+                          </div>
+                          <span style={{ fontWeight: 700, color: "#16a34a" }}>
+                            ✓
+                          </span>
+                        </div>
+                      ))}
+                      {boolFeats.length > 5 && (
+                        <button
+                          onClick={() => toggleShowAllFeatures?.()}
+                          style={{
+                            width: "100%",
+                            padding: "8px 0",
+                            background: "none",
+                            border: "none",
+                            cursor: "pointer",
+                            fontSize: tokens.size - 1,
+                            fontWeight: 600,
+                            color: tokens.primary,
+                            textAlign: "center",
+                          }}
+                        >
+                          {showAllFeatures
+                            ? "Show less"
+                            : `Show all ${boolFeats.length} features`}
+                        </button>
+                      )}
+                    </>
+                  );
+                })()}
                 {creditFeats.map((e) => {
                   const val =
                     typeof e.value === "number"
@@ -4131,6 +4171,8 @@ function PortalContent({
     ComponentElement & Record<string, unknown>
   >;
 
+  const [showAllFeatures, setShowAllFeatures] = useState(false);
+
   // Icon map built from entitlements for feature icon rendering
   const iconMap = new Map<string, string>();
   (data.entitlements as any[])?.forEach((ent: any) => {
@@ -4324,6 +4366,8 @@ function PortalContent({
           onResumeSubscription,
           allowPlanChanges,
           allowCancellation,
+          showAllFeatures,
+          () => setShowAllFeatures((v) => !v),
         ),
       )}
 
@@ -4752,6 +4796,8 @@ function PortalContent({
                 onResumeSubscription,
                 allowPlanChanges,
                 allowCancellation,
+                showAllFeatures,
+                () => setShowAllFeatures((v) => !v),
               ),
             )}
           </div>
@@ -5029,17 +5075,19 @@ function PortalContent({
                 style={{ display: "flex", flexDirection: "column", gap: 12 }}
               >
                 {billingEls.map((el, i) =>
-                  renderElement(
-                    el as ComponentElement & Record<string, unknown>,
-                    i + 200,
-                    data,
-                    tokens,
-                    onChangePlan,
-                    onUnsubscribe,
-                    onResumeSubscription,
-                    allowPlanChanges,
-                    allowCancellation,
-                  ),
+              renderElement(
+                el as ComponentElement & Record<string, unknown>,
+                i + 200,
+                data,
+                responsiveTokens,
+                onChangePlan,
+                onUnsubscribe,
+                onResumeSubscription,
+                allowPlanChanges,
+                allowCancellation,
+                showAllFeatures,
+                () => setShowAllFeatures((v) => !v),
+              ),
                 )}
                 {/* Branding */}
                 <div style={{ textAlign: "center", paddingTop: 4 }}>
@@ -5127,6 +5175,7 @@ function CheckoutContent({
     code: string;
     discount: number;
   } | null>(null);
+  const [expandedFeatures, setExpandedFeatures] = useState<Set<string>>(new Set());
   const [couponError, setCouponError] = useState("");
   const [couponLoading, setCouponLoading] = useState(false);
   const didInitializeCouponScope = useRef(false);
@@ -5662,98 +5711,131 @@ function CheckoutContent({
                           paddingBottom: 14,
                         }}
                       >
-                        {features.slice(0, 8).map(
-                          (
-                            ent: {
-                              featureName: string;
-                              featureKey: string;
-                              type: string;
-                              value: boolean | number | null;
-                              icon?: string | null;
-                            },
-                            i: number,
-                          ) => {
-                            const featureIcon =
-                              ent.icon || iconMap.get(ent.featureKey) || null;
-                            const renderedFeatureIcon = renderFeatureIconNode(
-                              featureIcon,
-                              16,
-                            );
-
-                            return (
-                              <div
-                                key={ent.featureKey || i}
-                                style={{
-                                  display: "flex",
-                                  alignItems: "flex-start",
-                                  gap: 8,
-                                  fontSize: tokens.size - 1,
-                                  color: tokens.mutedColor,
-                                  lineHeight: 1.35,
-                                }}
-                              >
-                                <span
-                                  style={{
-                                    flexShrink: 0,
-                                    width: featureIcon ? 20 : 16,
-                                    fontWeight: 700,
-                                    textAlign: "center",
-                                    marginTop: 1,
-                                    fontSize:
-                                      featureIcon &&
-                                      !isSvgFeatureIcon(featureIcon) &&
-                                      featureIcon.length <= 2
-                                        ? tokens.size
-                                        : tokens.size - 2,
-                                    color: tokens.mutedColor,
-                                  }}
-                                >
-                                  {renderedFeatureIcon ? (
-                                    renderedFeatureIcon
-                                  ) : ent.type === "BOOLEAN" ? (
-                                    ent.value === true ? (
-                                      <span style={{ color: "#16a34a" }}>
-                                        ✓
-                                      </span>
-                                    ) : (
-                                      <span style={{ color: "#d1d5db" }}>
-                                        —
-                                      </span>
-                                    )
-                                  ) : ent.type === "UNLIMITED" ? (
-                                    <span
-                                      style={{
-                                        color: tokens.primary,
-                                        fontWeight: 600,
-                                      }}
-                                    >
-                                      ∞
-                                    </span>
-                                  ) : (
-                                    <span style={{ color: tokens.primary }}>
-                                      •
-                                    </span>
-                                  )}
-                                </span>
-                                <span>
-                                  {ent.type === "NUMERIC" && ent.value != null
-                                    ? `${ent.value} ${ent.featureName || ent.featureKey}`
-                                    : ent.featureName || ent.featureKey}
-                                </span>
-                              </div>
-                            );
-                          },
-                        )}
-                        {features.length > 8 && (
-                          <div
+                        {(() => {
+                          const isExpanded = expandedFeatures.has(plan.id);
+                          const visibleFeatures = isExpanded ? features : features.slice(0, 8);
+                          return <div
                             style={{
-                              fontSize: 11,
-                              color: tokens.mutedColor,
-                              fontStyle: "italic",
+                              maxHeight: isExpanded ? 280 : undefined,
+                              overflowY: isExpanded ? "auto" : undefined,
+                              display: "flex",
+                              flexDirection: "column",
+                              gap: 8,
                             }}
                           >
-                            +{features.length - 8} more
-                          </div>
+                            {visibleFeatures.map(
+                              (
+                                ent: {
+                                  featureName: string;
+                                  featureKey: string;
+                                  type: string;
+                                  value: boolean | number | null;
+                                  icon?: string | null;
+                                },
+                                i: number,
+                              ) => {
+                                const featureIcon =
+                                  ent.icon || iconMap.get(ent.featureKey) || null;
+                                const renderedFeatureIcon = renderFeatureIconNode(
+                                  featureIcon,
+                                  16,
+                                );
+
+                                return (
+                                  <div
+                                    key={ent.featureKey || i}
+                                    style={{
+                                      display: "flex",
+                                      alignItems: "flex-start",
+                                      gap: 8,
+                                      fontSize: tokens.size - 1,
+                                      color: tokens.mutedColor,
+                                      lineHeight: 1.35,
+                                    }}
+                                  >
+                                    <span
+                                      style={{
+                                        flexShrink: 0,
+                                        width: featureIcon ? 20 : 16,
+                                        fontWeight: 700,
+                                        textAlign: "center",
+                                        marginTop: 1,
+                                        fontSize:
+                                          featureIcon &&
+                                          !isSvgFeatureIcon(featureIcon) &&
+                                          featureIcon.length <= 2
+                                            ? tokens.size
+                                            : tokens.size - 2,
+                                        color: tokens.mutedColor,
+                                      }}
+                                    >
+                                      {renderedFeatureIcon ? (
+                                        renderedFeatureIcon
+                                      ) : ent.type === "BOOLEAN" ? (
+                                        ent.value === true ? (
+                                          <span style={{ color: "#16a34a" }}>
+                                            ✓
+                                          </span>
+                                        ) : (
+                                          <span style={{ color: "#d1d5db" }}>
+                                            —
+                                          </span>
+                                        )
+                                      ) : ent.type === "UNLIMITED" ? (
+                                        <span
+                                          style={{
+                                            color: tokens.primary,
+                                            fontWeight: 600,
+                                          }}
+                                        >
+                                          ∞
+                                        </span>
+                                      ) : (
+                                        <span style={{ color: tokens.primary }}>
+                                          •
+                                        </span>
+                                      )}
+                                    </span>
+                                    <span>
+                                      {ent.type === "NUMERIC" && ent.value != null
+                                        ? `${ent.value} ${ent.featureName || ent.featureKey}`
+                                        : ent.featureName || ent.featureKey}
+                                    </span>
+                                  </div>
+                                );
+                              },
+                            )}
+                          </div>;
+                        })()}
+                        {features.length > 8 && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setExpandedFeatures((prev) => {
+                                const next = new Set(prev);
+                                if (next.has(plan.id)) {
+                                  next.delete(plan.id);
+                                } else {
+                                  next.add(plan.id);
+                                }
+                                return next;
+                              });
+                            }}
+                            style={{
+                              fontSize: 11,
+                              color: tokens.primary,
+                              fontWeight: 600,
+                              background: "none",
+                              border: "none",
+                              cursor: "pointer",
+                              padding: 0,
+                              textAlign: "left",
+                            }}
+                          >
+                            {expandedFeatures.has(plan.id)
+                              ? "Show less"
+                              : `+${features.length - 8} more`}
+                          </button>
                         )}
                       </div>
                     );
@@ -9197,11 +9279,13 @@ function FullScreenModal({
   tokens,
   contentRef,
   children,
+  hideBranding = false,
 }: {
   onClose: () => void;
   tokens: Tokens;
   contentRef: React.RefObject<HTMLDivElement | null>;
   children: React.ReactNode;
+  hideBranding?: boolean;
 }) {
   const idRef = useRef(`am-${++_modalIdCounter}`);
 
@@ -9258,7 +9342,7 @@ function FullScreenModal({
             {children}
           </div>
           <div style={{ flexShrink: 0, borderTop: `1px solid rgba(0,0,0,0.06)` }}>
-            <SecuredByArcenpay tokens={tokens} />
+            {!hideBranding && <SecuredByArcenpay tokens={tokens} />}
           </div>
         </div>
       </div>
@@ -9509,6 +9593,7 @@ export function ArcenEmbed({
   onViewChange,
   onPlanChange,
   mode = "modal",
+  hideBranding = false,
 }: ArcenEmbedProps = {}) {
   // The portal should always surface plan changes by default.
   // Workspace-specific restrictions are enforced by backend APIs when a
@@ -10611,7 +10696,7 @@ export function ArcenEmbed({
               containerWidth={effectiveContainerWidth}
             />
           )}
-          <SecuredByArcenpay tokens={tokens} />
+          {!hideBranding && <SecuredByArcenpay tokens={tokens} />}
         </>
       ) : (
         <>
@@ -10631,6 +10716,7 @@ export function ArcenEmbed({
               onClose={() => dispatch({ type: "GOTO_PORTAL" })}
               tokens={tokens}
               contentRef={modalContentRef}
+              hideBranding={hideBranding}
             >
               {view === "checkout" && (
                 <CheckoutContent
@@ -10738,7 +10824,7 @@ export function ArcenEmbed({
               )}
             </FullScreenModal>
           )}
-          <SecuredByArcenpay tokens={tokens} />
+          {!hideBranding && <SecuredByArcenpay tokens={tokens} />}
         </>
       )}
     </div>
