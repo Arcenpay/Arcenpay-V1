@@ -3836,7 +3836,7 @@ function PlansTable({
       </div>
 
       {loading ? (
-        <SkeletonTable rows={5} cols={5} />
+        <SkeletonTable rows={5} cols={9} />
       ) : plans.length === 0 ? (
         <div className="rounded-xl border border-dashed border-border bg-secondary/15 px-6 py-12 text-center">
           <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl border border-border bg-card">
@@ -4441,7 +4441,7 @@ function AddOnsTable({
       </div>
 
       {loading ? (
-        <SkeletonTable rows={5} cols={4} />
+        <SkeletonTable rows={5} cols={9} />
       ) : addOns.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-12 border border-dashed border-border rounded-lg bg-secondary/20">
           <Package className="w-12 h-12 text-muted-foreground/50 mb-4" />
@@ -5067,7 +5067,7 @@ function CreditTypesTable({
       </div>
 
       {loading ? (
-        <SkeletonTable rows={5} cols={4} />
+        <SkeletonTable rows={5} cols={6} />
       ) : creditTypes.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-12 border border-dashed border-border rounded-lg bg-secondary/20">
           <Coins className="w-12 h-12 text-muted-foreground/50 mb-4" />

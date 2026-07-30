@@ -42,6 +42,8 @@
   --color-sidebar-ring: var(--sidebar-ring);
   --color-success: var(--success);
   --color-warning: var(--warning);
+  --color-brand: #0000FD;
+  --color-brand-dark: #0000D0;
   --color-surface: var(--surface);
   --color-surface-raised: var(--surface-raised);
   --color-elevated: var(--elevated);
@@ -53,8 +55,52 @@
   --radius-xl: calc(var(--radius) + 4px);
 }
 
-/* Dark theme — Clerk.com inspired minimal dark */
+/* Light theme — default (no class needed) */
 :root {
+  --background: #fafafa;
+  --foreground: #0a0a0a;
+  --card: #ffffff;
+  --card-foreground: #0a0a0a;
+  --popover: #ffffff;
+  --popover-foreground: #0a0a0a;
+  --primary: #0a0a0a;
+  --primary-foreground: #ffffff;
+  --secondary: #f4f4f5;
+  --secondary-foreground: #18181b;
+  --muted: #f4f4f5;
+  --muted-foreground: #71717a;
+  --accent: #f4f4f5;
+  --accent-foreground: #18181b;
+  --surface: #f4f4f5;
+  --surface-raised: #e4e4e7;
+  --elevated: #ffffff;
+  --elevated-hover: #f4f4f5;
+  --destructive: #ef4444;
+  --destructive-foreground: #ffffff;
+  --border: #e4e4e7;
+  --input: #f4f4f5;
+  --ring: #0a0a0a;
+  --chart-1: #0a0a0a;
+  --chart-2: #666666;
+  --chart-3: #a0a0a0;
+  --chart-4: #cccccc;
+  --chart-5: #eeeeee;
+  --sidebar: #ffffff;
+  --sidebar-foreground: #0a0a0a;
+  --sidebar-primary: #0a0a0a;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #f4f4f5;
+  --sidebar-accent-foreground: #18181b;
+  --sidebar-border: #e4e4e7;
+  --sidebar-ring: #0a0a0a;
+  --sidebar-active: rgba(0,0,0,0.06);
+  --sidebar-hover: rgba(0,0,0,0.03);
+  --success: #0000FD;
+  --warning: #f59e0b;
+}
+
+/* Dark theme override */
+.dark {
   /* Base colors — near black */
   --background: #0a0a0a;
   --foreground: #ffffff;
@@ -101,9 +147,6 @@
   --chart-4: #444444;
   --chart-5: #222222;
 
-  /* Radius */
-  --radius: 0.625rem;
-
   /* Sidebar — same as background, minimal */
   --sidebar: #0a0a0a;
   --sidebar-foreground: #ffffff;
@@ -113,52 +156,11 @@
   --sidebar-accent-foreground: #ffffff;
   --sidebar-border: #1a1a1a;
   --sidebar-ring: #ffffff;
+  --sidebar-active: rgba(255,255,255,0.08);
+  --sidebar-hover: rgba(255,255,255,0.04);
 
   /* Status */
-  --success: #22c55e;
-  --warning: #f59e0b;
-}
-
-/* Light theme override */
-.light,
-:root:not(.dark) {
-  --background: #fafafa;
-  --foreground: #0a0a0a;
-  --card: #ffffff;
-  --card-foreground: #0a0a0a;
-  --popover: #ffffff;
-  --popover-foreground: #0a0a0a;
-  --primary: #0a0a0a;
-  --primary-foreground: #ffffff;
-  --secondary: #f4f4f5;
-  --secondary-foreground: #18181b;
-  --muted: #f4f4f5;
-  --muted-foreground: #71717a;
-  --accent: #f4f4f5;
-  --accent-foreground: #18181b;
-  --surface: #f4f4f5;
-  --surface-raised: #e4e4e7;
-  --elevated: #ffffff;
-  --elevated-hover: #f4f4f5;
-  --destructive: #ef4444;
-  --destructive-foreground: #ffffff;
-  --border: #e4e4e7;
-  --input: #f4f4f5;
-  --ring: #0a0a0a;
-  --chart-1: #0a0a0a;
-  --chart-2: #666666;
-  --chart-3: #a0a0a0;
-  --chart-4: #cccccc;
-  --chart-5: #eeeeee;
-  --sidebar: #fafafa;
-  --sidebar-foreground: #0a0a0a;
-  --sidebar-primary: #0a0a0a;
-  --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #f4f4f5;
-  --sidebar-accent-foreground: #18181b;
-  --sidebar-border: #e4e4e7;
-  --sidebar-ring: #0a0a0a;
-  --success: #22c55e;
+  --success: #0000FD;
   --warning: #f59e0b;
 }
 

@@ -24,6 +24,7 @@ import {
   Wallet,
   ArrowRightLeft,
 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -167,7 +168,10 @@ function ApiKeysTab() {
     fetch("/api/v1/api-keys")
       .then((r) => r.json())
       .then((d) => setKeys(d.data ?? []))
-      .catch(() => setKeys([]))
+      .catch(() => {
+        setKeys([]);
+        toast.error("Failed to load API keys");
+      })
       .finally(() => setLoading(false));
   }, []);
 
@@ -363,7 +367,7 @@ function SessionsTab() {
       )}
 
       {loading ? (
-        <SkeletonTable rows={3} cols={7} />
+        <SkeletonTable rows={3} cols={6} />
       ) : sessions.length === 0 ? (
         <div className="text-center py-10 border border-dashed border-border rounded-lg">
           <Database className="w-8 h-8 text-muted-foreground/40 mx-auto mb-2" />
@@ -707,7 +711,9 @@ function PermissionsTab() {
           }
         }
       })
-      .catch(() => {})
+      .catch(() => {
+        toast.error("Failed to load agent settings");
+      })
       .finally(() => setLoading(false));
   }, []);
 
@@ -1271,7 +1277,10 @@ function DispatchHistoryTab() {
     fetch("/api/v1/agent/dispatch")
       .then((r) => r.json())
       .then((d) => setRequests(d.requests ?? []))
-      .catch(() => setRequests([]))
+      .catch(() => {
+        setRequests([]);
+        toast.error("Failed to load dispatch history");
+      })
       .finally(() => setLoading(false));
   }, []);
 
@@ -1355,7 +1364,7 @@ export function AgentSection() {
   const [tab, setTab] = useState<AgentTab>("quickstart");
   const { address, isConnected } = useAccount();
 
-  const tabs: { id: AgentTab; label: string; icon: React.ElementType }[] = [
+  const tabs: { id: AgentTab; label: string; icon: LucideIcon }[] = [
     { id: "quickstart", label: "Quickstart", icon: Zap },
     { id: "api-keys", label: "API Keys", icon: Key },
     { id: "sessions", label: "Sessions", icon: Activity },

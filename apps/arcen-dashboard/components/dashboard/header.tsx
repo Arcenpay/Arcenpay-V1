@@ -2,7 +2,7 @@
 
 import { cn } from "@/lib/utils";
 import type { Section } from "@/app/(dashboard)/page";
-import { Bell, Search, ChevronDown, LogOut, UserRound, Wallet, Building2 } from "lucide-react";
+import { Bell, ChevronDown, Wallet } from "lucide-react";
 import { Web3Icon } from "@/components/web3-icon";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
@@ -83,7 +83,6 @@ export function Header({ activeSection, onMobileMenuToggle }: HeaderProps) {
     selectEnvironment,
   } = useEnvironment();
   const chainId = useChainId();
-  const [searchFocused, setSearchFocused] = useState(false);
   const { data: sessionData, refresh: refreshSessionData } = useDashboardSession();
   const storedWallet = sessionData?.user.walletAddress ?? null;
   const {
@@ -108,9 +107,6 @@ export function Header({ activeSection, onMobileMenuToggle }: HeaderProps) {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showWalletMenu, setShowWalletMenu] = useState(false);
   const [showEnvironmentMenu, setShowEnvironmentMenu] = useState(false);
-  const [showWorkspaceMenu, setShowWorkspaceMenu] = useState(false);
-  const [showAccountMenu, setShowAccountMenu] = useState(false);
-  const [isSwitchingTeam, setIsSwitchingTeam] = useState(false);
   const [isSwitchingEnvironment, setIsSwitchingEnvironment] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [auditEvents, setAuditEvents] = useState<AuditEntry[]>([]);
@@ -118,8 +114,6 @@ export function Header({ activeSection, onMobileMenuToggle }: HeaderProps) {
   const bellRef = useRef<HTMLDivElement>(null);
   const walletRef = useRef<HTMLDivElement>(null);
   const environmentRef = useRef<HTMLDivElement>(null);
-  const workspaceRef = useRef<HTMLDivElement>(null);
-  const accountRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     fetch("/api/audit-log?limit=10")
@@ -152,18 +146,12 @@ export function Header({ activeSection, onMobileMenuToggle }: HeaderProps) {
       if (environmentRef.current && !environmentRef.current.contains(e.target as Node)) {
         setShowEnvironmentMenu(false);
       }
-      if (workspaceRef.current && !workspaceRef.current.contains(e.target as Node)) {
-        setShowWorkspaceMenu(false);
-      }
-      if (accountRef.current && !accountRef.current.contains(e.target as Node)) {
-        setShowAccountMenu(false);
-      }
     }
-    if (showNotifications || showWalletMenu || showEnvironmentMenu || showWorkspaceMenu || showAccountMenu) {
+    if (showNotifications || showWalletMenu || showEnvironmentMenu) {
       document.addEventListener("mousedown", handleClick);
       return () => document.removeEventListener("mousedown", handleClick);
     }
-  }, [showAccountMenu, showEnvironmentMenu, showNotifications, showWalletMenu, showWorkspaceMenu]);
+  }, [showEnvironmentMenu, showNotifications, showWalletMenu]);
 
   const markAllRead = useCallback(() => {
     localStorage.setItem("arcen_notif_last_viewed", new Date().toISOString());
@@ -172,27 +160,6 @@ export function Header({ activeSection, onMobileMenuToggle }: HeaderProps) {
 
   const formatAction = (action: string) =>
     action.replace(/\./g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
-
-  const handleSwitchTeam = async (teamId: string) => {
-    if (!sessionData || sessionData.currentTeam?.id === teamId) {
-      setShowWorkspaceMenu(false);
-      return;
-    }
-    setIsSwitchingTeam(true);
-    try {
-      const response = await fetch("/api/team/switch", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ teamId }),
-      });
-      if (!response.ok) return;
-      await refreshSessionData();
-      setShowWorkspaceMenu(false);
-      window.location.reload();
-    } finally {
-      setIsSwitchingTeam(false);
-    }
-  };
 
   const handleLogout = async () => {
     setIsLoggingOut(true);
@@ -248,126 +215,6 @@ export function Header({ activeSection, onMobileMenuToggle }: HeaderProps) {
       </div>
 
       <div className="flex items-center gap-2 md:gap-3 shrink-0">
-        {/* Environment switcher */}
-        <div ref={environmentRef} className="relative hidden sm:block">
-          <button
-            type="button"
-            onClick={() => setShowEnvironmentMenu((open) => !open)}
-            className="inline-flex h-9 items-center gap-2 rounded-lg border border-border bg-surface px-3 text-xs font-medium text-foreground hover:bg-surface-raised transition-colors"
-          >
-            {activeEnvironment?.chainLabel && (
-              <Web3Icon chainLabel={activeEnvironment.chainLabel} size="sm" />
-            )}
-            <span className="max-w-[9rem] truncate">
-              {activeEnvironment?.name ?? "Environment"}
-            </span>
-            <Badge
-              variant="outline"
-              className={cn(
-                "px-2 py-0.5 text-[10px] font-semibold border-none",
-                activeEnvironment?.mode === "PRODUCTION"
-                  ? "bg-secondary text-destructive"
-                  : "bg-secondary text-warning",
-              )}
-            >
-              {activeEnvironment?.mode === "PRODUCTION" ? "PROD" : "DEV"}
-            </Badge>
-            <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
-          </button>
-
-          {showEnvironmentMenu ? (
-            <div className="absolute right-0 top-11 z-50 w-[min(20rem,calc(100vw-1rem))] rounded-xl border border-border bg-popover p-2">
-              <div className="px-3 pb-2 pt-1 text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
-                Active environment
-              </div>
-              <div className="space-y-1">
-                {environments.map((environment) => (
-                  <button
-                    key={environment.id}
-                    type="button"
-                    disabled={isSwitchingEnvironment}
-                    onClick={() => void handleSelectEnvironment(environment.id)}
-                    className={cn(
-                      "flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-left transition-colors",
-                      activeEnvironment?.id === environment.id
-                        ? "bg-secondary text-foreground"
-                        : "text-muted-foreground hover:bg-secondary/50 hover:text-foreground",
-                    )}
-                  >
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      {environment.chainLabel && (
-                        <Web3Icon chainLabel={environment.chainLabel} size="sm" />
-                      )}
-                      <div className="min-w-0">
-                        <div className="truncate text-sm font-medium">{environment.name}</div>
-                        <div className="truncate text-xs text-muted-foreground/70">
-                          {environment.chainLabel}
-                        </div>
-                      </div>
-                    </div>
-                    <Badge
-                      variant="outline"
-                      className={cn(
-                        "border-none text-[10px]",
-                        environment.mode === "PRODUCTION"
-                          ? "bg-secondary text-destructive"
-                          : "bg-secondary text-warning",
-                      )}
-                    >
-                      {environment.mode === "PRODUCTION" ? "PROD" : "DEV"}
-                    </Badge>
-                  </button>
-                ))}
-              </div>
-              <div className="mt-2 border-t border-border pt-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowEnvironmentMenu(false);
-                    router.push("/onboarding/environment");
-                  }}
-                  className="flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm text-muted-foreground transition-colors hover:bg-secondary/50 hover:text-foreground"
-                >
-                  <span>Create environment</span>
-                  <span className="text-[11px] font-medium uppercase tracking-[0.1em] text-foreground">
-                    New
-                  </span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowEnvironmentMenu(false);
-                    router.push("/?section=settings&tab=workspace", { scroll: false });
-                  }}
-                  className="mt-1 flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm text-muted-foreground transition-colors hover:bg-secondary/50 hover:text-foreground"
-                >
-                  <span>Manage environments</span>
-                  <span className="text-[11px] font-medium uppercase tracking-[0.1em] text-muted-foreground">
-                    Settings
-                  </span>
-                </button>
-              </div>
-            </div>
-          ) : null}
-        </div>
-
-        {/* Search */}
-        <div
-          className={cn(
-            "relative flex items-center transition-all duration-300 hidden md:flex",
-            searchFocused ? "w-64" : "w-48",
-          )}
-        >
-          <Search className="absolute left-3 w-4 h-4 text-muted-foreground pointer-events-none" />
-          <input
-            type="text"
-            placeholder="Search..."
-            onFocus={() => setSearchFocused(true)}
-            onBlur={() => setSearchFocused(false)}
-            className="w-full h-9 pl-9 pr-4 rounded-lg bg-surface border border-border text-sm text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-0 focus:border-border transition-all duration-200"
-          />
-        </div>
-
         {/* Notifications */}
         <div ref={bellRef} className="relative">
           <button
@@ -553,51 +400,74 @@ export function Header({ activeSection, onMobileMenuToggle }: HeaderProps) {
           ) : null}
         </div>
 
-        {/* Workspace switcher */}
-        <div ref={workspaceRef} className="relative">
+        {/* Environment switcher */}
+        <div ref={environmentRef} className="relative hidden sm:block">
           <button
             type="button"
-            onClick={() => setShowWorkspaceMenu((open) => !open)}
-            className="inline-flex h-9 items-center gap-2 rounded-lg border border-border bg-surface px-2 sm:px-3 text-xs font-medium text-foreground hover:bg-surface-raised transition-colors"
-            title={sessionData?.currentTeam?.name ?? "Workspace"}
+            onClick={() => setShowEnvironmentMenu((open) => !open)}
+            className="inline-flex h-9 items-center gap-2 rounded-lg border border-border bg-surface px-3 text-xs font-medium text-foreground hover:bg-surface-raised transition-colors"
           >
-            <Building2 className="h-4 w-4 sm:hidden text-muted-foreground" />
-            <span className="max-w-[11rem] truncate hidden sm:inline">
-              {sessionData?.currentTeam?.name ?? "Workspace"}
+            {activeEnvironment?.chainLabel && (
+              <Web3Icon chainLabel={activeEnvironment.chainLabel} size="sm" />
+            )}
+            <span className="max-w-[9rem] truncate">
+              {activeEnvironment?.name ?? "Environment"}
             </span>
-            <ChevronDown className="h-3.5 w-3.5 text-muted-foreground hidden sm:block" />
+            <Badge
+              variant="outline"
+              className={cn(
+                "px-2 py-0.5 text-[10px] font-semibold border-none",
+                activeEnvironment?.mode === "PRODUCTION"
+                  ? "bg-secondary text-destructive"
+                  : "bg-secondary text-warning",
+              )}
+            >
+              {activeEnvironment?.mode === "PRODUCTION" ? "PROD" : "DEV"}
+            </Badge>
+            <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
           </button>
 
-          {showWorkspaceMenu && sessionData ? (
-            <div className="absolute right-0 top-11 z-50 w-[min(18rem,calc(100vw-1rem))] rounded-xl border border-border bg-popover p-2">
+          {showEnvironmentMenu ? (
+            <div className="absolute right-0 top-11 z-50 w-[min(20rem,calc(100vw-1rem))] rounded-xl border border-border bg-popover p-2">
               <div className="px-3 pb-2 pt-1 text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
-                Switch workspace
+                Active environment
               </div>
               <div className="space-y-1">
-                {sessionData.teams.map((team) => (
+                {environments.map((environment) => (
                   <button
-                    key={team.id}
+                    key={environment.id}
                     type="button"
-                    disabled={isSwitchingTeam}
-                    onClick={() => void handleSwitchTeam(team.id)}
+                    disabled={isSwitchingEnvironment}
+                    onClick={() => void handleSelectEnvironment(environment.id)}
                     className={cn(
                       "flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-left transition-colors",
-                      sessionData.currentTeam?.id === team.id
+                      activeEnvironment?.id === environment.id
                         ? "bg-secondary text-foreground"
                         : "text-muted-foreground hover:bg-secondary/50 hover:text-foreground",
                     )}
                   >
-                    <div>
-                      <div className="text-sm font-medium">{team.name}</div>
-                      <div className="text-[11px] font-medium uppercase tracking-[0.1em] text-muted-foreground/70">
-                        {team.role}
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      {environment.chainLabel && (
+                        <Web3Icon chainLabel={environment.chainLabel} size="sm" />
+                      )}
+                      <div className="min-w-0">
+                        <div className="truncate text-sm font-medium">{environment.name}</div>
+                        <div className="truncate text-xs text-muted-foreground/70">
+                          {environment.chainLabel}
+                        </div>
                       </div>
                     </div>
-                    {sessionData.currentTeam?.id === team.id ? (
-                      <span className="text-[11px] font-medium uppercase tracking-[0.1em] text-foreground">
-                        Active
-                      </span>
-                    ) : null}
+                    <Badge
+                      variant="outline"
+                      className={cn(
+                        "border-none text-[10px]",
+                        environment.mode === "PRODUCTION"
+                          ? "bg-secondary text-destructive"
+                          : "bg-secondary text-warning",
+                      )}
+                    >
+                      {environment.mode === "PRODUCTION" ? "PROD" : "DEV"}
+                    </Badge>
                   </button>
                 ))}
               </div>
@@ -605,12 +475,25 @@ export function Header({ activeSection, onMobileMenuToggle }: HeaderProps) {
                 <button
                   type="button"
                   onClick={() => {
-                    setShowWorkspaceMenu(false);
-                    router.push("/?section=settings&tab=workspace", { scroll: false });
+                    setShowEnvironmentMenu(false);
+                    router.push("/onboarding/environment");
                   }}
                   className="flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm text-muted-foreground transition-colors hover:bg-secondary/50 hover:text-foreground"
                 >
-                  <span>Manage workspace</span>
+                  <span>Create environment</span>
+                  <span className="text-[11px] font-medium uppercase tracking-[0.1em] text-foreground">
+                    New
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowEnvironmentMenu(false);
+                    router.push("/?section=settings&tab=workspace", { scroll: false });
+                  }}
+                  className="mt-1 flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm text-muted-foreground transition-colors hover:bg-secondary/50 hover:text-foreground"
+                >
+                  <span>Manage environments</span>
                   <span className="text-[11px] font-medium uppercase tracking-[0.1em] text-muted-foreground">
                     Settings
                   </span>
@@ -620,55 +503,6 @@ export function Header({ activeSection, onMobileMenuToggle }: HeaderProps) {
           ) : null}
         </div>
 
-        {/* Account menu */}
-        <div ref={accountRef} className="relative">
-          <button
-            type="button"
-            onClick={() => setShowAccountMenu((open) => !open)}
-            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-border bg-surface text-foreground overflow-hidden hover:bg-surface-raised transition-colors"
-          >
-            {sessionData?.user?.email ? (
-              <img
-                src={`https://api.dicebear.com/9.x/dylan/svg?seed=${encodeURIComponent(sessionData.user.email)}`}
-                alt="avatar"
-                className="h-full w-full"
-              />
-            ) : (
-              <UserRound className="h-4 w-4" />
-            )}
-          </button>
-
-          {showAccountMenu && sessionData ? (
-            <div className="absolute right-0 top-11 z-50 w-[min(18rem,calc(100vw-1rem))] rounded-xl border border-border bg-popover p-2">
-              <div className="flex items-center gap-3 rounded-lg bg-surface px-3 py-3">
-                {sessionData.user.email && (
-                  <img
-                    src={`https://api.dicebear.com/9.x/dylan/svg?seed=${encodeURIComponent(sessionData.user.email)}`}
-                    alt="avatar"
-                    className="h-9 w-9 rounded-full border border-border bg-background shrink-0"
-                  />
-                )}
-                <div className="min-w-0">
-                  <p className="text-sm font-medium text-foreground truncate">
-                    {sessionData.currentTeam?.name ?? "ArcenPay"}
-                  </p>
-                  <p className="text-xs text-muted-foreground truncate">
-                    {sessionData.user.email ?? "No email"}
-                  </p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => void handleLogout()}
-                disabled={isLoggingOut}
-                className="mt-2 flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-secondary/50 hover:text-foreground"
-              >
-                <LogOut className="h-4 w-4" />
-                {isLoggingOut ? "Signing out..." : "Sign out"}
-              </button>
-            </div>
-          ) : null}
-        </div>
       </div>
     </header>
   );

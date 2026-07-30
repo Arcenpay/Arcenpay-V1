@@ -60,7 +60,7 @@ export async function getTier(c: Context) {
           pastDueAt: subscription.pastDueAt,
           graceEndsAt: subscription.graceEndsAt,
           tier: subscription.tier,
-          amount: subscription.amountMicros,
+          amount: subscription.amount,
         }
       : null,
   });

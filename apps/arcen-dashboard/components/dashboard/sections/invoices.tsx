@@ -230,7 +230,7 @@ function InvoiceTable({
         </TableRow>
       </TableHeader>
       <TableBody>
-        {loading && <SkeletonTable rows={4} cols={7} />}
+        {loading && <SkeletonTable rows={4} cols={8} />}
         {!loading && rows.length === 0 && (
           <TableRow>
             <TableCell

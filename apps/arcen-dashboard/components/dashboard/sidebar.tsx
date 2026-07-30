@@ -1,19 +1,16 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import Image from "next/image";
 import { cn } from "@/lib/utils";
 import type { Section } from "@/app/(dashboard)/page";
 import { useAccount } from "wagmi";
 import {
   LayoutDashboard,
-  Layers,
+  LayoutGrid,
   Users,
   ReceiptText,
   Settings,
-  ChevronLeft,
-  ChevronRight,
-  ChevronDown,
-  Hexagon,
   Flag,
   Building2,
   ClipboardList,
@@ -32,18 +29,24 @@ import {
   Moon,
   Monitor,
   X,
+  LifeBuoy,
+  ChevronUp,
+  Sparkles,
+  LogOut,
+  UserRound,
+  Search,
 } from "lucide-react";
+import { CommandPalette } from "./command-palette";
 import { useDashboardSession } from "@/hooks/use-dashboard-session";
 import { DASHBOARD_DOCS_URL } from "@/lib/docs-url";
 import { getChainLabel, resolveEnvironmentChainId } from "@/lib/default-chain";
 import { useEnvironment } from "@/contexts/environment-context";
 import { useTheme } from "next-themes";
+import { useRouter } from "next/navigation";
 
 interface SidebarProps {
   activeSection: Section;
   onSectionChange: (section: Section) => void;
-  collapsed: boolean;
-  onCollapsedChange: (collapsed: boolean) => void;
   mobileOpen?: boolean;
   onMobileOpenChange?: (open: boolean) => void;
 }
@@ -51,68 +54,83 @@ interface SidebarProps {
 type NavItem = {
   id: Section;
   label: string;
-  icon: React.ElementType;
-  parent?: string;
 };
 
 type NavGroup = {
   label: string;
+  icon: React.ComponentType<{ className?: string; strokeWidth?: number }>;
   items: NavItem[];
   collapsible?: boolean;
 };
 
 const navGroups: NavGroup[] = [
   {
-    label: "",
-    items: [{ id: "overview", label: "Overview", icon: LayoutDashboard }],
+    label: "Home",
+    icon: LayoutDashboard,
+    items: [{ id: "overview", label: "Overview" }],
   },
   {
-    label: "Catalog",
+    label: "Products",
+    icon: LayoutGrid,
     collapsible: true,
     items: [
-      { id: "catalog-plans", label: "Plans", icon: Layers },
-      { id: "catalog-addons", label: "Add-Ons", icon: Package },
-      { id: "catalog-credits", label: "Credits", icon: Coins },
-      { id: "catalog-config", label: "Configuration", icon: SlidersHorizontal },
+      { id: "catalog-plans", label: "Catalogue" },
+      { id: "catalog-addons", label: "Add-Ons" },
+      { id: "catalog-credits", label: "Credits" },
+      { id: "catalog-config", label: "Configuration" },
     ],
   },
   {
-    label: "Manage",
+    label: "Customers",
+    icon: Users,
     collapsible: true,
     items: [
-      { id: "companies", label: "Companies", icon: Building2 },
-      { id: "subscribers", label: "Users", icon: Users },
-      { id: "features", label: "Features", icon: Flag },
-      { id: "feature-flags", label: "Flags", icon: Zap },
+      { id: "companies", label: "Companies" },
+      { id: "subscribers", label: "Users" },
+    ],
+  },
+  {
+    label: "Features",
+    icon: Flag,
+    collapsible: true,
+    items: [
+      { id: "features", label: "Entitlements" },
+      { id: "feature-flags", label: "Flags" },
     ],
   },
   {
     label: "Connections",
+    icon: Activity,
     collapsible: true,
     items: [
-      { id: "events-stream", label: "Events", icon: Activity },
-      { id: "components", label: "Components", icon: LayoutTemplate },
-      { id: "webhooks", label: "Webhooks", icon: Webhook },
+      { id: "events-stream", label: "Events" },
+      { id: "components", label: "Components" },
+      { id: "webhooks", label: "Webhooks" },
     ],
   },
   {
     label: "Agent",
-    items: [{ id: "agent", label: "Agent", icon: Bot }],
+    icon: Bot,
+    items: [{ id: "agent", label: "Agent" }],
   },
   {
-    label: "Admin",
+    label: "Billing",
+    icon: CreditCard,
     collapsible: true,
     items: [
-      { id: "invoices", label: "Invoices", icon: ReceiptText },
-      { id: "payments", label: "Payments", icon: CreditCard },
-      { id: "billing", label: "Billing & Plan", icon: CreditCard },
-      { id: "audit-log", label: "Audit Log", icon: ClipboardList },
-      { id: "settings", label: "Settings", icon: Settings },
+      { id: "invoices", label: "Invoices" },
+      { id: "payments", label: "Payments" },
+      { id: "billing", label: "Billing & Plan" },
+      { id: "audit-log", label: "Audit Log" },
     ],
+  },
+  {
+    label: "Settings",
+    icon: Settings,
+    items: [{ id: "settings", label: "Settings" }],
   },
 ];
 
-// Check if a group is active based on any of its items being active
 function isGroupActive(items: NavItem[], activeSection: Section) {
   return items.some((item) => item.id === activeSection);
 }
@@ -120,342 +138,450 @@ function isGroupActive(items: NavItem[], activeSection: Section) {
 export function Sidebar({
   activeSection,
   onSectionChange,
-  collapsed,
-  onCollapsedChange,
   mobileOpen = false,
   onMobileOpenChange,
 }: SidebarProps) {
+  const router = useRouter();
   const { address, isConnected } = useAccount();
   const { envMode, activeEnvironment } = useEnvironment();
-  const { data: sessionData } = useDashboardSession();
+  const { data: sessionData, refresh: refreshSessionData } = useDashboardSession();
   const [mounted, setMounted] = useState(false);
-  const { theme, setTheme } = useTheme();
-  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(
-    new Set(navGroups.filter((g) => g.collapsible).map((g) => g.label)),
-  );
+  const { theme, resolvedTheme, setTheme } = useTheme();
+  const isDark = resolvedTheme === "dark";
+
+  // Accordion: only one group open at a time, default all closed
+  const [expandedGroup, setExpandedGroup] = useState<string | null>(null);
+  const [showAccountMenu, setShowAccountMenu] = useState(false);
+  const [isSwitchingTeam, setIsSwitchingTeam] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
+  const accountRef = React.useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  // Auto-expand groups that contain the active section
+  // Auto-expand the group containing the active section (on mount / section change)
   useEffect(() => {
-    const newExpanded = new Set(expandedGroups);
-    navGroups.forEach((group) => {
-      if (group.collapsible && isGroupActive(group.items, activeSection)) {
-        newExpanded.add(group.label);
-      }
-    });
-    setExpandedGroups(newExpanded);
+    const parentGroup = navGroups.find(
+      (g) => g.collapsible && g.items.some((i) => i.id === activeSection),
+    );
+    if (parentGroup) {
+      setExpandedGroup(parentGroup.label);
+    } else {
+      // Single-page item selected — collapse all groups
+      setExpandedGroup(null);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeSection]);
 
-  const toggleGroup = (label: string) => {
-    setExpandedGroups((prev) => {
-      const next = new Set(prev);
-      if (next.has(label)) {
-        next.delete(label);
-      } else {
-        next.add(label);
+  // Close account menu on outside click
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (accountRef.current && !accountRef.current.contains(e.target as Node)) {
+        setShowAccountMenu(false);
       }
-      return next;
-    });
+    }
+    if (showAccountMenu) {
+      document.addEventListener("mousedown", handleClick);
+      return () => document.removeEventListener("mousedown", handleClick);
+    }
+  }, [showAccountMenu]);
+
+  const handleGroupClick = (group: NavGroup) => {
+    if (!group.collapsible) {
+      // Non-collapsible: just select the first (and only) item
+      if (group.items.length > 0) {
+        onSectionChange(group.items[0].id);
+      }
+      return;
+    }
+    if (expandedGroup === group.label) {
+      // Already open — close it
+      setExpandedGroup(null);
+    } else {
+      // Open this group, close others, and auto-select first item
+      setExpandedGroup(group.label);
+      if (group.items.length > 0) {
+        onSectionChange(group.items[0].id);
+      }
+    }
   };
 
-  const teamName = sessionData?.currentTeam?.name ?? null;
+  const handleLogout = async () => {
+    setIsLoggingOut(true);
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+      router.push("/login");
+      router.refresh();
+    } finally {
+      setIsLoggingOut(false);
+    }
+  };
+
+  const handleSwitchTeam = async (teamId: string) => {
+    if (!sessionData || sessionData.currentTeam?.id === teamId) {
+      setShowAccountMenu(false);
+      return;
+    }
+    setIsSwitchingTeam(true);
+    try {
+      const response = await fetch("/api/team/switch", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ teamId }),
+      });
+      if (!response.ok) return;
+      await refreshSessionData();
+      setShowAccountMenu(false);
+      window.location.reload();
+    } finally {
+      setIsSwitchingTeam(false);
+    }
+  };
+
   const shortAddress = address
-    ? `${address.slice(0, 6)}…${address.slice(-4)}`
+    ? `${address.slice(0, 6)}...${address.slice(-4)}`
     : null;
-  const networkLabel = activeEnvironment?.chainLabel ?? getChainLabel(resolveEnvironmentChainId(envMode));
 
   return (
     <>
       {/* Mobile overlay */}
       {mobileOpen ? (
         <div
-          className="fixed inset-0 z-[35] bg-black/50 lg:hidden"
+          className="fixed inset-0 z-[35] bg-black/60 lg:hidden backdrop-blur-sm"
           onClick={() => onMobileOpenChange?.(false)}
         />
       ) : null}
 
       <aside
         className={cn(
-          "fixed left-0 top-0 z-50 h-screen bg-sidebar border-r border-sidebar-border transition-all duration-300 ease-out flex flex-col",
-          // Mobile: slide in/out
-          "max-lg:translate-x-[-100%]",
+          "fixed left-0 top-0 z-50 h-screen bg-sidebar flex flex-col border-r border-sidebar-border",
+          "max-lg:translate-x-[-100%] transition-transform duration-300 ease-out",
           mobileOpen ? "max-lg:translate-x-0" : "",
-          // Width
-          "w-[min(280px,85vw)] lg:w-[68px]",
-          !collapsed && "lg:w-[240px]",
+          "w-[min(280px,85vw)] lg:w-[260px]",
         )}
       >
         {/* Mobile drawer header */}
-        <div className="lg:hidden h-14 flex items-center justify-between px-4 border-b border-sidebar-border shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 bg-sidebar-primary">
-              <Hexagon className="w-4 h-4 text-sidebar-primary-foreground" />
-            </div>
-            <span className="font-semibold text-sm text-sidebar-foreground">
-              ArcenPay
-            </span>
-          </div>
+        <div className="lg:hidden h-14 flex items-center justify-between px-4 shrink-0">
+          <Image
+            src="/arcenpay-logo.png"
+            alt="ArcenPay"
+            width={140}
+            height={36}
+            className={cn(
+              "h-7 w-auto object-contain",
+              isDark && "brightness-0 invert"
+            )}
+            priority
+            unoptimized
+          />
+          <button
+            type="button"
+            onClick={() => setCommandPaletteOpen(true)}
+            className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-sidebar-foreground/50 hover:text-sidebar-foreground hover:bg-[var(--sidebar-hover)] transition-colors"
+          >
+            <Search className="w-4 h-4" strokeWidth={1.5} />
+          </button>
           <button
             type="button"
             onClick={() => onMobileOpenChange?.(false)}
-            className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-sidebar-foreground hover:bg-sidebar-accent transition-colors"
+            className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-[var(--sidebar-hover)] transition-colors"
           >
-            <X className="w-5 h-5" />
+            <X className="w-5 h-5" strokeWidth={1.5} />
           </button>
         </div>
 
-        {/* Logo — desktop only */}
-        <div className="hidden lg:flex h-14 items-center px-4 border-b border-sidebar-border shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 bg-sidebar-primary">
-              <Hexagon className="w-4 h-4 text-sidebar-primary-foreground" />
-            </div>
-            <span
-              className={cn(
-                "font-semibold text-sm text-sidebar-foreground whitespace-nowrap transition-all duration-300",
-                collapsed
-                  ? "opacity-0 w-0 overflow-hidden"
-                  : "opacity-100 w-auto",
-              )}
-            >
-              ArcenPay
-            </span>
-          </div>
+        {/* Logo + Search — desktop only */}
+        <div className="hidden lg:flex h-14 items-center justify-between px-5 shrink-0">
+          <Image
+            src="/arcenpay-logo.png"
+            alt="ArcenPay"
+            width={140}
+            height={36}
+            className={cn(
+              "h-7 w-auto object-contain",
+              isDark && "brightness-0 invert"
+            )}
+            priority
+            unoptimized
+          />
+          <button
+            type="button"
+            onClick={() => setCommandPaletteOpen(true)}
+            className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-sidebar-foreground/50 hover:text-sidebar-foreground hover:bg-[var(--sidebar-hover)] transition-colors"
+            title="Search"
+          >
+            <Search className="w-4 h-4" strokeWidth={1.5} />
+          </button>
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 px-2 py-3 overflow-y-auto overflow-x-hidden">
+        <nav className="flex-1 px-3 py-2 overflow-y-auto overflow-x-hidden">
           {navGroups.map((group, gi) => {
-            const groupActive = isGroupActive(group.items, activeSection);
-            const isExpanded = group.collapsible ? expandedGroups.has(group.label) : true;
+            const GroupIcon = group.icon;
+            const isExpanded = group.collapsible ? expandedGroup === group.label : true;
+            const isGroupActive = group.items.some((i) => i.id === activeSection);
+
 
             return (
-              <div key={gi} className={gi > 0 ? "mt-3" : ""}>
-                {/* Group label / collapsible header */}
-                {group.label && (
-                  <div className={cn(
-                    "flex items-center transition-all duration-300",
-                    collapsed && !mobileOpen ? "opacity-0 h-0 overflow-hidden mb-0" : "opacity-100 mb-1",
-                  )}>
-                    {group.collapsible ? (
-                      <button
-                        onClick={() => toggleGroup(group.label)}
-                        className={cn(
-                          "flex items-center gap-1 px-3 py-1 w-full text-[11px] font-medium uppercase tracking-[0.12em] select-none transition-colors",
-                          groupActive || isExpanded
-                            ? "text-sidebar-foreground"
-                            : "text-muted-foreground",
-                        )}
-                      >
-                        <span>{group.label}</span>
-                        <ChevronDown
-                          className={cn(
-                            "w-3 h-3 transition-transform duration-200",
-                            isExpanded ? "rotate-0" : "-rotate-90",
-                          )}
-                        />
-                      </button>
-                    ) : (
-                      <p className="px-3 py-1 text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground select-none">
-                        {group.label}
-                      </p>
+              <div key={gi} className={gi > 0 ? "mt-0.5" : ""}>
+                {/* Group header with icon */}
+                <button
+                  onClick={() => handleGroupClick(group)}
+                  className={cn(
+                    "flex items-center gap-3 px-3 py-2 w-full text-[13px] font-medium select-none transition-all duration-150 rounded-xl",
+                    isGroupActive
+                      ? "bg-[var(--sidebar-active)] text-sidebar-foreground"
+                      : "text-sidebar-foreground/50 hover:text-sidebar-foreground/80 hover:bg-[var(--sidebar-hover)]",
+                  )}
+                >
+                  <GroupIcon className="w-4 h-4 shrink-0" strokeWidth={1.5} />
+                  <span>{group.label}</span>
+                </button>
+
+                {/* Sub-items — only for collapsible groups */}
+                {group.collapsible && (
+                  <div
+                    className={cn(
+                      "transition-all duration-200",
+                      !isExpanded ? "max-h-0 overflow-hidden" : "max-h-[800px]",
                     )}
+                  >
+                    {group.items.map((item, ii) => {
+                      const isActive = activeSection === item.id;
+                      const isFirst = ii === 0;
+                      const isLast = ii === group.items.length - 1;
+
+                      return (
+                        <div
+                          key={item.id}
+                          className="relative pl-[28px]"
+                        >
+                          {/* Left vertical line — centered under group icon */}
+                          <div
+                            className={cn(
+                              "absolute left-[19px] w-[2px] bg-sidebar-border/70",
+                              isFirst ? "top-[-4px] bottom-0" : "",
+                              isLast && !isFirst ? "top-0 bottom-3" : "",
+                              !isFirst && !isLast ? "top-0 bottom-0" : "",
+                            )}
+                          />
+
+                          <button
+                            onClick={() => onSectionChange(item.id)}
+                            className={cn(
+                              "w-full text-left px-3 py-2 rounded-lg text-[13px] font-medium transition-all duration-150",
+                              isActive
+                                ? "text-sidebar-foreground"
+                                : "text-sidebar-foreground/50 hover:text-sidebar-foreground/80 hover:bg-[var(--sidebar-hover)]",
+                            )}
+                          >
+                            {item.label}
+                          </button>
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
-                {/* Divider in collapsed state */}
-                {group.label && collapsed && !mobileOpen && (
-                  <div className="mx-3 h-px bg-sidebar-border mb-2" />
-                )}
-
-                {/* Items */}
-                <div className={cn(
-                  "space-y-0.5 transition-all duration-200",
-                  group.collapsible && !isExpanded && !collapsed && !mobileOpen ? "max-h-0 overflow-hidden" : "max-h-[1000px]",
-                )}>
-                  {group.items.map((item) => {
-                    const Icon = item.icon;
-                    const isActive = activeSection === item.id;
-
-                    return (
-                      <button
-                        key={item.id}
-                        onClick={() => onSectionChange(item.id)}
-                        title={collapsed && !mobileOpen ? item.label : undefined}
-                        className={cn(
-                          "w-full flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium transition-all duration-150 relative",
-                          isActive
-                            ? "bg-sidebar-accent text-sidebar-foreground"
-                            : "text-muted-foreground hover:text-sidebar-foreground hover:bg-sidebar-accent/50",
-                        )}
-                      >
-                        {/* Active indicator line */}
-                        {isActive && (
-                          <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[2px] h-4 rounded-r-full bg-sidebar-primary" />
-                        )}
-                        <Icon
-                          className={cn(
-                            "w-[18px] h-[18px] shrink-0",
-                            isActive
-                              ? "text-sidebar-foreground"
-                              : "text-muted-foreground",
-                          )}
-                        />
-                        <span
-                          className={cn(
-                            "whitespace-nowrap transition-all duration-300",
-                            collapsed && !mobileOpen
-                              ? "opacity-0 w-0 overflow-hidden"
-                              : "opacity-100",
-                          )}
-                        >
-                          {item.label}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
               </div>
             );
           })}
         </nav>
 
-        {/* Team + Wallet status — desktop only */}
-        <div
-          className={cn(
-            "hidden lg:block mx-3 mb-3 rounded-lg border border-sidebar-border transition-all duration-300",
-            collapsed
-              ? "opacity-0 pointer-events-none h-0 mb-0 overflow-hidden"
-              : "opacity-100",
-          )}
-        >
-          {teamName && (
-            <div className="flex items-center gap-2 px-3 pt-3 pb-2 border-b border-sidebar-border/50">
-              <Building2 className="w-3.5 h-3.5 text-sidebar-foreground shrink-0" />
-              <span className="text-[12px] font-medium text-sidebar-foreground truncate">
-                {teamName}
-              </span>
+        {/* Bottom section */}
+        <div className="px-3 pb-3 space-y-1">
+          {/* Promo card */}
+          <div className="rounded-xl bg-white/[0.04] border border-sidebar-border/60 p-3.5 mb-2">
+            <div className="flex items-center gap-2 mb-2">
+              <Sparkles className="w-4 h-4 text-brand" strokeWidth={1.5} />
+              <span className="text-[13px] font-medium text-sidebar-foreground">Introducing ZK Plans</span>
             </div>
-          )}
-          <div className="flex items-center gap-2 text-[11px] text-muted-foreground p-3">
-            <div
-              className={cn(
-                "w-2 h-2 rounded-full shrink-0",
-                mounted && isConnected
-                  ? "bg-success"
-                  : "bg-warning animate-pulse",
-              )}
-            />
-            <span className="truncate">
-              {mounted && isConnected && shortAddress
-                ? shortAddress
-                : "Not connected"}
-            </span>
-          </div>
-          {mounted && isConnected && (
-            <p className="text-[10px] text-muted-foreground/40 px-3 pb-2 -mt-1 truncate">
-              {activeEnvironment?.name ? `${activeEnvironment.name} · ${networkLabel}` : networkLabel}
+            <p className="text-[12px] text-sidebar-foreground/50 leading-relaxed mb-2">
+              Get a lower fee with our subscription plans
             </p>
-          )}
-        </div>
+            <button
+              onClick={() => onSectionChange("billing")}
+              className="text-[13px] font-medium text-brand hover:text-brand-dark transition-colors"
+            >
+              Upgrade
+            </button>
+          </div>
 
-        <div className="border-t border-sidebar-border px-2 py-3">
+          {/* Support links */}
+          <a
+            href="#"
+            onClick={(e) => { e.preventDefault(); onSectionChange("settings"); }}
+            className="flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium text-sidebar-foreground/50 hover:text-sidebar-foreground/80 hover:bg-[var(--sidebar-hover)] transition-all duration-150"
+          >
+            <LifeBuoy className="w-4 h-4 shrink-0" strokeWidth={1.5} />
+            <span>Support</span>
+          </a>
+          <a
+            href={DASHBOARD_DOCS_URL}
+            target="_blank"
+            rel="noreferrer"
+            className="flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium text-sidebar-foreground/50 hover:text-sidebar-foreground/80 hover:bg-[var(--sidebar-hover)] transition-all duration-150"
+          >
+            <BookOpen className="w-4 h-4 shrink-0" strokeWidth={1.5} />
+            <span>Documentation</span>
+            <ArrowUpRight className="ml-auto w-3.5 h-3.5 opacity-40" strokeWidth={1.5} />
+          </a>
+
+          {/* Divider */}
+          <div className="h-px bg-sidebar-border/50 my-2" />
+
           {/* Theme toggle */}
           {mounted ? (
-            <div
-              className={cn(
-                "flex items-center gap-1 rounded-lg border border-sidebar-border mb-2 transition-all duration-300",
-                collapsed && !mobileOpen ? "justify-center p-1.5" : "p-1",
-              )}
-            >
+            <div className="flex items-center gap-1 rounded-lg border border-sidebar-border/50 p-1">
               <button
                 onClick={() => setTheme("light")}
                 title="Light mode"
                 className={cn(
-                  "flex items-center justify-center rounded-md transition-all duration-200",
-                  collapsed && !mobileOpen ? "w-8 h-8" : "flex-1 h-7",
+                  "flex items-center justify-center rounded-md transition-all duration-200 flex-1 h-7",
                   theme === "light"
-                    ? "bg-sidebar-accent text-sidebar-foreground"
-                    : "text-muted-foreground hover:text-sidebar-foreground",
+                    ? "bg-[var(--sidebar-active)] text-sidebar-foreground"
+                    : "text-sidebar-foreground/40 hover:text-sidebar-foreground/80",
                 )}
               >
-                <Sun className="w-3.5 h-3.5" />
-                {!(collapsed && !mobileOpen) && <span className="ml-1.5 text-[10px] font-medium">Light</span>}
+                <Sun className="w-3.5 h-3.5" strokeWidth={1.5} />
               </button>
               <button
                 onClick={() => setTheme("dark")}
                 title="Dark mode"
                 className={cn(
-                  "flex items-center justify-center rounded-md transition-all duration-200",
-                  collapsed && !mobileOpen ? "w-8 h-8" : "flex-1 h-7",
+                  "flex items-center justify-center rounded-md transition-all duration-200 flex-1 h-7",
                   theme === "dark"
-                    ? "bg-sidebar-accent text-sidebar-foreground"
-                    : "text-muted-foreground hover:text-sidebar-foreground",
+                    ? "bg-[var(--sidebar-active)] text-sidebar-foreground"
+                    : "text-sidebar-foreground/40 hover:text-sidebar-foreground/80",
                 )}
               >
-                <Moon className="w-3.5 h-3.5" />
-                {!(collapsed && !mobileOpen) && <span className="ml-1.5 text-[10px] font-medium">Dark</span>}
+                <Moon className="w-3.5 h-3.5" strokeWidth={1.5} />
               </button>
               <button
                 onClick={() => setTheme("system")}
                 title="System theme"
                 className={cn(
-                  "flex items-center justify-center rounded-md transition-all duration-200",
-                  collapsed && !mobileOpen ? "w-8 h-8" : "flex-1 h-7",
+                  "flex items-center justify-center rounded-md transition-all duration-200 flex-1 h-7",
                   theme === "system"
-                    ? "bg-sidebar-accent text-sidebar-foreground"
-                    : "text-muted-foreground hover:text-sidebar-foreground",
+                    ? "bg-[var(--sidebar-active)] text-sidebar-foreground"
+                    : "text-sidebar-foreground/40 hover:text-sidebar-foreground/80",
                 )}
               >
-                <Monitor className="w-3.5 h-3.5" />
-                {!(collapsed && !mobileOpen) && <span className="ml-1.5 text-[10px] font-medium">Auto</span>}
+                <Monitor className="w-3.5 h-3.5" strokeWidth={1.5} />
               </button>
             </div>
           ) : null}
 
-          <a
-            href={DASHBOARD_DOCS_URL}
-            target="_blank"
-            rel="noreferrer"
-            title={collapsed && !mobileOpen ? "Open docs" : undefined}
-            className={cn(
-              "flex items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] font-medium text-muted-foreground transition-all duration-200 hover:bg-sidebar-accent hover:text-sidebar-foreground",
-              collapsed && !mobileOpen ? "justify-center" : "",
-            )}
-          >
-            <BookOpen className="h-[18px] w-[18px] shrink-0" />
-            <span
-              className={cn(
-                "whitespace-nowrap transition-all duration-300",
-                collapsed && !mobileOpen ? "opacity-0 w-0 overflow-hidden" : "opacity-100",
-              )}
-            >
-              Open Docs
-            </span>
-            {!(collapsed && !mobileOpen) && <ArrowUpRight className="ml-auto h-3.5 w-3.5 opacity-50" />}
-          </a>
-        </div>
+          {/* Account profile — bottom left */}
+          {sessionData?.user?.email && (
+            <div ref={accountRef} className="relative mt-1">
+              <button
+                onClick={() => setShowAccountMenu((v) => !v)}
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-[var(--sidebar-hover)] transition-colors"
+              >
+                {sessionData.user.email ? (
+                  <img
+                    src={`https://api.dicebear.com/9.x/dylan/svg?seed=${encodeURIComponent(sessionData.user.email)}`}
+                    alt="avatar"
+                    className="h-7 w-7 rounded-full border border-sidebar-border bg-[var(--sidebar-hover)] shrink-0"
+                  />
+                ) : (
+                  <UserRound className="h-7 w-7 shrink-0 text-sidebar-foreground/40" strokeWidth={1.5} />
+                )}
+                <div className="min-w-0 flex-1 text-left">
+                  <p className="text-[13px] font-medium text-sidebar-foreground truncate">
+                    {sessionData.currentTeam?.name ?? "Workspace"}
+                  </p>
+                  <p className="text-[11px] text-sidebar-foreground/40 truncate">
+                    {shortAddress ?? "No wallet"}
+                  </p>
+                </div>
+                <div className="flex items-center gap-1">
+                  <div
+                    className={cn(
+                      "w-2 h-2 rounded-full",
+                      mounted && isConnected ? "bg-green-500" : "bg-yellow-500 animate-pulse",
+                    )}
+                  />
+                  <ChevronUp
+                    className={cn(
+                      "w-3.5 h-3.5 text-sidebar-foreground/30 transition-transform duration-200",
+                      showAccountMenu ? "rotate-180" : "",
+                    )}
+                    strokeWidth={1.5}
+                  />
+                </div>
+              </button>
 
-        {/* Collapse button — desktop only */}
-        <div className="hidden lg:block p-2 border-t border-sidebar-border">
-          <button
-            onClick={() => onCollapsedChange(!collapsed)}
-            className="w-full flex items-center justify-center gap-2 px-2 py-1.5 rounded-lg text-xs text-muted-foreground hover:text-sidebar-foreground hover:bg-sidebar-accent transition-all duration-150"
-          >
-            {collapsed ? (
-              <ChevronRight className="w-4 h-4" />
-            ) : (
-              <>
-                <ChevronLeft className="w-4 h-4" />
-                <span>Collapse</span>
-              </>
-            )}
-          </button>
+              {/* Account dropdown */}
+              {showAccountMenu && (
+                <div className="absolute bottom-full left-0 right-0 mb-1 z-50 rounded-xl border border-sidebar-border bg-popover p-2 shadow-lg">
+                  <div className="px-3 pb-2 pt-1 text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
+                    Switch workspace
+                  </div>
+                  <div className="space-y-1">
+                    {sessionData.teams.map((team) => (
+                      <button
+                        key={team.id}
+                        type="button"
+                        disabled={isSwitchingTeam}
+                        onClick={() => void handleSwitchTeam(team.id)}
+                        className={cn(
+                          "flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-left transition-colors",
+                          sessionData.currentTeam?.id === team.id
+                            ? "bg-secondary text-foreground"
+                            : "text-muted-foreground hover:bg-secondary/50 hover:text-foreground",
+                        )}
+                      >
+                        <div>
+                          <div className="text-sm font-medium">{team.name}</div>
+                          <div className="text-[11px] font-medium uppercase tracking-[0.1em] text-muted-foreground/70">
+                            {team.role}
+                          </div>
+                        </div>
+                        {sessionData.currentTeam?.id === team.id ? (
+                          <span className="text-[11px] font-medium uppercase tracking-[0.1em] text-foreground">
+                            Active
+                          </span>
+                        ) : null}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="mt-2 border-t border-border pt-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowAccountMenu(false);
+                        router.push("/?section=settings&tab=workspace", { scroll: false });
+                      }}
+                      className="flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm text-muted-foreground transition-colors hover:bg-secondary/50 hover:text-foreground"
+                    >
+                      <span>Manage workspace</span>
+                      <span className="text-[11px] font-medium uppercase tracking-[0.1em] text-muted-foreground">
+                        Settings
+                      </span>
+                    </button>
+                  </div>
+                  <div className="mt-2 border-t border-border pt-2">
+                    <button
+                      type="button"
+                      onClick={() => void handleLogout()}
+                      disabled={isLoggingOut}
+                      className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-secondary/50 hover:text-foreground"
+                    >
+                      <LogOut className="h-4 w-4" strokeWidth={1.5} />
+                      {isLoggingOut ? "Signing out..." : "Sign out"}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </aside>
+
+      <CommandPalette open={commandPaletteOpen} onOpenChange={setCommandPaletteOpen} />
     </>
   );
 }

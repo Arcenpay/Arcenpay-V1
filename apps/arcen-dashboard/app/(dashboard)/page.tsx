@@ -87,17 +87,7 @@ export default function Dashboard() {
       ? sectionFromUrl
       : "overview";
   });
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
-
-  useEffect(() => {
-    const saved = localStorage.getItem("sidebar_collapsed");
-    if (saved) setSidebarCollapsed(saved === "true");
-  }, []);
-
-  useEffect(() => {
-    localStorage.setItem("sidebar_collapsed", String(sidebarCollapsed));
-  }, [sidebarCollapsed]);
 
   const handleSectionChange = (section: Section) => {
     const params = new URLSearchParams(window.location.search);
@@ -238,18 +228,10 @@ export default function Dashboard() {
         <Sidebar
           activeSection={activeSection}
           onSectionChange={handleSectionChange}
-          collapsed={sidebarCollapsed}
-          onCollapsedChange={setSidebarCollapsed}
           mobileOpen={mobileSidebarOpen}
           onMobileOpenChange={setMobileSidebarOpen}
         />
-        <div
-          className={cn(
-            "flex-1 flex flex-col transition-all duration-300 ease-out min-w-0",
-            "lg:ml-0",
-            sidebarCollapsed ? "lg:ml-[68px]" : "lg:ml-[240px]",
-          )}
-        >
+        <div className="flex-1 flex flex-col min-w-0 lg:ml-[260px]">
           <Header
             activeSection={activeSection}
             onMobileMenuToggle={() => setMobileSidebarOpen((v) => !v)}

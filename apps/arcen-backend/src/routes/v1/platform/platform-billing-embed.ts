@@ -12,7 +12,18 @@ import {
 import { PLATFORM_BILLING_CHAIN_ID } from "../../../config.js";
 import { syncEntitlementsToFlagRules } from "../../../lib/entitlements/sync-entitlements.js";
 import { upsertSubscriptionLedgerState } from "../../../lib/billing/billing-ledger.js";
+import { TIER_PRICING } from "../../../lib/catalog/tier-guard.js";
 import type { PlatformTier } from "../../../generated/client/client.js";
+
+function tierMonthlyPrice(tier: PlatformTier): string {
+  return String(TIER_PRICING[tier]?.priceUsdc ?? 0);
+}
+
+function tierAnnualPrice(tier: PlatformTier): string {
+  const monthly = TIER_PRICING[tier]?.priceUsdc ?? 0;
+  if (monthly <= 0) return "0";
+  return String(Math.round(monthly * 12 * 0.8));
+}
 
 function signToken(payload: Record<string, unknown>, secret: string): string {
   const header = Buffer.from(
@@ -140,8 +151,8 @@ export async function postPlatformBillingEmbed(c: Context) {
             description: `ArcenPay platform ${tier} tier subscription`,
             status: "PUBLISHED",
             active: true,
-            price: tier === "FREE" ? "0" : tier === "PLUS" ? "9.99" : "499",
-            annualPrice: tier === "FREE" ? "0" : tier === "PLUS" ? "95" : "4788",
+            price: tierMonthlyPrice(tier),
+            annualPrice: tierAnnualPrice(tier),
             billingInterval: 2_592_000,
             acceptedToken: "0x0000000000000000000000000000000000000000",
             metadata: toPrismaJson(metadata),
@@ -152,8 +163,8 @@ export async function postPlatformBillingEmbed(c: Context) {
       plan = await db.catalogPlan.update({
         where: { id: plan.id },
         data: {
-          price: tier === "FREE" ? "0" : tier === "PLUS" ? "9.99" : "499",
-          annualPrice: tier === "FREE" ? "0" : tier === "PLUS" ? "95" : "4788",
+          price: tierMonthlyPrice(tier),
+          annualPrice: tierAnnualPrice(tier),
           metadata: toPrismaJson(metadata),
         },
       });

@@ -359,7 +359,9 @@ export function SettingsSection() {
         if (profile.taxId) setTaxId(profile.taxId);
         if (profile.gstin) setGstin(profile.gstin);
       })
-      .catch(() => {});
+      .catch(() => {
+        toast.error("Failed to load profile");
+      });
     // Load notification preferences from server (source of truth — not localStorage)
     fetch("/api/provider/notifications")
       .then((r) => (r.ok ? r.json() : null))
@@ -372,7 +374,9 @@ export function SettingsSection() {
           setNotifications(data.notifications);
         }
       })
-      .catch(() => {});
+      .catch(() => {
+        toast.error("Failed to load notification preferences");
+      });
   }, []);
 
   const { data: gmpBalance } = useBalance({

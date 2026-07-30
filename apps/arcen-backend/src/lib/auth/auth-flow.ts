@@ -6,10 +6,7 @@ import {
   isEmailDeliveryConfigured,
   sendEmailAuthCode,
   sendTeamInviteEmail,
-  sendWelcomeEmail,
 } from "../billing/email.js";
-import { assertCanCreateWorkspace } from "../catalog/tier-guard.js";
-
 export const EMAIL_AUTH_PURPOSE_LOGIN = "login";
 export const EMAIL_AUTH_CODE_TTL_MS = 10 * 60 * 1000;
 export const EMAIL_AUTH_RESEND_COOLDOWN_MS = 30 * 1000;
@@ -56,6 +53,38 @@ export async function findWalletConflict(
     conflict: true,
     ownerEmail: walletOwner.email ?? "",
     maskedEmail: maskEmail(walletOwner.email ?? ""),
+  };
+}
+
+export async function findEmailWalletConflict(
+  email: string,
+  attemptWalletAddress?: string,
+): Promise<{ conflict: true; ownerWallet: string } | { conflict: false }> {
+  const normalizedEmail = normalizeEmail(email);
+
+  const emailOwner = await db.user.findUnique({
+    where: { email: normalizedEmail },
+    select: { id: true, walletAddress: true },
+  });
+
+  if (!emailOwner || !emailOwner.walletAddress) {
+    return { conflict: false };
+  }
+
+  if (!attemptWalletAddress) {
+    return { conflict: false };
+  }
+
+  const normalizedAttemptWallet = normalizeWalletAddress(attemptWalletAddress);
+  const ownerWallet = normalizeWalletAddress(emailOwner.walletAddress);
+
+  if (ownerWallet === normalizedAttemptWallet) {
+    return { conflict: false };
+  }
+
+  return {
+    conflict: true,
+    ownerWallet: emailOwner.walletAddress,
   };
 }
 
@@ -202,12 +231,6 @@ export async function provisionUserForEmail(emailInput: string) {
   const email = normalizeEmail(emailInput);
   const existing = await db.user.findUnique({ where: { email } });
   if (existing) {
-    // Enforce workspace creation limit for existing users
-    const workspaceCheck = await assertCanCreateWorkspace(existing.id);
-    if (!workspaceCheck.allowed) {
-      throw new Error(workspaceCheck.reason);
-    }
-
     if (!existing.currentTeamId) {
       const membership = await db.teamMember.findFirst({
         where: { userId: existing.id },
@@ -273,10 +296,6 @@ export async function provisionUserForEmail(emailInput: string) {
       data: { currentTeamId: firstTeamId },
     });
   }
-
-  await sendWelcomeEmail(email).catch((error) => {
-    console.warn("[auth-flow] Could not send welcome email:", error);
-  });
 
   return db.user.findUniqueOrThrow({ where: { id: created.id } });
 }

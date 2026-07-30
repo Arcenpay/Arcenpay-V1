@@ -19,6 +19,34 @@ export default async function RootLayout({
 
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                try {
+                  var root = document.documentElement;
+                  var stored = localStorage.getItem('theme');
+                  if (stored === 'dark') {
+                    root.classList.add('dark');
+                  } else if (stored === 'light') {
+                    root.classList.remove('dark');
+                  } else {
+                    // Default to system preference
+                    var m = window.matchMedia('(prefers-color-scheme: dark)');
+                    if (m.matches) {
+                      root.classList.add('dark');
+                    } else {
+                      root.classList.remove('dark');
+                    }
+                    localStorage.setItem('theme', 'system');
+                  }
+                } catch (e) {}
+              })();
+            `,
+          }}
+        />
+      </head>
       <body className="font-sans antialiased" suppressHydrationWarning>
         <DashboardStructuredData />
         <ThemeProvider

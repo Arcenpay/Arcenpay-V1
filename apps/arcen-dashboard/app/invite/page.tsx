@@ -113,7 +113,7 @@ export default function AcceptInvitePage() {
             {status.state === "success" && (
               <>
                 <div className="flex items-center justify-center">
-                  <CheckCircle2 className="h-10 w-10 text-green-500" />
+                  <CheckCircle2 className="h-10 w-10 text-brand" />
                 </div>
                 <div>
                   <h1 className="text-xl font-semibold text-foreground">

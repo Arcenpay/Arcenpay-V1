@@ -422,7 +422,7 @@ export function SessionsSection() {
               {sessionsLoading && (
                 <tr>
                   <td colSpan={5}>
-                    <SkeletonTable rows={3} cols={4} />
+                    <SkeletonTable rows={3} cols={5} />
                   </td>
                 </tr>
               )}

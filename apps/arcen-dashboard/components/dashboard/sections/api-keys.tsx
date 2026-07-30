@@ -14,6 +14,7 @@ import {
   SheetDescription,
   SheetFooter,
 } from "@/components/ui/sheet";
+import { SkeletonTable } from "@/components/ui/skeleton";
 import { formatRelativeTime } from "@/lib/format";
 
 interface ApiKey {
@@ -147,16 +148,7 @@ function ApiKeysContent() {
 
       {/* Keys list */}
       {loading ? (
-        <div className="rounded-lg border border-border overflow-hidden">
-          <div className="h-11 bg-muted/50 border-b border-border" />
-          {[...Array(3)].map((_, i) => (
-            <div key={i} className="flex items-center gap-4 px-4 py-3 border-b border-border/50">
-              <div className="h-4 w-32 bg-muted/50 animate-pulse rounded" />
-              <div className="h-4 w-20 bg-muted/50 animate-pulse rounded" />
-              <div className="h-4 w-16 bg-muted/50 animate-pulse rounded ml-auto" />
-            </div>
-          ))}
-        </div>
+        <SkeletonTable rows={3} cols={5} />
       ) : keys.length === 0 ? (
         <div className="rounded-xl border border-dashed border-border/60 p-14 text-center">
           <div className="w-12 h-12 rounded-full bg-muted/50 flex items-center justify-center mx-auto mb-4">

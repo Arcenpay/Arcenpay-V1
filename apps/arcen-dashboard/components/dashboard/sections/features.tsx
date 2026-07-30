@@ -19,6 +19,7 @@ import {
   Copy,
   Check,
 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import dynamicIconImports from "lucide-react/dynamicIconImports";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -42,6 +43,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
+import { SkeletonTable } from "@/components/ui/skeleton";
 import { useTeamTier } from "@/hooks/use-team-tier";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -65,7 +67,7 @@ interface Feature {
 
 const FEATURE_TYPE_META: Record<
   FeatureType,
-  { label: string; icon: React.ElementType; color: string; description: string }
+  { label: string; icon: LucideIcon; color: string; description: string }
 > = {
   boolean: {
     label: "Boolean",
@@ -250,7 +252,7 @@ function DynamicLucidePreview({
   iconName: string;
   className?: string;
 }) {
-  const [IconComponent, setIconComponent] = useState<React.ElementType | null>(null);
+  const [IconComponent, setIconComponent] = useState<LucideIcon | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -1440,17 +1442,7 @@ export function FeaturesSection() {
               </tr>
             </thead>
             <tbody>
-              {loading &&
-                Array.from({ length: 4 }).map((_, i) => (
-                  <tr key={i} className="border-b border-border">
-                    {Array.from({ length: 4 }).map((__, j) => (
-                      <td key={j} className="py-3 px-4">
-                        <div className="h-4 bg-secondary/80 rounded animate-pulse w-24" />
-                      </td>
-                    ))}
-                    <td />
-                  </tr>
-                ))}
+              {loading && <SkeletonTable rows={4} cols={5} />}
 
               {!loading &&
                 filtered.map((feature, index) => {

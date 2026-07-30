@@ -682,6 +682,8 @@ export async function ensureTierCatalogPlan(
 
   const planName = `ArcenPay ${tier === "PRO" ? "Enterprise" : tier === "PLUS" ? "Pro" : "Free"} Plan`;
   const { priceUsdPerMonth } = tierPricing(tier);
+  const annualPrice =
+    tier === "FREE" ? "0" : String(Math.round(priceUsdPerMonth * 12 * 0.8));
 
   let plan = await db.catalogPlan.findFirst({
     where: {
@@ -709,7 +711,7 @@ export async function ensureTierCatalogPlan(
         status: "PUBLISHED",
         active: true,
         price: tier === "FREE" ? "0" : String(priceUsdPerMonth),
-        annualPrice: tier === "FREE" ? "0" : tier === "PLUS" ? "95" : "4788",
+        annualPrice,
         billingInterval: 2_592_000,
         acceptedToken: "0x0000000000000000000000000000000000000000",
         metadata: toPrismaJson(metadata),
@@ -722,7 +724,7 @@ export async function ensureTierCatalogPlan(
       data: {
         metadata: toPrismaJson(metadata),
         price: tier === "FREE" ? "0" : String(priceUsdPerMonth),
-        annualPrice: tier === "FREE" ? "0" : tier === "PLUS" ? "95" : "4788",
+        annualPrice,
       },
     });
   }
@@ -969,7 +971,7 @@ export async function activateTeamPlatformTier(input: {
     return { ok: true, subscriptionStateId: null, invoiceId: null, paymentId: null };
   }
 
-  const { amountMicros, priceUsdPerMonth } = tierPricing(targetTier);
+  const { priceUsdPerMonth } = tierPricing(targetTier);
 
   // Use proper 4-arg idempotency key when paymentAccount and txHash are available,
   // otherwise fall back to a simpler key for legacy/downgrade flows.
@@ -1166,7 +1168,7 @@ export async function renewTeamPlatformTier(input: {
     };
   }
 
-  const { amountMicros, priceUsdPerMonth } = tierPricing(team.platformTier);
+  const { priceUsdPerMonth } = tierPricing(team.platformTier);
   const idempotencyKey = buildTierRenewalIdempotencyKey(
     teamId,
     team.platformTier,
@@ -1364,7 +1366,7 @@ export async function getTeamPlatformSubscription(teamId: string): Promise<{
   pastDueAt: Date | null;
   graceEndsAt: Date | null;
   tier: string | null;
-  amountMicros: number;
+  amount: number;
 } | null> {
   const team = await db.team.findUnique({
     where: { id: teamId },
@@ -1399,7 +1401,7 @@ export async function getTeamPlatformSubscription(teamId: string): Promise<{
     pastDueAt: state.pastDueAt,
     graceEndsAt: state.graceEndsAt,
     tier: team.platformTier,
-    amountMicros: priceUsdPerMonth,
+    amount: priceUsdPerMonth,
   };
 }
 

@@ -11,6 +11,7 @@ import {
 import { isErrorResponse, requireTeamRoles } from "../../../lib/auth/api-auth.js";
 import { writeAuditEvent } from "../../../lib/platform/audit.js";
 import { getTierLimits } from "../../../lib/catalog/tier-guard.js";
+import { sendWelcomeEmail } from "../../../lib/billing/email.js";
 
 const manageRoles = ["OWNER", "ADMIN"] as const;
 
@@ -265,6 +266,26 @@ async function createEnvironment(c: Context) {
     }
   } catch (profileErr) {
     console.error("Failed to copy provider profile on environment creation:", profileErr);
+  }
+
+  // Send welcome email on first environment creation (onboarding complete)
+  try {
+    const totalEnvironments = await db.workspaceEnvironment.count({
+      where: { teamId: auth.team.teamId },
+    });
+    if (totalEnvironments === 1) {
+      const user = await db.user.findUnique({
+        where: { id: auth.team.userId },
+        select: { email: true },
+      });
+      if (user?.email) {
+        sendWelcomeEmail(user.email).catch((error) => {
+          console.warn("[environment] Could not send welcome email:", error);
+        });
+      }
+    }
+  } catch {
+    // Non-blocking: welcome email failures must not prevent environment creation
   }
 
   await writeAuditEvent({

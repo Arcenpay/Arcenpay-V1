@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { Activity, RefreshCw, Filter, ChevronDown, Zap, User, Flag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { SkeletonTable } from "@/components/ui/skeleton";
 
 interface EventRecord {
   id: string;
@@ -212,15 +213,7 @@ export function EventsStreamSection() {
           </thead>
           <tbody className="divide-y divide-border/40">
             {loading ? (
-              [...Array(6)].map((_, i) => (
-                <tr key={i}>
-                  <td className="px-4 py-3"><div className="h-5 w-20 bg-muted/50 animate-pulse rounded-full" /></td>
-                  <td className="px-4 py-3"><div className="h-4 w-28 bg-muted/50 animate-pulse rounded" /></td>
-                  <td className="px-4 py-3 hidden md:table-cell"><div className="h-4 w-20 bg-muted/50 animate-pulse rounded" /></td>
-                  <td className="px-4 py-3"><div className="h-4 w-24 bg-muted/50 animate-pulse rounded" /></td>
-                  <td className="px-4 py-3" />
-                </tr>
-              ))
+              <tr><td colSpan={5}><SkeletonTable rows={5} cols={5} /></td></tr>
             ) : events.length === 0 ? (
               <tr>
                 <td colSpan={5} className="px-4 py-14 text-center">

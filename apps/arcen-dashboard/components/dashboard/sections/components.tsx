@@ -386,9 +386,10 @@ export function ComponentsSection({ onSectionChange }: ComponentsSectionProps = 
           loading: false,
         });
       })
-      .catch(() =>
-        setPrereqs((p) => ({ ...p, loading: false })),
-      );
+      .catch(() => {
+        setPrereqs((p) => ({ ...p, loading: false }));
+        toast.error("Failed to load prerequisites");
+      });
   }, []);
 
   // Load components from server on mount
@@ -428,7 +429,9 @@ export function ComponentsSection({ onSectionChange }: ComponentsSectionProps = 
         });
         setCustomComponents(loaded);
       })
-      .catch(() => {})
+      .catch(() => {
+        toast.error("Failed to load components");
+      })
       .finally(() => setLoading(false));
   }, []);
 

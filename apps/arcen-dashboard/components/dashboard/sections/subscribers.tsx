@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { SkeletonList } from "@/components/ui/skeleton";
+import { SkeletonList, SkeletonTable } from "@/components/ui/skeleton";
 import {
   Users,
   Search,
@@ -355,7 +355,7 @@ export function SubscribersSection() {
       </div>
 
       {loading ? (
-        <SkeletonList items={4} />
+        <SkeletonTable rows={4} cols={5} />
       ) : users.length === 0 ? (
         <div className="rounded-xl border border-dashed border-border bg-muted/20 p-14 text-center space-y-3">
           <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center mx-auto">

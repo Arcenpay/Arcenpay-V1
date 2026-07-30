@@ -29,7 +29,7 @@ import {
   Globe,
   Paintbrush,
 } from "lucide-react";
-import { SkeletonCard } from "@/components/ui/skeleton";
+import { SkeletonCard, Skeleton, SkeletonTable } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -225,6 +225,7 @@ export function PaymentsSection() {
   const [companies, setCompanies] = useState<CompanyOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
+  const [savingEdit, setSavingEdit] = useState(false);
 
   const [form, setForm] = useState({
     name: "",
@@ -477,6 +478,7 @@ export function PaymentsSection() {
       toast.error("Name and recipient wallet are required.");
       return;
     }
+    setSavingEdit(true);
     try {
       const res = await fetch(`/api/v1/payment-links/${editDialog.id}`, {
         method: "PATCH",
@@ -509,6 +511,8 @@ export function PaymentsSection() {
       await load();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to update link");
+    } finally {
+      setSavingEdit(false);
     }
   }
 
@@ -933,8 +937,21 @@ export function PaymentsSection() {
           </div>
 
           {loading ? (
-            <div className="flex min-h-[320px] items-center justify-center">
-              <SkeletonCard lines={4} />
+            <div className="space-y-3 max-h-[480px] overflow-y-auto pr-1">
+              {[...Array(4)].map((_, i) => (
+                <div key={i} className="rounded-xl border border-border bg-secondary/20 p-4 space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Skeleton className="h-4 w-40" />
+                    <Skeleton className="h-4 w-12 rounded-full" />
+                    <Skeleton className="h-4 w-14 rounded-full" />
+                  </div>
+                  <Skeleton className="h-3 w-full" />
+                  <div className="flex items-center gap-2">
+                    <Skeleton className="h-3 w-20" />
+                    <Skeleton className="h-3 w-24" />
+                  </div>
+                </div>
+              ))}
             </div>
           ) : paymentLinks.length === 0 ? (
             <div className="flex min-h-[320px] flex-col items-center justify-center text-center">
@@ -1081,9 +1098,7 @@ export function PaymentsSection() {
         </div>
 
         {loading ? (
-          <div className="py-16">
-            <SkeletonCard lines={3} />
-          </div>
+          <SkeletonTable rows={4} cols={6} />
         ) : checkoutSessions.length === 0 ? (
           <div className="rounded-xl border border-dashed border-border bg-secondary/10 py-12 text-center">
             <ArrowUpRight className="mx-auto h-8 w-8 text-muted-foreground/40" />
@@ -1412,7 +1427,9 @@ export function PaymentsSection() {
             <Button variant="outline" onClick={() => setEditDialog(null)}>
               Cancel
             </Button>
-            <Button onClick={() => void saveEdit()}>Save changes</Button>
+            <Button onClick={() => void saveEdit()} disabled={savingEdit}>
+              {savingEdit ? "Saving…" : "Save changes"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

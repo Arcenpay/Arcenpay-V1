@@ -6,6 +6,7 @@ import {
   EMAIL_AUTH_PURPOSE_LOGIN,
   acceptTeamInvitation,
   findWalletConflict,
+  findEmailWalletConflict,
   getActiveTeamInvitationByToken,
   normalizeEmail,
   provisionUserForEmail,
@@ -83,6 +84,16 @@ export async function verifyEmail(c: Context) {
           error: "This wallet is already linked to another account. Please sign in with the email registered for that wallet.",
           code: "CONFLICT",
           maskedOwnerEmail: conflict.maskedEmail,
+        }, 409 as any);
+    }
+
+    const emailConflict = await findEmailWalletConflict(email, parsed.data.walletAddress);
+    if (emailConflict.conflict) {
+      return c.json({
+          ok: false,
+          error: "This email is already linked to a different wallet. Please sign in with the wallet registered for this email.",
+          code: "CONFLICT",
+          ownerWallet: emailConflict.ownerWallet,
         }, 409 as any);
     }
   }

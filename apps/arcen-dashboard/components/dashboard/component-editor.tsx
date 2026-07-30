@@ -52,6 +52,7 @@ import {
   Type,
   Square,
 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 // ============================================================
@@ -93,7 +94,7 @@ export interface ComponentElement {
   id: string;
   type: string;
   label: string;
-  icon: React.ElementType;
+  icon: LucideIcon;
   props: Record<string, any>;
 }
 
@@ -192,7 +193,7 @@ function toEditorElementType(type: string): string {
 
 /** Resolve the icon for an element — falls back to the library definition if
  *  el.icon is missing/invalid (e.g. after JSON round-trip from the API). */
-function resolveElementIcon(el: ComponentElement): React.ElementType {
+function resolveElementIcon(el: ComponentElement): LucideIcon {
   if (typeof el.icon === "function") return el.icon;
   const lib = ALL_ELEMENTS.find((e) => e.type === toEditorElementType(el.type));
   return lib?.icon ?? Layers;
@@ -2437,7 +2438,7 @@ const { data } = await res.json();
               </p>
               <div className="grid grid-cols-2 gap-1.5">
                 {cat.elements.map((el) => {
-                  const Icon: React.ElementType =
+                  const Icon: LucideIcon =
                     typeof el.icon === "function" ? el.icon : Layers;
                   const isAdded = elements.some(
                     (e) => toEditorElementType(e.type) === el.type,

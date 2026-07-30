@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { SkeletonCard } from "@/components/ui/skeleton";
+import { SkeletonCard, Skeleton } from "@/components/ui/skeleton";
 import {
   Card,
   CardContent,
@@ -32,6 +32,7 @@ import {
   Clock,
   RefreshCw,
 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { toast } from "sonner";
 import { ArcenEmbed } from "@arcenpay/react";
 import { usePlatformBillingEmbed } from "@/hooks/use-platform-billing-embed";
@@ -135,7 +136,7 @@ function ReadinessBanner({
 
   const bannerConfig: Record<
     PlatformBillingReadiness,
-    { icon: React.ElementType; color: string; title: string; body: string } | null
+    { icon: LucideIcon; color: string; title: string; body: string } | null
   > = {
     NOT_CONFIGURED: {
       icon: AlertCircle,
@@ -194,7 +195,7 @@ function UsageMeter({
   label: string;
   current: number;
   max: number;
-  icon: React.ElementType;
+  icon: LucideIcon;
 }) {
   const percent = max > 0 ? (current / max) * 100 : 0;
   const isNearLimit = percent >= 80;
@@ -293,9 +294,42 @@ export function BillingSection() {
   if (loading) {
     return (
       <div className="space-y-6">
-        <SkeletonCard lines={5} />
-        <SkeletonCard lines={5} />
-        <SkeletonCard lines={5} />
+        {/* Tier card skeleton matching actual layout */}
+        <div className="rounded-lg border bg-card text-card-foreground shadow-sm">
+          <div className="flex flex-col space-y-1.5 p-6">
+            <div className="flex items-center gap-2">
+              <Skeleton className="h-5 w-5 rounded-full" />
+              <Skeleton className="h-5 w-40" />
+              <Skeleton className="h-4 w-16 rounded-full" />
+            </div>
+            <Skeleton className="h-4 w-64" />
+          </div>
+          <div className="p-6 pt-0">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="rounded-lg border p-3 space-y-2">
+                <Skeleton className="h-3 w-12" />
+                <Skeleton className="h-6 w-8" />
+                <Skeleton className="h-2 w-full" />
+              </div>
+              <div className="rounded-lg border p-3 space-y-2">
+                <Skeleton className="h-3 w-24" />
+                <Skeleton className="h-6 w-8" />
+                <Skeleton className="h-2 w-full" />
+              </div>
+              <div className="rounded-lg border p-3 space-y-2">
+                <Skeleton className="h-3 w-16" />
+                <Skeleton className="h-6 w-10" />
+                <Skeleton className="h-2 w-full" />
+              </div>
+              <div className="rounded-lg border p-3 space-y-2">
+                <Skeleton className="h-3 w-14" />
+                <Skeleton className="h-6 w-10" />
+                <Skeleton className="h-2 w-full" />
+              </div>
+            </div>
+          </div>
+        </div>
+        <SkeletonCard lines={4} />
       </div>
     );
   }

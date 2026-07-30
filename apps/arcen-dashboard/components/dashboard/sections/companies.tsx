@@ -14,7 +14,7 @@ import {
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter,
 } from "@/components/ui/sheet";
 import { formatRelativeTime } from "@/lib/format";
-import { SkeletonList, SkeletonCard } from "@/components/ui/skeleton";
+import { SkeletonList, SkeletonCard, SkeletonTable } from "@/components/ui/skeleton";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -491,7 +491,7 @@ export function CompaniesSection() {
 
       {/* Table */}
       {loading ? (
-        <SkeletonList items={4} />
+        <SkeletonTable rows={4} cols={6} />
       ) : companies.length === 0 ? (
         <div className="rounded-xl border border-dashed border-border bg-muted/20 p-14 text-center space-y-3">
           <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center mx-auto">

@@ -15,6 +15,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { SkeletonTable } from "@/components/ui/skeleton";
 
 type ActorType = "USER" | "API" | "SYSTEM";
 
@@ -236,16 +237,7 @@ export function AuditLogSection() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {loading && (
-                <TableRow>
-                  <TableCell
-                    colSpan={6}
-                    className="text-center text-muted-foreground py-8"
-                  >
-                    Loading audit log…
-                  </TableCell>
-                </TableRow>
-              )}
+              {loading && <SkeletonTable rows={4} cols={6} />}
               {!loading && entries.length === 0 && (
                 <TableRow>
                   <TableCell
