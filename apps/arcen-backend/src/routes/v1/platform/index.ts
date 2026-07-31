@@ -11,7 +11,11 @@ import { postTierBootstrap } from "./tier-bootstrap.js";
 import { postTierPrepare } from "./tier-prepare.js";
 import { postTierConfirm } from "./tier-confirm.js";
 import { getPlatformInvoices } from "./invoices.js";
-import { postPlatformBillingEmbed } from "./platform-billing-embed.js";
+import {
+  getPlatformBillingStatusRoute,
+  postPlatformBillingEnrollment,
+  postPlatformBillingEmbed,
+} from "./platform-billing-embed.js";
 
 export const platformRoutes = new Hono()
   .get("/overview", getOverview)
@@ -22,6 +26,8 @@ export const platformRoutes = new Hono()
   .post("/tier/bootstrap", postTierBootstrap)
   .post("/tier/prepare", postTierPrepare)
   .post("/tier/confirm", postTierConfirm)
+  .get("/billing/status", getPlatformBillingStatusRoute)
+  .post("/billing/enroll", postPlatformBillingEnrollment)
   .post("/billing/embed-token", postPlatformBillingEmbed)
   .get("/invoices", getPlatformInvoices)
   .get("/tier-history", getTierHistory)

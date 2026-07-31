@@ -31,6 +31,7 @@ import {
   AlertCircle,
   Clock,
   RefreshCw,
+  CreditCard,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { toast } from "sonner";
@@ -240,6 +241,8 @@ export function BillingSection() {
     componentId: embedComponentId,
     loading: embedLoading,
     error: embedError,
+    needsSetup: needsBillingSetup,
+    setup: setupBilling,
     refresh: refreshEmbed,
   } = usePlatformBillingEmbed();
 
@@ -517,6 +520,17 @@ export function BillingSection() {
             <CardContent className="flex flex-col items-center justify-center py-12 space-y-3">
               <RefreshCw className="w-6 h-6 animate-spin text-primary" />
               <span className="text-sm text-muted-foreground">Loading billing portal…</span>
+            </CardContent>
+          </Card>
+        ) : needsBillingSetup ? (
+          <Card>
+            <CardContent className="flex flex-col items-center justify-center py-12 space-y-3 text-center">
+              <CreditCard className="w-10 h-10 text-muted-foreground/40" />
+              <p className="text-sm font-medium">Platform billing is not enabled</p>
+              <p className="max-w-md text-sm text-muted-foreground">
+                Opening this page does not create plans or subscribe the workspace. Enable self-billing only if you want to dogfood ArcenPay on this workspace.
+              </p>
+              <Button size="sm" onClick={setupBilling}>Enable platform billing</Button>
             </CardContent>
           </Card>
         ) : embedError ? (

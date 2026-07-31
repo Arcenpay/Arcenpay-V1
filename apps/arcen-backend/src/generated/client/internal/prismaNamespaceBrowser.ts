@@ -864,6 +864,7 @@ export const PlatformBillingPlanScalarFieldEnum = {
   createdAt: 'createdAt',
   updatedAt: 'updatedAt',
   tier: 'tier',
+  environmentId: 'environmentId',
   chainId: 'chainId',
   onChainPlanId: 'onChainPlanId',
   planName: 'planName',

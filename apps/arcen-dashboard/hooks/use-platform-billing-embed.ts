@@ -22,17 +22,21 @@ export function usePlatformBillingEmbed(): {
   componentId: string | null;
   loading: boolean;
   error: string | null;
+  needsSetup: boolean;
+  setup: () => void;
   refresh: () => void;
 } {
   const [data, setData] = useState<PlatformBillingEmbed | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [needsSetup, setNeedsSetup] = useState(false);
   const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const fetchToken = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
+      setNeedsSetup(false);
 
       const res = await fetch("/api/platform/billing/embed-token", {
         method: "POST",
@@ -40,6 +44,7 @@ export function usePlatformBillingEmbed(): {
 
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
+        setNeedsSetup(body.code === "PLATFORM_BILLING_NOT_ENROLLED");
         throw new Error(
           body.error ?? body.message ?? `Failed to fetch embed token (${res.status})`,
         );
@@ -69,6 +74,24 @@ export function usePlatformBillingEmbed(): {
     }
   }, []);
 
+  const setup = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const res = await fetch("/api/platform/billing/enroll", {
+        method: "POST",
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(body.error ?? body.message ?? `Failed to enable platform billing (${res.status})`);
+      setNeedsSetup(false);
+      await fetchToken();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unknown error");
+    } finally {
+      setLoading(false);
+    }
+  }, [fetchToken]);
+
   useEffect(() => {
     fetchToken();
     return () => {
@@ -81,6 +104,8 @@ export function usePlatformBillingEmbed(): {
     componentId: data?.componentId ?? null,
     loading,
     error,
+    needsSetup,
+    setup,
     refresh: fetchToken,
   };
 }

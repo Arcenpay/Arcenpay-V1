@@ -208,10 +208,16 @@ async function ensurePlatformBillingPlanRow(tier: PlatformTier) {
   const planName = tierPlanName(tier);
   const acceptedToken = platformBillingToken();
   const treasuryWallet = platformBillingTreasury();
+  const account = await db.platformBillingAccount.findFirst({
+    where: { environment: { chainId: PLATFORM_BILLING_CHAIN_ID } },
+    select: { environmentId: true },
+  });
+  if (!account) throw new Error("No platform billing environment is configured for this chain.");
 
   return db.platformBillingPlan.upsert({
     where: {
-      chainId_tier: {
+      environmentId_chainId_tier: {
+        environmentId: account.environmentId,
         chainId: PLATFORM_BILLING_CHAIN_ID,
         tier,
       },
@@ -224,6 +230,7 @@ async function ensurePlatformBillingPlanRow(tier: PlatformTier) {
       treasuryWallet,
     },
     create: {
+      environmentId: account.environmentId,
       chainId: PLATFORM_BILLING_CHAIN_ID,
       tier,
       planName,
@@ -869,7 +876,16 @@ export async function confirmPlatformTierActivation(input: {
 
   // Fetch the on-chain plan row
   const plan = await db.platformBillingPlan.findUnique({
-    where: { chainId_tier: { chainId: PLATFORM_BILLING_CHAIN_ID, tier: targetTier } },
+    where: {
+      environmentId_chainId_tier: {
+        environmentId: (await db.platformBillingAccount.findFirstOrThrow({
+          where: { environment: { chainId: PLATFORM_BILLING_CHAIN_ID } },
+          select: { environmentId: true },
+        })).environmentId,
+        chainId: PLATFORM_BILLING_CHAIN_ID,
+        tier: targetTier,
+      },
+    },
   });
 
   if (!plan?.onChainPlanId || plan.syncStatus !== "SYNCED") {

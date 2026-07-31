@@ -209,18 +209,19 @@ export type PlatformBillingAccountOrderByWithRelationInput = {
 
 export type PlatformBillingAccountWhereUniqueInput = Prisma.AtLeast<{
   id?: string
-  providerTeamId?: string
   environmentId?: string
   portalComponentId?: string
+  providerTeamId_environmentId?: Prisma.PlatformBillingAccountProviderTeamIdEnvironmentIdCompoundUniqueInput
   AND?: Prisma.PlatformBillingAccountWhereInput | Prisma.PlatformBillingAccountWhereInput[]
   OR?: Prisma.PlatformBillingAccountWhereInput[]
   NOT?: Prisma.PlatformBillingAccountWhereInput | Prisma.PlatformBillingAccountWhereInput[]
   createdAt?: Prisma.DateTimeFilter<"PlatformBillingAccount"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"PlatformBillingAccount"> | Date | string
+  providerTeamId?: Prisma.StringFilter<"PlatformBillingAccount"> | string
   providerTeam?: Prisma.XOR<Prisma.TeamScalarRelationFilter, Prisma.TeamWhereInput>
   environment?: Prisma.XOR<Prisma.WorkspaceEnvironmentScalarRelationFilter, Prisma.WorkspaceEnvironmentWhereInput>
   portalComponent?: Prisma.XOR<Prisma.EmbedComponentNullableScalarRelationFilter, Prisma.EmbedComponentWhereInput> | null
-}, "id" | "providerTeamId" | "environmentId" | "portalComponentId">
+}, "id" | "environmentId" | "portalComponentId" | "providerTeamId_environmentId">
 
 export type PlatformBillingAccountOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
@@ -306,9 +307,24 @@ export type PlatformBillingAccountUncheckedUpdateManyInput = {
   portalComponentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
 }
 
+export type PlatformBillingAccountListRelationFilter = {
+  every?: Prisma.PlatformBillingAccountWhereInput
+  some?: Prisma.PlatformBillingAccountWhereInput
+  none?: Prisma.PlatformBillingAccountWhereInput
+}
+
+export type PlatformBillingAccountOrderByRelationAggregateInput = {
+  _count?: Prisma.SortOrder
+}
+
 export type PlatformBillingAccountNullableScalarRelationFilter = {
   is?: Prisma.PlatformBillingAccountWhereInput | null
   isNot?: Prisma.PlatformBillingAccountWhereInput | null
+}
+
+export type PlatformBillingAccountProviderTeamIdEnvironmentIdCompoundUniqueInput = {
+  providerTeamId: string
+  environmentId: string
 }
 
 export type PlatformBillingAccountCountOrderByAggregateInput = {
@@ -338,36 +354,46 @@ export type PlatformBillingAccountMinOrderByAggregateInput = {
   portalComponentId?: Prisma.SortOrder
 }
 
-export type PlatformBillingAccountCreateNestedOneWithoutProviderTeamInput = {
-  create?: Prisma.XOR<Prisma.PlatformBillingAccountCreateWithoutProviderTeamInput, Prisma.PlatformBillingAccountUncheckedCreateWithoutProviderTeamInput>
-  connectOrCreate?: Prisma.PlatformBillingAccountCreateOrConnectWithoutProviderTeamInput
-  connect?: Prisma.PlatformBillingAccountWhereUniqueInput
+export type PlatformBillingAccountCreateNestedManyWithoutProviderTeamInput = {
+  create?: Prisma.XOR<Prisma.PlatformBillingAccountCreateWithoutProviderTeamInput, Prisma.PlatformBillingAccountUncheckedCreateWithoutProviderTeamInput> | Prisma.PlatformBillingAccountCreateWithoutProviderTeamInput[] | Prisma.PlatformBillingAccountUncheckedCreateWithoutProviderTeamInput[]
+  connectOrCreate?: Prisma.PlatformBillingAccountCreateOrConnectWithoutProviderTeamInput | Prisma.PlatformBillingAccountCreateOrConnectWithoutProviderTeamInput[]
+  createMany?: Prisma.PlatformBillingAccountCreateManyProviderTeamInputEnvelope
+  connect?: Prisma.PlatformBillingAccountWhereUniqueInput | Prisma.PlatformBillingAccountWhereUniqueInput[]
 }
 
-export type PlatformBillingAccountUncheckedCreateNestedOneWithoutProviderTeamInput = {
-  create?: Prisma.XOR<Prisma.PlatformBillingAccountCreateWithoutProviderTeamInput, Prisma.PlatformBillingAccountUncheckedCreateWithoutProviderTeamInput>
-  connectOrCreate?: Prisma.PlatformBillingAccountCreateOrConnectWithoutProviderTeamInput
-  connect?: Prisma.PlatformBillingAccountWhereUniqueInput
+export type PlatformBillingAccountUncheckedCreateNestedManyWithoutProviderTeamInput = {
+  create?: Prisma.XOR<Prisma.PlatformBillingAccountCreateWithoutProviderTeamInput, Prisma.PlatformBillingAccountUncheckedCreateWithoutProviderTeamInput> | Prisma.PlatformBillingAccountCreateWithoutProviderTeamInput[] | Prisma.PlatformBillingAccountUncheckedCreateWithoutProviderTeamInput[]
+  connectOrCreate?: Prisma.PlatformBillingAccountCreateOrConnectWithoutProviderTeamInput | Prisma.PlatformBillingAccountCreateOrConnectWithoutProviderTeamInput[]
+  createMany?: Prisma.PlatformBillingAccountCreateManyProviderTeamInputEnvelope
+  connect?: Prisma.PlatformBillingAccountWhereUniqueInput | Prisma.PlatformBillingAccountWhereUniqueInput[]
 }
 
-export type PlatformBillingAccountUpdateOneWithoutProviderTeamNestedInput = {
-  create?: Prisma.XOR<Prisma.PlatformBillingAccountCreateWithoutProviderTeamInput, Prisma.PlatformBillingAccountUncheckedCreateWithoutProviderTeamInput>
-  connectOrCreate?: Prisma.PlatformBillingAccountCreateOrConnectWithoutProviderTeamInput
-  upsert?: Prisma.PlatformBillingAccountUpsertWithoutProviderTeamInput
-  disconnect?: Prisma.PlatformBillingAccountWhereInput | boolean
-  delete?: Prisma.PlatformBillingAccountWhereInput | boolean
-  connect?: Prisma.PlatformBillingAccountWhereUniqueInput
-  update?: Prisma.XOR<Prisma.XOR<Prisma.PlatformBillingAccountUpdateToOneWithWhereWithoutProviderTeamInput, Prisma.PlatformBillingAccountUpdateWithoutProviderTeamInput>, Prisma.PlatformBillingAccountUncheckedUpdateWithoutProviderTeamInput>
+export type PlatformBillingAccountUpdateManyWithoutProviderTeamNestedInput = {
+  create?: Prisma.XOR<Prisma.PlatformBillingAccountCreateWithoutProviderTeamInput, Prisma.PlatformBillingAccountUncheckedCreateWithoutProviderTeamInput> | Prisma.PlatformBillingAccountCreateWithoutProviderTeamInput[] | Prisma.PlatformBillingAccountUncheckedCreateWithoutProviderTeamInput[]
+  connectOrCreate?: Prisma.PlatformBillingAccountCreateOrConnectWithoutProviderTeamInput | Prisma.PlatformBillingAccountCreateOrConnectWithoutProviderTeamInput[]
+  upsert?: Prisma.PlatformBillingAccountUpsertWithWhereUniqueWithoutProviderTeamInput | Prisma.PlatformBillingAccountUpsertWithWhereUniqueWithoutProviderTeamInput[]
+  createMany?: Prisma.PlatformBillingAccountCreateManyProviderTeamInputEnvelope
+  set?: Prisma.PlatformBillingAccountWhereUniqueInput | Prisma.PlatformBillingAccountWhereUniqueInput[]
+  disconnect?: Prisma.PlatformBillingAccountWhereUniqueInput | Prisma.PlatformBillingAccountWhereUniqueInput[]
+  delete?: Prisma.PlatformBillingAccountWhereUniqueInput | Prisma.PlatformBillingAccountWhereUniqueInput[]
+  connect?: Prisma.PlatformBillingAccountWhereUniqueInput | Prisma.PlatformBillingAccountWhereUniqueInput[]
+  update?: Prisma.PlatformBillingAccountUpdateWithWhereUniqueWithoutProviderTeamInput | Prisma.PlatformBillingAccountUpdateWithWhereUniqueWithoutProviderTeamInput[]
+  updateMany?: Prisma.PlatformBillingAccountUpdateManyWithWhereWithoutProviderTeamInput | Prisma.PlatformBillingAccountUpdateManyWithWhereWithoutProviderTeamInput[]
+  deleteMany?: Prisma.PlatformBillingAccountScalarWhereInput | Prisma.PlatformBillingAccountScalarWhereInput[]
 }
 
-export type PlatformBillingAccountUncheckedUpdateOneWithoutProviderTeamNestedInput = {
-  create?: Prisma.XOR<Prisma.PlatformBillingAccountCreateWithoutProviderTeamInput, Prisma.PlatformBillingAccountUncheckedCreateWithoutProviderTeamInput>
-  connectOrCreate?: Prisma.PlatformBillingAccountCreateOrConnectWithoutProviderTeamInput
-  upsert?: Prisma.PlatformBillingAccountUpsertWithoutProviderTeamInput
-  disconnect?: Prisma.PlatformBillingAccountWhereInput | boolean
-  delete?: Prisma.PlatformBillingAccountWhereInput | boolean
-  connect?: Prisma.PlatformBillingAccountWhereUniqueInput
-  update?: Prisma.XOR<Prisma.XOR<Prisma.PlatformBillingAccountUpdateToOneWithWhereWithoutProviderTeamInput, Prisma.PlatformBillingAccountUpdateWithoutProviderTeamInput>, Prisma.PlatformBillingAccountUncheckedUpdateWithoutProviderTeamInput>
+export type PlatformBillingAccountUncheckedUpdateManyWithoutProviderTeamNestedInput = {
+  create?: Prisma.XOR<Prisma.PlatformBillingAccountCreateWithoutProviderTeamInput, Prisma.PlatformBillingAccountUncheckedCreateWithoutProviderTeamInput> | Prisma.PlatformBillingAccountCreateWithoutProviderTeamInput[] | Prisma.PlatformBillingAccountUncheckedCreateWithoutProviderTeamInput[]
+  connectOrCreate?: Prisma.PlatformBillingAccountCreateOrConnectWithoutProviderTeamInput | Prisma.PlatformBillingAccountCreateOrConnectWithoutProviderTeamInput[]
+  upsert?: Prisma.PlatformBillingAccountUpsertWithWhereUniqueWithoutProviderTeamInput | Prisma.PlatformBillingAccountUpsertWithWhereUniqueWithoutProviderTeamInput[]
+  createMany?: Prisma.PlatformBillingAccountCreateManyProviderTeamInputEnvelope
+  set?: Prisma.PlatformBillingAccountWhereUniqueInput | Prisma.PlatformBillingAccountWhereUniqueInput[]
+  disconnect?: Prisma.PlatformBillingAccountWhereUniqueInput | Prisma.PlatformBillingAccountWhereUniqueInput[]
+  delete?: Prisma.PlatformBillingAccountWhereUniqueInput | Prisma.PlatformBillingAccountWhereUniqueInput[]
+  connect?: Prisma.PlatformBillingAccountWhereUniqueInput | Prisma.PlatformBillingAccountWhereUniqueInput[]
+  update?: Prisma.PlatformBillingAccountUpdateWithWhereUniqueWithoutProviderTeamInput | Prisma.PlatformBillingAccountUpdateWithWhereUniqueWithoutProviderTeamInput[]
+  updateMany?: Prisma.PlatformBillingAccountUpdateManyWithWhereWithoutProviderTeamInput | Prisma.PlatformBillingAccountUpdateManyWithWhereWithoutProviderTeamInput[]
+  deleteMany?: Prisma.PlatformBillingAccountScalarWhereInput | Prisma.PlatformBillingAccountScalarWhereInput[]
 }
 
 export type PlatformBillingAccountCreateNestedOneWithoutEnvironmentInput = {
@@ -455,31 +481,37 @@ export type PlatformBillingAccountCreateOrConnectWithoutProviderTeamInput = {
   create: Prisma.XOR<Prisma.PlatformBillingAccountCreateWithoutProviderTeamInput, Prisma.PlatformBillingAccountUncheckedCreateWithoutProviderTeamInput>
 }
 
-export type PlatformBillingAccountUpsertWithoutProviderTeamInput = {
-  update: Prisma.XOR<Prisma.PlatformBillingAccountUpdateWithoutProviderTeamInput, Prisma.PlatformBillingAccountUncheckedUpdateWithoutProviderTeamInput>
-  create: Prisma.XOR<Prisma.PlatformBillingAccountCreateWithoutProviderTeamInput, Prisma.PlatformBillingAccountUncheckedCreateWithoutProviderTeamInput>
-  where?: Prisma.PlatformBillingAccountWhereInput
+export type PlatformBillingAccountCreateManyProviderTeamInputEnvelope = {
+  data: Prisma.PlatformBillingAccountCreateManyProviderTeamInput | Prisma.PlatformBillingAccountCreateManyProviderTeamInput[]
+  skipDuplicates?: boolean
 }
 
-export type PlatformBillingAccountUpdateToOneWithWhereWithoutProviderTeamInput = {
-  where?: Prisma.PlatformBillingAccountWhereInput
+export type PlatformBillingAccountUpsertWithWhereUniqueWithoutProviderTeamInput = {
+  where: Prisma.PlatformBillingAccountWhereUniqueInput
+  update: Prisma.XOR<Prisma.PlatformBillingAccountUpdateWithoutProviderTeamInput, Prisma.PlatformBillingAccountUncheckedUpdateWithoutProviderTeamInput>
+  create: Prisma.XOR<Prisma.PlatformBillingAccountCreateWithoutProviderTeamInput, Prisma.PlatformBillingAccountUncheckedCreateWithoutProviderTeamInput>
+}
+
+export type PlatformBillingAccountUpdateWithWhereUniqueWithoutProviderTeamInput = {
+  where: Prisma.PlatformBillingAccountWhereUniqueInput
   data: Prisma.XOR<Prisma.PlatformBillingAccountUpdateWithoutProviderTeamInput, Prisma.PlatformBillingAccountUncheckedUpdateWithoutProviderTeamInput>
 }
 
-export type PlatformBillingAccountUpdateWithoutProviderTeamInput = {
-  id?: Prisma.StringFieldUpdateOperationsInput | string
-  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  environment?: Prisma.WorkspaceEnvironmentUpdateOneRequiredWithoutPlatformBillingAccountNestedInput
-  portalComponent?: Prisma.EmbedComponentUpdateOneWithoutPlatformBillingPortalAccountNestedInput
+export type PlatformBillingAccountUpdateManyWithWhereWithoutProviderTeamInput = {
+  where: Prisma.PlatformBillingAccountScalarWhereInput
+  data: Prisma.XOR<Prisma.PlatformBillingAccountUpdateManyMutationInput, Prisma.PlatformBillingAccountUncheckedUpdateManyWithoutProviderTeamInput>
 }
 
-export type PlatformBillingAccountUncheckedUpdateWithoutProviderTeamInput = {
-  id?: Prisma.StringFieldUpdateOperationsInput | string
-  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  environmentId?: Prisma.StringFieldUpdateOperationsInput | string
-  portalComponentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+export type PlatformBillingAccountScalarWhereInput = {
+  AND?: Prisma.PlatformBillingAccountScalarWhereInput | Prisma.PlatformBillingAccountScalarWhereInput[]
+  OR?: Prisma.PlatformBillingAccountScalarWhereInput[]
+  NOT?: Prisma.PlatformBillingAccountScalarWhereInput | Prisma.PlatformBillingAccountScalarWhereInput[]
+  id?: Prisma.StringFilter<"PlatformBillingAccount"> | string
+  createdAt?: Prisma.DateTimeFilter<"PlatformBillingAccount"> | Date | string
+  updatedAt?: Prisma.DateTimeFilter<"PlatformBillingAccount"> | Date | string
+  providerTeamId?: Prisma.StringFilter<"PlatformBillingAccount"> | string
+  environmentId?: Prisma.StringFilter<"PlatformBillingAccount"> | string
+  portalComponentId?: Prisma.StringNullableFilter<"PlatformBillingAccount"> | string | null
 }
 
 export type PlatformBillingAccountCreateWithoutEnvironmentInput = {
@@ -576,6 +608,38 @@ export type PlatformBillingAccountUncheckedUpdateWithoutPortalComponentInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   providerTeamId?: Prisma.StringFieldUpdateOperationsInput | string
   environmentId?: Prisma.StringFieldUpdateOperationsInput | string
+}
+
+export type PlatformBillingAccountCreateManyProviderTeamInput = {
+  id?: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  environmentId: string
+  portalComponentId?: string | null
+}
+
+export type PlatformBillingAccountUpdateWithoutProviderTeamInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  environment?: Prisma.WorkspaceEnvironmentUpdateOneRequiredWithoutPlatformBillingAccountNestedInput
+  portalComponent?: Prisma.EmbedComponentUpdateOneWithoutPlatformBillingPortalAccountNestedInput
+}
+
+export type PlatformBillingAccountUncheckedUpdateWithoutProviderTeamInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  environmentId?: Prisma.StringFieldUpdateOperationsInput | string
+  portalComponentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+}
+
+export type PlatformBillingAccountUncheckedUpdateManyWithoutProviderTeamInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  environmentId?: Prisma.StringFieldUpdateOperationsInput | string
+  portalComponentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
 }
 
 

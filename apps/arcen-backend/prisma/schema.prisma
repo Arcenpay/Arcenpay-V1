@@ -367,15 +367,15 @@ model Team {
   taxProfile                 TaxProfile?
   invoiceSequences           InvoiceSequence[]
 
-  auditEvents       AuditEvent[]
-  billingEvents     BillingEvent[]
-  webhookDeliveries WebhookDelivery[]
-  gasSpends         GasSpend[]
-  tierHistory       TierUpgradeHistory[]
-  supportTickets    SupportTicket[]
-  platformBillingProviderAccount PlatformBillingAccount? @relation("PlatformBillingProviderAccount")
+  auditEvents                      AuditEvent[]
+  billingEvents                    BillingEvent[]
+  webhookDeliveries                WebhookDelivery[]
+  gasSpends                        GasSpend[]
+  tierHistory                      TierUpgradeHistory[]
+  supportTickets                   SupportTicket[]
+  platformBillingProviderAccount   PlatformBillingAccount[]  @relation("PlatformBillingProviderAccount")
   platformBillingProviderCustomers PlatformBillingCustomer[] @relation("PlatformBillingProviderCustomers")
-  platformBillingWorkspaceCustomer PlatformBillingCustomer? @relation("PlatformBillingWorkspaceCustomer")
+  platformBillingWorkspaceCustomer PlatformBillingCustomer?  @relation("PlatformBillingWorkspaceCustomer")
 
   // Web3 ArcenPay Protocol Layer
   arcenCompanies    ArcenCompany[]
@@ -426,6 +426,7 @@ model WorkspaceEnvironment {
   arcenUsers                 ArcenUser[]
   arcenEvents                ArcenEvent[]
   platformBillingAccount     PlatformBillingAccount?
+  platformBillingPlans       PlatformBillingPlan[]
   platformBillingCustomers   PlatformBillingCustomer[]
 
   @@unique([teamId, name])
@@ -1265,25 +1266,29 @@ model PlatformTierConfig {
 }
 
 model PlatformBillingPlan {
-  id        String       @id @default(cuid())
-  createdAt DateTime     @default(now())
-  updatedAt DateTime     @updatedAt
-  tier      PlatformTier
-  chainId   Int
+  id            String       @id @default(cuid())
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  tier          PlatformTier
+  environmentId String
+  chainId       Int
 
-  onChainPlanId String?
-  planName      String
-  priceMicros   Int
+  onChainPlanId          String?
+  planName               String
+  priceMicros            Int
   billingIntervalSeconds Int
-  acceptedToken String
-  treasuryWallet String
-  bootstrapTxHash String?
-  syncStatus ChainSyncStatus @default(PENDING)
-  syncError  String?
-  syncedAt   DateTime?
-  metadata   Json?
+  acceptedToken          String
+  treasuryWallet         String
+  bootstrapTxHash        String?
+  syncStatus             ChainSyncStatus @default(PENDING)
+  syncError              String?
+  syncedAt               DateTime?
+  metadata               Json?
 
-  @@unique([chainId, tier])
+  environment WorkspaceEnvironment @relation(fields: [environmentId], references: [id], onDelete: Restrict)
+
+  @@unique([environmentId, chainId, tier])
+  @@index([environmentId, chainId])
   @@index([syncStatus])
 }
 
@@ -1294,13 +1299,15 @@ model PlatformBillingAccount {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  providerTeamId    String @unique
-  environmentId     String @unique
+  providerTeamId    String
+  environmentId     String  @unique
   portalComponentId String? @unique
 
-  providerTeam Team                 @relation("PlatformBillingProviderAccount", fields: [providerTeamId], references: [id], onDelete: Restrict)
-  environment  WorkspaceEnvironment @relation(fields: [environmentId], references: [id], onDelete: Restrict)
-  portalComponent EmbedComponent?   @relation(fields: [portalComponentId], references: [id], onDelete: SetNull)
+  providerTeam    Team                 @relation("PlatformBillingProviderAccount", fields: [providerTeamId], references: [id], onDelete: Restrict)
+  environment     WorkspaceEnvironment @relation(fields: [environmentId], references: [id], onDelete: Restrict)
+  portalComponent EmbedComponent?      @relation(fields: [portalComponentId], references: [id], onDelete: SetNull)
+
+  @@unique([providerTeamId, environmentId])
 }
 
 // Maps each customer workspace to its company record in the first-party
@@ -1320,8 +1327,8 @@ model PlatformBillingCustomer {
   environment   WorkspaceEnvironment @relation(fields: [environmentId], references: [id], onDelete: Restrict)
   company       ArcenCompany         @relation(fields: [companyId], references: [id], onDelete: Cascade)
 
-  @@index([providerTeamId, environmentId])
   @@unique([providerTeamId, companyId])
+  @@index([providerTeamId, environmentId])
 }
 
 // ─── Gas Sponsorship Tracking ─────────────────────────────────────────────────
@@ -1840,8 +1847,8 @@ model EmbedComponent {
   // Design settings: colors, typography, layout
   design   Json   @default("{}")
 
-  team        Team                  @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  environment WorkspaceEnvironment? @relation(fields: [environmentId], references: [id], onDelete: SetNull)
+  team                         Team                    @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  environment                  WorkspaceEnvironment?   @relation(fields: [environmentId], references: [id], onDelete: SetNull)
   platformBillingPortalAccount PlatformBillingAccount?
 
   @@index([teamId])

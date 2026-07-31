@@ -256,7 +256,7 @@ export type TeamWhereInput = {
   gasSpends?: Prisma.GasSpendListRelationFilter
   tierHistory?: Prisma.TierUpgradeHistoryListRelationFilter
   supportTickets?: Prisma.SupportTicketListRelationFilter
-  platformBillingProviderAccount?: Prisma.XOR<Prisma.PlatformBillingAccountNullableScalarRelationFilter, Prisma.PlatformBillingAccountWhereInput> | null
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountListRelationFilter
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerListRelationFilter
   platformBillingWorkspaceCustomer?: Prisma.XOR<Prisma.PlatformBillingCustomerNullableScalarRelationFilter, Prisma.PlatformBillingCustomerWhereInput> | null
   arcenCompanies?: Prisma.ArcenCompanyListRelationFilter
@@ -312,7 +312,7 @@ export type TeamOrderByWithRelationInput = {
   gasSpends?: Prisma.GasSpendOrderByRelationAggregateInput
   tierHistory?: Prisma.TierUpgradeHistoryOrderByRelationAggregateInput
   supportTickets?: Prisma.SupportTicketOrderByRelationAggregateInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountOrderByWithRelationInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountOrderByRelationAggregateInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerOrderByRelationAggregateInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerOrderByWithRelationInput
   arcenCompanies?: Prisma.ArcenCompanyOrderByRelationAggregateInput
@@ -371,7 +371,7 @@ export type TeamWhereUniqueInput = Prisma.AtLeast<{
   gasSpends?: Prisma.GasSpendListRelationFilter
   tierHistory?: Prisma.TierUpgradeHistoryListRelationFilter
   supportTickets?: Prisma.SupportTicketListRelationFilter
-  platformBillingProviderAccount?: Prisma.XOR<Prisma.PlatformBillingAccountNullableScalarRelationFilter, Prisma.PlatformBillingAccountWhereInput> | null
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountListRelationFilter
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerListRelationFilter
   platformBillingWorkspaceCustomer?: Prisma.XOR<Prisma.PlatformBillingCustomerNullableScalarRelationFilter, Prisma.PlatformBillingCustomerWhereInput> | null
   arcenCompanies?: Prisma.ArcenCompanyListRelationFilter
@@ -461,7 +461,7 @@ export type TeamCreateInput = {
   gasSpends?: Prisma.GasSpendCreateNestedManyWithoutTeamInput
   tierHistory?: Prisma.TierUpgradeHistoryCreateNestedManyWithoutTeamInput
   supportTickets?: Prisma.SupportTicketCreateNestedManyWithoutTeamInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountCreateNestedOneWithoutProviderTeamInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountCreateNestedManyWithoutProviderTeamInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerCreateNestedManyWithoutProviderTeamInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerCreateNestedOneWithoutWorkspaceTeamInput
   arcenCompanies?: Prisma.ArcenCompanyCreateNestedManyWithoutTeamInput
@@ -517,7 +517,7 @@ export type TeamUncheckedCreateInput = {
   gasSpends?: Prisma.GasSpendUncheckedCreateNestedManyWithoutTeamInput
   tierHistory?: Prisma.TierUpgradeHistoryUncheckedCreateNestedManyWithoutTeamInput
   supportTickets?: Prisma.SupportTicketUncheckedCreateNestedManyWithoutTeamInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedOneWithoutProviderTeamInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedManyWithoutProviderTeamInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerUncheckedCreateNestedManyWithoutProviderTeamInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerUncheckedCreateNestedOneWithoutWorkspaceTeamInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedCreateNestedManyWithoutTeamInput
@@ -573,7 +573,7 @@ export type TeamUpdateInput = {
   gasSpends?: Prisma.GasSpendUpdateManyWithoutTeamNestedInput
   tierHistory?: Prisma.TierUpgradeHistoryUpdateManyWithoutTeamNestedInput
   supportTickets?: Prisma.SupportTicketUpdateManyWithoutTeamNestedInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUpdateOneWithoutProviderTeamNestedInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUpdateManyWithoutProviderTeamNestedInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerUpdateManyWithoutProviderTeamNestedInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerUpdateOneWithoutWorkspaceTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUpdateManyWithoutTeamNestedInput
@@ -629,7 +629,7 @@ export type TeamUncheckedUpdateInput = {
   gasSpends?: Prisma.GasSpendUncheckedUpdateManyWithoutTeamNestedInput
   tierHistory?: Prisma.TierUpgradeHistoryUncheckedUpdateManyWithoutTeamNestedInput
   supportTickets?: Prisma.SupportTicketUncheckedUpdateManyWithoutTeamNestedInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedUpdateOneWithoutProviderTeamNestedInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedUpdateManyWithoutProviderTeamNestedInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerUncheckedUpdateManyWithoutProviderTeamNestedInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerUncheckedUpdateOneWithoutWorkspaceTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedUpdateManyWithoutTeamNestedInput
@@ -1367,7 +1367,7 @@ export type TeamCreateWithoutEnvironmentsInput = {
   gasSpends?: Prisma.GasSpendCreateNestedManyWithoutTeamInput
   tierHistory?: Prisma.TierUpgradeHistoryCreateNestedManyWithoutTeamInput
   supportTickets?: Prisma.SupportTicketCreateNestedManyWithoutTeamInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountCreateNestedOneWithoutProviderTeamInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountCreateNestedManyWithoutProviderTeamInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerCreateNestedManyWithoutProviderTeamInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerCreateNestedOneWithoutWorkspaceTeamInput
   arcenCompanies?: Prisma.ArcenCompanyCreateNestedManyWithoutTeamInput
@@ -1422,7 +1422,7 @@ export type TeamUncheckedCreateWithoutEnvironmentsInput = {
   gasSpends?: Prisma.GasSpendUncheckedCreateNestedManyWithoutTeamInput
   tierHistory?: Prisma.TierUpgradeHistoryUncheckedCreateNestedManyWithoutTeamInput
   supportTickets?: Prisma.SupportTicketUncheckedCreateNestedManyWithoutTeamInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedOneWithoutProviderTeamInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedManyWithoutProviderTeamInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerUncheckedCreateNestedManyWithoutProviderTeamInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerUncheckedCreateNestedOneWithoutWorkspaceTeamInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedCreateNestedManyWithoutTeamInput
@@ -1493,7 +1493,7 @@ export type TeamUpdateWithoutEnvironmentsInput = {
   gasSpends?: Prisma.GasSpendUpdateManyWithoutTeamNestedInput
   tierHistory?: Prisma.TierUpgradeHistoryUpdateManyWithoutTeamNestedInput
   supportTickets?: Prisma.SupportTicketUpdateManyWithoutTeamNestedInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUpdateOneWithoutProviderTeamNestedInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUpdateManyWithoutProviderTeamNestedInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerUpdateManyWithoutProviderTeamNestedInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerUpdateOneWithoutWorkspaceTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUpdateManyWithoutTeamNestedInput
@@ -1548,7 +1548,7 @@ export type TeamUncheckedUpdateWithoutEnvironmentsInput = {
   gasSpends?: Prisma.GasSpendUncheckedUpdateManyWithoutTeamNestedInput
   tierHistory?: Prisma.TierUpgradeHistoryUncheckedUpdateManyWithoutTeamNestedInput
   supportTickets?: Prisma.SupportTicketUncheckedUpdateManyWithoutTeamNestedInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedUpdateOneWithoutProviderTeamNestedInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedUpdateManyWithoutProviderTeamNestedInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerUncheckedUpdateManyWithoutProviderTeamNestedInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerUncheckedUpdateOneWithoutWorkspaceTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedUpdateManyWithoutTeamNestedInput
@@ -1603,7 +1603,7 @@ export type TeamCreateWithoutMembersInput = {
   gasSpends?: Prisma.GasSpendCreateNestedManyWithoutTeamInput
   tierHistory?: Prisma.TierUpgradeHistoryCreateNestedManyWithoutTeamInput
   supportTickets?: Prisma.SupportTicketCreateNestedManyWithoutTeamInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountCreateNestedOneWithoutProviderTeamInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountCreateNestedManyWithoutProviderTeamInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerCreateNestedManyWithoutProviderTeamInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerCreateNestedOneWithoutWorkspaceTeamInput
   arcenCompanies?: Prisma.ArcenCompanyCreateNestedManyWithoutTeamInput
@@ -1658,7 +1658,7 @@ export type TeamUncheckedCreateWithoutMembersInput = {
   gasSpends?: Prisma.GasSpendUncheckedCreateNestedManyWithoutTeamInput
   tierHistory?: Prisma.TierUpgradeHistoryUncheckedCreateNestedManyWithoutTeamInput
   supportTickets?: Prisma.SupportTicketUncheckedCreateNestedManyWithoutTeamInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedOneWithoutProviderTeamInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedManyWithoutProviderTeamInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerUncheckedCreateNestedManyWithoutProviderTeamInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerUncheckedCreateNestedOneWithoutWorkspaceTeamInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedCreateNestedManyWithoutTeamInput
@@ -1729,7 +1729,7 @@ export type TeamUpdateWithoutMembersInput = {
   gasSpends?: Prisma.GasSpendUpdateManyWithoutTeamNestedInput
   tierHistory?: Prisma.TierUpgradeHistoryUpdateManyWithoutTeamNestedInput
   supportTickets?: Prisma.SupportTicketUpdateManyWithoutTeamNestedInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUpdateOneWithoutProviderTeamNestedInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUpdateManyWithoutProviderTeamNestedInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerUpdateManyWithoutProviderTeamNestedInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerUpdateOneWithoutWorkspaceTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUpdateManyWithoutTeamNestedInput
@@ -1784,7 +1784,7 @@ export type TeamUncheckedUpdateWithoutMembersInput = {
   gasSpends?: Prisma.GasSpendUncheckedUpdateManyWithoutTeamNestedInput
   tierHistory?: Prisma.TierUpgradeHistoryUncheckedUpdateManyWithoutTeamNestedInput
   supportTickets?: Prisma.SupportTicketUncheckedUpdateManyWithoutTeamNestedInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedUpdateOneWithoutProviderTeamNestedInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedUpdateManyWithoutProviderTeamNestedInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerUncheckedUpdateManyWithoutProviderTeamNestedInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerUncheckedUpdateOneWithoutWorkspaceTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedUpdateManyWithoutTeamNestedInput
@@ -1839,7 +1839,7 @@ export type TeamCreateWithoutInvitationsInput = {
   gasSpends?: Prisma.GasSpendCreateNestedManyWithoutTeamInput
   tierHistory?: Prisma.TierUpgradeHistoryCreateNestedManyWithoutTeamInput
   supportTickets?: Prisma.SupportTicketCreateNestedManyWithoutTeamInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountCreateNestedOneWithoutProviderTeamInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountCreateNestedManyWithoutProviderTeamInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerCreateNestedManyWithoutProviderTeamInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerCreateNestedOneWithoutWorkspaceTeamInput
   arcenCompanies?: Prisma.ArcenCompanyCreateNestedManyWithoutTeamInput
@@ -1894,7 +1894,7 @@ export type TeamUncheckedCreateWithoutInvitationsInput = {
   gasSpends?: Prisma.GasSpendUncheckedCreateNestedManyWithoutTeamInput
   tierHistory?: Prisma.TierUpgradeHistoryUncheckedCreateNestedManyWithoutTeamInput
   supportTickets?: Prisma.SupportTicketUncheckedCreateNestedManyWithoutTeamInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedOneWithoutProviderTeamInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedManyWithoutProviderTeamInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerUncheckedCreateNestedManyWithoutProviderTeamInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerUncheckedCreateNestedOneWithoutWorkspaceTeamInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedCreateNestedManyWithoutTeamInput
@@ -1965,7 +1965,7 @@ export type TeamUpdateWithoutInvitationsInput = {
   gasSpends?: Prisma.GasSpendUpdateManyWithoutTeamNestedInput
   tierHistory?: Prisma.TierUpgradeHistoryUpdateManyWithoutTeamNestedInput
   supportTickets?: Prisma.SupportTicketUpdateManyWithoutTeamNestedInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUpdateOneWithoutProviderTeamNestedInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUpdateManyWithoutProviderTeamNestedInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerUpdateManyWithoutProviderTeamNestedInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerUpdateOneWithoutWorkspaceTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUpdateManyWithoutTeamNestedInput
@@ -2020,7 +2020,7 @@ export type TeamUncheckedUpdateWithoutInvitationsInput = {
   gasSpends?: Prisma.GasSpendUncheckedUpdateManyWithoutTeamNestedInput
   tierHistory?: Prisma.TierUpgradeHistoryUncheckedUpdateManyWithoutTeamNestedInput
   supportTickets?: Prisma.SupportTicketUncheckedUpdateManyWithoutTeamNestedInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedUpdateOneWithoutProviderTeamNestedInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedUpdateManyWithoutProviderTeamNestedInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerUncheckedUpdateManyWithoutProviderTeamNestedInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerUncheckedUpdateOneWithoutWorkspaceTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedUpdateManyWithoutTeamNestedInput
@@ -2075,7 +2075,7 @@ export type TeamCreateWithoutProviderProfilesInput = {
   gasSpends?: Prisma.GasSpendCreateNestedManyWithoutTeamInput
   tierHistory?: Prisma.TierUpgradeHistoryCreateNestedManyWithoutTeamInput
   supportTickets?: Prisma.SupportTicketCreateNestedManyWithoutTeamInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountCreateNestedOneWithoutProviderTeamInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountCreateNestedManyWithoutProviderTeamInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerCreateNestedManyWithoutProviderTeamInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerCreateNestedOneWithoutWorkspaceTeamInput
   arcenCompanies?: Prisma.ArcenCompanyCreateNestedManyWithoutTeamInput
@@ -2130,7 +2130,7 @@ export type TeamUncheckedCreateWithoutProviderProfilesInput = {
   gasSpends?: Prisma.GasSpendUncheckedCreateNestedManyWithoutTeamInput
   tierHistory?: Prisma.TierUpgradeHistoryUncheckedCreateNestedManyWithoutTeamInput
   supportTickets?: Prisma.SupportTicketUncheckedCreateNestedManyWithoutTeamInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedOneWithoutProviderTeamInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedManyWithoutProviderTeamInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerUncheckedCreateNestedManyWithoutProviderTeamInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerUncheckedCreateNestedOneWithoutWorkspaceTeamInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedCreateNestedManyWithoutTeamInput
@@ -2201,7 +2201,7 @@ export type TeamUpdateWithoutProviderProfilesInput = {
   gasSpends?: Prisma.GasSpendUpdateManyWithoutTeamNestedInput
   tierHistory?: Prisma.TierUpgradeHistoryUpdateManyWithoutTeamNestedInput
   supportTickets?: Prisma.SupportTicketUpdateManyWithoutTeamNestedInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUpdateOneWithoutProviderTeamNestedInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUpdateManyWithoutProviderTeamNestedInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerUpdateManyWithoutProviderTeamNestedInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerUpdateOneWithoutWorkspaceTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUpdateManyWithoutTeamNestedInput
@@ -2256,7 +2256,7 @@ export type TeamUncheckedUpdateWithoutProviderProfilesInput = {
   gasSpends?: Prisma.GasSpendUncheckedUpdateManyWithoutTeamNestedInput
   tierHistory?: Prisma.TierUpgradeHistoryUncheckedUpdateManyWithoutTeamNestedInput
   supportTickets?: Prisma.SupportTicketUncheckedUpdateManyWithoutTeamNestedInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedUpdateOneWithoutProviderTeamNestedInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedUpdateManyWithoutProviderTeamNestedInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerUncheckedUpdateManyWithoutProviderTeamNestedInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerUncheckedUpdateOneWithoutWorkspaceTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedUpdateManyWithoutTeamNestedInput
@@ -2311,7 +2311,7 @@ export type TeamCreateWithoutCatalogPlansInput = {
   gasSpends?: Prisma.GasSpendCreateNestedManyWithoutTeamInput
   tierHistory?: Prisma.TierUpgradeHistoryCreateNestedManyWithoutTeamInput
   supportTickets?: Prisma.SupportTicketCreateNestedManyWithoutTeamInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountCreateNestedOneWithoutProviderTeamInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountCreateNestedManyWithoutProviderTeamInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerCreateNestedManyWithoutProviderTeamInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerCreateNestedOneWithoutWorkspaceTeamInput
   arcenCompanies?: Prisma.ArcenCompanyCreateNestedManyWithoutTeamInput
@@ -2366,7 +2366,7 @@ export type TeamUncheckedCreateWithoutCatalogPlansInput = {
   gasSpends?: Prisma.GasSpendUncheckedCreateNestedManyWithoutTeamInput
   tierHistory?: Prisma.TierUpgradeHistoryUncheckedCreateNestedManyWithoutTeamInput
   supportTickets?: Prisma.SupportTicketUncheckedCreateNestedManyWithoutTeamInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedOneWithoutProviderTeamInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedManyWithoutProviderTeamInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerUncheckedCreateNestedManyWithoutProviderTeamInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerUncheckedCreateNestedOneWithoutWorkspaceTeamInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedCreateNestedManyWithoutTeamInput
@@ -2437,7 +2437,7 @@ export type TeamUpdateWithoutCatalogPlansInput = {
   gasSpends?: Prisma.GasSpendUpdateManyWithoutTeamNestedInput
   tierHistory?: Prisma.TierUpgradeHistoryUpdateManyWithoutTeamNestedInput
   supportTickets?: Prisma.SupportTicketUpdateManyWithoutTeamNestedInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUpdateOneWithoutProviderTeamNestedInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUpdateManyWithoutProviderTeamNestedInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerUpdateManyWithoutProviderTeamNestedInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerUpdateOneWithoutWorkspaceTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUpdateManyWithoutTeamNestedInput
@@ -2492,7 +2492,7 @@ export type TeamUncheckedUpdateWithoutCatalogPlansInput = {
   gasSpends?: Prisma.GasSpendUncheckedUpdateManyWithoutTeamNestedInput
   tierHistory?: Prisma.TierUpgradeHistoryUncheckedUpdateManyWithoutTeamNestedInput
   supportTickets?: Prisma.SupportTicketUncheckedUpdateManyWithoutTeamNestedInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedUpdateOneWithoutProviderTeamNestedInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedUpdateManyWithoutProviderTeamNestedInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerUncheckedUpdateManyWithoutProviderTeamNestedInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerUncheckedUpdateOneWithoutWorkspaceTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedUpdateManyWithoutTeamNestedInput
@@ -2547,7 +2547,7 @@ export type TeamCreateWithoutCatalogAddOnsInput = {
   gasSpends?: Prisma.GasSpendCreateNestedManyWithoutTeamInput
   tierHistory?: Prisma.TierUpgradeHistoryCreateNestedManyWithoutTeamInput
   supportTickets?: Prisma.SupportTicketCreateNestedManyWithoutTeamInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountCreateNestedOneWithoutProviderTeamInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountCreateNestedManyWithoutProviderTeamInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerCreateNestedManyWithoutProviderTeamInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerCreateNestedOneWithoutWorkspaceTeamInput
   arcenCompanies?: Prisma.ArcenCompanyCreateNestedManyWithoutTeamInput
@@ -2602,7 +2602,7 @@ export type TeamUncheckedCreateWithoutCatalogAddOnsInput = {
   gasSpends?: Prisma.GasSpendUncheckedCreateNestedManyWithoutTeamInput
   tierHistory?: Prisma.TierUpgradeHistoryUncheckedCreateNestedManyWithoutTeamInput
   supportTickets?: Prisma.SupportTicketUncheckedCreateNestedManyWithoutTeamInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedOneWithoutProviderTeamInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedManyWithoutProviderTeamInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerUncheckedCreateNestedManyWithoutProviderTeamInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerUncheckedCreateNestedOneWithoutWorkspaceTeamInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedCreateNestedManyWithoutTeamInput
@@ -2673,7 +2673,7 @@ export type TeamUpdateWithoutCatalogAddOnsInput = {
   gasSpends?: Prisma.GasSpendUpdateManyWithoutTeamNestedInput
   tierHistory?: Prisma.TierUpgradeHistoryUpdateManyWithoutTeamNestedInput
   supportTickets?: Prisma.SupportTicketUpdateManyWithoutTeamNestedInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUpdateOneWithoutProviderTeamNestedInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUpdateManyWithoutProviderTeamNestedInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerUpdateManyWithoutProviderTeamNestedInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerUpdateOneWithoutWorkspaceTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUpdateManyWithoutTeamNestedInput
@@ -2728,7 +2728,7 @@ export type TeamUncheckedUpdateWithoutCatalogAddOnsInput = {
   gasSpends?: Prisma.GasSpendUncheckedUpdateManyWithoutTeamNestedInput
   tierHistory?: Prisma.TierUpgradeHistoryUncheckedUpdateManyWithoutTeamNestedInput
   supportTickets?: Prisma.SupportTicketUncheckedUpdateManyWithoutTeamNestedInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedUpdateOneWithoutProviderTeamNestedInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedUpdateManyWithoutProviderTeamNestedInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerUncheckedUpdateManyWithoutProviderTeamNestedInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerUncheckedUpdateOneWithoutWorkspaceTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedUpdateManyWithoutTeamNestedInput
@@ -2783,7 +2783,7 @@ export type TeamCreateWithoutCatalogCreditTypesInput = {
   gasSpends?: Prisma.GasSpendCreateNestedManyWithoutTeamInput
   tierHistory?: Prisma.TierUpgradeHistoryCreateNestedManyWithoutTeamInput
   supportTickets?: Prisma.SupportTicketCreateNestedManyWithoutTeamInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountCreateNestedOneWithoutProviderTeamInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountCreateNestedManyWithoutProviderTeamInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerCreateNestedManyWithoutProviderTeamInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerCreateNestedOneWithoutWorkspaceTeamInput
   arcenCompanies?: Prisma.ArcenCompanyCreateNestedManyWithoutTeamInput
@@ -2838,7 +2838,7 @@ export type TeamUncheckedCreateWithoutCatalogCreditTypesInput = {
   gasSpends?: Prisma.GasSpendUncheckedCreateNestedManyWithoutTeamInput
   tierHistory?: Prisma.TierUpgradeHistoryUncheckedCreateNestedManyWithoutTeamInput
   supportTickets?: Prisma.SupportTicketUncheckedCreateNestedManyWithoutTeamInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedOneWithoutProviderTeamInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedManyWithoutProviderTeamInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerUncheckedCreateNestedManyWithoutProviderTeamInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerUncheckedCreateNestedOneWithoutWorkspaceTeamInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedCreateNestedManyWithoutTeamInput
@@ -2909,7 +2909,7 @@ export type TeamUpdateWithoutCatalogCreditTypesInput = {
   gasSpends?: Prisma.GasSpendUpdateManyWithoutTeamNestedInput
   tierHistory?: Prisma.TierUpgradeHistoryUpdateManyWithoutTeamNestedInput
   supportTickets?: Prisma.SupportTicketUpdateManyWithoutTeamNestedInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUpdateOneWithoutProviderTeamNestedInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUpdateManyWithoutProviderTeamNestedInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerUpdateManyWithoutProviderTeamNestedInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerUpdateOneWithoutWorkspaceTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUpdateManyWithoutTeamNestedInput
@@ -2964,7 +2964,7 @@ export type TeamUncheckedUpdateWithoutCatalogCreditTypesInput = {
   gasSpends?: Prisma.GasSpendUncheckedUpdateManyWithoutTeamNestedInput
   tierHistory?: Prisma.TierUpgradeHistoryUncheckedUpdateManyWithoutTeamNestedInput
   supportTickets?: Prisma.SupportTicketUncheckedUpdateManyWithoutTeamNestedInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedUpdateOneWithoutProviderTeamNestedInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedUpdateManyWithoutProviderTeamNestedInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerUncheckedUpdateManyWithoutProviderTeamNestedInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerUncheckedUpdateOneWithoutWorkspaceTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedUpdateManyWithoutTeamNestedInput
@@ -3019,7 +3019,7 @@ export type TeamCreateWithoutCatalogVersionsInput = {
   gasSpends?: Prisma.GasSpendCreateNestedManyWithoutTeamInput
   tierHistory?: Prisma.TierUpgradeHistoryCreateNestedManyWithoutTeamInput
   supportTickets?: Prisma.SupportTicketCreateNestedManyWithoutTeamInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountCreateNestedOneWithoutProviderTeamInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountCreateNestedManyWithoutProviderTeamInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerCreateNestedManyWithoutProviderTeamInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerCreateNestedOneWithoutWorkspaceTeamInput
   arcenCompanies?: Prisma.ArcenCompanyCreateNestedManyWithoutTeamInput
@@ -3074,7 +3074,7 @@ export type TeamUncheckedCreateWithoutCatalogVersionsInput = {
   gasSpends?: Prisma.GasSpendUncheckedCreateNestedManyWithoutTeamInput
   tierHistory?: Prisma.TierUpgradeHistoryUncheckedCreateNestedManyWithoutTeamInput
   supportTickets?: Prisma.SupportTicketUncheckedCreateNestedManyWithoutTeamInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedOneWithoutProviderTeamInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedManyWithoutProviderTeamInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerUncheckedCreateNestedManyWithoutProviderTeamInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerUncheckedCreateNestedOneWithoutWorkspaceTeamInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedCreateNestedManyWithoutTeamInput
@@ -3145,7 +3145,7 @@ export type TeamUpdateWithoutCatalogVersionsInput = {
   gasSpends?: Prisma.GasSpendUpdateManyWithoutTeamNestedInput
   tierHistory?: Prisma.TierUpgradeHistoryUpdateManyWithoutTeamNestedInput
   supportTickets?: Prisma.SupportTicketUpdateManyWithoutTeamNestedInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUpdateOneWithoutProviderTeamNestedInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUpdateManyWithoutProviderTeamNestedInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerUpdateManyWithoutProviderTeamNestedInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerUpdateOneWithoutWorkspaceTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUpdateManyWithoutTeamNestedInput
@@ -3200,7 +3200,7 @@ export type TeamUncheckedUpdateWithoutCatalogVersionsInput = {
   gasSpends?: Prisma.GasSpendUncheckedUpdateManyWithoutTeamNestedInput
   tierHistory?: Prisma.TierUpgradeHistoryUncheckedUpdateManyWithoutTeamNestedInput
   supportTickets?: Prisma.SupportTicketUncheckedUpdateManyWithoutTeamNestedInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedUpdateOneWithoutProviderTeamNestedInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedUpdateManyWithoutProviderTeamNestedInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerUncheckedUpdateManyWithoutProviderTeamNestedInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerUncheckedUpdateOneWithoutWorkspaceTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedUpdateManyWithoutTeamNestedInput
@@ -3255,7 +3255,7 @@ export type TeamCreateWithoutCatalogConfigsInput = {
   gasSpends?: Prisma.GasSpendCreateNestedManyWithoutTeamInput
   tierHistory?: Prisma.TierUpgradeHistoryCreateNestedManyWithoutTeamInput
   supportTickets?: Prisma.SupportTicketCreateNestedManyWithoutTeamInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountCreateNestedOneWithoutProviderTeamInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountCreateNestedManyWithoutProviderTeamInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerCreateNestedManyWithoutProviderTeamInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerCreateNestedOneWithoutWorkspaceTeamInput
   arcenCompanies?: Prisma.ArcenCompanyCreateNestedManyWithoutTeamInput
@@ -3310,7 +3310,7 @@ export type TeamUncheckedCreateWithoutCatalogConfigsInput = {
   gasSpends?: Prisma.GasSpendUncheckedCreateNestedManyWithoutTeamInput
   tierHistory?: Prisma.TierUpgradeHistoryUncheckedCreateNestedManyWithoutTeamInput
   supportTickets?: Prisma.SupportTicketUncheckedCreateNestedManyWithoutTeamInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedOneWithoutProviderTeamInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedManyWithoutProviderTeamInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerUncheckedCreateNestedManyWithoutProviderTeamInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerUncheckedCreateNestedOneWithoutWorkspaceTeamInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedCreateNestedManyWithoutTeamInput
@@ -3381,7 +3381,7 @@ export type TeamUpdateWithoutCatalogConfigsInput = {
   gasSpends?: Prisma.GasSpendUpdateManyWithoutTeamNestedInput
   tierHistory?: Prisma.TierUpgradeHistoryUpdateManyWithoutTeamNestedInput
   supportTickets?: Prisma.SupportTicketUpdateManyWithoutTeamNestedInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUpdateOneWithoutProviderTeamNestedInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUpdateManyWithoutProviderTeamNestedInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerUpdateManyWithoutProviderTeamNestedInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerUpdateOneWithoutWorkspaceTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUpdateManyWithoutTeamNestedInput
@@ -3436,7 +3436,7 @@ export type TeamUncheckedUpdateWithoutCatalogConfigsInput = {
   gasSpends?: Prisma.GasSpendUncheckedUpdateManyWithoutTeamNestedInput
   tierHistory?: Prisma.TierUpgradeHistoryUncheckedUpdateManyWithoutTeamNestedInput
   supportTickets?: Prisma.SupportTicketUncheckedUpdateManyWithoutTeamNestedInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedUpdateOneWithoutProviderTeamNestedInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedUpdateManyWithoutProviderTeamNestedInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerUncheckedUpdateManyWithoutProviderTeamNestedInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerUncheckedUpdateOneWithoutWorkspaceTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedUpdateManyWithoutTeamNestedInput
@@ -3491,7 +3491,7 @@ export type TeamCreateWithoutBillingTemplatesInput = {
   gasSpends?: Prisma.GasSpendCreateNestedManyWithoutTeamInput
   tierHistory?: Prisma.TierUpgradeHistoryCreateNestedManyWithoutTeamInput
   supportTickets?: Prisma.SupportTicketCreateNestedManyWithoutTeamInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountCreateNestedOneWithoutProviderTeamInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountCreateNestedManyWithoutProviderTeamInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerCreateNestedManyWithoutProviderTeamInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerCreateNestedOneWithoutWorkspaceTeamInput
   arcenCompanies?: Prisma.ArcenCompanyCreateNestedManyWithoutTeamInput
@@ -3546,7 +3546,7 @@ export type TeamUncheckedCreateWithoutBillingTemplatesInput = {
   gasSpends?: Prisma.GasSpendUncheckedCreateNestedManyWithoutTeamInput
   tierHistory?: Prisma.TierUpgradeHistoryUncheckedCreateNestedManyWithoutTeamInput
   supportTickets?: Prisma.SupportTicketUncheckedCreateNestedManyWithoutTeamInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedOneWithoutProviderTeamInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedManyWithoutProviderTeamInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerUncheckedCreateNestedManyWithoutProviderTeamInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerUncheckedCreateNestedOneWithoutWorkspaceTeamInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedCreateNestedManyWithoutTeamInput
@@ -3617,7 +3617,7 @@ export type TeamUpdateWithoutBillingTemplatesInput = {
   gasSpends?: Prisma.GasSpendUpdateManyWithoutTeamNestedInput
   tierHistory?: Prisma.TierUpgradeHistoryUpdateManyWithoutTeamNestedInput
   supportTickets?: Prisma.SupportTicketUpdateManyWithoutTeamNestedInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUpdateOneWithoutProviderTeamNestedInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUpdateManyWithoutProviderTeamNestedInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerUpdateManyWithoutProviderTeamNestedInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerUpdateOneWithoutWorkspaceTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUpdateManyWithoutTeamNestedInput
@@ -3672,7 +3672,7 @@ export type TeamUncheckedUpdateWithoutBillingTemplatesInput = {
   gasSpends?: Prisma.GasSpendUncheckedUpdateManyWithoutTeamNestedInput
   tierHistory?: Prisma.TierUpgradeHistoryUncheckedUpdateManyWithoutTeamNestedInput
   supportTickets?: Prisma.SupportTicketUncheckedUpdateManyWithoutTeamNestedInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedUpdateOneWithoutProviderTeamNestedInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedUpdateManyWithoutProviderTeamNestedInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerUncheckedUpdateManyWithoutProviderTeamNestedInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerUncheckedUpdateOneWithoutWorkspaceTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedUpdateManyWithoutTeamNestedInput
@@ -3727,7 +3727,7 @@ export type TeamCreateWithoutTemplateInstallsInput = {
   gasSpends?: Prisma.GasSpendCreateNestedManyWithoutTeamInput
   tierHistory?: Prisma.TierUpgradeHistoryCreateNestedManyWithoutTeamInput
   supportTickets?: Prisma.SupportTicketCreateNestedManyWithoutTeamInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountCreateNestedOneWithoutProviderTeamInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountCreateNestedManyWithoutProviderTeamInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerCreateNestedManyWithoutProviderTeamInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerCreateNestedOneWithoutWorkspaceTeamInput
   arcenCompanies?: Prisma.ArcenCompanyCreateNestedManyWithoutTeamInput
@@ -3782,7 +3782,7 @@ export type TeamUncheckedCreateWithoutTemplateInstallsInput = {
   gasSpends?: Prisma.GasSpendUncheckedCreateNestedManyWithoutTeamInput
   tierHistory?: Prisma.TierUpgradeHistoryUncheckedCreateNestedManyWithoutTeamInput
   supportTickets?: Prisma.SupportTicketUncheckedCreateNestedManyWithoutTeamInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedOneWithoutProviderTeamInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedManyWithoutProviderTeamInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerUncheckedCreateNestedManyWithoutProviderTeamInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerUncheckedCreateNestedOneWithoutWorkspaceTeamInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedCreateNestedManyWithoutTeamInput
@@ -3853,7 +3853,7 @@ export type TeamUpdateWithoutTemplateInstallsInput = {
   gasSpends?: Prisma.GasSpendUpdateManyWithoutTeamNestedInput
   tierHistory?: Prisma.TierUpgradeHistoryUpdateManyWithoutTeamNestedInput
   supportTickets?: Prisma.SupportTicketUpdateManyWithoutTeamNestedInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUpdateOneWithoutProviderTeamNestedInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUpdateManyWithoutProviderTeamNestedInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerUpdateManyWithoutProviderTeamNestedInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerUpdateOneWithoutWorkspaceTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUpdateManyWithoutTeamNestedInput
@@ -3908,7 +3908,7 @@ export type TeamUncheckedUpdateWithoutTemplateInstallsInput = {
   gasSpends?: Prisma.GasSpendUncheckedUpdateManyWithoutTeamNestedInput
   tierHistory?: Prisma.TierUpgradeHistoryUncheckedUpdateManyWithoutTeamNestedInput
   supportTickets?: Prisma.SupportTicketUncheckedUpdateManyWithoutTeamNestedInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedUpdateOneWithoutProviderTeamNestedInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedUpdateManyWithoutProviderTeamNestedInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerUncheckedUpdateManyWithoutProviderTeamNestedInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerUncheckedUpdateOneWithoutWorkspaceTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedUpdateManyWithoutTeamNestedInput
@@ -3963,7 +3963,7 @@ export type TeamCreateWithoutTaxProfileInput = {
   gasSpends?: Prisma.GasSpendCreateNestedManyWithoutTeamInput
   tierHistory?: Prisma.TierUpgradeHistoryCreateNestedManyWithoutTeamInput
   supportTickets?: Prisma.SupportTicketCreateNestedManyWithoutTeamInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountCreateNestedOneWithoutProviderTeamInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountCreateNestedManyWithoutProviderTeamInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerCreateNestedManyWithoutProviderTeamInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerCreateNestedOneWithoutWorkspaceTeamInput
   arcenCompanies?: Prisma.ArcenCompanyCreateNestedManyWithoutTeamInput
@@ -4018,7 +4018,7 @@ export type TeamUncheckedCreateWithoutTaxProfileInput = {
   gasSpends?: Prisma.GasSpendUncheckedCreateNestedManyWithoutTeamInput
   tierHistory?: Prisma.TierUpgradeHistoryUncheckedCreateNestedManyWithoutTeamInput
   supportTickets?: Prisma.SupportTicketUncheckedCreateNestedManyWithoutTeamInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedOneWithoutProviderTeamInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedManyWithoutProviderTeamInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerUncheckedCreateNestedManyWithoutProviderTeamInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerUncheckedCreateNestedOneWithoutWorkspaceTeamInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedCreateNestedManyWithoutTeamInput
@@ -4089,7 +4089,7 @@ export type TeamUpdateWithoutTaxProfileInput = {
   gasSpends?: Prisma.GasSpendUpdateManyWithoutTeamNestedInput
   tierHistory?: Prisma.TierUpgradeHistoryUpdateManyWithoutTeamNestedInput
   supportTickets?: Prisma.SupportTicketUpdateManyWithoutTeamNestedInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUpdateOneWithoutProviderTeamNestedInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUpdateManyWithoutProviderTeamNestedInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerUpdateManyWithoutProviderTeamNestedInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerUpdateOneWithoutWorkspaceTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUpdateManyWithoutTeamNestedInput
@@ -4144,7 +4144,7 @@ export type TeamUncheckedUpdateWithoutTaxProfileInput = {
   gasSpends?: Prisma.GasSpendUncheckedUpdateManyWithoutTeamNestedInput
   tierHistory?: Prisma.TierUpgradeHistoryUncheckedUpdateManyWithoutTeamNestedInput
   supportTickets?: Prisma.SupportTicketUncheckedUpdateManyWithoutTeamNestedInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedUpdateOneWithoutProviderTeamNestedInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedUpdateManyWithoutProviderTeamNestedInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerUncheckedUpdateManyWithoutProviderTeamNestedInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerUncheckedUpdateOneWithoutWorkspaceTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedUpdateManyWithoutTeamNestedInput
@@ -4199,7 +4199,7 @@ export type TeamCreateWithoutInvoiceSequencesInput = {
   gasSpends?: Prisma.GasSpendCreateNestedManyWithoutTeamInput
   tierHistory?: Prisma.TierUpgradeHistoryCreateNestedManyWithoutTeamInput
   supportTickets?: Prisma.SupportTicketCreateNestedManyWithoutTeamInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountCreateNestedOneWithoutProviderTeamInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountCreateNestedManyWithoutProviderTeamInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerCreateNestedManyWithoutProviderTeamInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerCreateNestedOneWithoutWorkspaceTeamInput
   arcenCompanies?: Prisma.ArcenCompanyCreateNestedManyWithoutTeamInput
@@ -4254,7 +4254,7 @@ export type TeamUncheckedCreateWithoutInvoiceSequencesInput = {
   gasSpends?: Prisma.GasSpendUncheckedCreateNestedManyWithoutTeamInput
   tierHistory?: Prisma.TierUpgradeHistoryUncheckedCreateNestedManyWithoutTeamInput
   supportTickets?: Prisma.SupportTicketUncheckedCreateNestedManyWithoutTeamInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedOneWithoutProviderTeamInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedManyWithoutProviderTeamInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerUncheckedCreateNestedManyWithoutProviderTeamInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerUncheckedCreateNestedOneWithoutWorkspaceTeamInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedCreateNestedManyWithoutTeamInput
@@ -4325,7 +4325,7 @@ export type TeamUpdateWithoutInvoiceSequencesInput = {
   gasSpends?: Prisma.GasSpendUpdateManyWithoutTeamNestedInput
   tierHistory?: Prisma.TierUpgradeHistoryUpdateManyWithoutTeamNestedInput
   supportTickets?: Prisma.SupportTicketUpdateManyWithoutTeamNestedInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUpdateOneWithoutProviderTeamNestedInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUpdateManyWithoutProviderTeamNestedInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerUpdateManyWithoutProviderTeamNestedInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerUpdateOneWithoutWorkspaceTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUpdateManyWithoutTeamNestedInput
@@ -4380,7 +4380,7 @@ export type TeamUncheckedUpdateWithoutInvoiceSequencesInput = {
   gasSpends?: Prisma.GasSpendUncheckedUpdateManyWithoutTeamNestedInput
   tierHistory?: Prisma.TierUpgradeHistoryUncheckedUpdateManyWithoutTeamNestedInput
   supportTickets?: Prisma.SupportTicketUncheckedUpdateManyWithoutTeamNestedInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedUpdateOneWithoutProviderTeamNestedInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedUpdateManyWithoutProviderTeamNestedInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerUncheckedUpdateManyWithoutProviderTeamNestedInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerUncheckedUpdateOneWithoutWorkspaceTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedUpdateManyWithoutTeamNestedInput
@@ -4435,7 +4435,7 @@ export type TeamCreateWithoutInvoicesInput = {
   gasSpends?: Prisma.GasSpendCreateNestedManyWithoutTeamInput
   tierHistory?: Prisma.TierUpgradeHistoryCreateNestedManyWithoutTeamInput
   supportTickets?: Prisma.SupportTicketCreateNestedManyWithoutTeamInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountCreateNestedOneWithoutProviderTeamInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountCreateNestedManyWithoutProviderTeamInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerCreateNestedManyWithoutProviderTeamInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerCreateNestedOneWithoutWorkspaceTeamInput
   arcenCompanies?: Prisma.ArcenCompanyCreateNestedManyWithoutTeamInput
@@ -4490,7 +4490,7 @@ export type TeamUncheckedCreateWithoutInvoicesInput = {
   gasSpends?: Prisma.GasSpendUncheckedCreateNestedManyWithoutTeamInput
   tierHistory?: Prisma.TierUpgradeHistoryUncheckedCreateNestedManyWithoutTeamInput
   supportTickets?: Prisma.SupportTicketUncheckedCreateNestedManyWithoutTeamInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedOneWithoutProviderTeamInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedManyWithoutProviderTeamInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerUncheckedCreateNestedManyWithoutProviderTeamInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerUncheckedCreateNestedOneWithoutWorkspaceTeamInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedCreateNestedManyWithoutTeamInput
@@ -4561,7 +4561,7 @@ export type TeamUpdateWithoutInvoicesInput = {
   gasSpends?: Prisma.GasSpendUpdateManyWithoutTeamNestedInput
   tierHistory?: Prisma.TierUpgradeHistoryUpdateManyWithoutTeamNestedInput
   supportTickets?: Prisma.SupportTicketUpdateManyWithoutTeamNestedInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUpdateOneWithoutProviderTeamNestedInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUpdateManyWithoutProviderTeamNestedInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerUpdateManyWithoutProviderTeamNestedInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerUpdateOneWithoutWorkspaceTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUpdateManyWithoutTeamNestedInput
@@ -4616,7 +4616,7 @@ export type TeamUncheckedUpdateWithoutInvoicesInput = {
   gasSpends?: Prisma.GasSpendUncheckedUpdateManyWithoutTeamNestedInput
   tierHistory?: Prisma.TierUpgradeHistoryUncheckedUpdateManyWithoutTeamNestedInput
   supportTickets?: Prisma.SupportTicketUncheckedUpdateManyWithoutTeamNestedInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedUpdateOneWithoutProviderTeamNestedInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedUpdateManyWithoutProviderTeamNestedInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerUncheckedUpdateManyWithoutProviderTeamNestedInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerUncheckedUpdateOneWithoutWorkspaceTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedUpdateManyWithoutTeamNestedInput
@@ -4671,7 +4671,7 @@ export type TeamCreateWithoutAuditEventsInput = {
   gasSpends?: Prisma.GasSpendCreateNestedManyWithoutTeamInput
   tierHistory?: Prisma.TierUpgradeHistoryCreateNestedManyWithoutTeamInput
   supportTickets?: Prisma.SupportTicketCreateNestedManyWithoutTeamInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountCreateNestedOneWithoutProviderTeamInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountCreateNestedManyWithoutProviderTeamInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerCreateNestedManyWithoutProviderTeamInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerCreateNestedOneWithoutWorkspaceTeamInput
   arcenCompanies?: Prisma.ArcenCompanyCreateNestedManyWithoutTeamInput
@@ -4726,7 +4726,7 @@ export type TeamUncheckedCreateWithoutAuditEventsInput = {
   gasSpends?: Prisma.GasSpendUncheckedCreateNestedManyWithoutTeamInput
   tierHistory?: Prisma.TierUpgradeHistoryUncheckedCreateNestedManyWithoutTeamInput
   supportTickets?: Prisma.SupportTicketUncheckedCreateNestedManyWithoutTeamInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedOneWithoutProviderTeamInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedManyWithoutProviderTeamInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerUncheckedCreateNestedManyWithoutProviderTeamInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerUncheckedCreateNestedOneWithoutWorkspaceTeamInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedCreateNestedManyWithoutTeamInput
@@ -4797,7 +4797,7 @@ export type TeamUpdateWithoutAuditEventsInput = {
   gasSpends?: Prisma.GasSpendUpdateManyWithoutTeamNestedInput
   tierHistory?: Prisma.TierUpgradeHistoryUpdateManyWithoutTeamNestedInput
   supportTickets?: Prisma.SupportTicketUpdateManyWithoutTeamNestedInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUpdateOneWithoutProviderTeamNestedInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUpdateManyWithoutProviderTeamNestedInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerUpdateManyWithoutProviderTeamNestedInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerUpdateOneWithoutWorkspaceTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUpdateManyWithoutTeamNestedInput
@@ -4852,7 +4852,7 @@ export type TeamUncheckedUpdateWithoutAuditEventsInput = {
   gasSpends?: Prisma.GasSpendUncheckedUpdateManyWithoutTeamNestedInput
   tierHistory?: Prisma.TierUpgradeHistoryUncheckedUpdateManyWithoutTeamNestedInput
   supportTickets?: Prisma.SupportTicketUncheckedUpdateManyWithoutTeamNestedInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedUpdateOneWithoutProviderTeamNestedInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedUpdateManyWithoutProviderTeamNestedInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerUncheckedUpdateManyWithoutProviderTeamNestedInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerUncheckedUpdateOneWithoutWorkspaceTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedUpdateManyWithoutTeamNestedInput
@@ -4907,7 +4907,7 @@ export type TeamCreateWithoutBillingEventsInput = {
   gasSpends?: Prisma.GasSpendCreateNestedManyWithoutTeamInput
   tierHistory?: Prisma.TierUpgradeHistoryCreateNestedManyWithoutTeamInput
   supportTickets?: Prisma.SupportTicketCreateNestedManyWithoutTeamInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountCreateNestedOneWithoutProviderTeamInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountCreateNestedManyWithoutProviderTeamInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerCreateNestedManyWithoutProviderTeamInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerCreateNestedOneWithoutWorkspaceTeamInput
   arcenCompanies?: Prisma.ArcenCompanyCreateNestedManyWithoutTeamInput
@@ -4962,7 +4962,7 @@ export type TeamUncheckedCreateWithoutBillingEventsInput = {
   gasSpends?: Prisma.GasSpendUncheckedCreateNestedManyWithoutTeamInput
   tierHistory?: Prisma.TierUpgradeHistoryUncheckedCreateNestedManyWithoutTeamInput
   supportTickets?: Prisma.SupportTicketUncheckedCreateNestedManyWithoutTeamInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedOneWithoutProviderTeamInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedManyWithoutProviderTeamInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerUncheckedCreateNestedManyWithoutProviderTeamInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerUncheckedCreateNestedOneWithoutWorkspaceTeamInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedCreateNestedManyWithoutTeamInput
@@ -5033,7 +5033,7 @@ export type TeamUpdateWithoutBillingEventsInput = {
   gasSpends?: Prisma.GasSpendUpdateManyWithoutTeamNestedInput
   tierHistory?: Prisma.TierUpgradeHistoryUpdateManyWithoutTeamNestedInput
   supportTickets?: Prisma.SupportTicketUpdateManyWithoutTeamNestedInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUpdateOneWithoutProviderTeamNestedInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUpdateManyWithoutProviderTeamNestedInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerUpdateManyWithoutProviderTeamNestedInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerUpdateOneWithoutWorkspaceTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUpdateManyWithoutTeamNestedInput
@@ -5088,7 +5088,7 @@ export type TeamUncheckedUpdateWithoutBillingEventsInput = {
   gasSpends?: Prisma.GasSpendUncheckedUpdateManyWithoutTeamNestedInput
   tierHistory?: Prisma.TierUpgradeHistoryUncheckedUpdateManyWithoutTeamNestedInput
   supportTickets?: Prisma.SupportTicketUncheckedUpdateManyWithoutTeamNestedInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedUpdateOneWithoutProviderTeamNestedInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedUpdateManyWithoutProviderTeamNestedInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerUncheckedUpdateManyWithoutProviderTeamNestedInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerUncheckedUpdateOneWithoutWorkspaceTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedUpdateManyWithoutTeamNestedInput
@@ -5143,7 +5143,7 @@ export type TeamCreateWithoutSubscriptionStatesInput = {
   gasSpends?: Prisma.GasSpendCreateNestedManyWithoutTeamInput
   tierHistory?: Prisma.TierUpgradeHistoryCreateNestedManyWithoutTeamInput
   supportTickets?: Prisma.SupportTicketCreateNestedManyWithoutTeamInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountCreateNestedOneWithoutProviderTeamInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountCreateNestedManyWithoutProviderTeamInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerCreateNestedManyWithoutProviderTeamInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerCreateNestedOneWithoutWorkspaceTeamInput
   arcenCompanies?: Prisma.ArcenCompanyCreateNestedManyWithoutTeamInput
@@ -5198,7 +5198,7 @@ export type TeamUncheckedCreateWithoutSubscriptionStatesInput = {
   gasSpends?: Prisma.GasSpendUncheckedCreateNestedManyWithoutTeamInput
   tierHistory?: Prisma.TierUpgradeHistoryUncheckedCreateNestedManyWithoutTeamInput
   supportTickets?: Prisma.SupportTicketUncheckedCreateNestedManyWithoutTeamInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedOneWithoutProviderTeamInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedManyWithoutProviderTeamInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerUncheckedCreateNestedManyWithoutProviderTeamInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerUncheckedCreateNestedOneWithoutWorkspaceTeamInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedCreateNestedManyWithoutTeamInput
@@ -5269,7 +5269,7 @@ export type TeamUpdateWithoutSubscriptionStatesInput = {
   gasSpends?: Prisma.GasSpendUpdateManyWithoutTeamNestedInput
   tierHistory?: Prisma.TierUpgradeHistoryUpdateManyWithoutTeamNestedInput
   supportTickets?: Prisma.SupportTicketUpdateManyWithoutTeamNestedInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUpdateOneWithoutProviderTeamNestedInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUpdateManyWithoutProviderTeamNestedInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerUpdateManyWithoutProviderTeamNestedInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerUpdateOneWithoutWorkspaceTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUpdateManyWithoutTeamNestedInput
@@ -5324,7 +5324,7 @@ export type TeamUncheckedUpdateWithoutSubscriptionStatesInput = {
   gasSpends?: Prisma.GasSpendUncheckedUpdateManyWithoutTeamNestedInput
   tierHistory?: Prisma.TierUpgradeHistoryUncheckedUpdateManyWithoutTeamNestedInput
   supportTickets?: Prisma.SupportTicketUncheckedUpdateManyWithoutTeamNestedInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedUpdateOneWithoutProviderTeamNestedInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedUpdateManyWithoutProviderTeamNestedInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerUncheckedUpdateManyWithoutProviderTeamNestedInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerUncheckedUpdateOneWithoutWorkspaceTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedUpdateManyWithoutTeamNestedInput
@@ -5379,7 +5379,7 @@ export type TeamCreateWithoutSubscriptionChangeRequestsInput = {
   gasSpends?: Prisma.GasSpendCreateNestedManyWithoutTeamInput
   tierHistory?: Prisma.TierUpgradeHistoryCreateNestedManyWithoutTeamInput
   supportTickets?: Prisma.SupportTicketCreateNestedManyWithoutTeamInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountCreateNestedOneWithoutProviderTeamInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountCreateNestedManyWithoutProviderTeamInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerCreateNestedManyWithoutProviderTeamInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerCreateNestedOneWithoutWorkspaceTeamInput
   arcenCompanies?: Prisma.ArcenCompanyCreateNestedManyWithoutTeamInput
@@ -5434,7 +5434,7 @@ export type TeamUncheckedCreateWithoutSubscriptionChangeRequestsInput = {
   gasSpends?: Prisma.GasSpendUncheckedCreateNestedManyWithoutTeamInput
   tierHistory?: Prisma.TierUpgradeHistoryUncheckedCreateNestedManyWithoutTeamInput
   supportTickets?: Prisma.SupportTicketUncheckedCreateNestedManyWithoutTeamInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedOneWithoutProviderTeamInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedManyWithoutProviderTeamInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerUncheckedCreateNestedManyWithoutProviderTeamInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerUncheckedCreateNestedOneWithoutWorkspaceTeamInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedCreateNestedManyWithoutTeamInput
@@ -5505,7 +5505,7 @@ export type TeamUpdateWithoutSubscriptionChangeRequestsInput = {
   gasSpends?: Prisma.GasSpendUpdateManyWithoutTeamNestedInput
   tierHistory?: Prisma.TierUpgradeHistoryUpdateManyWithoutTeamNestedInput
   supportTickets?: Prisma.SupportTicketUpdateManyWithoutTeamNestedInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUpdateOneWithoutProviderTeamNestedInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUpdateManyWithoutProviderTeamNestedInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerUpdateManyWithoutProviderTeamNestedInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerUpdateOneWithoutWorkspaceTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUpdateManyWithoutTeamNestedInput
@@ -5560,7 +5560,7 @@ export type TeamUncheckedUpdateWithoutSubscriptionChangeRequestsInput = {
   gasSpends?: Prisma.GasSpendUncheckedUpdateManyWithoutTeamNestedInput
   tierHistory?: Prisma.TierUpgradeHistoryUncheckedUpdateManyWithoutTeamNestedInput
   supportTickets?: Prisma.SupportTicketUncheckedUpdateManyWithoutTeamNestedInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedUpdateOneWithoutProviderTeamNestedInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedUpdateManyWithoutProviderTeamNestedInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerUncheckedUpdateManyWithoutProviderTeamNestedInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerUncheckedUpdateOneWithoutWorkspaceTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedUpdateManyWithoutTeamNestedInput
@@ -5615,7 +5615,7 @@ export type TeamCreateWithoutPaymentsInput = {
   gasSpends?: Prisma.GasSpendCreateNestedManyWithoutTeamInput
   tierHistory?: Prisma.TierUpgradeHistoryCreateNestedManyWithoutTeamInput
   supportTickets?: Prisma.SupportTicketCreateNestedManyWithoutTeamInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountCreateNestedOneWithoutProviderTeamInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountCreateNestedManyWithoutProviderTeamInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerCreateNestedManyWithoutProviderTeamInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerCreateNestedOneWithoutWorkspaceTeamInput
   arcenCompanies?: Prisma.ArcenCompanyCreateNestedManyWithoutTeamInput
@@ -5670,7 +5670,7 @@ export type TeamUncheckedCreateWithoutPaymentsInput = {
   gasSpends?: Prisma.GasSpendUncheckedCreateNestedManyWithoutTeamInput
   tierHistory?: Prisma.TierUpgradeHistoryUncheckedCreateNestedManyWithoutTeamInput
   supportTickets?: Prisma.SupportTicketUncheckedCreateNestedManyWithoutTeamInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedOneWithoutProviderTeamInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedManyWithoutProviderTeamInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerUncheckedCreateNestedManyWithoutProviderTeamInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerUncheckedCreateNestedOneWithoutWorkspaceTeamInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedCreateNestedManyWithoutTeamInput
@@ -5741,7 +5741,7 @@ export type TeamUpdateWithoutPaymentsInput = {
   gasSpends?: Prisma.GasSpendUpdateManyWithoutTeamNestedInput
   tierHistory?: Prisma.TierUpgradeHistoryUpdateManyWithoutTeamNestedInput
   supportTickets?: Prisma.SupportTicketUpdateManyWithoutTeamNestedInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUpdateOneWithoutProviderTeamNestedInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUpdateManyWithoutProviderTeamNestedInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerUpdateManyWithoutProviderTeamNestedInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerUpdateOneWithoutWorkspaceTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUpdateManyWithoutTeamNestedInput
@@ -5796,7 +5796,7 @@ export type TeamUncheckedUpdateWithoutPaymentsInput = {
   gasSpends?: Prisma.GasSpendUncheckedUpdateManyWithoutTeamNestedInput
   tierHistory?: Prisma.TierUpgradeHistoryUncheckedUpdateManyWithoutTeamNestedInput
   supportTickets?: Prisma.SupportTicketUncheckedUpdateManyWithoutTeamNestedInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedUpdateOneWithoutProviderTeamNestedInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedUpdateManyWithoutProviderTeamNestedInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerUncheckedUpdateManyWithoutProviderTeamNestedInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerUncheckedUpdateOneWithoutWorkspaceTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedUpdateManyWithoutTeamNestedInput
@@ -5851,7 +5851,7 @@ export type TeamCreateWithoutBillingAdjustmentsInput = {
   gasSpends?: Prisma.GasSpendCreateNestedManyWithoutTeamInput
   tierHistory?: Prisma.TierUpgradeHistoryCreateNestedManyWithoutTeamInput
   supportTickets?: Prisma.SupportTicketCreateNestedManyWithoutTeamInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountCreateNestedOneWithoutProviderTeamInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountCreateNestedManyWithoutProviderTeamInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerCreateNestedManyWithoutProviderTeamInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerCreateNestedOneWithoutWorkspaceTeamInput
   arcenCompanies?: Prisma.ArcenCompanyCreateNestedManyWithoutTeamInput
@@ -5906,7 +5906,7 @@ export type TeamUncheckedCreateWithoutBillingAdjustmentsInput = {
   gasSpends?: Prisma.GasSpendUncheckedCreateNestedManyWithoutTeamInput
   tierHistory?: Prisma.TierUpgradeHistoryUncheckedCreateNestedManyWithoutTeamInput
   supportTickets?: Prisma.SupportTicketUncheckedCreateNestedManyWithoutTeamInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedOneWithoutProviderTeamInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedManyWithoutProviderTeamInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerUncheckedCreateNestedManyWithoutProviderTeamInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerUncheckedCreateNestedOneWithoutWorkspaceTeamInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedCreateNestedManyWithoutTeamInput
@@ -5977,7 +5977,7 @@ export type TeamUpdateWithoutBillingAdjustmentsInput = {
   gasSpends?: Prisma.GasSpendUpdateManyWithoutTeamNestedInput
   tierHistory?: Prisma.TierUpgradeHistoryUpdateManyWithoutTeamNestedInput
   supportTickets?: Prisma.SupportTicketUpdateManyWithoutTeamNestedInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUpdateOneWithoutProviderTeamNestedInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUpdateManyWithoutProviderTeamNestedInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerUpdateManyWithoutProviderTeamNestedInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerUpdateOneWithoutWorkspaceTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUpdateManyWithoutTeamNestedInput
@@ -6032,7 +6032,7 @@ export type TeamUncheckedUpdateWithoutBillingAdjustmentsInput = {
   gasSpends?: Prisma.GasSpendUncheckedUpdateManyWithoutTeamNestedInput
   tierHistory?: Prisma.TierUpgradeHistoryUncheckedUpdateManyWithoutTeamNestedInput
   supportTickets?: Prisma.SupportTicketUncheckedUpdateManyWithoutTeamNestedInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedUpdateOneWithoutProviderTeamNestedInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedUpdateManyWithoutProviderTeamNestedInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerUncheckedUpdateManyWithoutProviderTeamNestedInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerUncheckedUpdateOneWithoutWorkspaceTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedUpdateManyWithoutTeamNestedInput
@@ -6087,7 +6087,7 @@ export type TeamCreateWithoutBillingBalancesInput = {
   gasSpends?: Prisma.GasSpendCreateNestedManyWithoutTeamInput
   tierHistory?: Prisma.TierUpgradeHistoryCreateNestedManyWithoutTeamInput
   supportTickets?: Prisma.SupportTicketCreateNestedManyWithoutTeamInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountCreateNestedOneWithoutProviderTeamInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountCreateNestedManyWithoutProviderTeamInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerCreateNestedManyWithoutProviderTeamInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerCreateNestedOneWithoutWorkspaceTeamInput
   arcenCompanies?: Prisma.ArcenCompanyCreateNestedManyWithoutTeamInput
@@ -6142,7 +6142,7 @@ export type TeamUncheckedCreateWithoutBillingBalancesInput = {
   gasSpends?: Prisma.GasSpendUncheckedCreateNestedManyWithoutTeamInput
   tierHistory?: Prisma.TierUpgradeHistoryUncheckedCreateNestedManyWithoutTeamInput
   supportTickets?: Prisma.SupportTicketUncheckedCreateNestedManyWithoutTeamInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedOneWithoutProviderTeamInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedManyWithoutProviderTeamInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerUncheckedCreateNestedManyWithoutProviderTeamInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerUncheckedCreateNestedOneWithoutWorkspaceTeamInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedCreateNestedManyWithoutTeamInput
@@ -6213,7 +6213,7 @@ export type TeamUpdateWithoutBillingBalancesInput = {
   gasSpends?: Prisma.GasSpendUpdateManyWithoutTeamNestedInput
   tierHistory?: Prisma.TierUpgradeHistoryUpdateManyWithoutTeamNestedInput
   supportTickets?: Prisma.SupportTicketUpdateManyWithoutTeamNestedInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUpdateOneWithoutProviderTeamNestedInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUpdateManyWithoutProviderTeamNestedInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerUpdateManyWithoutProviderTeamNestedInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerUpdateOneWithoutWorkspaceTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUpdateManyWithoutTeamNestedInput
@@ -6268,7 +6268,7 @@ export type TeamUncheckedUpdateWithoutBillingBalancesInput = {
   gasSpends?: Prisma.GasSpendUncheckedUpdateManyWithoutTeamNestedInput
   tierHistory?: Prisma.TierUpgradeHistoryUncheckedUpdateManyWithoutTeamNestedInput
   supportTickets?: Prisma.SupportTicketUncheckedUpdateManyWithoutTeamNestedInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedUpdateOneWithoutProviderTeamNestedInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedUpdateManyWithoutProviderTeamNestedInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerUncheckedUpdateManyWithoutProviderTeamNestedInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerUncheckedUpdateOneWithoutWorkspaceTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedUpdateManyWithoutTeamNestedInput
@@ -6323,7 +6323,7 @@ export type TeamCreateWithoutRefundsInput = {
   gasSpends?: Prisma.GasSpendCreateNestedManyWithoutTeamInput
   tierHistory?: Prisma.TierUpgradeHistoryCreateNestedManyWithoutTeamInput
   supportTickets?: Prisma.SupportTicketCreateNestedManyWithoutTeamInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountCreateNestedOneWithoutProviderTeamInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountCreateNestedManyWithoutProviderTeamInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerCreateNestedManyWithoutProviderTeamInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerCreateNestedOneWithoutWorkspaceTeamInput
   arcenCompanies?: Prisma.ArcenCompanyCreateNestedManyWithoutTeamInput
@@ -6378,7 +6378,7 @@ export type TeamUncheckedCreateWithoutRefundsInput = {
   gasSpends?: Prisma.GasSpendUncheckedCreateNestedManyWithoutTeamInput
   tierHistory?: Prisma.TierUpgradeHistoryUncheckedCreateNestedManyWithoutTeamInput
   supportTickets?: Prisma.SupportTicketUncheckedCreateNestedManyWithoutTeamInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedOneWithoutProviderTeamInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedManyWithoutProviderTeamInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerUncheckedCreateNestedManyWithoutProviderTeamInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerUncheckedCreateNestedOneWithoutWorkspaceTeamInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedCreateNestedManyWithoutTeamInput
@@ -6449,7 +6449,7 @@ export type TeamUpdateWithoutRefundsInput = {
   gasSpends?: Prisma.GasSpendUpdateManyWithoutTeamNestedInput
   tierHistory?: Prisma.TierUpgradeHistoryUpdateManyWithoutTeamNestedInput
   supportTickets?: Prisma.SupportTicketUpdateManyWithoutTeamNestedInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUpdateOneWithoutProviderTeamNestedInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUpdateManyWithoutProviderTeamNestedInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerUpdateManyWithoutProviderTeamNestedInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerUpdateOneWithoutWorkspaceTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUpdateManyWithoutTeamNestedInput
@@ -6504,7 +6504,7 @@ export type TeamUncheckedUpdateWithoutRefundsInput = {
   gasSpends?: Prisma.GasSpendUncheckedUpdateManyWithoutTeamNestedInput
   tierHistory?: Prisma.TierUpgradeHistoryUncheckedUpdateManyWithoutTeamNestedInput
   supportTickets?: Prisma.SupportTicketUncheckedUpdateManyWithoutTeamNestedInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedUpdateOneWithoutProviderTeamNestedInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedUpdateManyWithoutProviderTeamNestedInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerUncheckedUpdateManyWithoutProviderTeamNestedInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerUncheckedUpdateOneWithoutWorkspaceTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedUpdateManyWithoutTeamNestedInput
@@ -6559,7 +6559,7 @@ export type TeamCreateWithoutBillingRecoveryTasksInput = {
   gasSpends?: Prisma.GasSpendCreateNestedManyWithoutTeamInput
   tierHistory?: Prisma.TierUpgradeHistoryCreateNestedManyWithoutTeamInput
   supportTickets?: Prisma.SupportTicketCreateNestedManyWithoutTeamInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountCreateNestedOneWithoutProviderTeamInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountCreateNestedManyWithoutProviderTeamInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerCreateNestedManyWithoutProviderTeamInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerCreateNestedOneWithoutWorkspaceTeamInput
   arcenCompanies?: Prisma.ArcenCompanyCreateNestedManyWithoutTeamInput
@@ -6614,7 +6614,7 @@ export type TeamUncheckedCreateWithoutBillingRecoveryTasksInput = {
   gasSpends?: Prisma.GasSpendUncheckedCreateNestedManyWithoutTeamInput
   tierHistory?: Prisma.TierUpgradeHistoryUncheckedCreateNestedManyWithoutTeamInput
   supportTickets?: Prisma.SupportTicketUncheckedCreateNestedManyWithoutTeamInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedOneWithoutProviderTeamInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedManyWithoutProviderTeamInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerUncheckedCreateNestedManyWithoutProviderTeamInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerUncheckedCreateNestedOneWithoutWorkspaceTeamInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedCreateNestedManyWithoutTeamInput
@@ -6685,7 +6685,7 @@ export type TeamUpdateWithoutBillingRecoveryTasksInput = {
   gasSpends?: Prisma.GasSpendUpdateManyWithoutTeamNestedInput
   tierHistory?: Prisma.TierUpgradeHistoryUpdateManyWithoutTeamNestedInput
   supportTickets?: Prisma.SupportTicketUpdateManyWithoutTeamNestedInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUpdateOneWithoutProviderTeamNestedInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUpdateManyWithoutProviderTeamNestedInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerUpdateManyWithoutProviderTeamNestedInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerUpdateOneWithoutWorkspaceTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUpdateManyWithoutTeamNestedInput
@@ -6740,7 +6740,7 @@ export type TeamUncheckedUpdateWithoutBillingRecoveryTasksInput = {
   gasSpends?: Prisma.GasSpendUncheckedUpdateManyWithoutTeamNestedInput
   tierHistory?: Prisma.TierUpgradeHistoryUncheckedUpdateManyWithoutTeamNestedInput
   supportTickets?: Prisma.SupportTicketUncheckedUpdateManyWithoutTeamNestedInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedUpdateOneWithoutProviderTeamNestedInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedUpdateManyWithoutProviderTeamNestedInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerUncheckedUpdateManyWithoutProviderTeamNestedInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerUncheckedUpdateOneWithoutWorkspaceTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedUpdateManyWithoutTeamNestedInput
@@ -6795,7 +6795,7 @@ export type TeamCreateWithoutWebhookDeliveriesInput = {
   gasSpends?: Prisma.GasSpendCreateNestedManyWithoutTeamInput
   tierHistory?: Prisma.TierUpgradeHistoryCreateNestedManyWithoutTeamInput
   supportTickets?: Prisma.SupportTicketCreateNestedManyWithoutTeamInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountCreateNestedOneWithoutProviderTeamInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountCreateNestedManyWithoutProviderTeamInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerCreateNestedManyWithoutProviderTeamInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerCreateNestedOneWithoutWorkspaceTeamInput
   arcenCompanies?: Prisma.ArcenCompanyCreateNestedManyWithoutTeamInput
@@ -6850,7 +6850,7 @@ export type TeamUncheckedCreateWithoutWebhookDeliveriesInput = {
   gasSpends?: Prisma.GasSpendUncheckedCreateNestedManyWithoutTeamInput
   tierHistory?: Prisma.TierUpgradeHistoryUncheckedCreateNestedManyWithoutTeamInput
   supportTickets?: Prisma.SupportTicketUncheckedCreateNestedManyWithoutTeamInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedOneWithoutProviderTeamInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedManyWithoutProviderTeamInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerUncheckedCreateNestedManyWithoutProviderTeamInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerUncheckedCreateNestedOneWithoutWorkspaceTeamInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedCreateNestedManyWithoutTeamInput
@@ -6921,7 +6921,7 @@ export type TeamUpdateWithoutWebhookDeliveriesInput = {
   gasSpends?: Prisma.GasSpendUpdateManyWithoutTeamNestedInput
   tierHistory?: Prisma.TierUpgradeHistoryUpdateManyWithoutTeamNestedInput
   supportTickets?: Prisma.SupportTicketUpdateManyWithoutTeamNestedInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUpdateOneWithoutProviderTeamNestedInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUpdateManyWithoutProviderTeamNestedInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerUpdateManyWithoutProviderTeamNestedInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerUpdateOneWithoutWorkspaceTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUpdateManyWithoutTeamNestedInput
@@ -6976,7 +6976,7 @@ export type TeamUncheckedUpdateWithoutWebhookDeliveriesInput = {
   gasSpends?: Prisma.GasSpendUncheckedUpdateManyWithoutTeamNestedInput
   tierHistory?: Prisma.TierUpgradeHistoryUncheckedUpdateManyWithoutTeamNestedInput
   supportTickets?: Prisma.SupportTicketUncheckedUpdateManyWithoutTeamNestedInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedUpdateOneWithoutProviderTeamNestedInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedUpdateManyWithoutProviderTeamNestedInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerUncheckedUpdateManyWithoutProviderTeamNestedInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerUncheckedUpdateOneWithoutWorkspaceTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedUpdateManyWithoutTeamNestedInput
@@ -7268,7 +7268,7 @@ export type TeamCreateWithoutPlatformBillingWorkspaceCustomerInput = {
   gasSpends?: Prisma.GasSpendCreateNestedManyWithoutTeamInput
   tierHistory?: Prisma.TierUpgradeHistoryCreateNestedManyWithoutTeamInput
   supportTickets?: Prisma.SupportTicketCreateNestedManyWithoutTeamInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountCreateNestedOneWithoutProviderTeamInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountCreateNestedManyWithoutProviderTeamInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerCreateNestedManyWithoutProviderTeamInput
   arcenCompanies?: Prisma.ArcenCompanyCreateNestedManyWithoutTeamInput
   addOnGrants?: Prisma.CompanyAddOnGrantCreateNestedManyWithoutTeamInput
@@ -7323,7 +7323,7 @@ export type TeamUncheckedCreateWithoutPlatformBillingWorkspaceCustomerInput = {
   gasSpends?: Prisma.GasSpendUncheckedCreateNestedManyWithoutTeamInput
   tierHistory?: Prisma.TierUpgradeHistoryUncheckedCreateNestedManyWithoutTeamInput
   supportTickets?: Prisma.SupportTicketUncheckedCreateNestedManyWithoutTeamInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedOneWithoutProviderTeamInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedManyWithoutProviderTeamInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerUncheckedCreateNestedManyWithoutProviderTeamInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedCreateNestedManyWithoutTeamInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedCreateNestedManyWithoutTeamInput
@@ -7383,7 +7383,7 @@ export type TeamCreateWithoutPlatformBillingProviderCustomersInput = {
   gasSpends?: Prisma.GasSpendCreateNestedManyWithoutTeamInput
   tierHistory?: Prisma.TierUpgradeHistoryCreateNestedManyWithoutTeamInput
   supportTickets?: Prisma.SupportTicketCreateNestedManyWithoutTeamInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountCreateNestedOneWithoutProviderTeamInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountCreateNestedManyWithoutProviderTeamInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerCreateNestedOneWithoutWorkspaceTeamInput
   arcenCompanies?: Prisma.ArcenCompanyCreateNestedManyWithoutTeamInput
   addOnGrants?: Prisma.CompanyAddOnGrantCreateNestedManyWithoutTeamInput
@@ -7438,7 +7438,7 @@ export type TeamUncheckedCreateWithoutPlatformBillingProviderCustomersInput = {
   gasSpends?: Prisma.GasSpendUncheckedCreateNestedManyWithoutTeamInput
   tierHistory?: Prisma.TierUpgradeHistoryUncheckedCreateNestedManyWithoutTeamInput
   supportTickets?: Prisma.SupportTicketUncheckedCreateNestedManyWithoutTeamInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedOneWithoutProviderTeamInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedManyWithoutProviderTeamInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerUncheckedCreateNestedOneWithoutWorkspaceTeamInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedCreateNestedManyWithoutTeamInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedCreateNestedManyWithoutTeamInput
@@ -7509,7 +7509,7 @@ export type TeamUpdateWithoutPlatformBillingWorkspaceCustomerInput = {
   gasSpends?: Prisma.GasSpendUpdateManyWithoutTeamNestedInput
   tierHistory?: Prisma.TierUpgradeHistoryUpdateManyWithoutTeamNestedInput
   supportTickets?: Prisma.SupportTicketUpdateManyWithoutTeamNestedInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUpdateOneWithoutProviderTeamNestedInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUpdateManyWithoutProviderTeamNestedInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerUpdateManyWithoutProviderTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUpdateManyWithoutTeamNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUpdateManyWithoutTeamNestedInput
@@ -7564,7 +7564,7 @@ export type TeamUncheckedUpdateWithoutPlatformBillingWorkspaceCustomerInput = {
   gasSpends?: Prisma.GasSpendUncheckedUpdateManyWithoutTeamNestedInput
   tierHistory?: Prisma.TierUpgradeHistoryUncheckedUpdateManyWithoutTeamNestedInput
   supportTickets?: Prisma.SupportTicketUncheckedUpdateManyWithoutTeamNestedInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedUpdateOneWithoutProviderTeamNestedInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedUpdateManyWithoutProviderTeamNestedInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerUncheckedUpdateManyWithoutProviderTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedUpdateManyWithoutTeamNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedUpdateManyWithoutTeamNestedInput
@@ -7630,7 +7630,7 @@ export type TeamUpdateWithoutPlatformBillingProviderCustomersInput = {
   gasSpends?: Prisma.GasSpendUpdateManyWithoutTeamNestedInput
   tierHistory?: Prisma.TierUpgradeHistoryUpdateManyWithoutTeamNestedInput
   supportTickets?: Prisma.SupportTicketUpdateManyWithoutTeamNestedInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUpdateOneWithoutProviderTeamNestedInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUpdateManyWithoutProviderTeamNestedInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerUpdateOneWithoutWorkspaceTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUpdateManyWithoutTeamNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUpdateManyWithoutTeamNestedInput
@@ -7685,7 +7685,7 @@ export type TeamUncheckedUpdateWithoutPlatformBillingProviderCustomersInput = {
   gasSpends?: Prisma.GasSpendUncheckedUpdateManyWithoutTeamNestedInput
   tierHistory?: Prisma.TierUpgradeHistoryUncheckedUpdateManyWithoutTeamNestedInput
   supportTickets?: Prisma.SupportTicketUncheckedUpdateManyWithoutTeamNestedInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedUpdateOneWithoutProviderTeamNestedInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedUpdateManyWithoutProviderTeamNestedInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerUncheckedUpdateOneWithoutWorkspaceTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedUpdateManyWithoutTeamNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedUpdateManyWithoutTeamNestedInput
@@ -7739,7 +7739,7 @@ export type TeamCreateWithoutGasSpendsInput = {
   webhookDeliveries?: Prisma.WebhookDeliveryCreateNestedManyWithoutTeamInput
   tierHistory?: Prisma.TierUpgradeHistoryCreateNestedManyWithoutTeamInput
   supportTickets?: Prisma.SupportTicketCreateNestedManyWithoutTeamInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountCreateNestedOneWithoutProviderTeamInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountCreateNestedManyWithoutProviderTeamInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerCreateNestedManyWithoutProviderTeamInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerCreateNestedOneWithoutWorkspaceTeamInput
   arcenCompanies?: Prisma.ArcenCompanyCreateNestedManyWithoutTeamInput
@@ -7794,7 +7794,7 @@ export type TeamUncheckedCreateWithoutGasSpendsInput = {
   webhookDeliveries?: Prisma.WebhookDeliveryUncheckedCreateNestedManyWithoutTeamInput
   tierHistory?: Prisma.TierUpgradeHistoryUncheckedCreateNestedManyWithoutTeamInput
   supportTickets?: Prisma.SupportTicketUncheckedCreateNestedManyWithoutTeamInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedOneWithoutProviderTeamInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedManyWithoutProviderTeamInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerUncheckedCreateNestedManyWithoutProviderTeamInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerUncheckedCreateNestedOneWithoutWorkspaceTeamInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedCreateNestedManyWithoutTeamInput
@@ -7865,7 +7865,7 @@ export type TeamUpdateWithoutGasSpendsInput = {
   webhookDeliveries?: Prisma.WebhookDeliveryUpdateManyWithoutTeamNestedInput
   tierHistory?: Prisma.TierUpgradeHistoryUpdateManyWithoutTeamNestedInput
   supportTickets?: Prisma.SupportTicketUpdateManyWithoutTeamNestedInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUpdateOneWithoutProviderTeamNestedInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUpdateManyWithoutProviderTeamNestedInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerUpdateManyWithoutProviderTeamNestedInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerUpdateOneWithoutWorkspaceTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUpdateManyWithoutTeamNestedInput
@@ -7920,7 +7920,7 @@ export type TeamUncheckedUpdateWithoutGasSpendsInput = {
   webhookDeliveries?: Prisma.WebhookDeliveryUncheckedUpdateManyWithoutTeamNestedInput
   tierHistory?: Prisma.TierUpgradeHistoryUncheckedUpdateManyWithoutTeamNestedInput
   supportTickets?: Prisma.SupportTicketUncheckedUpdateManyWithoutTeamNestedInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedUpdateOneWithoutProviderTeamNestedInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedUpdateManyWithoutProviderTeamNestedInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerUncheckedUpdateManyWithoutProviderTeamNestedInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerUncheckedUpdateOneWithoutWorkspaceTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedUpdateManyWithoutTeamNestedInput
@@ -7975,7 +7975,7 @@ export type TeamCreateWithoutTierHistoryInput = {
   webhookDeliveries?: Prisma.WebhookDeliveryCreateNestedManyWithoutTeamInput
   gasSpends?: Prisma.GasSpendCreateNestedManyWithoutTeamInput
   supportTickets?: Prisma.SupportTicketCreateNestedManyWithoutTeamInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountCreateNestedOneWithoutProviderTeamInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountCreateNestedManyWithoutProviderTeamInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerCreateNestedManyWithoutProviderTeamInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerCreateNestedOneWithoutWorkspaceTeamInput
   arcenCompanies?: Prisma.ArcenCompanyCreateNestedManyWithoutTeamInput
@@ -8030,7 +8030,7 @@ export type TeamUncheckedCreateWithoutTierHistoryInput = {
   webhookDeliveries?: Prisma.WebhookDeliveryUncheckedCreateNestedManyWithoutTeamInput
   gasSpends?: Prisma.GasSpendUncheckedCreateNestedManyWithoutTeamInput
   supportTickets?: Prisma.SupportTicketUncheckedCreateNestedManyWithoutTeamInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedOneWithoutProviderTeamInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedManyWithoutProviderTeamInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerUncheckedCreateNestedManyWithoutProviderTeamInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerUncheckedCreateNestedOneWithoutWorkspaceTeamInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedCreateNestedManyWithoutTeamInput
@@ -8101,7 +8101,7 @@ export type TeamUpdateWithoutTierHistoryInput = {
   webhookDeliveries?: Prisma.WebhookDeliveryUpdateManyWithoutTeamNestedInput
   gasSpends?: Prisma.GasSpendUpdateManyWithoutTeamNestedInput
   supportTickets?: Prisma.SupportTicketUpdateManyWithoutTeamNestedInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUpdateOneWithoutProviderTeamNestedInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUpdateManyWithoutProviderTeamNestedInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerUpdateManyWithoutProviderTeamNestedInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerUpdateOneWithoutWorkspaceTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUpdateManyWithoutTeamNestedInput
@@ -8156,7 +8156,7 @@ export type TeamUncheckedUpdateWithoutTierHistoryInput = {
   webhookDeliveries?: Prisma.WebhookDeliveryUncheckedUpdateManyWithoutTeamNestedInput
   gasSpends?: Prisma.GasSpendUncheckedUpdateManyWithoutTeamNestedInput
   supportTickets?: Prisma.SupportTicketUncheckedUpdateManyWithoutTeamNestedInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedUpdateOneWithoutProviderTeamNestedInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedUpdateManyWithoutProviderTeamNestedInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerUncheckedUpdateManyWithoutProviderTeamNestedInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerUncheckedUpdateOneWithoutWorkspaceTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedUpdateManyWithoutTeamNestedInput
@@ -8211,7 +8211,7 @@ export type TeamCreateWithoutSupportTicketsInput = {
   webhookDeliveries?: Prisma.WebhookDeliveryCreateNestedManyWithoutTeamInput
   gasSpends?: Prisma.GasSpendCreateNestedManyWithoutTeamInput
   tierHistory?: Prisma.TierUpgradeHistoryCreateNestedManyWithoutTeamInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountCreateNestedOneWithoutProviderTeamInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountCreateNestedManyWithoutProviderTeamInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerCreateNestedManyWithoutProviderTeamInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerCreateNestedOneWithoutWorkspaceTeamInput
   arcenCompanies?: Prisma.ArcenCompanyCreateNestedManyWithoutTeamInput
@@ -8266,7 +8266,7 @@ export type TeamUncheckedCreateWithoutSupportTicketsInput = {
   webhookDeliveries?: Prisma.WebhookDeliveryUncheckedCreateNestedManyWithoutTeamInput
   gasSpends?: Prisma.GasSpendUncheckedCreateNestedManyWithoutTeamInput
   tierHistory?: Prisma.TierUpgradeHistoryUncheckedCreateNestedManyWithoutTeamInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedOneWithoutProviderTeamInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedManyWithoutProviderTeamInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerUncheckedCreateNestedManyWithoutProviderTeamInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerUncheckedCreateNestedOneWithoutWorkspaceTeamInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedCreateNestedManyWithoutTeamInput
@@ -8337,7 +8337,7 @@ export type TeamUpdateWithoutSupportTicketsInput = {
   webhookDeliveries?: Prisma.WebhookDeliveryUpdateManyWithoutTeamNestedInput
   gasSpends?: Prisma.GasSpendUpdateManyWithoutTeamNestedInput
   tierHistory?: Prisma.TierUpgradeHistoryUpdateManyWithoutTeamNestedInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUpdateOneWithoutProviderTeamNestedInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUpdateManyWithoutProviderTeamNestedInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerUpdateManyWithoutProviderTeamNestedInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerUpdateOneWithoutWorkspaceTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUpdateManyWithoutTeamNestedInput
@@ -8392,7 +8392,7 @@ export type TeamUncheckedUpdateWithoutSupportTicketsInput = {
   webhookDeliveries?: Prisma.WebhookDeliveryUncheckedUpdateManyWithoutTeamNestedInput
   gasSpends?: Prisma.GasSpendUncheckedUpdateManyWithoutTeamNestedInput
   tierHistory?: Prisma.TierUpgradeHistoryUncheckedUpdateManyWithoutTeamNestedInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedUpdateOneWithoutProviderTeamNestedInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedUpdateManyWithoutProviderTeamNestedInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerUncheckedUpdateManyWithoutProviderTeamNestedInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerUncheckedUpdateOneWithoutWorkspaceTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedUpdateManyWithoutTeamNestedInput
@@ -8448,7 +8448,7 @@ export type TeamCreateWithoutArcenCompaniesInput = {
   gasSpends?: Prisma.GasSpendCreateNestedManyWithoutTeamInput
   tierHistory?: Prisma.TierUpgradeHistoryCreateNestedManyWithoutTeamInput
   supportTickets?: Prisma.SupportTicketCreateNestedManyWithoutTeamInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountCreateNestedOneWithoutProviderTeamInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountCreateNestedManyWithoutProviderTeamInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerCreateNestedManyWithoutProviderTeamInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerCreateNestedOneWithoutWorkspaceTeamInput
   addOnGrants?: Prisma.CompanyAddOnGrantCreateNestedManyWithoutTeamInput
@@ -8503,7 +8503,7 @@ export type TeamUncheckedCreateWithoutArcenCompaniesInput = {
   gasSpends?: Prisma.GasSpendUncheckedCreateNestedManyWithoutTeamInput
   tierHistory?: Prisma.TierUpgradeHistoryUncheckedCreateNestedManyWithoutTeamInput
   supportTickets?: Prisma.SupportTicketUncheckedCreateNestedManyWithoutTeamInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedOneWithoutProviderTeamInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedManyWithoutProviderTeamInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerUncheckedCreateNestedManyWithoutProviderTeamInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerUncheckedCreateNestedOneWithoutWorkspaceTeamInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedCreateNestedManyWithoutTeamInput
@@ -8574,7 +8574,7 @@ export type TeamUpdateWithoutArcenCompaniesInput = {
   gasSpends?: Prisma.GasSpendUpdateManyWithoutTeamNestedInput
   tierHistory?: Prisma.TierUpgradeHistoryUpdateManyWithoutTeamNestedInput
   supportTickets?: Prisma.SupportTicketUpdateManyWithoutTeamNestedInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUpdateOneWithoutProviderTeamNestedInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUpdateManyWithoutProviderTeamNestedInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerUpdateManyWithoutProviderTeamNestedInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerUpdateOneWithoutWorkspaceTeamNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUpdateManyWithoutTeamNestedInput
@@ -8629,7 +8629,7 @@ export type TeamUncheckedUpdateWithoutArcenCompaniesInput = {
   gasSpends?: Prisma.GasSpendUncheckedUpdateManyWithoutTeamNestedInput
   tierHistory?: Prisma.TierUpgradeHistoryUncheckedUpdateManyWithoutTeamNestedInput
   supportTickets?: Prisma.SupportTicketUncheckedUpdateManyWithoutTeamNestedInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedUpdateOneWithoutProviderTeamNestedInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedUpdateManyWithoutProviderTeamNestedInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerUncheckedUpdateManyWithoutProviderTeamNestedInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerUncheckedUpdateOneWithoutWorkspaceTeamNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedUpdateManyWithoutTeamNestedInput
@@ -8684,7 +8684,7 @@ export type TeamCreateWithoutAddOnGrantsInput = {
   gasSpends?: Prisma.GasSpendCreateNestedManyWithoutTeamInput
   tierHistory?: Prisma.TierUpgradeHistoryCreateNestedManyWithoutTeamInput
   supportTickets?: Prisma.SupportTicketCreateNestedManyWithoutTeamInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountCreateNestedOneWithoutProviderTeamInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountCreateNestedManyWithoutProviderTeamInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerCreateNestedManyWithoutProviderTeamInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerCreateNestedOneWithoutWorkspaceTeamInput
   arcenCompanies?: Prisma.ArcenCompanyCreateNestedManyWithoutTeamInput
@@ -8739,7 +8739,7 @@ export type TeamUncheckedCreateWithoutAddOnGrantsInput = {
   gasSpends?: Prisma.GasSpendUncheckedCreateNestedManyWithoutTeamInput
   tierHistory?: Prisma.TierUpgradeHistoryUncheckedCreateNestedManyWithoutTeamInput
   supportTickets?: Prisma.SupportTicketUncheckedCreateNestedManyWithoutTeamInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedOneWithoutProviderTeamInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedManyWithoutProviderTeamInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerUncheckedCreateNestedManyWithoutProviderTeamInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerUncheckedCreateNestedOneWithoutWorkspaceTeamInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedCreateNestedManyWithoutTeamInput
@@ -8810,7 +8810,7 @@ export type TeamUpdateWithoutAddOnGrantsInput = {
   gasSpends?: Prisma.GasSpendUpdateManyWithoutTeamNestedInput
   tierHistory?: Prisma.TierUpgradeHistoryUpdateManyWithoutTeamNestedInput
   supportTickets?: Prisma.SupportTicketUpdateManyWithoutTeamNestedInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUpdateOneWithoutProviderTeamNestedInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUpdateManyWithoutProviderTeamNestedInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerUpdateManyWithoutProviderTeamNestedInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerUpdateOneWithoutWorkspaceTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUpdateManyWithoutTeamNestedInput
@@ -8865,7 +8865,7 @@ export type TeamUncheckedUpdateWithoutAddOnGrantsInput = {
   gasSpends?: Prisma.GasSpendUncheckedUpdateManyWithoutTeamNestedInput
   tierHistory?: Prisma.TierUpgradeHistoryUncheckedUpdateManyWithoutTeamNestedInput
   supportTickets?: Prisma.SupportTicketUncheckedUpdateManyWithoutTeamNestedInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedUpdateOneWithoutProviderTeamNestedInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedUpdateManyWithoutProviderTeamNestedInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerUncheckedUpdateManyWithoutProviderTeamNestedInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerUncheckedUpdateOneWithoutWorkspaceTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedUpdateManyWithoutTeamNestedInput
@@ -8920,7 +8920,7 @@ export type TeamCreateWithoutCreditGrantsInput = {
   gasSpends?: Prisma.GasSpendCreateNestedManyWithoutTeamInput
   tierHistory?: Prisma.TierUpgradeHistoryCreateNestedManyWithoutTeamInput
   supportTickets?: Prisma.SupportTicketCreateNestedManyWithoutTeamInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountCreateNestedOneWithoutProviderTeamInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountCreateNestedManyWithoutProviderTeamInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerCreateNestedManyWithoutProviderTeamInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerCreateNestedOneWithoutWorkspaceTeamInput
   arcenCompanies?: Prisma.ArcenCompanyCreateNestedManyWithoutTeamInput
@@ -8975,7 +8975,7 @@ export type TeamUncheckedCreateWithoutCreditGrantsInput = {
   gasSpends?: Prisma.GasSpendUncheckedCreateNestedManyWithoutTeamInput
   tierHistory?: Prisma.TierUpgradeHistoryUncheckedCreateNestedManyWithoutTeamInput
   supportTickets?: Prisma.SupportTicketUncheckedCreateNestedManyWithoutTeamInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedOneWithoutProviderTeamInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedManyWithoutProviderTeamInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerUncheckedCreateNestedManyWithoutProviderTeamInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerUncheckedCreateNestedOneWithoutWorkspaceTeamInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedCreateNestedManyWithoutTeamInput
@@ -9046,7 +9046,7 @@ export type TeamUpdateWithoutCreditGrantsInput = {
   gasSpends?: Prisma.GasSpendUpdateManyWithoutTeamNestedInput
   tierHistory?: Prisma.TierUpgradeHistoryUpdateManyWithoutTeamNestedInput
   supportTickets?: Prisma.SupportTicketUpdateManyWithoutTeamNestedInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUpdateOneWithoutProviderTeamNestedInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUpdateManyWithoutProviderTeamNestedInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerUpdateManyWithoutProviderTeamNestedInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerUpdateOneWithoutWorkspaceTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUpdateManyWithoutTeamNestedInput
@@ -9101,7 +9101,7 @@ export type TeamUncheckedUpdateWithoutCreditGrantsInput = {
   gasSpends?: Prisma.GasSpendUncheckedUpdateManyWithoutTeamNestedInput
   tierHistory?: Prisma.TierUpgradeHistoryUncheckedUpdateManyWithoutTeamNestedInput
   supportTickets?: Prisma.SupportTicketUncheckedUpdateManyWithoutTeamNestedInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedUpdateOneWithoutProviderTeamNestedInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedUpdateManyWithoutProviderTeamNestedInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerUncheckedUpdateManyWithoutProviderTeamNestedInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerUncheckedUpdateOneWithoutWorkspaceTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedUpdateManyWithoutTeamNestedInput
@@ -9155,7 +9155,7 @@ export type TeamCreateWithoutCreditLedgerEntriesInput = {
   gasSpends?: Prisma.GasSpendCreateNestedManyWithoutTeamInput
   tierHistory?: Prisma.TierUpgradeHistoryCreateNestedManyWithoutTeamInput
   supportTickets?: Prisma.SupportTicketCreateNestedManyWithoutTeamInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountCreateNestedOneWithoutProviderTeamInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountCreateNestedManyWithoutProviderTeamInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerCreateNestedManyWithoutProviderTeamInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerCreateNestedOneWithoutWorkspaceTeamInput
   arcenCompanies?: Prisma.ArcenCompanyCreateNestedManyWithoutTeamInput
@@ -9210,7 +9210,7 @@ export type TeamUncheckedCreateWithoutCreditLedgerEntriesInput = {
   gasSpends?: Prisma.GasSpendUncheckedCreateNestedManyWithoutTeamInput
   tierHistory?: Prisma.TierUpgradeHistoryUncheckedCreateNestedManyWithoutTeamInput
   supportTickets?: Prisma.SupportTicketUncheckedCreateNestedManyWithoutTeamInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedOneWithoutProviderTeamInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedManyWithoutProviderTeamInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerUncheckedCreateNestedManyWithoutProviderTeamInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerUncheckedCreateNestedOneWithoutWorkspaceTeamInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedCreateNestedManyWithoutTeamInput
@@ -9281,7 +9281,7 @@ export type TeamUpdateWithoutCreditLedgerEntriesInput = {
   gasSpends?: Prisma.GasSpendUpdateManyWithoutTeamNestedInput
   tierHistory?: Prisma.TierUpgradeHistoryUpdateManyWithoutTeamNestedInput
   supportTickets?: Prisma.SupportTicketUpdateManyWithoutTeamNestedInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUpdateOneWithoutProviderTeamNestedInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUpdateManyWithoutProviderTeamNestedInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerUpdateManyWithoutProviderTeamNestedInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerUpdateOneWithoutWorkspaceTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUpdateManyWithoutTeamNestedInput
@@ -9336,7 +9336,7 @@ export type TeamUncheckedUpdateWithoutCreditLedgerEntriesInput = {
   gasSpends?: Prisma.GasSpendUncheckedUpdateManyWithoutTeamNestedInput
   tierHistory?: Prisma.TierUpgradeHistoryUncheckedUpdateManyWithoutTeamNestedInput
   supportTickets?: Prisma.SupportTicketUncheckedUpdateManyWithoutTeamNestedInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedUpdateOneWithoutProviderTeamNestedInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedUpdateManyWithoutProviderTeamNestedInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerUncheckedUpdateManyWithoutProviderTeamNestedInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerUncheckedUpdateOneWithoutWorkspaceTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedUpdateManyWithoutTeamNestedInput
@@ -9391,7 +9391,7 @@ export type TeamCreateWithoutPaymentLinksInput = {
   gasSpends?: Prisma.GasSpendCreateNestedManyWithoutTeamInput
   tierHistory?: Prisma.TierUpgradeHistoryCreateNestedManyWithoutTeamInput
   supportTickets?: Prisma.SupportTicketCreateNestedManyWithoutTeamInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountCreateNestedOneWithoutProviderTeamInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountCreateNestedManyWithoutProviderTeamInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerCreateNestedManyWithoutProviderTeamInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerCreateNestedOneWithoutWorkspaceTeamInput
   arcenCompanies?: Prisma.ArcenCompanyCreateNestedManyWithoutTeamInput
@@ -9446,7 +9446,7 @@ export type TeamUncheckedCreateWithoutPaymentLinksInput = {
   gasSpends?: Prisma.GasSpendUncheckedCreateNestedManyWithoutTeamInput
   tierHistory?: Prisma.TierUpgradeHistoryUncheckedCreateNestedManyWithoutTeamInput
   supportTickets?: Prisma.SupportTicketUncheckedCreateNestedManyWithoutTeamInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedOneWithoutProviderTeamInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedManyWithoutProviderTeamInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerUncheckedCreateNestedManyWithoutProviderTeamInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerUncheckedCreateNestedOneWithoutWorkspaceTeamInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedCreateNestedManyWithoutTeamInput
@@ -9517,7 +9517,7 @@ export type TeamUpdateWithoutPaymentLinksInput = {
   gasSpends?: Prisma.GasSpendUpdateManyWithoutTeamNestedInput
   tierHistory?: Prisma.TierUpgradeHistoryUpdateManyWithoutTeamNestedInput
   supportTickets?: Prisma.SupportTicketUpdateManyWithoutTeamNestedInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUpdateOneWithoutProviderTeamNestedInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUpdateManyWithoutProviderTeamNestedInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerUpdateManyWithoutProviderTeamNestedInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerUpdateOneWithoutWorkspaceTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUpdateManyWithoutTeamNestedInput
@@ -9572,7 +9572,7 @@ export type TeamUncheckedUpdateWithoutPaymentLinksInput = {
   gasSpends?: Prisma.GasSpendUncheckedUpdateManyWithoutTeamNestedInput
   tierHistory?: Prisma.TierUpgradeHistoryUncheckedUpdateManyWithoutTeamNestedInput
   supportTickets?: Prisma.SupportTicketUncheckedUpdateManyWithoutTeamNestedInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedUpdateOneWithoutProviderTeamNestedInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedUpdateManyWithoutProviderTeamNestedInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerUncheckedUpdateManyWithoutProviderTeamNestedInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerUncheckedUpdateOneWithoutWorkspaceTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedUpdateManyWithoutTeamNestedInput
@@ -9627,7 +9627,7 @@ export type TeamCreateWithoutCheckoutSessionsInput = {
   gasSpends?: Prisma.GasSpendCreateNestedManyWithoutTeamInput
   tierHistory?: Prisma.TierUpgradeHistoryCreateNestedManyWithoutTeamInput
   supportTickets?: Prisma.SupportTicketCreateNestedManyWithoutTeamInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountCreateNestedOneWithoutProviderTeamInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountCreateNestedManyWithoutProviderTeamInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerCreateNestedManyWithoutProviderTeamInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerCreateNestedOneWithoutWorkspaceTeamInput
   arcenCompanies?: Prisma.ArcenCompanyCreateNestedManyWithoutTeamInput
@@ -9682,7 +9682,7 @@ export type TeamUncheckedCreateWithoutCheckoutSessionsInput = {
   gasSpends?: Prisma.GasSpendUncheckedCreateNestedManyWithoutTeamInput
   tierHistory?: Prisma.TierUpgradeHistoryUncheckedCreateNestedManyWithoutTeamInput
   supportTickets?: Prisma.SupportTicketUncheckedCreateNestedManyWithoutTeamInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedOneWithoutProviderTeamInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedManyWithoutProviderTeamInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerUncheckedCreateNestedManyWithoutProviderTeamInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerUncheckedCreateNestedOneWithoutWorkspaceTeamInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedCreateNestedManyWithoutTeamInput
@@ -9753,7 +9753,7 @@ export type TeamUpdateWithoutCheckoutSessionsInput = {
   gasSpends?: Prisma.GasSpendUpdateManyWithoutTeamNestedInput
   tierHistory?: Prisma.TierUpgradeHistoryUpdateManyWithoutTeamNestedInput
   supportTickets?: Prisma.SupportTicketUpdateManyWithoutTeamNestedInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUpdateOneWithoutProviderTeamNestedInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUpdateManyWithoutProviderTeamNestedInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerUpdateManyWithoutProviderTeamNestedInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerUpdateOneWithoutWorkspaceTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUpdateManyWithoutTeamNestedInput
@@ -9808,7 +9808,7 @@ export type TeamUncheckedUpdateWithoutCheckoutSessionsInput = {
   gasSpends?: Prisma.GasSpendUncheckedUpdateManyWithoutTeamNestedInput
   tierHistory?: Prisma.TierUpgradeHistoryUncheckedUpdateManyWithoutTeamNestedInput
   supportTickets?: Prisma.SupportTicketUncheckedUpdateManyWithoutTeamNestedInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedUpdateOneWithoutProviderTeamNestedInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedUpdateManyWithoutProviderTeamNestedInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerUncheckedUpdateManyWithoutProviderTeamNestedInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerUncheckedUpdateOneWithoutWorkspaceTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedUpdateManyWithoutTeamNestedInput
@@ -9864,7 +9864,7 @@ export type TeamCreateWithoutFeatureFlagsInput = {
   gasSpends?: Prisma.GasSpendCreateNestedManyWithoutTeamInput
   tierHistory?: Prisma.TierUpgradeHistoryCreateNestedManyWithoutTeamInput
   supportTickets?: Prisma.SupportTicketCreateNestedManyWithoutTeamInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountCreateNestedOneWithoutProviderTeamInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountCreateNestedManyWithoutProviderTeamInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerCreateNestedManyWithoutProviderTeamInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerCreateNestedOneWithoutWorkspaceTeamInput
   arcenCompanies?: Prisma.ArcenCompanyCreateNestedManyWithoutTeamInput
@@ -9919,7 +9919,7 @@ export type TeamUncheckedCreateWithoutFeatureFlagsInput = {
   gasSpends?: Prisma.GasSpendUncheckedCreateNestedManyWithoutTeamInput
   tierHistory?: Prisma.TierUpgradeHistoryUncheckedCreateNestedManyWithoutTeamInput
   supportTickets?: Prisma.SupportTicketUncheckedCreateNestedManyWithoutTeamInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedOneWithoutProviderTeamInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedManyWithoutProviderTeamInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerUncheckedCreateNestedManyWithoutProviderTeamInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerUncheckedCreateNestedOneWithoutWorkspaceTeamInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedCreateNestedManyWithoutTeamInput
@@ -9990,7 +9990,7 @@ export type TeamUpdateWithoutFeatureFlagsInput = {
   gasSpends?: Prisma.GasSpendUpdateManyWithoutTeamNestedInput
   tierHistory?: Prisma.TierUpgradeHistoryUpdateManyWithoutTeamNestedInput
   supportTickets?: Prisma.SupportTicketUpdateManyWithoutTeamNestedInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUpdateOneWithoutProviderTeamNestedInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUpdateManyWithoutProviderTeamNestedInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerUpdateManyWithoutProviderTeamNestedInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerUpdateOneWithoutWorkspaceTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUpdateManyWithoutTeamNestedInput
@@ -10045,7 +10045,7 @@ export type TeamUncheckedUpdateWithoutFeatureFlagsInput = {
   gasSpends?: Prisma.GasSpendUncheckedUpdateManyWithoutTeamNestedInput
   tierHistory?: Prisma.TierUpgradeHistoryUncheckedUpdateManyWithoutTeamNestedInput
   supportTickets?: Prisma.SupportTicketUncheckedUpdateManyWithoutTeamNestedInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedUpdateOneWithoutProviderTeamNestedInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedUpdateManyWithoutProviderTeamNestedInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerUncheckedUpdateManyWithoutProviderTeamNestedInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerUncheckedUpdateOneWithoutWorkspaceTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedUpdateManyWithoutTeamNestedInput
@@ -10100,7 +10100,7 @@ export type TeamCreateWithoutEmbedAccessTokensInput = {
   gasSpends?: Prisma.GasSpendCreateNestedManyWithoutTeamInput
   tierHistory?: Prisma.TierUpgradeHistoryCreateNestedManyWithoutTeamInput
   supportTickets?: Prisma.SupportTicketCreateNestedManyWithoutTeamInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountCreateNestedOneWithoutProviderTeamInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountCreateNestedManyWithoutProviderTeamInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerCreateNestedManyWithoutProviderTeamInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerCreateNestedOneWithoutWorkspaceTeamInput
   arcenCompanies?: Prisma.ArcenCompanyCreateNestedManyWithoutTeamInput
@@ -10155,7 +10155,7 @@ export type TeamUncheckedCreateWithoutEmbedAccessTokensInput = {
   gasSpends?: Prisma.GasSpendUncheckedCreateNestedManyWithoutTeamInput
   tierHistory?: Prisma.TierUpgradeHistoryUncheckedCreateNestedManyWithoutTeamInput
   supportTickets?: Prisma.SupportTicketUncheckedCreateNestedManyWithoutTeamInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedOneWithoutProviderTeamInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedManyWithoutProviderTeamInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerUncheckedCreateNestedManyWithoutProviderTeamInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerUncheckedCreateNestedOneWithoutWorkspaceTeamInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedCreateNestedManyWithoutTeamInput
@@ -10226,7 +10226,7 @@ export type TeamUpdateWithoutEmbedAccessTokensInput = {
   gasSpends?: Prisma.GasSpendUpdateManyWithoutTeamNestedInput
   tierHistory?: Prisma.TierUpgradeHistoryUpdateManyWithoutTeamNestedInput
   supportTickets?: Prisma.SupportTicketUpdateManyWithoutTeamNestedInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUpdateOneWithoutProviderTeamNestedInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUpdateManyWithoutProviderTeamNestedInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerUpdateManyWithoutProviderTeamNestedInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerUpdateOneWithoutWorkspaceTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUpdateManyWithoutTeamNestedInput
@@ -10281,7 +10281,7 @@ export type TeamUncheckedUpdateWithoutEmbedAccessTokensInput = {
   gasSpends?: Prisma.GasSpendUncheckedUpdateManyWithoutTeamNestedInput
   tierHistory?: Prisma.TierUpgradeHistoryUncheckedUpdateManyWithoutTeamNestedInput
   supportTickets?: Prisma.SupportTicketUncheckedUpdateManyWithoutTeamNestedInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedUpdateOneWithoutProviderTeamNestedInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedUpdateManyWithoutProviderTeamNestedInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerUncheckedUpdateManyWithoutProviderTeamNestedInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerUncheckedUpdateOneWithoutWorkspaceTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedUpdateManyWithoutTeamNestedInput
@@ -10336,7 +10336,7 @@ export type TeamCreateWithoutArcenApiKeysInput = {
   gasSpends?: Prisma.GasSpendCreateNestedManyWithoutTeamInput
   tierHistory?: Prisma.TierUpgradeHistoryCreateNestedManyWithoutTeamInput
   supportTickets?: Prisma.SupportTicketCreateNestedManyWithoutTeamInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountCreateNestedOneWithoutProviderTeamInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountCreateNestedManyWithoutProviderTeamInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerCreateNestedManyWithoutProviderTeamInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerCreateNestedOneWithoutWorkspaceTeamInput
   arcenCompanies?: Prisma.ArcenCompanyCreateNestedManyWithoutTeamInput
@@ -10391,7 +10391,7 @@ export type TeamUncheckedCreateWithoutArcenApiKeysInput = {
   gasSpends?: Prisma.GasSpendUncheckedCreateNestedManyWithoutTeamInput
   tierHistory?: Prisma.TierUpgradeHistoryUncheckedCreateNestedManyWithoutTeamInput
   supportTickets?: Prisma.SupportTicketUncheckedCreateNestedManyWithoutTeamInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedOneWithoutProviderTeamInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedManyWithoutProviderTeamInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerUncheckedCreateNestedManyWithoutProviderTeamInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerUncheckedCreateNestedOneWithoutWorkspaceTeamInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedCreateNestedManyWithoutTeamInput
@@ -10462,7 +10462,7 @@ export type TeamUpdateWithoutArcenApiKeysInput = {
   gasSpends?: Prisma.GasSpendUpdateManyWithoutTeamNestedInput
   tierHistory?: Prisma.TierUpgradeHistoryUpdateManyWithoutTeamNestedInput
   supportTickets?: Prisma.SupportTicketUpdateManyWithoutTeamNestedInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUpdateOneWithoutProviderTeamNestedInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUpdateManyWithoutProviderTeamNestedInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerUpdateManyWithoutProviderTeamNestedInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerUpdateOneWithoutWorkspaceTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUpdateManyWithoutTeamNestedInput
@@ -10517,7 +10517,7 @@ export type TeamUncheckedUpdateWithoutArcenApiKeysInput = {
   gasSpends?: Prisma.GasSpendUncheckedUpdateManyWithoutTeamNestedInput
   tierHistory?: Prisma.TierUpgradeHistoryUncheckedUpdateManyWithoutTeamNestedInput
   supportTickets?: Prisma.SupportTicketUncheckedUpdateManyWithoutTeamNestedInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedUpdateOneWithoutProviderTeamNestedInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedUpdateManyWithoutProviderTeamNestedInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerUncheckedUpdateManyWithoutProviderTeamNestedInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerUncheckedUpdateOneWithoutWorkspaceTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedUpdateManyWithoutTeamNestedInput
@@ -10572,7 +10572,7 @@ export type TeamCreateWithoutEmbedComponentsInput = {
   gasSpends?: Prisma.GasSpendCreateNestedManyWithoutTeamInput
   tierHistory?: Prisma.TierUpgradeHistoryCreateNestedManyWithoutTeamInput
   supportTickets?: Prisma.SupportTicketCreateNestedManyWithoutTeamInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountCreateNestedOneWithoutProviderTeamInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountCreateNestedManyWithoutProviderTeamInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerCreateNestedManyWithoutProviderTeamInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerCreateNestedOneWithoutWorkspaceTeamInput
   arcenCompanies?: Prisma.ArcenCompanyCreateNestedManyWithoutTeamInput
@@ -10627,7 +10627,7 @@ export type TeamUncheckedCreateWithoutEmbedComponentsInput = {
   gasSpends?: Prisma.GasSpendUncheckedCreateNestedManyWithoutTeamInput
   tierHistory?: Prisma.TierUpgradeHistoryUncheckedCreateNestedManyWithoutTeamInput
   supportTickets?: Prisma.SupportTicketUncheckedCreateNestedManyWithoutTeamInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedOneWithoutProviderTeamInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedManyWithoutProviderTeamInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerUncheckedCreateNestedManyWithoutProviderTeamInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerUncheckedCreateNestedOneWithoutWorkspaceTeamInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedCreateNestedManyWithoutTeamInput
@@ -10698,7 +10698,7 @@ export type TeamUpdateWithoutEmbedComponentsInput = {
   gasSpends?: Prisma.GasSpendUpdateManyWithoutTeamNestedInput
   tierHistory?: Prisma.TierUpgradeHistoryUpdateManyWithoutTeamNestedInput
   supportTickets?: Prisma.SupportTicketUpdateManyWithoutTeamNestedInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUpdateOneWithoutProviderTeamNestedInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUpdateManyWithoutProviderTeamNestedInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerUpdateManyWithoutProviderTeamNestedInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerUpdateOneWithoutWorkspaceTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUpdateManyWithoutTeamNestedInput
@@ -10753,7 +10753,7 @@ export type TeamUncheckedUpdateWithoutEmbedComponentsInput = {
   gasSpends?: Prisma.GasSpendUncheckedUpdateManyWithoutTeamNestedInput
   tierHistory?: Prisma.TierUpgradeHistoryUncheckedUpdateManyWithoutTeamNestedInput
   supportTickets?: Prisma.SupportTicketUncheckedUpdateManyWithoutTeamNestedInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedUpdateOneWithoutProviderTeamNestedInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedUpdateManyWithoutProviderTeamNestedInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerUncheckedUpdateManyWithoutProviderTeamNestedInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerUncheckedUpdateOneWithoutWorkspaceTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedUpdateManyWithoutTeamNestedInput
@@ -10808,7 +10808,7 @@ export type TeamCreateWithoutAgentConfigInput = {
   gasSpends?: Prisma.GasSpendCreateNestedManyWithoutTeamInput
   tierHistory?: Prisma.TierUpgradeHistoryCreateNestedManyWithoutTeamInput
   supportTickets?: Prisma.SupportTicketCreateNestedManyWithoutTeamInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountCreateNestedOneWithoutProviderTeamInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountCreateNestedManyWithoutProviderTeamInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerCreateNestedManyWithoutProviderTeamInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerCreateNestedOneWithoutWorkspaceTeamInput
   arcenCompanies?: Prisma.ArcenCompanyCreateNestedManyWithoutTeamInput
@@ -10863,7 +10863,7 @@ export type TeamUncheckedCreateWithoutAgentConfigInput = {
   gasSpends?: Prisma.GasSpendUncheckedCreateNestedManyWithoutTeamInput
   tierHistory?: Prisma.TierUpgradeHistoryUncheckedCreateNestedManyWithoutTeamInput
   supportTickets?: Prisma.SupportTicketUncheckedCreateNestedManyWithoutTeamInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedOneWithoutProviderTeamInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedManyWithoutProviderTeamInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerUncheckedCreateNestedManyWithoutProviderTeamInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerUncheckedCreateNestedOneWithoutWorkspaceTeamInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedCreateNestedManyWithoutTeamInput
@@ -10934,7 +10934,7 @@ export type TeamUpdateWithoutAgentConfigInput = {
   gasSpends?: Prisma.GasSpendUpdateManyWithoutTeamNestedInput
   tierHistory?: Prisma.TierUpgradeHistoryUpdateManyWithoutTeamNestedInput
   supportTickets?: Prisma.SupportTicketUpdateManyWithoutTeamNestedInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUpdateOneWithoutProviderTeamNestedInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUpdateManyWithoutProviderTeamNestedInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerUpdateManyWithoutProviderTeamNestedInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerUpdateOneWithoutWorkspaceTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUpdateManyWithoutTeamNestedInput
@@ -10989,7 +10989,7 @@ export type TeamUncheckedUpdateWithoutAgentConfigInput = {
   gasSpends?: Prisma.GasSpendUncheckedUpdateManyWithoutTeamNestedInput
   tierHistory?: Prisma.TierUpgradeHistoryUncheckedUpdateManyWithoutTeamNestedInput
   supportTickets?: Prisma.SupportTicketUncheckedUpdateManyWithoutTeamNestedInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedUpdateOneWithoutProviderTeamNestedInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedUpdateManyWithoutProviderTeamNestedInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerUncheckedUpdateManyWithoutProviderTeamNestedInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerUncheckedUpdateOneWithoutWorkspaceTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedUpdateManyWithoutTeamNestedInput
@@ -11044,7 +11044,7 @@ export type TeamCreateWithoutDispatchRequestsInput = {
   gasSpends?: Prisma.GasSpendCreateNestedManyWithoutTeamInput
   tierHistory?: Prisma.TierUpgradeHistoryCreateNestedManyWithoutTeamInput
   supportTickets?: Prisma.SupportTicketCreateNestedManyWithoutTeamInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountCreateNestedOneWithoutProviderTeamInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountCreateNestedManyWithoutProviderTeamInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerCreateNestedManyWithoutProviderTeamInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerCreateNestedOneWithoutWorkspaceTeamInput
   arcenCompanies?: Prisma.ArcenCompanyCreateNestedManyWithoutTeamInput
@@ -11099,7 +11099,7 @@ export type TeamUncheckedCreateWithoutDispatchRequestsInput = {
   gasSpends?: Prisma.GasSpendUncheckedCreateNestedManyWithoutTeamInput
   tierHistory?: Prisma.TierUpgradeHistoryUncheckedCreateNestedManyWithoutTeamInput
   supportTickets?: Prisma.SupportTicketUncheckedCreateNestedManyWithoutTeamInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedOneWithoutProviderTeamInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedManyWithoutProviderTeamInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerUncheckedCreateNestedManyWithoutProviderTeamInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerUncheckedCreateNestedOneWithoutWorkspaceTeamInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedCreateNestedManyWithoutTeamInput
@@ -11170,7 +11170,7 @@ export type TeamUpdateWithoutDispatchRequestsInput = {
   gasSpends?: Prisma.GasSpendUpdateManyWithoutTeamNestedInput
   tierHistory?: Prisma.TierUpgradeHistoryUpdateManyWithoutTeamNestedInput
   supportTickets?: Prisma.SupportTicketUpdateManyWithoutTeamNestedInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUpdateOneWithoutProviderTeamNestedInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUpdateManyWithoutProviderTeamNestedInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerUpdateManyWithoutProviderTeamNestedInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerUpdateOneWithoutWorkspaceTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUpdateManyWithoutTeamNestedInput
@@ -11225,7 +11225,7 @@ export type TeamUncheckedUpdateWithoutDispatchRequestsInput = {
   gasSpends?: Prisma.GasSpendUncheckedUpdateManyWithoutTeamNestedInput
   tierHistory?: Prisma.TierUpgradeHistoryUncheckedUpdateManyWithoutTeamNestedInput
   supportTickets?: Prisma.SupportTicketUncheckedUpdateManyWithoutTeamNestedInput
-  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedUpdateOneWithoutProviderTeamNestedInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedUpdateManyWithoutProviderTeamNestedInput
   platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerUncheckedUpdateManyWithoutProviderTeamNestedInput
   platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerUncheckedUpdateOneWithoutWorkspaceTeamNestedInput
   arcenCompanies?: Prisma.ArcenCompanyUncheckedUpdateManyWithoutTeamNestedInput
@@ -11273,6 +11273,7 @@ export type TeamCountOutputType = {
   gasSpends: number
   tierHistory: number
   supportTickets: number
+  platformBillingProviderAccount: number
   platformBillingProviderCustomers: number
   arcenCompanies: number
   addOnGrants: number
@@ -11314,6 +11315,7 @@ export type TeamCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.I
   gasSpends?: boolean | TeamCountOutputTypeCountGasSpendsArgs
   tierHistory?: boolean | TeamCountOutputTypeCountTierHistoryArgs
   supportTickets?: boolean | TeamCountOutputTypeCountSupportTicketsArgs
+  platformBillingProviderAccount?: boolean | TeamCountOutputTypeCountPlatformBillingProviderAccountArgs
   platformBillingProviderCustomers?: boolean | TeamCountOutputTypeCountPlatformBillingProviderCustomersArgs
   arcenCompanies?: boolean | TeamCountOutputTypeCountArcenCompaniesArgs
   addOnGrants?: boolean | TeamCountOutputTypeCountAddOnGrantsArgs
@@ -11536,6 +11538,13 @@ export type TeamCountOutputTypeCountTierHistoryArgs<ExtArgs extends runtime.Type
  */
 export type TeamCountOutputTypeCountSupportTicketsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   where?: Prisma.SupportTicketWhereInput
+}
+
+/**
+ * TeamCountOutputType without action
+ */
+export type TeamCountOutputTypeCountPlatformBillingProviderAccountArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.PlatformBillingAccountWhereInput
 }
 
 /**
@@ -11783,7 +11792,7 @@ export type $TeamPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs =
     gasSpends: Prisma.$GasSpendPayload<ExtArgs>[]
     tierHistory: Prisma.$TierUpgradeHistoryPayload<ExtArgs>[]
     supportTickets: Prisma.$SupportTicketPayload<ExtArgs>[]
-    platformBillingProviderAccount: Prisma.$PlatformBillingAccountPayload<ExtArgs> | null
+    platformBillingProviderAccount: Prisma.$PlatformBillingAccountPayload<ExtArgs>[]
     platformBillingProviderCustomers: Prisma.$PlatformBillingCustomerPayload<ExtArgs>[]
     platformBillingWorkspaceCustomer: Prisma.$PlatformBillingCustomerPayload<ExtArgs> | null
     arcenCompanies: Prisma.$ArcenCompanyPayload<ExtArgs>[]
@@ -12232,7 +12241,7 @@ export interface Prisma__TeamClient<T, Null = never, ExtArgs extends runtime.Typ
   gasSpends<T extends Prisma.Team$gasSpendsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Team$gasSpendsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$GasSpendPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   tierHistory<T extends Prisma.Team$tierHistoryArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Team$tierHistoryArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$TierUpgradeHistoryPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   supportTickets<T extends Prisma.Team$supportTicketsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Team$supportTicketsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$SupportTicketPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
-  platformBillingProviderAccount<T extends Prisma.Team$platformBillingProviderAccountArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Team$platformBillingProviderAccountArgs<ExtArgs>>): Prisma.Prisma__PlatformBillingAccountClient<runtime.Types.Result.GetResult<Prisma.$PlatformBillingAccountPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+  platformBillingProviderAccount<T extends Prisma.Team$platformBillingProviderAccountArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Team$platformBillingProviderAccountArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$PlatformBillingAccountPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   platformBillingProviderCustomers<T extends Prisma.Team$platformBillingProviderCustomersArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Team$platformBillingProviderCustomersArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$PlatformBillingCustomerPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   platformBillingWorkspaceCustomer<T extends Prisma.Team$platformBillingWorkspaceCustomerArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Team$platformBillingWorkspaceCustomerArgs<ExtArgs>>): Prisma.Prisma__PlatformBillingCustomerClient<runtime.Types.Result.GetResult<Prisma.$PlatformBillingCustomerPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   arcenCompanies<T extends Prisma.Team$arcenCompaniesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Team$arcenCompaniesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ArcenCompanyPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
@@ -13403,6 +13412,11 @@ export type Team$platformBillingProviderAccountArgs<ExtArgs extends runtime.Type
    */
   include?: Prisma.PlatformBillingAccountInclude<ExtArgs> | null
   where?: Prisma.PlatformBillingAccountWhereInput
+  orderBy?: Prisma.PlatformBillingAccountOrderByWithRelationInput | Prisma.PlatformBillingAccountOrderByWithRelationInput[]
+  cursor?: Prisma.PlatformBillingAccountWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.PlatformBillingAccountScalarFieldEnum | Prisma.PlatformBillingAccountScalarFieldEnum[]
 }
 
 /**

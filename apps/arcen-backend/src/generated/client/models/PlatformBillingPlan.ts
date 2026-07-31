@@ -43,6 +43,7 @@ export type PlatformBillingPlanMinAggregateOutputType = {
   createdAt: Date | null
   updatedAt: Date | null
   tier: $Enums.PlatformTier | null
+  environmentId: string | null
   chainId: number | null
   onChainPlanId: string | null
   planName: string | null
@@ -61,6 +62,7 @@ export type PlatformBillingPlanMaxAggregateOutputType = {
   createdAt: Date | null
   updatedAt: Date | null
   tier: $Enums.PlatformTier | null
+  environmentId: string | null
   chainId: number | null
   onChainPlanId: string | null
   planName: string | null
@@ -79,6 +81,7 @@ export type PlatformBillingPlanCountAggregateOutputType = {
   createdAt: number
   updatedAt: number
   tier: number
+  environmentId: number
   chainId: number
   onChainPlanId: number
   planName: number
@@ -112,6 +115,7 @@ export type PlatformBillingPlanMinAggregateInputType = {
   createdAt?: true
   updatedAt?: true
   tier?: true
+  environmentId?: true
   chainId?: true
   onChainPlanId?: true
   planName?: true
@@ -130,6 +134,7 @@ export type PlatformBillingPlanMaxAggregateInputType = {
   createdAt?: true
   updatedAt?: true
   tier?: true
+  environmentId?: true
   chainId?: true
   onChainPlanId?: true
   planName?: true
@@ -148,6 +153,7 @@ export type PlatformBillingPlanCountAggregateInputType = {
   createdAt?: true
   updatedAt?: true
   tier?: true
+  environmentId?: true
   chainId?: true
   onChainPlanId?: true
   planName?: true
@@ -254,6 +260,7 @@ export type PlatformBillingPlanGroupByOutputType = {
   createdAt: Date
   updatedAt: Date
   tier: $Enums.PlatformTier
+  environmentId: string
   chainId: number
   onChainPlanId: string | null
   planName: string
@@ -296,6 +303,7 @@ export type PlatformBillingPlanWhereInput = {
   createdAt?: Prisma.DateTimeFilter<"PlatformBillingPlan"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"PlatformBillingPlan"> | Date | string
   tier?: Prisma.EnumPlatformTierFilter<"PlatformBillingPlan"> | $Enums.PlatformTier
+  environmentId?: Prisma.StringFilter<"PlatformBillingPlan"> | string
   chainId?: Prisma.IntFilter<"PlatformBillingPlan"> | number
   onChainPlanId?: Prisma.StringNullableFilter<"PlatformBillingPlan"> | string | null
   planName?: Prisma.StringFilter<"PlatformBillingPlan"> | string
@@ -308,6 +316,7 @@ export type PlatformBillingPlanWhereInput = {
   syncError?: Prisma.StringNullableFilter<"PlatformBillingPlan"> | string | null
   syncedAt?: Prisma.DateTimeNullableFilter<"PlatformBillingPlan"> | Date | string | null
   metadata?: Prisma.JsonNullableFilter<"PlatformBillingPlan">
+  environment?: Prisma.XOR<Prisma.WorkspaceEnvironmentScalarRelationFilter, Prisma.WorkspaceEnvironmentWhereInput>
 }
 
 export type PlatformBillingPlanOrderByWithRelationInput = {
@@ -315,6 +324,7 @@ export type PlatformBillingPlanOrderByWithRelationInput = {
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   tier?: Prisma.SortOrder
+  environmentId?: Prisma.SortOrder
   chainId?: Prisma.SortOrder
   onChainPlanId?: Prisma.SortOrderInput | Prisma.SortOrder
   planName?: Prisma.SortOrder
@@ -327,17 +337,19 @@ export type PlatformBillingPlanOrderByWithRelationInput = {
   syncError?: Prisma.SortOrderInput | Prisma.SortOrder
   syncedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   metadata?: Prisma.SortOrderInput | Prisma.SortOrder
+  environment?: Prisma.WorkspaceEnvironmentOrderByWithRelationInput
 }
 
 export type PlatformBillingPlanWhereUniqueInput = Prisma.AtLeast<{
   id?: string
-  chainId_tier?: Prisma.PlatformBillingPlanChainIdTierCompoundUniqueInput
+  environmentId_chainId_tier?: Prisma.PlatformBillingPlanEnvironmentIdChainIdTierCompoundUniqueInput
   AND?: Prisma.PlatformBillingPlanWhereInput | Prisma.PlatformBillingPlanWhereInput[]
   OR?: Prisma.PlatformBillingPlanWhereInput[]
   NOT?: Prisma.PlatformBillingPlanWhereInput | Prisma.PlatformBillingPlanWhereInput[]
   createdAt?: Prisma.DateTimeFilter<"PlatformBillingPlan"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"PlatformBillingPlan"> | Date | string
   tier?: Prisma.EnumPlatformTierFilter<"PlatformBillingPlan"> | $Enums.PlatformTier
+  environmentId?: Prisma.StringFilter<"PlatformBillingPlan"> | string
   chainId?: Prisma.IntFilter<"PlatformBillingPlan"> | number
   onChainPlanId?: Prisma.StringNullableFilter<"PlatformBillingPlan"> | string | null
   planName?: Prisma.StringFilter<"PlatformBillingPlan"> | string
@@ -350,13 +362,15 @@ export type PlatformBillingPlanWhereUniqueInput = Prisma.AtLeast<{
   syncError?: Prisma.StringNullableFilter<"PlatformBillingPlan"> | string | null
   syncedAt?: Prisma.DateTimeNullableFilter<"PlatformBillingPlan"> | Date | string | null
   metadata?: Prisma.JsonNullableFilter<"PlatformBillingPlan">
-}, "id" | "chainId_tier">
+  environment?: Prisma.XOR<Prisma.WorkspaceEnvironmentScalarRelationFilter, Prisma.WorkspaceEnvironmentWhereInput>
+}, "id" | "environmentId_chainId_tier">
 
 export type PlatformBillingPlanOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   tier?: Prisma.SortOrder
+  environmentId?: Prisma.SortOrder
   chainId?: Prisma.SortOrder
   onChainPlanId?: Prisma.SortOrderInput | Prisma.SortOrder
   planName?: Prisma.SortOrder
@@ -384,6 +398,7 @@ export type PlatformBillingPlanScalarWhereWithAggregatesInput = {
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"PlatformBillingPlan"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"PlatformBillingPlan"> | Date | string
   tier?: Prisma.EnumPlatformTierWithAggregatesFilter<"PlatformBillingPlan"> | $Enums.PlatformTier
+  environmentId?: Prisma.StringWithAggregatesFilter<"PlatformBillingPlan"> | string
   chainId?: Prisma.IntWithAggregatesFilter<"PlatformBillingPlan"> | number
   onChainPlanId?: Prisma.StringNullableWithAggregatesFilter<"PlatformBillingPlan"> | string | null
   planName?: Prisma.StringWithAggregatesFilter<"PlatformBillingPlan"> | string
@@ -415,6 +430,7 @@ export type PlatformBillingPlanCreateInput = {
   syncError?: string | null
   syncedAt?: Date | string | null
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  environment: Prisma.WorkspaceEnvironmentCreateNestedOneWithoutPlatformBillingPlansInput
 }
 
 export type PlatformBillingPlanUncheckedCreateInput = {
@@ -422,6 +438,7 @@ export type PlatformBillingPlanUncheckedCreateInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   tier: $Enums.PlatformTier
+  environmentId: string
   chainId: number
   onChainPlanId?: string | null
   planName: string
@@ -453,6 +470,7 @@ export type PlatformBillingPlanUpdateInput = {
   syncError?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   syncedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  environment?: Prisma.WorkspaceEnvironmentUpdateOneRequiredWithoutPlatformBillingPlansNestedInput
 }
 
 export type PlatformBillingPlanUncheckedUpdateInput = {
@@ -460,6 +478,7 @@ export type PlatformBillingPlanUncheckedUpdateInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   tier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
+  environmentId?: Prisma.StringFieldUpdateOperationsInput | string
   chainId?: Prisma.IntFieldUpdateOperationsInput | number
   onChainPlanId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   planName?: Prisma.StringFieldUpdateOperationsInput | string
@@ -479,6 +498,7 @@ export type PlatformBillingPlanCreateManyInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   tier: $Enums.PlatformTier
+  environmentId: string
   chainId: number
   onChainPlanId?: string | null
   planName: string
@@ -517,6 +537,7 @@ export type PlatformBillingPlanUncheckedUpdateManyInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   tier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
+  environmentId?: Prisma.StringFieldUpdateOperationsInput | string
   chainId?: Prisma.IntFieldUpdateOperationsInput | number
   onChainPlanId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   planName?: Prisma.StringFieldUpdateOperationsInput | string
@@ -531,7 +552,18 @@ export type PlatformBillingPlanUncheckedUpdateManyInput = {
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
 }
 
-export type PlatformBillingPlanChainIdTierCompoundUniqueInput = {
+export type PlatformBillingPlanListRelationFilter = {
+  every?: Prisma.PlatformBillingPlanWhereInput
+  some?: Prisma.PlatformBillingPlanWhereInput
+  none?: Prisma.PlatformBillingPlanWhereInput
+}
+
+export type PlatformBillingPlanOrderByRelationAggregateInput = {
+  _count?: Prisma.SortOrder
+}
+
+export type PlatformBillingPlanEnvironmentIdChainIdTierCompoundUniqueInput = {
+  environmentId: string
   chainId: number
   tier: $Enums.PlatformTier
 }
@@ -541,6 +573,7 @@ export type PlatformBillingPlanCountOrderByAggregateInput = {
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   tier?: Prisma.SortOrder
+  environmentId?: Prisma.SortOrder
   chainId?: Prisma.SortOrder
   onChainPlanId?: Prisma.SortOrder
   planName?: Prisma.SortOrder
@@ -566,6 +599,7 @@ export type PlatformBillingPlanMaxOrderByAggregateInput = {
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   tier?: Prisma.SortOrder
+  environmentId?: Prisma.SortOrder
   chainId?: Prisma.SortOrder
   onChainPlanId?: Prisma.SortOrder
   planName?: Prisma.SortOrder
@@ -584,6 +618,7 @@ export type PlatformBillingPlanMinOrderByAggregateInput = {
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   tier?: Prisma.SortOrder
+  environmentId?: Prisma.SortOrder
   chainId?: Prisma.SortOrder
   onChainPlanId?: Prisma.SortOrder
   planName?: Prisma.SortOrder
@@ -603,6 +638,211 @@ export type PlatformBillingPlanSumOrderByAggregateInput = {
   billingIntervalSeconds?: Prisma.SortOrder
 }
 
+export type PlatformBillingPlanCreateNestedManyWithoutEnvironmentInput = {
+  create?: Prisma.XOR<Prisma.PlatformBillingPlanCreateWithoutEnvironmentInput, Prisma.PlatformBillingPlanUncheckedCreateWithoutEnvironmentInput> | Prisma.PlatformBillingPlanCreateWithoutEnvironmentInput[] | Prisma.PlatformBillingPlanUncheckedCreateWithoutEnvironmentInput[]
+  connectOrCreate?: Prisma.PlatformBillingPlanCreateOrConnectWithoutEnvironmentInput | Prisma.PlatformBillingPlanCreateOrConnectWithoutEnvironmentInput[]
+  createMany?: Prisma.PlatformBillingPlanCreateManyEnvironmentInputEnvelope
+  connect?: Prisma.PlatformBillingPlanWhereUniqueInput | Prisma.PlatformBillingPlanWhereUniqueInput[]
+}
+
+export type PlatformBillingPlanUncheckedCreateNestedManyWithoutEnvironmentInput = {
+  create?: Prisma.XOR<Prisma.PlatformBillingPlanCreateWithoutEnvironmentInput, Prisma.PlatformBillingPlanUncheckedCreateWithoutEnvironmentInput> | Prisma.PlatformBillingPlanCreateWithoutEnvironmentInput[] | Prisma.PlatformBillingPlanUncheckedCreateWithoutEnvironmentInput[]
+  connectOrCreate?: Prisma.PlatformBillingPlanCreateOrConnectWithoutEnvironmentInput | Prisma.PlatformBillingPlanCreateOrConnectWithoutEnvironmentInput[]
+  createMany?: Prisma.PlatformBillingPlanCreateManyEnvironmentInputEnvelope
+  connect?: Prisma.PlatformBillingPlanWhereUniqueInput | Prisma.PlatformBillingPlanWhereUniqueInput[]
+}
+
+export type PlatformBillingPlanUpdateManyWithoutEnvironmentNestedInput = {
+  create?: Prisma.XOR<Prisma.PlatformBillingPlanCreateWithoutEnvironmentInput, Prisma.PlatformBillingPlanUncheckedCreateWithoutEnvironmentInput> | Prisma.PlatformBillingPlanCreateWithoutEnvironmentInput[] | Prisma.PlatformBillingPlanUncheckedCreateWithoutEnvironmentInput[]
+  connectOrCreate?: Prisma.PlatformBillingPlanCreateOrConnectWithoutEnvironmentInput | Prisma.PlatformBillingPlanCreateOrConnectWithoutEnvironmentInput[]
+  upsert?: Prisma.PlatformBillingPlanUpsertWithWhereUniqueWithoutEnvironmentInput | Prisma.PlatformBillingPlanUpsertWithWhereUniqueWithoutEnvironmentInput[]
+  createMany?: Prisma.PlatformBillingPlanCreateManyEnvironmentInputEnvelope
+  set?: Prisma.PlatformBillingPlanWhereUniqueInput | Prisma.PlatformBillingPlanWhereUniqueInput[]
+  disconnect?: Prisma.PlatformBillingPlanWhereUniqueInput | Prisma.PlatformBillingPlanWhereUniqueInput[]
+  delete?: Prisma.PlatformBillingPlanWhereUniqueInput | Prisma.PlatformBillingPlanWhereUniqueInput[]
+  connect?: Prisma.PlatformBillingPlanWhereUniqueInput | Prisma.PlatformBillingPlanWhereUniqueInput[]
+  update?: Prisma.PlatformBillingPlanUpdateWithWhereUniqueWithoutEnvironmentInput | Prisma.PlatformBillingPlanUpdateWithWhereUniqueWithoutEnvironmentInput[]
+  updateMany?: Prisma.PlatformBillingPlanUpdateManyWithWhereWithoutEnvironmentInput | Prisma.PlatformBillingPlanUpdateManyWithWhereWithoutEnvironmentInput[]
+  deleteMany?: Prisma.PlatformBillingPlanScalarWhereInput | Prisma.PlatformBillingPlanScalarWhereInput[]
+}
+
+export type PlatformBillingPlanUncheckedUpdateManyWithoutEnvironmentNestedInput = {
+  create?: Prisma.XOR<Prisma.PlatformBillingPlanCreateWithoutEnvironmentInput, Prisma.PlatformBillingPlanUncheckedCreateWithoutEnvironmentInput> | Prisma.PlatformBillingPlanCreateWithoutEnvironmentInput[] | Prisma.PlatformBillingPlanUncheckedCreateWithoutEnvironmentInput[]
+  connectOrCreate?: Prisma.PlatformBillingPlanCreateOrConnectWithoutEnvironmentInput | Prisma.PlatformBillingPlanCreateOrConnectWithoutEnvironmentInput[]
+  upsert?: Prisma.PlatformBillingPlanUpsertWithWhereUniqueWithoutEnvironmentInput | Prisma.PlatformBillingPlanUpsertWithWhereUniqueWithoutEnvironmentInput[]
+  createMany?: Prisma.PlatformBillingPlanCreateManyEnvironmentInputEnvelope
+  set?: Prisma.PlatformBillingPlanWhereUniqueInput | Prisma.PlatformBillingPlanWhereUniqueInput[]
+  disconnect?: Prisma.PlatformBillingPlanWhereUniqueInput | Prisma.PlatformBillingPlanWhereUniqueInput[]
+  delete?: Prisma.PlatformBillingPlanWhereUniqueInput | Prisma.PlatformBillingPlanWhereUniqueInput[]
+  connect?: Prisma.PlatformBillingPlanWhereUniqueInput | Prisma.PlatformBillingPlanWhereUniqueInput[]
+  update?: Prisma.PlatformBillingPlanUpdateWithWhereUniqueWithoutEnvironmentInput | Prisma.PlatformBillingPlanUpdateWithWhereUniqueWithoutEnvironmentInput[]
+  updateMany?: Prisma.PlatformBillingPlanUpdateManyWithWhereWithoutEnvironmentInput | Prisma.PlatformBillingPlanUpdateManyWithWhereWithoutEnvironmentInput[]
+  deleteMany?: Prisma.PlatformBillingPlanScalarWhereInput | Prisma.PlatformBillingPlanScalarWhereInput[]
+}
+
+export type PlatformBillingPlanCreateWithoutEnvironmentInput = {
+  id?: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  tier: $Enums.PlatformTier
+  chainId: number
+  onChainPlanId?: string | null
+  planName: string
+  priceMicros: number
+  billingIntervalSeconds: number
+  acceptedToken: string
+  treasuryWallet: string
+  bootstrapTxHash?: string | null
+  syncStatus?: $Enums.ChainSyncStatus
+  syncError?: string | null
+  syncedAt?: Date | string | null
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+}
+
+export type PlatformBillingPlanUncheckedCreateWithoutEnvironmentInput = {
+  id?: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  tier: $Enums.PlatformTier
+  chainId: number
+  onChainPlanId?: string | null
+  planName: string
+  priceMicros: number
+  billingIntervalSeconds: number
+  acceptedToken: string
+  treasuryWallet: string
+  bootstrapTxHash?: string | null
+  syncStatus?: $Enums.ChainSyncStatus
+  syncError?: string | null
+  syncedAt?: Date | string | null
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+}
+
+export type PlatformBillingPlanCreateOrConnectWithoutEnvironmentInput = {
+  where: Prisma.PlatformBillingPlanWhereUniqueInput
+  create: Prisma.XOR<Prisma.PlatformBillingPlanCreateWithoutEnvironmentInput, Prisma.PlatformBillingPlanUncheckedCreateWithoutEnvironmentInput>
+}
+
+export type PlatformBillingPlanCreateManyEnvironmentInputEnvelope = {
+  data: Prisma.PlatformBillingPlanCreateManyEnvironmentInput | Prisma.PlatformBillingPlanCreateManyEnvironmentInput[]
+  skipDuplicates?: boolean
+}
+
+export type PlatformBillingPlanUpsertWithWhereUniqueWithoutEnvironmentInput = {
+  where: Prisma.PlatformBillingPlanWhereUniqueInput
+  update: Prisma.XOR<Prisma.PlatformBillingPlanUpdateWithoutEnvironmentInput, Prisma.PlatformBillingPlanUncheckedUpdateWithoutEnvironmentInput>
+  create: Prisma.XOR<Prisma.PlatformBillingPlanCreateWithoutEnvironmentInput, Prisma.PlatformBillingPlanUncheckedCreateWithoutEnvironmentInput>
+}
+
+export type PlatformBillingPlanUpdateWithWhereUniqueWithoutEnvironmentInput = {
+  where: Prisma.PlatformBillingPlanWhereUniqueInput
+  data: Prisma.XOR<Prisma.PlatformBillingPlanUpdateWithoutEnvironmentInput, Prisma.PlatformBillingPlanUncheckedUpdateWithoutEnvironmentInput>
+}
+
+export type PlatformBillingPlanUpdateManyWithWhereWithoutEnvironmentInput = {
+  where: Prisma.PlatformBillingPlanScalarWhereInput
+  data: Prisma.XOR<Prisma.PlatformBillingPlanUpdateManyMutationInput, Prisma.PlatformBillingPlanUncheckedUpdateManyWithoutEnvironmentInput>
+}
+
+export type PlatformBillingPlanScalarWhereInput = {
+  AND?: Prisma.PlatformBillingPlanScalarWhereInput | Prisma.PlatformBillingPlanScalarWhereInput[]
+  OR?: Prisma.PlatformBillingPlanScalarWhereInput[]
+  NOT?: Prisma.PlatformBillingPlanScalarWhereInput | Prisma.PlatformBillingPlanScalarWhereInput[]
+  id?: Prisma.StringFilter<"PlatformBillingPlan"> | string
+  createdAt?: Prisma.DateTimeFilter<"PlatformBillingPlan"> | Date | string
+  updatedAt?: Prisma.DateTimeFilter<"PlatformBillingPlan"> | Date | string
+  tier?: Prisma.EnumPlatformTierFilter<"PlatformBillingPlan"> | $Enums.PlatformTier
+  environmentId?: Prisma.StringFilter<"PlatformBillingPlan"> | string
+  chainId?: Prisma.IntFilter<"PlatformBillingPlan"> | number
+  onChainPlanId?: Prisma.StringNullableFilter<"PlatformBillingPlan"> | string | null
+  planName?: Prisma.StringFilter<"PlatformBillingPlan"> | string
+  priceMicros?: Prisma.IntFilter<"PlatformBillingPlan"> | number
+  billingIntervalSeconds?: Prisma.IntFilter<"PlatformBillingPlan"> | number
+  acceptedToken?: Prisma.StringFilter<"PlatformBillingPlan"> | string
+  treasuryWallet?: Prisma.StringFilter<"PlatformBillingPlan"> | string
+  bootstrapTxHash?: Prisma.StringNullableFilter<"PlatformBillingPlan"> | string | null
+  syncStatus?: Prisma.EnumChainSyncStatusFilter<"PlatformBillingPlan"> | $Enums.ChainSyncStatus
+  syncError?: Prisma.StringNullableFilter<"PlatformBillingPlan"> | string | null
+  syncedAt?: Prisma.DateTimeNullableFilter<"PlatformBillingPlan"> | Date | string | null
+  metadata?: Prisma.JsonNullableFilter<"PlatformBillingPlan">
+}
+
+export type PlatformBillingPlanCreateManyEnvironmentInput = {
+  id?: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  tier: $Enums.PlatformTier
+  chainId: number
+  onChainPlanId?: string | null
+  planName: string
+  priceMicros: number
+  billingIntervalSeconds: number
+  acceptedToken: string
+  treasuryWallet: string
+  bootstrapTxHash?: string | null
+  syncStatus?: $Enums.ChainSyncStatus
+  syncError?: string | null
+  syncedAt?: Date | string | null
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+}
+
+export type PlatformBillingPlanUpdateWithoutEnvironmentInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  tier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
+  chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  onChainPlanId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  planName?: Prisma.StringFieldUpdateOperationsInput | string
+  priceMicros?: Prisma.IntFieldUpdateOperationsInput | number
+  billingIntervalSeconds?: Prisma.IntFieldUpdateOperationsInput | number
+  acceptedToken?: Prisma.StringFieldUpdateOperationsInput | string
+  treasuryWallet?: Prisma.StringFieldUpdateOperationsInput | string
+  bootstrapTxHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  syncStatus?: Prisma.EnumChainSyncStatusFieldUpdateOperationsInput | $Enums.ChainSyncStatus
+  syncError?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  syncedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+}
+
+export type PlatformBillingPlanUncheckedUpdateWithoutEnvironmentInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  tier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
+  chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  onChainPlanId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  planName?: Prisma.StringFieldUpdateOperationsInput | string
+  priceMicros?: Prisma.IntFieldUpdateOperationsInput | number
+  billingIntervalSeconds?: Prisma.IntFieldUpdateOperationsInput | number
+  acceptedToken?: Prisma.StringFieldUpdateOperationsInput | string
+  treasuryWallet?: Prisma.StringFieldUpdateOperationsInput | string
+  bootstrapTxHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  syncStatus?: Prisma.EnumChainSyncStatusFieldUpdateOperationsInput | $Enums.ChainSyncStatus
+  syncError?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  syncedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+}
+
+export type PlatformBillingPlanUncheckedUpdateManyWithoutEnvironmentInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  tier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
+  chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  onChainPlanId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  planName?: Prisma.StringFieldUpdateOperationsInput | string
+  priceMicros?: Prisma.IntFieldUpdateOperationsInput | number
+  billingIntervalSeconds?: Prisma.IntFieldUpdateOperationsInput | number
+  acceptedToken?: Prisma.StringFieldUpdateOperationsInput | string
+  treasuryWallet?: Prisma.StringFieldUpdateOperationsInput | string
+  bootstrapTxHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  syncStatus?: Prisma.EnumChainSyncStatusFieldUpdateOperationsInput | $Enums.ChainSyncStatus
+  syncError?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  syncedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+}
+
 
 
 export type PlatformBillingPlanSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -610,6 +850,7 @@ export type PlatformBillingPlanSelect<ExtArgs extends runtime.Types.Extensions.I
   createdAt?: boolean
   updatedAt?: boolean
   tier?: boolean
+  environmentId?: boolean
   chainId?: boolean
   onChainPlanId?: boolean
   planName?: boolean
@@ -622,6 +863,7 @@ export type PlatformBillingPlanSelect<ExtArgs extends runtime.Types.Extensions.I
   syncError?: boolean
   syncedAt?: boolean
   metadata?: boolean
+  environment?: boolean | Prisma.WorkspaceEnvironmentDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["platformBillingPlan"]>
 
 export type PlatformBillingPlanSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -629,6 +871,7 @@ export type PlatformBillingPlanSelectCreateManyAndReturn<ExtArgs extends runtime
   createdAt?: boolean
   updatedAt?: boolean
   tier?: boolean
+  environmentId?: boolean
   chainId?: boolean
   onChainPlanId?: boolean
   planName?: boolean
@@ -641,6 +884,7 @@ export type PlatformBillingPlanSelectCreateManyAndReturn<ExtArgs extends runtime
   syncError?: boolean
   syncedAt?: boolean
   metadata?: boolean
+  environment?: boolean | Prisma.WorkspaceEnvironmentDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["platformBillingPlan"]>
 
 export type PlatformBillingPlanSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -648,6 +892,7 @@ export type PlatformBillingPlanSelectUpdateManyAndReturn<ExtArgs extends runtime
   createdAt?: boolean
   updatedAt?: boolean
   tier?: boolean
+  environmentId?: boolean
   chainId?: boolean
   onChainPlanId?: boolean
   planName?: boolean
@@ -660,6 +905,7 @@ export type PlatformBillingPlanSelectUpdateManyAndReturn<ExtArgs extends runtime
   syncError?: boolean
   syncedAt?: boolean
   metadata?: boolean
+  environment?: boolean | Prisma.WorkspaceEnvironmentDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["platformBillingPlan"]>
 
 export type PlatformBillingPlanSelectScalar = {
@@ -667,6 +913,7 @@ export type PlatformBillingPlanSelectScalar = {
   createdAt?: boolean
   updatedAt?: boolean
   tier?: boolean
+  environmentId?: boolean
   chainId?: boolean
   onChainPlanId?: boolean
   planName?: boolean
@@ -681,16 +928,28 @@ export type PlatformBillingPlanSelectScalar = {
   metadata?: boolean
 }
 
-export type PlatformBillingPlanOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "createdAt" | "updatedAt" | "tier" | "chainId" | "onChainPlanId" | "planName" | "priceMicros" | "billingIntervalSeconds" | "acceptedToken" | "treasuryWallet" | "bootstrapTxHash" | "syncStatus" | "syncError" | "syncedAt" | "metadata", ExtArgs["result"]["platformBillingPlan"]>
+export type PlatformBillingPlanOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "createdAt" | "updatedAt" | "tier" | "environmentId" | "chainId" | "onChainPlanId" | "planName" | "priceMicros" | "billingIntervalSeconds" | "acceptedToken" | "treasuryWallet" | "bootstrapTxHash" | "syncStatus" | "syncError" | "syncedAt" | "metadata", ExtArgs["result"]["platformBillingPlan"]>
+export type PlatformBillingPlanInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  environment?: boolean | Prisma.WorkspaceEnvironmentDefaultArgs<ExtArgs>
+}
+export type PlatformBillingPlanIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  environment?: boolean | Prisma.WorkspaceEnvironmentDefaultArgs<ExtArgs>
+}
+export type PlatformBillingPlanIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  environment?: boolean | Prisma.WorkspaceEnvironmentDefaultArgs<ExtArgs>
+}
 
 export type $PlatformBillingPlanPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "PlatformBillingPlan"
-  objects: {}
+  objects: {
+    environment: Prisma.$WorkspaceEnvironmentPayload<ExtArgs>
+  }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
     createdAt: Date
     updatedAt: Date
     tier: $Enums.PlatformTier
+    environmentId: string
     chainId: number
     onChainPlanId: string | null
     planName: string
@@ -1097,6 +1356,7 @@ readonly fields: PlatformBillingPlanFieldRefs;
  */
 export interface Prisma__PlatformBillingPlanClient<T, Null = never, ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
   readonly [Symbol.toStringTag]: "PrismaPromise"
+  environment<T extends Prisma.WorkspaceEnvironmentDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.WorkspaceEnvironmentDefaultArgs<ExtArgs>>): Prisma.Prisma__WorkspaceEnvironmentClient<runtime.Types.Result.GetResult<Prisma.$WorkspaceEnvironmentPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -1130,6 +1390,7 @@ export interface PlatformBillingPlanFieldRefs {
   readonly createdAt: Prisma.FieldRef<"PlatformBillingPlan", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"PlatformBillingPlan", 'DateTime'>
   readonly tier: Prisma.FieldRef<"PlatformBillingPlan", 'PlatformTier'>
+  readonly environmentId: Prisma.FieldRef<"PlatformBillingPlan", 'String'>
   readonly chainId: Prisma.FieldRef<"PlatformBillingPlan", 'Int'>
   readonly onChainPlanId: Prisma.FieldRef<"PlatformBillingPlan", 'String'>
   readonly planName: Prisma.FieldRef<"PlatformBillingPlan", 'String'>
@@ -1159,6 +1420,10 @@ export type PlatformBillingPlanFindUniqueArgs<ExtArgs extends runtime.Types.Exte
    */
   omit?: Prisma.PlatformBillingPlanOmit<ExtArgs> | null
   /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.PlatformBillingPlanInclude<ExtArgs> | null
+  /**
    * Filter, which PlatformBillingPlan to fetch.
    */
   where: Prisma.PlatformBillingPlanWhereUniqueInput
@@ -1177,6 +1442,10 @@ export type PlatformBillingPlanFindUniqueOrThrowArgs<ExtArgs extends runtime.Typ
    */
   omit?: Prisma.PlatformBillingPlanOmit<ExtArgs> | null
   /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.PlatformBillingPlanInclude<ExtArgs> | null
+  /**
    * Filter, which PlatformBillingPlan to fetch.
    */
   where: Prisma.PlatformBillingPlanWhereUniqueInput
@@ -1194,6 +1463,10 @@ export type PlatformBillingPlanFindFirstArgs<ExtArgs extends runtime.Types.Exten
    * Omit specific fields from the PlatformBillingPlan
    */
   omit?: Prisma.PlatformBillingPlanOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.PlatformBillingPlanInclude<ExtArgs> | null
   /**
    * Filter, which PlatformBillingPlan to fetch.
    */
@@ -1243,6 +1516,10 @@ export type PlatformBillingPlanFindFirstOrThrowArgs<ExtArgs extends runtime.Type
    */
   omit?: Prisma.PlatformBillingPlanOmit<ExtArgs> | null
   /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.PlatformBillingPlanInclude<ExtArgs> | null
+  /**
    * Filter, which PlatformBillingPlan to fetch.
    */
   where?: Prisma.PlatformBillingPlanWhereInput
@@ -1291,6 +1568,10 @@ export type PlatformBillingPlanFindManyArgs<ExtArgs extends runtime.Types.Extens
    */
   omit?: Prisma.PlatformBillingPlanOmit<ExtArgs> | null
   /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.PlatformBillingPlanInclude<ExtArgs> | null
+  /**
    * Filter, which PlatformBillingPlans to fetch.
    */
   where?: Prisma.PlatformBillingPlanWhereInput
@@ -1334,6 +1615,10 @@ export type PlatformBillingPlanCreateArgs<ExtArgs extends runtime.Types.Extensio
    */
   omit?: Prisma.PlatformBillingPlanOmit<ExtArgs> | null
   /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.PlatformBillingPlanInclude<ExtArgs> | null
+  /**
    * The data needed to create a PlatformBillingPlan.
    */
   data: Prisma.XOR<Prisma.PlatformBillingPlanCreateInput, Prisma.PlatformBillingPlanUncheckedCreateInput>
@@ -1367,6 +1652,10 @@ export type PlatformBillingPlanCreateManyAndReturnArgs<ExtArgs extends runtime.T
    */
   data: Prisma.PlatformBillingPlanCreateManyInput | Prisma.PlatformBillingPlanCreateManyInput[]
   skipDuplicates?: boolean
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.PlatformBillingPlanIncludeCreateManyAndReturn<ExtArgs> | null
 }
 
 /**
@@ -1381,6 +1670,10 @@ export type PlatformBillingPlanUpdateArgs<ExtArgs extends runtime.Types.Extensio
    * Omit specific fields from the PlatformBillingPlan
    */
   omit?: Prisma.PlatformBillingPlanOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.PlatformBillingPlanInclude<ExtArgs> | null
   /**
    * The data needed to update a PlatformBillingPlan.
    */
@@ -1433,6 +1726,10 @@ export type PlatformBillingPlanUpdateManyAndReturnArgs<ExtArgs extends runtime.T
    * Limit how many PlatformBillingPlans to update.
    */
   limit?: number
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.PlatformBillingPlanIncludeUpdateManyAndReturn<ExtArgs> | null
 }
 
 /**
@@ -1447,6 +1744,10 @@ export type PlatformBillingPlanUpsertArgs<ExtArgs extends runtime.Types.Extensio
    * Omit specific fields from the PlatformBillingPlan
    */
   omit?: Prisma.PlatformBillingPlanOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.PlatformBillingPlanInclude<ExtArgs> | null
   /**
    * The filter to search for the PlatformBillingPlan to update in case it exists.
    */
@@ -1473,6 +1774,10 @@ export type PlatformBillingPlanDeleteArgs<ExtArgs extends runtime.Types.Extensio
    * Omit specific fields from the PlatformBillingPlan
    */
   omit?: Prisma.PlatformBillingPlanOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.PlatformBillingPlanInclude<ExtArgs> | null
   /**
    * Filter which PlatformBillingPlan to delete.
    */
@@ -1505,4 +1810,8 @@ export type PlatformBillingPlanDefaultArgs<ExtArgs extends runtime.Types.Extensi
    * Omit specific fields from the PlatformBillingPlan
    */
   omit?: Prisma.PlatformBillingPlanOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.PlatformBillingPlanInclude<ExtArgs> | null
 }

@@ -1,6 +1,5 @@
 import { getBillingReconciliationSummary } from "./billing-reconciliation.js";
 import { runBillingDunningSweep } from "./billing-dunning.js";
-import { runPlatformTierDunningSweep, runPlatformTierRenewalSweep } from "./platform-tier-billing.js";
 import { processPendingBillingRecoveryTasks } from "./billing-recovery.js";
 import { db } from "../../db.js";
 import { resolvePublishedFreePlan } from "../catalog/catalog-billing.js";
@@ -486,27 +485,6 @@ export async function runBillingMaintenance(input: {
           dryRun: true,
         };
 
-  const platformTierRenewal = await runPlatformTierRenewalSweep({
-    teamId: input.teamId,
-    now,
-    limit: input.limit ?? 50,
-  });
-
-  const platformTierDunning =
-    input.executeDunning
-      ? await runPlatformTierDunningSweep({
-          teamId: input.teamId,
-          now,
-          limit: input.limit ?? 50,
-        })
-      : {
-          scanned: 0,
-          enforced: 0,
-          skipped: 0,
-          results: [],
-          dryRun: true,
-        };
-
   const reconciliationAfter = await getBillingReconciliationSummary({
     teamId: input.teamId,
     now,
@@ -520,8 +498,6 @@ export async function runBillingMaintenance(input: {
     recovery,
     scheduledTransitions,
     dunning,
-    platformTierRenewal,
-    platformTierDunning,
     reconciliationAfter,
   };
 }

@@ -3,6 +3,7 @@ import { db } from "../../db.js";
 
 export interface EmbedAccessTokenContext {
   teamId: string;
+  workspaceTeamId?: string | null;
   environmentId: string | null;
   companyId: string | null;
   userId: string | null;
@@ -33,6 +34,7 @@ function verifySignedEmbedAccessToken(
       companyId?: string | null;
       userId?: string | null;
       componentId?: string | null;
+      workspaceTeamId?: string | null;
       preview?: boolean;
     };
 
@@ -43,6 +45,7 @@ function verifySignedEmbedAccessToken(
 
     return {
       teamId: payload.teamId,
+      workspaceTeamId: payload.workspaceTeamId ?? null,
       environmentId: payload.environmentId ?? null,
       companyId: payload.companyId ?? null,
       userId: payload.userId ?? null,
@@ -98,6 +101,7 @@ export async function resolveEmbedAccessToken(
   if (!record) return null;
   return {
     teamId: verified.teamId,
+    workspaceTeamId: verified.workspaceTeamId ?? null,
     environmentId: record.environmentId ?? verified.environmentId ?? null,
     companyId: record.companyId,
     userId: record.userId,

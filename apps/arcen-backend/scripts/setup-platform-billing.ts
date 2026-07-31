@@ -221,15 +221,22 @@ async function main() {
 
   // ── 8. Create PlatformBillingAccount ───────────────────────────────────
   log("Setting up PlatformBillingAccount...");
-  await db.platformBillingAccount.upsert({
-    where: { providerTeamId: teamId },
-    update: { portalComponentId: component.id },
-    create: {
-      providerTeamId: teamId,
-      environmentId: activeEnv?.id ?? null,
-      portalComponentId: component.id,
-    },
-  });
+  if (activeEnv) {
+    await db.platformBillingAccount.upsert({
+      where: {
+        providerTeamId_environmentId: {
+          providerTeamId: teamId,
+          environmentId: activeEnv.id,
+        },
+      },
+      update: { portalComponentId: component.id },
+      create: {
+        providerTeamId: teamId,
+        environmentId: activeEnv.id,
+        portalComponentId: component.id,
+      },
+    });
+  }
   log("  Account created/updated");
 
   // ── 9. Associate company with active plan ──────────────────────────────

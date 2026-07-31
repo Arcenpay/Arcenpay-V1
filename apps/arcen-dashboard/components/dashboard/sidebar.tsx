@@ -394,7 +394,7 @@ export function Sidebar({
           {/* Promo card */}
           <div className="rounded-xl bg-white/[0.04] border border-sidebar-border/60 p-3.5 mb-2">
             <div className="flex items-center gap-2 mb-2">
-              <Sparkles className="w-4 h-4 text-brand" strokeWidth={1.5} />
+              <Sparkles className="w-4 h-4 text-sidebar-foreground" strokeWidth={1.5} />
               <span className="text-[13px] font-medium text-sidebar-foreground">Introducing ZK Plans</span>
             </div>
             <p className="text-[12px] text-sidebar-foreground/50 leading-relaxed mb-2">
@@ -402,7 +402,7 @@ export function Sidebar({
             </p>
             <button
               onClick={() => onSectionChange("billing")}
-              className="text-[13px] font-medium text-brand hover:text-brand-dark transition-colors"
+              className="text-[13px] font-medium text-sidebar-foreground hover:text-sidebar-foreground/80 transition-colors"
             >
               Upgrade
             </button>

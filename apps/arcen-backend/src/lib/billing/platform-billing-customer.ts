@@ -27,26 +27,32 @@ export type PlatformBillingCustomerResult =
   | { configured: false; created: false; reason: "not_configured" | "workspace_not_found" };
 
 function readPlatformTier(value: unknown): PlatformTier | null {
-  const tier = asRecord(value).platformTier;
-  return tier === "PLUS" || tier === "PRO" ? tier : null;
+  const metadata = asRecord(value);
+  const tier = metadata.platformTier ?? metadata.tier;
+  return tier === "FREE" || tier === "PLUS" || tier === "PRO" ? tier : null;
 }
 
 /** Returns the durable first-party customer identity for a workspace. */
 export async function ensurePlatformBillingCustomer(
-  input: { workspaceTeamId: string },
+  input: { workspaceTeamId: string; environmentId?: string | null },
   client: PlatformBillingDb = db,
 ): Promise<PlatformBillingCustomerResult> {
-  const account = await client.platformBillingAccount.findUnique({
-    where: { id: "default" },
-    select: { providerTeamId: true, environmentId: true, portalComponentId: true },
-  });
+  const account = input.environmentId
+    ? await client.platformBillingAccount.findFirst({
+        where: { environmentId: input.environmentId },
+        select: { providerTeamId: true, environmentId: true, portalComponentId: true },
+      })
+    : await client.platformBillingAccount.findUnique({
+        where: { id: "default" },
+        select: { providerTeamId: true, environmentId: true, portalComponentId: true },
+      });
   if (!account) return { configured: false, created: false, reason: "not_configured" };
 
   const existing = await client.platformBillingCustomer.findUnique({
     where: { workspaceTeamId: input.workspaceTeamId },
-    select: { companyId: true },
+    select: { companyId: true, providerTeamId: true, environmentId: true },
   });
-  if (existing) {
+  if (existing && (!existing.providerTeamId || existing.providerTeamId === account.providerTeamId)) {
     return { configured: true, created: false, ...account, companyId: existing.companyId };
   }
 
@@ -61,6 +67,7 @@ export async function ensurePlatformBillingCustomer(
     where: { teamId: account.providerTeamId, environmentId: account.environmentId, externalId },
     select: { id: true },
   });
+  let created = false;
   if (!company) {
     company = await client.arcenCompany.create({
       data: {
@@ -72,18 +79,31 @@ export async function ensurePlatformBillingCustomer(
       },
       select: { id: true },
     });
+    created = true;
   }
 
   try {
-    await client.platformBillingCustomer.create({
-      data: {
-        workspaceTeamId: workspace.id,
-        providerTeamId: account.providerTeamId,
-        environmentId: account.environmentId,
-        companyId: company.id,
-      },
-      select: { id: true },
-    });
+    if (existing) {
+      await client.platformBillingCustomer.update({
+        where: { workspaceTeamId: workspace.id },
+        data: {
+          providerTeamId: account.providerTeamId,
+          environmentId: account.environmentId,
+          companyId: company.id,
+        },
+        select: { id: true },
+      });
+    } else {
+      await client.platformBillingCustomer.create({
+        data: {
+          workspaceTeamId: workspace.id,
+          providerTeamId: account.providerTeamId,
+          environmentId: account.environmentId,
+          companyId: company.id,
+        },
+        select: { id: true },
+      });
+    }
   } catch (error) {
     if (!(typeof error === "object" && error !== null && "code" in error && error.code === "P2002")) throw error;
     const concurrent = await client.platformBillingCustomer.findUnique({
@@ -94,7 +114,7 @@ export async function ensurePlatformBillingCustomer(
     company = { id: concurrent.companyId };
   }
 
-  return { configured: true, created: true, ...account, companyId: company.id };
+  return { configured: true, created, ...account, companyId: company.id };
 }
 
 /**
