@@ -1,6 +1,7 @@
 import type { Context } from "hono";
 import { bootstrapPlatformBillingPlans } from "../../../lib/billing/platform-tier-billing.js";
-import { requireTeamRoles, isErrorResponse } from "../../../lib/auth/api-auth.js";
+import { isErrorResponse } from "../../../lib/auth/api-auth.js";
+import { requirePlatformOwner } from "../../../lib/auth/platform-owner.js";
 import { writeAuditEvent } from "../../../lib/platform/audit.js";
 
 /**
@@ -13,7 +14,7 @@ import { writeAuditEvent } from "../../../lib/platform/audit.js";
  * Fails visibly if an existing plan has a parameter mismatch.
  */
 export async function postTierBootstrap(c: Context) {
-  const auth = await requireTeamRoles(c, ["OWNER"]);
+  const auth = await requirePlatformOwner(c);
   if (isErrorResponse(auth)) return c.json({ ok: false, error: auth.error }, auth.status as any);
 
   try {

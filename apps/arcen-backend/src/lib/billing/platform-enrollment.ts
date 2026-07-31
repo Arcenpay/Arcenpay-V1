@@ -34,6 +34,7 @@ async function providerAccount(environmentId?: string | null) {
     select: {
       providerTeamId: true,
       environmentId: true,
+      environment: { select: { mode: true } },
       portalComponentId: true,
     },
   });
@@ -269,6 +270,25 @@ export async function enrollWorkspaceInPlatformBilling(input: {
     ensurePlatformPlan(account.providerTeamId, account.environmentId, "PLUS"),
     ensurePlatformPlan(account.providerTeamId, account.environmentId, "PRO"),
   ]);
+  const platformPlanIds = [freePlan.id, plusPlan.id, proPlan.id];
+  await db.catalogConfig.upsert({
+    where: { environmentId: account.environmentId },
+    update: {
+      livePlanIds: platformPlanIds,
+      restrictLivePlans: true,
+      initialPlan: freePlan.id,
+      fallbackPlan: freePlan.id,
+    },
+    create: {
+      teamId: account.providerTeamId,
+      environmentId: account.environmentId,
+      environmentMode: account.environment.mode,
+      livePlanIds: platformPlanIds,
+      restrictLivePlans: true,
+      initialPlan: freePlan.id,
+      fallbackPlan: freePlan.id,
+    },
+  });
 
   const existing = await db.subscriptionState.findUnique({
     where: { companyId: company.id },
