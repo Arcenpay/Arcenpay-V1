@@ -295,6 +295,12 @@ export async function provisionUserForEmail(emailInput: string) {
       where: { id: created.id },
       data: { currentTeamId: firstTeamId },
     });
+
+    // Do not create an environment during account creation. The owner must
+    // explicitly choose the first environment and chain in onboarding. The
+    // environment creation route then creates its catalog config, copies the
+    // team profile, provisions the single FREE first-party subscription, and
+    // marks that user-created environment as the workspace default.
   }
 
   return db.user.findUniqueOrThrow({ where: { id: created.id } });

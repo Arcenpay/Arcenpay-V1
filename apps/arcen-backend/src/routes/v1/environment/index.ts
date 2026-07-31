@@ -12,6 +12,8 @@ import { isErrorResponse, requireTeamRoles } from "../../../lib/auth/api-auth.js
 import { writeAuditEvent } from "../../../lib/platform/audit.js";
 import { getTierLimits } from "../../../lib/catalog/tier-guard.js";
 import { sendWelcomeEmail } from "../../../lib/billing/email.js";
+import { ensureWorkspacePlatformBilling } from "../../../lib/billing/platform-enrollment.js";
+import { PRODUCTION_ENVIRONMENTS_ENABLED } from "../../../lib/platform/launch-flags.js";
 
 const manageRoles = ["OWNER", "ADMIN"] as const;
 
@@ -28,6 +30,10 @@ const selectSchema = z.object({
 const renameSchema = z.object({
   environmentId: z.string().min(1),
   name: z.string().trim().min(1).max(64),
+});
+
+const deleteSchema = z.object({
+  environmentId: z.string().min(1),
 });
 
 async function listEnvironments(c: Context) {
@@ -66,6 +72,7 @@ async function listEnvironments(c: Context) {
       development: environments.filter((env) => env.mode === "DEVELOPMENT").length,
       production: environments.filter((env) => env.mode === "PRODUCTION").length,
     },
+    productionEnabled: PRODUCTION_ENVIRONMENTS_ENABLED,
   });
 }
 
@@ -85,6 +92,16 @@ async function createEnvironment(c: Context) {
 
   if (!isChainAllowedForMode(parsed.data.mode, parsed.data.chainId)) {
     return c.json({ error: "Selected chain is not allowed for this environment type." }, 400 as any);
+  }
+
+  if (parsed.data.mode === "PRODUCTION" && !PRODUCTION_ENVIRONMENTS_ENABLED) {
+    return c.json(
+      {
+        error: "Production environments are not enabled yet. Continue using a development environment until mainnet configuration is approved.",
+        code: "PRODUCTION_ENVIRONMENT_DISABLED",
+      },
+      409 as any,
+    );
   }
 
   const team = await db.team.findUnique({
@@ -228,6 +245,17 @@ async function createEnvironment(c: Context) {
       environmentMode: environment.mode,
     },
   }).catch(() => {});
+
+  // Complete or repair automatic first-party billing enrollment when the
+  // workspace receives its first usable environment. Repeated calls are safe.
+  try {
+    await ensureWorkspacePlatformBilling({
+      workspaceTeamId: auth.team.teamId,
+      workspaceEnvironmentId: environment.id,
+    });
+  } catch (error) {
+    console.warn("[environment] First-party platform billing provisioning deferred:", error);
+  }
 
   // Copy onboarding profile from team record to the new environment's ProviderProfile
   try {
@@ -406,6 +434,120 @@ async function renameEnvironment(c: Context) {
   });
 }
 
+async function deleteEnvironment(c: Context) {
+  const auth = await requireTeamRoles(c, ["OWNER", "ADMIN"]);
+  if (isErrorResponse(auth)) {
+    return c.json({ ok: false, error: auth.error }, auth.status as any);
+  }
+
+  const parsed = deleteSchema.safeParse(await c.req.json().catch(() => ({})));
+  if (!parsed.success) {
+    return c.json(
+      { error: "Invalid request", details: parsed.error.flatten().fieldErrors },
+      400 as any,
+    );
+  }
+
+  const environment = await db.workspaceEnvironment.findFirst({
+    where: { id: parsed.data.environmentId, teamId: auth.team.teamId },
+  });
+  if (!environment) {
+    return c.json({ error: "Environment not found" }, 404 as any);
+  }
+
+  const defaultEnvironment = await db.workspaceEnvironment.findFirst({
+    where: { teamId: auth.team.teamId },
+    orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+    select: { id: true },
+  });
+  if (defaultEnvironment?.id === environment.id) {
+    return c.json(
+      {
+        error: "The first Development environment is the workspace default and cannot be deleted.",
+        code: "DEFAULT_ENVIRONMENT_PROTECTED",
+      },
+      409 as any,
+    );
+  }
+
+  const [activePlanCount, activeSubscriptionCount, customerMappingCount] =
+    await Promise.all([
+      db.catalogPlan.count({
+        where: {
+          environmentId: environment.id,
+          active: true,
+          status: { in: ["DRAFT", "PUBLISHED"] },
+        },
+      }),
+      db.subscriptionState.count({
+        where: {
+          environmentId: environment.id,
+          status: { in: ["ACTIVE", "PAST_DUE"] },
+        },
+      }),
+      db.platformBillingCustomer.count({
+        where: { environmentId: environment.id },
+      }),
+    ]);
+
+  if (activePlanCount > 0 || activeSubscriptionCount > 0) {
+    return c.json(
+      {
+        error: "Environment cannot be deleted while it has active plans or subscriptions.",
+        code: "ENVIRONMENT_HAS_ACTIVE_BILLING",
+        activePlans: activePlanCount,
+        activeSubscriptions: activeSubscriptionCount,
+      },
+      409 as any,
+    );
+  }
+
+  // Customer mappings are retained with their billing history and are not
+  // destructively removed as part of environment cleanup.
+  if (customerMappingCount > 0) {
+    return c.json(
+      {
+        error: "Environment has billing history and cannot be deleted. Archive it after cancelling its billing records.",
+        code: "ENVIRONMENT_HAS_BILLING_HISTORY",
+      },
+      409 as any,
+    );
+  }
+
+  const replacement = await db.workspaceEnvironment.findFirst({
+    where: { teamId: auth.team.teamId, id: { not: environment.id } },
+    orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+    select: { id: true },
+  });
+
+  await db.$transaction(async (tx) => {
+    await tx.authSession.updateMany({
+      where: { activeEnvironmentId: environment.id },
+      data: { activeEnvironmentId: replacement?.id ?? null },
+    });
+    await tx.platformBillingPlan.deleteMany({
+      where: { environmentId: environment.id },
+    });
+    await tx.platformBillingAccount.deleteMany({
+      where: { environmentId: environment.id },
+    });
+    await tx.workspaceEnvironment.delete({ where: { id: environment.id } });
+  });
+
+  await writeAuditEvent({
+    headers: c.req.raw.headers,
+    teamId: auth.team.teamId,
+    userId: auth.team.userId,
+    walletAddress: auth.team.walletAddress,
+    action: "environment.delete",
+    resourceType: "WorkspaceEnvironment",
+    resourceId: environment.id,
+    beforeData: environment,
+  });
+
+  return c.json({ ok: true, deletedEnvironmentId: environment.id });
+}
+
 async function deprecatedSwitch(c: Context) {
   const auth = await requireTeamRoles(c, ["OWNER", "ADMIN"]);
   if (isErrorResponse(auth)) {
@@ -426,4 +568,5 @@ export const environmentRoutes = new Hono()
   .post("/", createEnvironment)
   .post("/select", selectEnvironment)
   .patch("/", renameEnvironment)
+  .delete("/", deleteEnvironment)
   .post("/switch", deprecatedSwitch);

@@ -44,7 +44,7 @@ export function usePlatformBillingEmbed(): {
 
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
-        setNeedsSetup(body.code === "PLATFORM_BILLING_NOT_ENROLLED");
+        setNeedsSetup(body.code === "PLATFORM_BILLING_PROVISIONING");
         throw new Error(
           body.error ?? body.message ?? `Failed to fetch embed token (${res.status})`,
         );

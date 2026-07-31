@@ -25,3 +25,9 @@ export const SUBGRAPH_REQUIRED = isEnabled(
   process.env.ARCENPAY_REQUIRE_SUBGRAPH ??
     process.env.NEXT_PUBLIC_ARCENPAY_REQUIRE_SUBGRAPH,
 );
+
+// Mainnet environments remain opt-in until production contracts, RPC,
+// facilitator, token, and treasury configuration have been verified.
+export const PRODUCTION_ENVIRONMENTS_ENABLED = isEnabled(
+  process.env.ARCENPAY_ENABLE_PRODUCTION_ENVIRONMENTS,
+);

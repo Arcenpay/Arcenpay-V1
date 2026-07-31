@@ -128,7 +128,7 @@ export async function getPlanSignNonce(c: Context) {
       const immutableMismatch =
         onChainPlan.name !== plan.name ||
         onChainPlan.tier !== plan.tier ||
-        Number(onChainPlan.billingInterval) !== plan.billingInterval * 86400 ||
+        Number(onChainPlan.billingInterval) !== plan.billingInterval ||
         onChainPlan.acceptedToken.toLowerCase() !==
           plan.acceptedToken.toLowerCase();
 

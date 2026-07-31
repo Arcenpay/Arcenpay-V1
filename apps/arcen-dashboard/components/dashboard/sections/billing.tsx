@@ -13,14 +13,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
   Zap,
   Crown,
   Rocket,
@@ -229,12 +221,10 @@ export function BillingSection() {
   const [gasBudget, setGasBudget] = useState<GasBudget | null>(null);
   const [gasHistory, setGasHistory] = useState<GasHistoryEntry[]>([]);
   const [billingReadiness, setBillingReadiness] = useState<PlatformBillingReadiness>("READY");
+  const [canBootstrapPlatformPlans, setCanBootstrapPlatformPlans] = useState(false);
   const [subscription, setSubscription] = useState<SubscriptionStatus>(null);
   const [loading, setLoading] = useState(true);
   const [bootstrapping, setBootstrapping] = useState(false);
-
-  const [downgradeDialogOpen, setDowngradeDialogOpen] = useState(false);
-  const [selectedTier, setSelectedTier] = useState<string | null>(null);
 
   const {
     token: embedToken,
@@ -257,6 +247,7 @@ export function BillingSection() {
         const data = await tierRes.json();
         setCurrentTier(data.current);
         setBillingReadiness(data.billingReadiness ?? "READY");
+        setCanBootstrapPlatformPlans(data.canBootstrapPlatformPlans === true);
         setSubscription(data.subscription ?? null);
       }
 
@@ -344,7 +335,8 @@ export function BillingSection() {
     <div className="space-y-6">
       <ReadinessBanner readiness={billingReadiness} subscription={subscription} />
 
-      {(billingReadiness === "BOOTSTRAP_MISSING" || billingReadiness === "BOOTSTRAP_FAILED") && (
+      {canBootstrapPlatformPlans &&
+        (billingReadiness === "BOOTSTRAP_MISSING" || billingReadiness === "BOOTSTRAP_FAILED") && (
         <div className="flex items-center justify-between px-4 py-3 rounded-lg border bg-muted/30">
           <div>
             <p className="text-sm font-medium">Bootstrap Platform Plans</p>
@@ -526,11 +518,14 @@ export function BillingSection() {
           <Card>
             <CardContent className="flex flex-col items-center justify-center py-12 space-y-3 text-center">
               <CreditCard className="w-10 h-10 text-muted-foreground/40" />
-              <p className="text-sm font-medium">Platform billing is not enabled</p>
+              <p className="text-sm font-medium">Setting up your platform billing</p>
               <p className="max-w-md text-sm text-muted-foreground">
-                Opening this page does not create plans or subscribe the workspace. Enable self-billing only if you want to dogfood ArcenPay on this workspace.
+                Your workspace is automatically enrolled in the FREE ArcenPay plan. This page will be ready as soon as that setup finishes.
               </p>
-              <Button size="sm" onClick={setupBilling}>Enable platform billing</Button>
+              <Button variant="outline" size="sm" onClick={refreshEmbed}>
+                <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
+                Check again
+              </Button>
             </CardContent>
           </Card>
         ) : embedError ? (
@@ -573,87 +568,6 @@ export function BillingSection() {
         )}
       </div>
 
-      <DowngradeDialog
-        open={downgradeDialogOpen}
-        onOpenChange={setDowngradeDialogOpen}
-        selectedTier={selectedTier}
-        currentTier={currentTier}
-        onSuccess={fetchPlatformData}
-      />
     </div>
-  );
-}
-
-// ── Downgrade Dialog ─────────────────────────────────────────────────────────
-
-function DowngradeDialog({
-  open,
-  onOpenChange,
-  selectedTier,
-  currentTier,
-  onSuccess,
-}: {
-  open: boolean;
-  onOpenChange: (v: boolean) => void;
-  selectedTier: string | null;
-  currentTier: CurrentTier | null;
-  onSuccess: () => void;
-}) {
-  const [loading, setLoading] = useState(false);
-
-  async function handleDowngrade() {
-    if (!selectedTier) return;
-    setLoading(true);
-
-    try {
-      const res = await fetch("/api/platform/tier", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ targetTier: selectedTier }),
-      });
-
-      const data = await res.json();
-
-      if (res.ok && data.ok) {
-        toast.success(data.message ?? "Downgraded successfully.");
-        onOpenChange(false);
-        onSuccess();
-      } else if (res.status === 409) {
-        const violations = (data.violations ?? []) as string[];
-        toast.error(
-          violations.length > 0
-            ? violations.join(" | ")
-            : data.message ?? "Cannot downgrade due to usage limits.",
-        );
-      } else {
-        toast.error(data.message ?? data.error ?? "Downgrade failed.");
-      }
-    } catch {
-      toast.error("Network error.");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-sm bg-white p-6 rounded-lg">
-        <DialogHeader>
-          <DialogTitle className="text-lg font-bold">Downgrade to {getTierConfig(selectedTier).label}</DialogTitle>
-          <DialogDescription className="text-sm text-muted-foreground mt-1">
-            Downgrading will reduce your limits immediately. Make sure your current usage is
-            within the target tier&apos;s limits.
-          </DialogDescription>
-        </DialogHeader>
-        <DialogFooter className="mt-4 flex gap-2 justify-end">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
-          </Button>
-          <Button variant="destructive" onClick={handleDowngrade} disabled={loading}>
-            {loading ? "Downgrading…" : "Confirm Downgrade"}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
   );
 }

@@ -54,7 +54,7 @@ export function AuthShell({ mode, title, description, children }: AuthShellProps
                   alt="ArcenPay"
                   width={178}
                   height={44}
-                  className="h-10 w-auto object-contain"
+                  className="h-10 w-auto object-contain dark:brightness-0 dark:invert"
                   priority
                 />
               </Link>

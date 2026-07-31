@@ -564,7 +564,7 @@ export function PaymentsSection() {
 
       {/* Stats cards */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="rounded-2xl border border-border bg-card p-5">
+        <div className="border border-border bg-card p-5">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-secondary">
               <Link2 className="h-5 w-5 text-foreground" />
@@ -575,7 +575,7 @@ export function PaymentsSection() {
             </div>
           </div>
         </div>
-        <div className="rounded-2xl border border-border bg-card p-5">
+        <div className="border border-border bg-card p-5">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-secondary">
               <DollarSign className="h-5 w-5 text-foreground" />
@@ -588,7 +588,7 @@ export function PaymentsSection() {
             </div>
           </div>
         </div>
-        <div className="rounded-2xl border border-border bg-card p-5">
+        <div className="border border-border bg-card p-5">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-secondary">
               <Clock className="h-5 w-5 text-foreground" />
@@ -599,7 +599,7 @@ export function PaymentsSection() {
             </div>
           </div>
         </div>
-        <div className="rounded-2xl border border-border bg-card p-5">
+        <div className="border border-border bg-card p-5">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-secondary">
               <Users className="h-5 w-5 text-foreground" />
@@ -614,7 +614,7 @@ export function PaymentsSection() {
 
       <div className="grid gap-6 xl:grid-cols-[1fr_1fr]">
         {/* Create payment link */}
-        <div className="rounded-2xl border border-border bg-card p-5">
+        <div className="border border-border bg-card p-5">
           <div className="mb-4">
             <p className="text-sm font-semibold text-foreground">Create payment link</p>
             <p className="mt-1 text-xs text-muted-foreground">
@@ -925,7 +925,7 @@ export function PaymentsSection() {
         </div>
 
         {/* Payment links list */}
-        <div className="rounded-2xl border border-border bg-card p-5">
+        <div className="border border-border bg-card p-5">
           <div className="mb-4 flex items-center justify-between">
             <div>
               <p className="text-sm font-semibold text-foreground">Payment links</p>
@@ -1086,7 +1086,7 @@ export function PaymentsSection() {
       </div>
 
       {/* Checkout sessions table */}
-      <div className="rounded-2xl border border-border bg-card p-5">
+      <div className="border border-border bg-card p-5">
         <div className="mb-4 flex items-center justify-between">
           <div>
             <p className="text-sm font-semibold text-foreground">Checkout sessions</p>

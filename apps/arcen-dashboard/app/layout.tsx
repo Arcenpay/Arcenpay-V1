@@ -26,7 +26,9 @@ export default async function RootLayout({
               (function() {
                 try {
                   var root = document.documentElement;
-                  var stored = localStorage.getItem('theme');
+                  // Use a namespaced key so stale theme values from the old
+                  // dashboard implementation cannot force the wrong mode.
+                  var stored = localStorage.getItem('arcenpay-theme');
                   if (stored === 'dark') {
                     root.classList.add('dark');
                   } else if (stored === 'light') {
@@ -39,7 +41,7 @@ export default async function RootLayout({
                     } else {
                       root.classList.remove('dark');
                     }
-                    localStorage.setItem('theme', 'system');
+                    localStorage.setItem('arcenpay-theme', 'system');
                   }
                 } catch (e) {}
               })();
@@ -53,6 +55,7 @@ export default async function RootLayout({
           attribute="class"
           defaultTheme="system"
           enableSystem
+          storageKey="arcenpay-theme"
           disableTransitionOnChange
         >
           <Web3Provider cookies={cookies}>{children}</Web3Provider>

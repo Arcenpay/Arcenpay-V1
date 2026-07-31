@@ -147,7 +147,7 @@ function useExpiryCountdown(expiresAt?: string | null) {
 function Skeleton() {
   return (
     <div className="pt-6 sm:pt-10">
-      <div className="mx-auto max-w-[110rem] overflow-hidden rounded-[1rem] border border-[#e5e7eb] bg-white shadow-[0_20px_60px_-40px_rgba(15,23,42,0.28)] lg:grid lg:grid-cols-[1.02fr_0.98fr]">
+      <div className="mx-auto max-w-[110rem] overflow-hidden border border-[#e5e7eb] bg-white shadow-[0_20px_60px_-40px_rgba(15,23,42,0.28)] lg:grid lg:grid-cols-[1.02fr_0.98fr]">
         <section className="bg-[#f5f5f7] px-6 py-8 sm:px-10 lg:px-12 lg:py-10">
           <div className="h-4 w-16 animate-pulse rounded bg-[#d8dbe2]" />
           <div className="mt-7 flex items-center gap-3">
@@ -572,7 +572,7 @@ function CheckoutContent() {
         {/* Error state */}
         {!loading && error && !session && (
           <div className="pt-6 sm:pt-10">
-            <div className="mx-auto max-w-3xl overflow-hidden rounded-[1rem] border border-[#e5e7eb] bg-white shadow-[0_20px_60px_-40px_rgba(15,23,42,0.28)]">
+            <div className="mx-auto max-w-3xl overflow-hidden border border-[#e5e7eb] bg-white shadow-[0_20px_60px_-40px_rgba(15,23,42,0.28)]">
               <div className="border-b border-[#eceff4] bg-[#f5f5f7] px-6 py-6 sm:px-8">
                 <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#8b8f98]">
                   Hosted checkout
@@ -607,7 +607,7 @@ function CheckoutContent() {
         {/* Already PAID */}
         {!loading && session?.status === "PAID" && (
           <div className="pt-6 sm:pt-10">
-            <div className="mx-auto max-w-[72rem] overflow-hidden rounded-[1rem] border border-[#e5e7eb] bg-white shadow-[0_20px_60px_-40px_rgba(15,23,42,0.28)] lg:grid lg:grid-cols-[0.95fr_1.05fr]">
+            <div className="mx-auto max-w-[72rem] overflow-hidden border border-[#e5e7eb] bg-white shadow-[0_20px_60px_-40px_rgba(15,23,42,0.28)] lg:grid lg:grid-cols-[0.95fr_1.05fr]">
               <section className="bg-[#f5f5f7] px-6 py-8 sm:px-10 lg:px-12 lg:py-10">
                 <div className="flex items-center gap-3">
                   {merchantLogoUrl ? (
@@ -700,7 +700,7 @@ function CheckoutContent() {
           session &&
           (session.status === "EXPIRED" || session.status === "CANCELLED" || session.status === "FAILED") && (
             <div className="pt-6 sm:pt-10">
-              <div className="mx-auto max-w-3xl overflow-hidden rounded-[1rem] border border-[#e5e7eb] bg-white shadow-[0_20px_60px_-40px_rgba(15,23,42,0.28)]">
+              <div className="mx-auto max-w-3xl overflow-hidden border border-[#e5e7eb] bg-white shadow-[0_20px_60px_-40px_rgba(15,23,42,0.28)]">
                 <div className="border-b border-[#eceff4] bg-[#f5f5f7] px-6 py-6 sm:px-8">
                   <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#8b8f98]">
                     Hosted checkout
@@ -747,7 +747,7 @@ function CheckoutContent() {
         {/* PENDING — active checkout */}
         {!loading && session?.status === "PENDING" && (
           <div className="pt-6 sm:pt-10">
-            <div className="mx-auto max-w-[110rem] overflow-hidden rounded-[1rem] border border-[#e5e7eb] bg-white shadow-[0_20px_60px_-40px_rgba(15,23,42,0.28)] lg:grid lg:grid-cols-[1.02fr_0.98fr]">
+            <div className="mx-auto max-w-[110rem] overflow-hidden border border-[#e5e7eb] bg-white shadow-[0_20px_60px_-40px_rgba(15,23,42,0.28)] lg:grid lg:grid-cols-[1.02fr_0.98fr]">
               <section className="bg-[#f5f5f7] px-6 py-8 sm:px-10 lg:px-12 lg:py-10">
                 <button
                   type="button"

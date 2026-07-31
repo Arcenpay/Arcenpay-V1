@@ -10,12 +10,30 @@ import { toPrismaNullableJson } from "../../../utils/prisma-json.js";
 import { assertCanCreatePlan } from "../../../lib/catalog/tier-guard.js";
 import { requireResolvedActiveEnvironment } from "../../../lib/environments/workspace-environments.js";
 import { getRpcUrl } from "../../../config.js";
-import { getChain, PlanFactoryABI, getContractAddresses } from "@arcenpay/internal-core";
+import {
+  getChain,
+  MONTHLY_INTERVAL,
+  PlanFactoryABI,
+  YEARLY_INTERVAL,
+  getContractAddresses,
+} from "@arcenpay/internal-core";
 
 const listSchema = z.object({
   environmentMode: z.enum(["DEVELOPMENT", "PRODUCTION"]).optional(),
   status: z.enum(["DRAFT", "PUBLISHED", "ARCHIVED"]).optional(),
 });
+
+const QUARTERLY_INTERVAL = MONTHLY_INTERVAL * 3;
+const BILLING_INTERVALS = new Set([
+  MONTHLY_INTERVAL,
+  QUARTERLY_INTERVAL,
+  YEARLY_INTERVAL,
+]);
+
+const billingIntervalSchema = z.coerce.number().int().refine(
+  (value) => BILLING_INTERVALS.has(value),
+  "Billing interval must be Monthly, Quarterly, or Annual.",
+);
 
 const createSchema = z.object({
   name: z.string().min(1),
@@ -23,7 +41,7 @@ const createSchema = z.object({
   description: z.string().optional(),
   price: z.coerce.number().nonnegative(),
   annualPrice: z.coerce.number().nonnegative().optional(),
-  billingInterval: z.coerce.number().int().positive(),
+  billingInterval: billingIntervalSchema,
   acceptedToken: z.string().min(1),
   chainId: z.coerce.number().int().positive().optional(),
   metadata: z.record(z.unknown()).optional(),
@@ -37,7 +55,7 @@ const updateSchema = z.object({
   description: z.string().nullable().optional(),
   price: z.coerce.number().nonnegative().optional(),
   annualPrice: z.coerce.number().nonnegative().nullable().optional(),
-  billingInterval: z.coerce.number().int().positive().optional(),
+  billingInterval: billingIntervalSchema.optional(),
   acceptedToken: z.string().min(1).optional(),
   chainId: z.coerce.number().int().positive().optional(),
   metadata: z.record(z.unknown()).optional(),
@@ -265,7 +283,6 @@ export async function createPlan(c: Context) {
         message: "Annual billing options are only available on Growth and Enterprise tiers. Free tier plans must use monthly billing only.",
       }, 403 as any);
     }
-    const MONTHLY_INTERVAL = 2_592_000;
     if (data.billingInterval > MONTHLY_INTERVAL) {
       return c.json({
         error: "UPGRADE_REQUIRED",

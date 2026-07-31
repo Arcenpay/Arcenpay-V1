@@ -40,6 +40,7 @@ export default function EnvironmentOnboardingPage() {
   const [name, setName] = useState("");
   const [mode, setMode] = useState<EnvironmentMode>("DEVELOPMENT");
   const [chainId, setChainId] = useState<number>(BASE_SEPOLIA_CHAIN_ID);
+  const [productionEnabled, setProductionEnabled] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -47,11 +48,48 @@ export default function EnvironmentOnboardingPage() {
     data?.currentTeam?.role === "OWNER" || data?.currentTeam?.role === "ADMIN";
 
   const chainOptions = useMemo(() => CHAINS[mode], [mode]);
-  const hasExistingEnvironments = (data?.environments?.length ?? 0) > 0;
+  const existingEnvironments = data?.environments ?? [];
+  const hasExistingEnvironments = existingEnvironments.length > 0;
 
   useEffect(() => {
     setChainId(chainOptions[0]?.chainId ?? BASE_SEPOLIA_CHAIN_ID);
   }, [chainOptions]);
+
+  useEffect(() => {
+    fetch("/api/environments", { cache: "no-store" })
+      .then((response) => (response.ok ? response.json() : null))
+      .then((payload: { productionEnabled?: boolean } | null) => {
+        setProductionEnabled(payload?.productionEnabled === true);
+      })
+      .catch(() => setProductionEnabled(false));
+  }, []);
+
+  useEffect(() => {
+    if (data?.activeEnvironment) {
+      window.location.assign("/");
+    }
+  }, [data?.activeEnvironment]);
+
+  async function handleSelect(environmentId: string) {
+    setSubmitting(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/environments/select", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ environmentId }),
+      });
+      const payload = (await res.json().catch(() => ({}))) as { error?: string };
+      if (!res.ok) {
+        setError(payload.error || "Failed to select environment");
+        return;
+      }
+      await refresh();
+      window.location.assign("/");
+    } finally {
+      setSubmitting(false);
+    }
+  }
 
   async function handleCreate() {
     setSubmitting(true);
@@ -72,8 +110,10 @@ export default function EnvironmentOnboardingPage() {
         return;
       }
       await refresh();
-      router.replace("/");
-      router.refresh();
+      // A full navigation ensures the server dashboard layout reads the
+      // newly activated environment and does not reuse the onboarding route's
+      // cached session state.
+      window.location.assign("/");
     } finally {
       setSubmitting(false);
     }
@@ -116,7 +156,45 @@ export default function EnvironmentOnboardingPage() {
           </p>
         </div>
 
+        {hasExistingEnvironments && (
+          <div className="mb-8 rounded-xl border border-border bg-card p-4">
+            <div className="mb-3">
+              <h2 className="text-sm font-semibold text-foreground">Use an existing environment</h2>
+              <p className="mt-1 text-xs text-muted-foreground">
+                This workspace already has an environment. Select it to continue without creating another one.
+              </p>
+            </div>
+            <div className="space-y-2">
+              {existingEnvironments.map((environment) => (
+                <button
+                  key={environment.id}
+                  type="button"
+                  onClick={() => void handleSelect(environment.id)}
+                  disabled={submitting}
+                  className="flex w-full items-center justify-between rounded-lg border border-border px-3 py-3 text-left transition-colors hover:border-brand hover:bg-brand/5 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  <span className="min-w-0">
+                    <span className="block truncate text-sm font-medium text-foreground">{environment.name}</span>
+                    <span className="mt-0.5 block text-xs text-muted-foreground">
+                      {environment.mode === "PRODUCTION" ? "Production" : "Development"} · {environment.chainLabel}
+                    </span>
+                  </span>
+                  <CheckCircle2 className="h-4 w-4 shrink-0 text-brand" />
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         <div className="space-y-6">
+          {hasExistingEnvironments && (
+            <div className="border-t border-border pt-8">
+              <h2 className="text-base font-semibold text-foreground">Create another environment</h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Add a separate environment only when you need another isolated chain configuration.
+              </p>
+            </div>
+          )}
           {/* Environment Name */}
           <div className="space-y-2">
             <Label htmlFor="environment-name" className="text-sm font-medium text-foreground">
@@ -150,7 +228,11 @@ export default function EnvironmentOnboardingPage() {
                 </SelectTrigger>
                 <SelectContent className="bg-popover border-border text-popover-foreground">
                   <SelectItem value="DEVELOPMENT">Development (Testnet-only)</SelectItem>
-                  <SelectItem value="PRODUCTION">Production (Mainnet-only)</SelectItem>
+                  <SelectItem value="PRODUCTION" disabled={!productionEnabled}>
+                    {productionEnabled
+                      ? "Production (Mainnet-only)"
+                      : "Production (Mainnet-only — not enabled yet)"}
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>

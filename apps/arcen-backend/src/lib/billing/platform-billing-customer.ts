@@ -38,14 +38,18 @@ export async function ensurePlatformBillingCustomer(
   client: PlatformBillingDb = db,
 ): Promise<PlatformBillingCustomerResult> {
   const account = input.environmentId
-    ? await client.platformBillingAccount.findFirst({
+    ? (await client.platformBillingAccount.findFirst({
         where: { environmentId: input.environmentId },
         select: { providerTeamId: true, environmentId: true, portalComponentId: true },
-      })
-    : await client.platformBillingAccount.findUnique({
+      })) ?? (await client.platformBillingAccount.findFirst({
+        select: { providerTeamId: true, environmentId: true, portalComponentId: true },
+      }))
+    : (await client.platformBillingAccount.findUnique({
         where: { id: "default" },
         select: { providerTeamId: true, environmentId: true, portalComponentId: true },
-      });
+      })) ?? (await client.platformBillingAccount.findFirst({
+        select: { providerTeamId: true, environmentId: true, portalComponentId: true },
+      }));
   if (!account) return { configured: false, created: false, reason: "not_configured" };
 
   const existing = await client.platformBillingCustomer.findUnique({

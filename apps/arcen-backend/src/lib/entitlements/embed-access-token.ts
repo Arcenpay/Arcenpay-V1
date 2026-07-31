@@ -4,6 +4,8 @@ import { db } from "../../db.js";
 export interface EmbedAccessTokenContext {
   teamId: string;
   workspaceTeamId?: string | null;
+  teamRole?: "OWNER" | "ADMIN" | "FINANCE" | "DEVELOPER" | "SUPPORT" | "MEMBER" | null;
+  platformBilling?: boolean;
   environmentId: string | null;
   companyId: string | null;
   userId: string | null;
@@ -35,6 +37,8 @@ function verifySignedEmbedAccessToken(
       userId?: string | null;
       componentId?: string | null;
       workspaceTeamId?: string | null;
+      teamRole?: EmbedAccessTokenContext["teamRole"];
+      platformBilling?: boolean;
       preview?: boolean;
     };
 
@@ -46,6 +50,8 @@ function verifySignedEmbedAccessToken(
     return {
       teamId: payload.teamId,
       workspaceTeamId: payload.workspaceTeamId ?? null,
+      teamRole: payload.teamRole ?? null,
+      platformBilling: payload.platformBilling === true,
       environmentId: payload.environmentId ?? null,
       companyId: payload.companyId ?? null,
       userId: payload.userId ?? null,
@@ -99,13 +105,34 @@ export async function resolveEmbedAccessToken(
   });
 
   if (!record) return null;
+  if (record.teamId !== verified.teamId) return null;
+  if (
+    record.environmentId &&
+    verified.environmentId &&
+    record.environmentId !== verified.environmentId
+  ) {
+    return null;
+  }
+  if (record.companyId) {
+    const company = await db.arcenCompany.findFirst({
+      where: {
+        id: record.companyId,
+        teamId: record.teamId,
+        ...(record.environmentId ? { environmentId: record.environmentId } : {}),
+      },
+      select: { id: true },
+    });
+    if (!company) return null;
+  }
   return {
-    teamId: verified.teamId,
+    teamId: record.teamId,
     workspaceTeamId: verified.workspaceTeamId ?? null,
     environmentId: record.environmentId ?? verified.environmentId ?? null,
     companyId: record.companyId,
     userId: record.userId,
     componentId: verified.componentId,
+    teamRole: verified.teamRole ?? null,
+    platformBilling: verified.platformBilling === true,
     preview: verified.preview,
   };
 }

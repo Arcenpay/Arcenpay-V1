@@ -633,6 +633,18 @@ export async function handleCompanyPlanRequest(
     );
 
   const { teamId, companyId, userId } = decoded;
+  if (
+    decoded.platformBilling &&
+    decoded.teamRole !== "OWNER" &&
+    decoded.teamRole !== "ADMIN" &&
+    decoded.teamRole !== "FINANCE"
+  ) {
+    return c.json(
+      { error: "Only workspace billing administrators can change the platform subscription" },
+      403,
+      corsHeaders(origin),
+    );
+  }
   if (!companyId)
     return c.json(
       { error: "No company associated with this token" },

@@ -249,7 +249,9 @@ export async function registerPlanOnChain(c: Context) {
   const publicClient = createPublicClient({ chain, transport: http(rpcUrl) });
 
   const priceInUsdc = resolveMaxOnChainChargeMicros(plan);
-  const billingIntervalSeconds = plan.billingInterval * 86400;
+  // CatalogPlan.billingInterval is persisted in seconds and maps directly to
+  // PlanFactory's uint32 billingInterval field.
+  const billingIntervalSeconds = plan.billingInterval;
   let shouldReplaceOnChainPlan = false;
   let replacedOnChainPlanId: string | null = null;
   const usdcAddress = plan.onChainPlanId

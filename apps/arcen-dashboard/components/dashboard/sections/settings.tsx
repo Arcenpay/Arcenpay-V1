@@ -186,6 +186,7 @@ export function SettingsSection() {
   >([]);
   const [workspaceLoading, setWorkspaceLoading] = useState(true);
   const [workspaceBusy, setWorkspaceBusy] = useState(false);
+  const [deletingEnvironmentId, setDeletingEnvironmentId] = useState<string | null>(null);
   const [renamingEnvironmentId, setRenamingEnvironmentId] = useState<string | null>(null);
   const [environmentNameDraft, setEnvironmentNameDraft] = useState("");
   const [inviteEmail, setInviteEmail] = useState("");
@@ -561,6 +562,33 @@ export function SettingsSection() {
     }
   };
 
+  const handleDeleteEnvironment = async (environmentId: string, name: string) => {
+    if (!window.confirm(`Delete the ${name} environment? This is allowed only when it has no active plans or subscriptions.`)) {
+      return;
+    }
+
+    setDeletingEnvironmentId(environmentId);
+    try {
+      const response = await fetch("/api/environments", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ environmentId }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(payload?.error ?? "Failed to delete environment");
+      }
+      await Promise.all([loadWorkspaceData(), refreshEnvironments()]);
+      toast.success("Environment deleted");
+    } catch (err: unknown) {
+      toast.error(
+        err instanceof Error ? err.message : "Failed to delete environment",
+      );
+    } finally {
+      setDeletingEnvironmentId(null);
+    }
+  };
+
   const handleInviteMember = async () => {
     if (!inviteEmail.trim()) {
       toast.error("Enter an email address to invite");
@@ -929,6 +957,7 @@ export function SettingsSection() {
                     <div className="space-y-3">
                       {environments.map((environment) => {
                         const isRenaming = renamingEnvironmentId === environment.id;
+                        const isDefaultEnvironment = environments[0]?.id === environment.id;
                         return (
                           <div
                             key={environment.id}
@@ -973,6 +1002,18 @@ export function SettingsSection() {
                                     }}
                                   >
                                     Rename
+                                  </Button>
+                                ) : null}
+                                {canManageWorkspace && !isDefaultEnvironment ? (
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="text-destructive hover:text-destructive"
+                                    disabled={workspaceBusy || deletingEnvironmentId === environment.id}
+                                    onClick={() => void handleDeleteEnvironment(environment.id, environment.name)}
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5 mr-2" />
+                                    {deletingEnvironmentId === environment.id ? "Deleting…" : "Delete"}
                                   </Button>
                                 ) : null}
                               </div>

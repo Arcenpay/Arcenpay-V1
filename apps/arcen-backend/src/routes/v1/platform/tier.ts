@@ -11,6 +11,7 @@ import {
 } from "../../../lib/billing/platform-tier-billing.js";
 import { getPlatformBillingStatus } from "../../../lib/billing/platform-enrollment.js";
 import { requireTeamRoles, isErrorResponse } from "../../../lib/auth/api-auth.js";
+import { PLATFORM_OWNER_WALLET } from "../../../lib/auth/platform-owner.js";
 import type { PlatformTier } from "../../../generated/client/client.js";
 
 export async function getTier(c: Context) {
@@ -36,11 +37,16 @@ export async function getTier(c: Context) {
     getTeamPlatformSubscription(auth.team.teamId),
   ]);
 
+  // PlatformBillingPlan rows describe ArcenPay's own first-party catalog.
+  // They are not provider catalog data and must not be exposed through the
+  // normal workspace tier endpoint. Bootstrap remains available only through
+  // the owner-gated /tier/bootstrap route.
   return c.json({
     current: tierInfo,
     allTiers,
     billingReadiness: readinessResult.readiness,
-    platformPlans: readinessResult.platformPlans,
+    canBootstrapPlatformPlans:
+      auth.team.walletAddress?.trim().toLowerCase() === PLATFORM_OWNER_WALLET,
     enrollment,
     subscription: platformSubscription,
   });

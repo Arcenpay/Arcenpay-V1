@@ -492,6 +492,16 @@ export async function GET(c: Context) {
     );
   }
 
+  // First-party billing tokens are scoped to exactly one portal component.
+  // External provider tokens may omit componentId and remain component-selective.
+  if (!preview && componentId && componentId !== id) {
+    return c.json(
+      { error: "This access token is not valid for the requested component" },
+      403,
+      corsHeaders(origin),
+    );
+  }
+
   // Load the component
   const component = await db.embedComponent.findFirst({
     where: {
@@ -1476,8 +1486,16 @@ export async function GET(c: Context) {
       const hasCreditGrants =
         listComponentPlanMetadataCreditGrants(plan.metadata).length > 0;
       const isPaid = parseFloat(String(plan.price ?? "0")) > 0;
-      // Free plans always show. Paid plans must have customer-facing value configured.
-      return !isPaid || hasEntitlements || hasCreditGrants;
+      // The SDK has no safe paid fallback: paid subscriptions must begin or
+      // change through the authoritative on-chain flow. Do not expose a plan
+      // as selectable until its catalog record has a synced on-chain identity.
+      // This prevents the UI from offering a purchase that can only end in
+      // "Authoritative flow required".
+      const hasAuthoritativePaidFlow = !isPaid || Boolean(plan.onChainPlanId);
+      return (
+        hasAuthoritativePaidFlow &&
+        (!isPaid || hasEntitlements || hasCreditGrants)
+      );
     })
     .map((plan) => ({
     id: plan.id,

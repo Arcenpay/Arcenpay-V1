@@ -93,7 +93,7 @@ export default function AcceptInvitePage() {
               alt="ArcenPay"
               width={168}
               height={40}
-              className="h-10 w-auto object-contain"
+              className="h-10 w-auto object-contain dark:brightness-0 dark:invert"
               priority
             />
           </div>

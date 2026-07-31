@@ -107,7 +107,7 @@ import {
   resolveEnvironmentChainId,
 } from "@/lib/default-chain";
 import { toast } from "sonner";
-import { PlanFactoryABI } from "@arcenpay/internal-core";
+import { PlanFactoryABI, YEARLY_INTERVAL } from "@arcenpay/internal-core";
 import {
   isSmartAccountInfrastructureError,
   sendSmartAccountTransaction,
@@ -230,11 +230,17 @@ interface RegisterOnChainResponse {
 
 const TOKEN_OPTIONS: TokenOption[] = getTokenOptions();
 
-const BILLING_INTERVALS: { label: string; days: number; sublabel: string }[] = [
-  { label: "Monthly", days: 30, sublabel: "Every 30 days" },
-  { label: "Quarterly", days: 90, sublabel: "Every 90 days" },
-  { label: "Annual", days: 365, sublabel: "Every 365 days" },
+const BILLING_INTERVALS: { label: string; seconds: number; days: number; sublabel: string }[] = [
+  { label: "Monthly", seconds: 2_592_000, days: 30, sublabel: "Every month" },
+  { label: "Quarterly", seconds: 7_776_000, days: 90, sublabel: "Every 3 months" },
+  { label: "Annual", seconds: 31_536_000, days: 365, sublabel: "Every year" },
 ];
+const SECONDS_PER_DAY = 86_400;
+
+function billingIntervalLabel(seconds: number): string {
+  return BILLING_INTERVALS.find((interval) => interval.seconds === seconds)?.label ??
+    `${Math.round(seconds / SECONDS_PER_DAY)} days`;
+}
 
 function tokenLabel(address: string): string {
   const match = TOKEN_OPTIONS.find(
@@ -492,7 +498,7 @@ function CreatePlanDialog({
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [planType, setPlanType] = useState<"free" | "paid">("paid");
-  const [billingIntervalDays, setBillingIntervalDays] = useState(30);
+  const [billingIntervalDays, setBillingIntervalDays] = useState(2_592_000);
   const [hasAnnualPrice, setHasAnnualPrice] = useState(false);
   const [annualDiscount, setAnnualDiscount] = useState("20");
   const [form, setForm] = useState({
@@ -529,7 +535,7 @@ function CreatePlanDialog({
 
   function resetForm() {
     setPlanType("paid");
-    setBillingIntervalDays(30);
+    setBillingIntervalDays(2_592_000);
     setHasAnnualPrice(false);
     setAnnualDiscount("20");
     setForm({
@@ -668,8 +674,8 @@ function CreatePlanDialog({
                       <span className="text-xs font-normal text-muted-foreground ml-1">
                         /{" "}
                         {BILLING_INTERVALS.find(
-                          (i) => i.days === billingIntervalDays,
-                        )?.label.toLowerCase() ?? `${billingIntervalDays}d`}
+                          (i) => i.seconds === billingIntervalDays,
+                        )?.label.toLowerCase() ?? "custom"}
                       </span>
                     )}
                   </p>
@@ -900,15 +906,14 @@ function CreatePlanDialog({
                                 return (
                                   <DropdownMenuItem
                                     key={opt.chainId}
-                                    disabled={!isConn}
+                                    disabled={false}
                                     onClick={() =>
-                                      isConn &&
                                       setForm((p) => ({
                                         ...p,
                                         acceptedToken: opt.address,
                                       }))
                                     }
-                                    className={`flex items-center justify-between gap-3 py-2.5 ${!isConn ? "opacity-40 cursor-not-allowed" : ""}`}
+                                    className="flex items-center justify-between gap-3 py-2.5"
                                   >
                                     <div className="flex items-center gap-2.5">
                                       <Web3Icon
@@ -934,13 +939,12 @@ function CreatePlanDialog({
                                         </p>
                                       </div>
                                     </div>
-                                    {form.acceptedToken === opt.address &&
-                                      isConn && (
+                                    {form.acceptedToken === opt.address && (
                                         <Check className="w-3.5 h-3.5 text-foreground shrink-0" />
                                       )}
                                     {!isConn && (
                                       <span className="text-[9px] text-muted-foreground shrink-0">
-                                        Switch wallet
+                                        Switch wallet to sync
                                       </span>
                                     )}
                                   </DropdownMenuItem>
@@ -963,15 +967,14 @@ function CreatePlanDialog({
                                 return (
                                   <DropdownMenuItem
                                     key={opt.chainId}
-                                    disabled={!isConn}
+                                    disabled={false}
                                     onClick={() =>
-                                      isConn &&
                                       setForm((p) => ({
                                         ...p,
                                         acceptedToken: opt.address,
                                       }))
                                     }
-                                    className={`flex items-center justify-between gap-3 py-2.5 ${!isConn ? "opacity-40 cursor-not-allowed" : ""}`}
+                                    className="flex items-center justify-between gap-3 py-2.5"
                                   >
                                     <div className="flex items-center gap-2.5">
                                       <Web3Icon
@@ -997,13 +1000,12 @@ function CreatePlanDialog({
                                         </p>
                                       </div>
                                     </div>
-                                    {form.acceptedToken === opt.address &&
-                                      isConn && (
+                                    {form.acceptedToken === opt.address && (
                                         <Check className="w-3.5 h-3.5 text-foreground shrink-0" />
                                       )}
                                     {!isConn && (
                                       <span className="text-[9px] text-muted-foreground shrink-0">
-                                        Switch wallet
+                                        Switch wallet to sync
                                       </span>
                                     )}
                                   </DropdownMenuItem>
@@ -1027,7 +1029,7 @@ function CreatePlanDialog({
                       <div className="grid grid-cols-2 gap-4 mt-4">
                         <div>
                           <Label className="text-sm font-medium text-foreground mb-2 block">
-                            Monthly Price (USDC) *
+                            Price per billing period (USDC) *
                           </Label>
                           <div className="relative">
                             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground pointer-events-none">
@@ -1064,8 +1066,8 @@ function CreatePlanDialog({
                               >
                                 <span className="font-medium">
                                   {BILLING_INTERVALS.find(
-                                    (i) => i.days === billingIntervalDays,
-                                  )?.label ?? `${billingIntervalDays} days`}
+                                    (i) => i.seconds === billingIntervalDays,
+                                  )?.label ?? "Custom interval"}
                                 </span>
                                 <ChevronDown className="w-4 h-4 text-muted-foreground" />
                               </button>
@@ -1073,9 +1075,15 @@ function CreatePlanDialog({
                             <DropdownMenuContent className="w-[--radix-dropdown-menu-trigger-width]">
                               {BILLING_INTERVALS.map((iv) => (
                                 <DropdownMenuItem
-                                  key={iv.days}
+                                  key={iv.seconds}
                                   onClick={() =>
-                                    setBillingIntervalDays(iv.days)
+                                    {
+                                      setBillingIntervalDays(iv.seconds);
+                                      if (iv.seconds === YEARLY_INTERVAL) {
+                                        setHasAnnualPrice(false);
+                                        setForm((p) => ({ ...p, annualPrice: "" }));
+                                      }
+                                    }
                                   }
                                   className="flex items-center justify-between"
                                 >
@@ -1087,7 +1095,7 @@ function CreatePlanDialog({
                                       {iv.sublabel}
                                     </p>
                                   </div>
-                                  {billingIntervalDays === iv.days && (
+                                  {billingIntervalDays === iv.seconds && (
                                     <Check className="w-4 h-4 text-foreground ml-2" />
                                   )}
                                 </DropdownMenuItem>
@@ -1112,6 +1120,8 @@ function CreatePlanDialog({
                             type="button"
                             role="switch"
                             aria-checked={hasAnnualPrice}
+                            aria-disabled={billingIntervalDays === YEARLY_INTERVAL}
+                            disabled={billingIntervalDays === YEARLY_INTERVAL}
                             onClick={() => {
                               const next = !hasAnnualPrice;
                               setHasAnnualPrice(next);
@@ -1133,6 +1143,8 @@ function CreatePlanDialog({
                             }}
                             className={cn(
                               "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors",
+                              billingIntervalDays === YEARLY_INTERVAL &&
+                                "cursor-not-allowed opacity-50",
                               hasAnnualPrice ? "bg-primary" : "bg-secondary",
                             )}
                           >
@@ -1852,7 +1864,7 @@ function CreateAddOnDialog({
                                         acceptedToken: opt.address,
                                       }))
                                     }
-                                    className={`flex items-center justify-between gap-3 py-2.5 ${!isConn ? "opacity-40 cursor-not-allowed" : ""}`}
+                                    className="flex items-center justify-between gap-3 py-2.5"
                                   >
                                     <div className="flex items-center gap-2.5">
                                       <Web3Icon
@@ -1878,13 +1890,12 @@ function CreateAddOnDialog({
                                         </p>
                                       </div>
                                     </div>
-                                    {form.acceptedToken === opt.address &&
-                                      isConn && (
+                                    {form.acceptedToken === opt.address && (
                                         <Check className="w-3.5 h-3.5 text-foreground shrink-0" />
                                       )}
                                     {!isConn && (
                                       <span className="text-[9px] text-muted-foreground shrink-0">
-                                        Switch wallet
+                                        Switch wallet to sync
                                       </span>
                                     )}
                                   </DropdownMenuItem>
@@ -1915,7 +1926,7 @@ function CreateAddOnDialog({
                                         acceptedToken: opt.address,
                                       }))
                                     }
-                                    className={`flex items-center justify-between gap-3 py-2.5 ${!isConn ? "opacity-40 cursor-not-allowed" : ""}`}
+                                    className="flex items-center justify-between gap-3 py-2.5"
                                   >
                                     <div className="flex items-center gap-2.5">
                                       <Web3Icon
@@ -1941,13 +1952,12 @@ function CreateAddOnDialog({
                                         </p>
                                       </div>
                                     </div>
-                                    {form.acceptedToken === opt.address &&
-                                      isConn && (
+                                    {form.acceptedToken === opt.address && (
                                         <Check className="w-3.5 h-3.5 text-foreground shrink-0" />
                                       )}
                                     {!isConn && (
                                       <span className="text-[9px] text-muted-foreground shrink-0">
-                                        Switch wallet
+                                        Switch wallet to sync
                                       </span>
                                     )}
                                   </DropdownMenuItem>
@@ -3492,7 +3502,9 @@ function PlansTable({
       // 2. Prepare plan parameters for signing
       const deadline = Math.floor(Date.now() / 1000) + 3600; // 1 hour from now
       const priceInUsdc = resolveMaxOnChainChargeMicros(plan);
-      const billingIntervalSeconds = plan.billingInterval * 86400;
+      // CatalogPlan.billingInterval is already stored in seconds. Do not
+      // convert it a second time before encoding the contract uint32 field.
+      const billingIntervalSeconds = plan.billingInterval;
 
       // 3. Sign EIP-712 typed data when the provider is the connected wallet
       const signature = signingRequired
@@ -3924,8 +3936,8 @@ function PlansTable({
                   </TableCell>
                   <TableCell className="text-muted-foreground text-xs">
                     {BILLING_INTERVALS.find(
-                      (i) => i.days === plan.billingInterval,
-                    )?.label ?? `${plan.billingInterval}d`}
+                      (i) => i.seconds === plan.billingInterval,
+                    )?.label ?? "Custom interval"}
                   </TableCell>
                   <TableCell className="text-xs">
                     {isFree ? (
@@ -6684,9 +6696,11 @@ function EditPlanDialog({
 }) {
   const { activeEnvironment } = useEnvironment();
   const chainId = useChainId();
+  // The selected workspace environment is authoritative. Older draft rows may
+  // still contain a stale default chain, so do not let that hide the Arc token.
   const tokenOptions = getTokenOptionsForChain(
-    plan.chainId ??
-      activeEnvironment?.chainId ??
+    activeEnvironment?.chainId ??
+      plan.chainId ??
       resolveEnvironmentChainId(plan.environmentMode),
   );
 
@@ -6707,7 +6721,7 @@ function EditPlanDialog({
       ? parseFloat(plan.annualPrice).toFixed(2)
       : "";
   const [hasAnnualPrice, setHasAnnualPrice] = useState(
-    Boolean(initialAnnualPrice),
+    Boolean(initialAnnualPrice) && plan.billingInterval !== YEARLY_INTERVAL,
   );
   const [annualDiscount, setAnnualDiscount] = useState(() => {
     const monthly = parseFloat(plan.price);
@@ -6738,8 +6752,8 @@ function EditPlanDialog({
   );
   const selectedIntervalLabel =
     BILLING_INTERVALS.find(
-      (i) => i.days === billingIntervalDays,
-    )?.label.toLowerCase() ?? `${billingIntervalDays}d`;
+      (i) => i.seconds === billingIntervalDays,
+    )?.label.toLowerCase() ?? "custom";
   const chainName = (o: TokenOption) => o.chainLabel;
   const chainInitial = (o: TokenOption) => {
     const n = o.chainLabel;
@@ -7132,15 +7146,14 @@ function EditPlanDialog({
                                 return (
                                   <DropdownMenuItem
                                     key={opt.chainId}
-                                    disabled={isOnChainLocked || !isConn}
+                                    disabled={isOnChainLocked}
                                     onClick={() =>
-                                      isConn &&
                                       setForm((f) => ({
                                         ...f,
                                         acceptedToken: opt.address,
                                       }))
                                     }
-                                    className={`flex items-center justify-between gap-3 py-2.5 ${!isConn ? "opacity-40 cursor-not-allowed" : ""}`}
+                                    className="flex items-center justify-between gap-3 py-2.5"
                                   >
                                     <div className="flex items-center gap-2.5">
                                       <Web3Icon
@@ -7166,13 +7179,12 @@ function EditPlanDialog({
                                         </p>
                                       </div>
                                     </div>
-                                    {form.acceptedToken === opt.address &&
-                                      isConn && (
-                                        <Check className="w-3.5 h-3.5 text-foreground shrink-0" />
-                                      )}
+                                    {form.acceptedToken === opt.address && (
+                                      <Check className="w-3.5 h-3.5 text-foreground shrink-0" />
+                                    )}
                                     {!isConn && (
                                       <span className="text-[9px] text-muted-foreground shrink-0">
-                                        Switch wallet
+                                        Switch wallet to sync
                                       </span>
                                     )}
                                   </DropdownMenuItem>
@@ -7195,15 +7207,14 @@ function EditPlanDialog({
                                 return (
                                   <DropdownMenuItem
                                     key={opt.chainId}
-                                    disabled={isOnChainLocked || !isConn}
+                                    disabled={isOnChainLocked}
                                     onClick={() =>
-                                      isConn &&
                                       setForm((f) => ({
                                         ...f,
                                         acceptedToken: opt.address,
                                       }))
                                     }
-                                    className={`flex items-center justify-between gap-3 py-2.5 ${!isConn ? "opacity-40 cursor-not-allowed" : ""}`}
+                                    className="flex items-center justify-between gap-3 py-2.5"
                                   >
                                     <div className="flex items-center gap-2.5">
                                       <Web3Icon
@@ -7229,13 +7240,12 @@ function EditPlanDialog({
                                         </p>
                                       </div>
                                     </div>
-                                    {form.acceptedToken === opt.address &&
-                                      isConn && (
-                                        <Check className="w-3.5 h-3.5 text-foreground shrink-0" />
-                                      )}
+                                    {form.acceptedToken === opt.address && (
+                                      <Check className="w-3.5 h-3.5 text-foreground shrink-0" />
+                                    )}
                                     {!isConn && (
                                       <span className="text-[9px] text-muted-foreground shrink-0">
-                                        Switch wallet
+                                        Switch wallet to sync
                                       </span>
                                     )}
                                   </DropdownMenuItem>
@@ -7259,7 +7269,7 @@ function EditPlanDialog({
                       <div className="grid grid-cols-2 gap-4 mt-4">
                         <div>
                           <Label className="text-sm font-medium text-foreground mb-2 block">
-                            Monthly Price (USDC) *
+                            Price per billing period (USDC) *
                           </Label>
                           <div className="relative">
                             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground pointer-events-none">
@@ -7320,8 +7330,8 @@ function EditPlanDialog({
                               >
                                 <span className="font-medium">
                                   {BILLING_INTERVALS.find(
-                                    (i) => i.days === billingIntervalDays,
-                                  )?.label ?? `${billingIntervalDays} days`}
+                                    (i) => i.seconds === billingIntervalDays,
+                                  )?.label ?? "Custom interval"}
                                 </span>
                                 <ChevronDown className="w-4 h-4 text-muted-foreground" />
                               </button>
@@ -7329,10 +7339,16 @@ function EditPlanDialog({
                             <DropdownMenuContent className="w-[--radix-dropdown-menu-trigger-width]">
                               {BILLING_INTERVALS.map((iv) => (
                                 <DropdownMenuItem
-                                  key={iv.days}
+                                  key={iv.seconds}
                                   disabled={isOnChainLocked}
                                   onClick={() =>
-                                    setBillingIntervalDays(iv.days)
+                                    {
+                                      setBillingIntervalDays(iv.seconds);
+                                      if (iv.seconds === YEARLY_INTERVAL) {
+                                        setHasAnnualPrice(false);
+                                        setForm((f) => ({ ...f, annualPrice: "" }));
+                                      }
+                                    }
                                   }
                                   className="flex items-center justify-between"
                                 >
@@ -7344,7 +7360,7 @@ function EditPlanDialog({
                                       {iv.sublabel}
                                     </p>
                                   </div>
-                                  {billingIntervalDays === iv.days && (
+                                  {billingIntervalDays === iv.seconds && (
                                     <Check className="w-4 h-4 text-foreground ml-2" />
                                   )}
                                 </DropdownMenuItem>
@@ -7369,6 +7385,14 @@ function EditPlanDialog({
                             type="button"
                             role="switch"
                             aria-checked={hasAnnualPrice}
+                            aria-disabled={
+                              billingIntervalDays === YEARLY_INTERVAL ||
+                              isOnChainLocked
+                            }
+                            disabled={
+                              billingIntervalDays === YEARLY_INTERVAL ||
+                              isOnChainLocked
+                            }
                             onClick={() => {
                               const next = !hasAnnualPrice;
                               setHasAnnualPrice(next);
@@ -7389,6 +7413,9 @@ function EditPlanDialog({
                             }}
                             className={cn(
                               "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors",
+                              (billingIntervalDays === YEARLY_INTERVAL ||
+                                isOnChainLocked) &&
+                                "cursor-not-allowed opacity-50",
                               hasAnnualPrice ? "bg-primary" : "bg-secondary",
                             )}
                           >
@@ -7619,9 +7646,9 @@ function planPriceLabel(
   const price = parseFloat(plan.price);
   if (price === 0) return "Free";
   const intervalLabel =
-    plan.billingInterval <= 30
+    billingIntervalLabel(plan.billingInterval) === "Monthly"
       ? "mo"
-      : plan.billingInterval <= 92
+      : billingIntervalLabel(plan.billingInterval) === "Quarterly"
         ? "qtr"
         : "yr";
   return `$${price.toFixed(2)}/${intervalLabel}`;
@@ -8695,14 +8722,13 @@ function PlanDetailView({
                   Billing interval
                 </p>
                 <p className="text-lg font-semibold">
-                  {plan.billingInterval <= 30
-                    ? "Monthly"
-                    : plan.billingInterval <= 92
-                      ? "Quarterly"
-                      : "Annual"}
+                  {billingIntervalLabel(plan.billingInterval)}
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  Every {plan.billingInterval} days
+                  {BILLING_INTERVALS.find(
+                    (interval) => interval.seconds === plan.billingInterval,
+                  )?.sublabel ??
+                    `Every ${Math.round(plan.billingInterval / SECONDS_PER_DAY)} days`}
                 </p>
               </div>
               <div>
@@ -10293,8 +10319,8 @@ export function CatalogSection() {
                         </td>
                         <td className="py-4 px-4">
                           <span className="text-sm">
-                            ${parseFloat(plan.price).toFixed(2)} /{" "}
-                            {plan.billingInterval}d
+                              ${parseFloat(plan.price).toFixed(2)} /{" "}
+                              {billingIntervalLabel(plan.billingInterval)}
                           </span>
                         </td>
                         <td className="py-4 px-4">

@@ -41,6 +41,8 @@ import type { PlatformTier } from "../../generated/client/client.js";
 const PLATFORM_TIER_COMPANY_KEY = "arcenpay_platform_subscription";
 const PLATFORM_BILLING_TIERS = ["PLUS", "PRO"] as const;
 const PLATFORM_BILLING_INTERVAL_SECONDS = MONTHLY_INTERVAL;
+// Platform catalog plans are environment-scoped. Cache by workspace,
+// environment, and tier so one environment cannot hide or replace another.
 const TIER_PLAN_IDS: Record<string, string> = {};
 
 // ── Readiness types ──────────────────────────────────────────────────────────
@@ -623,14 +625,12 @@ const PLATFORM_TIER_FEATURES: Record<PlatformTier, string[]> = {
     "Coupons: Unlimited",
     "Add-ons: Unlimited",
     "Credit types: Unlimited",
-    "Usage metering & credit-burn: Yes",
-    "Custom branding: Full whitelabel",
-    "Agent payments (x402 protocol): Yes",
-    "ZK settlement (ZKVUB): Yes",
-    "Cross-chain mirroring (Axelar + CCIP): Yes",
-    "Tableland + Lit Protocol integration: Yes",
-    "Support: Dedicated + white-glove onboarding",
-    "Platform fee: 0.5%",
+  "Usage metering & credit-burn: Yes",
+  "Custom branding: Full whitelabel",
+  "Agent payments (x402 protocol): Yes",
+  "ZK settlement (ZKVUB): Yes",
+  "Support: Dedicated support",
+  "Platform fee: 0.5%",
   ],
 };
 
@@ -684,22 +684,59 @@ export function buildPlatformTierEntitlements(tier: PlatformTier): Array<{
 export async function ensureTierCatalogPlan(
   teamId: string,
   tier: PlatformTier,
+  options: {
+    environmentId?: string | null;
+    publish?: boolean;
+    syncOnchain?: boolean;
+  } = {},
 ): Promise<string | null> {
-  if (TIER_PLAN_IDS[tier]) return TIER_PLAN_IDS[tier];
+  const cacheKey = `${teamId}:${options.environmentId ?? "legacy"}:${tier}`;
+  if (TIER_PLAN_IDS[cacheKey]) return TIER_PLAN_IDS[cacheKey];
 
   const planName = `ArcenPay ${tier === "PRO" ? "Enterprise" : tier === "PLUS" ? "Pro" : "Free"} Plan`;
   const { priceUsdPerMonth } = tierPricing(tier);
   const annualPrice =
     tier === "FREE" ? "0" : String(Math.round(priceUsdPerMonth * 12 * 0.8));
 
-  let plan = await db.catalogPlan.findFirst({
+  const billingCustomerEnvironment = options.environmentId
+    ? null
+    : await db.platformBillingCustomer.findUnique({
+        where: { workspaceTeamId: teamId },
+        select: { environmentId: true },
+      });
+  const resolvedEnvironmentId =
+    options.environmentId ?? billingCustomerEnvironment?.environmentId ?? null;
+
+  const environment = resolvedEnvironmentId
+    ? await db.workspaceEnvironment.findUnique({
+        where: { id: resolvedEnvironmentId },
+        select: { mode: true, chainId: true },
+      })
+    : null;
+  const catalogChainId = environment?.chainId ?? PLATFORM_BILLING_CHAIN_ID;
+  const catalogToken =
+    normalizeAddress(getTokenAddress(catalogChainId, "USDC")) ??
+    platformBillingToken();
+
+  const expectedCatalogTier =
+    tier === "PRO" ? "enterprise" : tier === "PLUS" ? "pro" : "starter";
+  const candidatePlans = await db.catalogPlan.findMany({
     where: {
       teamId,
-      name: planName,
       active: true,
+      tier: expectedCatalogTier,
+      ...(resolvedEnvironmentId ? { environmentId: resolvedEnvironmentId } : {}),
     },
-    select: { id: true },
+    select: { id: true, onChainPlanId: true },
+    orderBy: { createdAt: "asc" },
   });
+  // Reuse the existing live/on-chain plan before considering a draft. This
+  // prevents automatic enrollment from creating a second plan just because
+  // the administrator chose a different display name such as "Pro".
+  let plan =
+    candidatePlans.find((candidate) => candidate.onChainPlanId) ??
+    candidatePlans[0] ??
+    null;
 
   const entitlements = buildPlatformTierEntitlements(tier);
   const metadata = {
@@ -715,15 +752,19 @@ export async function ensureTierCatalogPlan(
         name: planName,
         tier: tier === "PRO" ? "enterprise" : tier === "PLUS" ? "pro" : "starter",
         description: `ArcenPay platform ${tier} tier subscription`,
-        status: "PUBLISHED",
+        status: options.publish === false ? "DRAFT" : "PUBLISHED",
+        publishedAt: options.publish === false ? null : new Date(),
         active: true,
+        environmentId: resolvedEnvironmentId ?? undefined,
         price: tier === "FREE" ? "0" : String(priceUsdPerMonth),
         annualPrice,
-        billingInterval: 2_592_000,
-        acceptedToken: "0x0000000000000000000000000000000000000000",
+        billingInterval: MONTHLY_INTERVAL,
+        environmentMode: environment?.mode ?? "DEVELOPMENT",
+        chainId: catalogChainId,
+        acceptedToken: catalogToken,
         metadata: toPrismaJson(metadata),
       },
-      select: { id: true },
+      select: { id: true, onChainPlanId: true },
     });
   } else {
     await db.catalogPlan.update({
@@ -732,18 +773,26 @@ export async function ensureTierCatalogPlan(
         metadata: toPrismaJson(metadata),
         price: tier === "FREE" ? "0" : String(priceUsdPerMonth),
         annualPrice,
+        ...(!plan.onChainPlanId
+          ? {
+              environmentMode: environment?.mode ?? "DEVELOPMENT",
+              chainId: catalogChainId,
+              acceptedToken: catalogToken,
+            }
+          : {}),
+        ...(options.publish === false
+          ? { status: "DRAFT" as const, publishedAt: null }
+          : {}),
       },
     });
   }
 
   if (entitlements.length > 0) {
-    syncEntitlementsToFlagRules(teamId, plan.id, entitlements).catch((err) => {
-      console.warn("[platform-tier-billing] Failed to sync tier entitlements:", err);
-    });
+    await syncEntitlementsToFlagRules(teamId, plan.id, entitlements);
   }
 
   // Sync onChainPlanId from bootstrapped platform billing plan
-  if (tier !== "FREE") {
+  if (tier !== "FREE" && options.syncOnchain !== false) {
     const onChainPlan = await db.platformBillingPlan.findFirst({
       where: {
         chainId: PLATFORM_BILLING_CHAIN_ID,
@@ -766,7 +815,7 @@ export async function ensureTierCatalogPlan(
     }
   }
 
-  TIER_PLAN_IDS[tier] = plan.id;
+  TIER_PLAN_IDS[cacheKey] = plan.id;
   return plan.id;
 }
 
@@ -1637,15 +1686,46 @@ export async function getTeamPlatformBillingReadiness(teamId: string): Promise<{
     chainId: p.chainId,
   }));
 
+  // A platform owner may deploy the first-party Pro/Enterprise catalog plans
+  // through the normal catalog flow instead of the legacy bootstrap endpoint.
+  // Those plans are the authoritative portal plans, so readiness must accept
+  // them when both are published, active, and have an on-chain identity.
+  const platformAccount = await db.platformBillingAccount.findFirst({
+    where: { environment: { chainId: PLATFORM_BILLING_CHAIN_ID } },
+    select: { providerTeamId: true, environmentId: true },
+  });
+  const catalogPaidPlans = platformAccount
+    ? await db.catalogPlan.findMany({
+        where: {
+          teamId: platformAccount.providerTeamId,
+          environmentId: platformAccount.environmentId,
+          active: true,
+          status: "PUBLISHED",
+          tier: { in: ["pro", "enterprise"] },
+          chainId: PLATFORM_BILLING_CHAIN_ID,
+          onChainPlanId: { not: null },
+        },
+        select: {
+          tier: true,
+          onChainPlanId: true,
+          price: true,
+          acceptedToken: true,
+          chainId: true,
+        },
+      })
+    : [];
+  const hasCatalogPaidPlans =
+    new Set(catalogPaidPlans.map((plan) => plan.tier)).size === 2;
+
   const anyFailed = plans.some((p: typeof plans[number]) => p.syncStatus === "FAILED");
-  if (anyFailed) {
+  if (anyFailed && !hasCatalogPaidPlans) {
     return { readiness: "BOOTSTRAP_FAILED", platformPlans, subscription: null };
   }
 
   const allSynced =
     plans.length > 0 && plans.every((p: typeof plans[number]) => p.syncStatus === "SYNCED" && p.onChainPlanId);
 
-  if (!allSynced) {
+  if (!allSynced && !hasCatalogPaidPlans) {
     return { readiness: "BOOTSTRAP_MISSING", platformPlans, subscription: null };
   }
 

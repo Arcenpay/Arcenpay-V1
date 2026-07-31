@@ -470,6 +470,18 @@ export async function POST(c: Context) {
         corsHeaders(origin),
       );
     }
+    if (
+      embedTokenContext.platformBilling &&
+      embedTokenContext.teamRole !== "OWNER" &&
+      embedTokenContext.teamRole !== "ADMIN" &&
+      embedTokenContext.teamRole !== "FINANCE"
+    ) {
+      return c.json(
+        { error: "Only workspace billing administrators can change the platform subscription" },
+        403,
+        corsHeaders(origin),
+      );
+    }
     teamId = embedTokenContext.teamId;
   } else {
     const auth = await requireAnyAuth(c);

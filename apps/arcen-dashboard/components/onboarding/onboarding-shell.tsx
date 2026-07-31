@@ -27,7 +27,7 @@ export function OnboardingShell({
             alt="ArcenPay"
             width={160}
             height={40}
-            className="h-9 w-auto object-contain"
+            className="h-9 w-auto object-contain dark:brightness-0 dark:invert"
             priority
             unoptimized
           />
@@ -103,7 +103,7 @@ function StepItem({
         </div>
       )}
       <span
-        className={`text-[13px] ${
+        className={`whitespace-nowrap text-[11px] md:text-[13px] ${
           status === "active"
             ? "font-semibold text-foreground"
             : status === "complete"

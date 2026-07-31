@@ -284,7 +284,7 @@ export function EmailAuthFlow({ inviteToken }: EmailAuthFlowProps) {
           <img
             src="/arcenpay-logo.png"
             alt="ArcenPay"
-            className="h-7 sm:h-8 w-auto object-contain"
+            className="h-7 sm:h-8 w-auto object-contain dark:brightness-0 dark:invert"
             onError={(e) => {
               (e.target as HTMLImageElement).style.display = "none";
             }}

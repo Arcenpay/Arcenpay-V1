@@ -19,6 +19,11 @@ function platformPlanName(tier: "FREE" | "PLUS" | "PRO"): string {
   return `ArcenPay ${tier === "PRO" ? "Enterprise" : tier === "PLUS" ? "Pro" : "Free"} Plan`;
 }
 
+function platformPlanNames(tier: "FREE" | "PLUS" | "PRO"): string[] {
+  const displayName = tier === "PRO" ? "Enterprise" : tier === "PLUS" ? "Pro" : "Free";
+  return [platformPlanName(tier), displayName];
+}
+
 function platformPlanTier(tier: "FREE" | "PLUS" | "PRO"): string {
   return tier === "PRO" ? "enterprise" : tier === "PLUS" ? "pro" : "starter";
 }
@@ -29,8 +34,18 @@ function platformAnnualPrice(tier: "FREE" | "PLUS" | "PRO"): string {
 }
 
 async function providerAccount(environmentId?: string | null) {
-  return db.platformBillingAccount.findFirst({
-    where: environmentId ? { environmentId } : undefined,
+  const exact = environmentId
+    ? await db.platformBillingAccount.findFirst({
+        where: { environmentId },
+        select: {
+          providerTeamId: true,
+          environmentId: true,
+          environment: { select: { mode: true } },
+          portalComponentId: true,
+        },
+      })
+    : null;
+  return exact ?? db.platformBillingAccount.findFirst({
     select: {
       providerTeamId: true,
       environmentId: true,
@@ -54,9 +69,35 @@ async function ensurePlatformPlan(
     entitlements,
   });
 
+  // Resolve the canonical first-party plan by environment + tier metadata,
+  // not by display name. Owners are allowed to rename a plan to “Free” or
+  // “Pro”; doing a name-only lookup would create a second plan and leave the
+  // workspace subscription pointing at the old featureless row.
   let plan = await db.catalogPlan.findFirst({
-    where: { teamId: providerTeamId, environmentId, name },
+    where: {
+      teamId: providerTeamId,
+      environmentId,
+      tier: platformPlanTier(tier),
+      active: true,
+      OR: [
+        { metadata: { path: ["isFirstPartyPlan"], equals: toPrismaJson(true) } },
+        { metadata: { path: ["isPlatformTierPlan"], equals: toPrismaJson(true) } },
+      ],
+    },
+    orderBy: [{ updatedAt: "desc" }, { createdAt: "asc" }],
   });
+
+  if (!plan) {
+    plan = await db.catalogPlan.findFirst({
+      where: {
+        teamId: providerTeamId,
+        environmentId,
+        name: { in: platformPlanNames(tier) },
+        active: true,
+      },
+      orderBy: [{ updatedAt: "desc" }, { createdAt: "asc" }],
+    });
+  }
 
   if (!plan) {
     try {
@@ -67,7 +108,7 @@ async function ensurePlatformPlan(
           name,
           tier: platformPlanTier(tier),
           description: `ArcenPay platform ${tier} tier subscription`,
-          status: "PUBLISHED",
+          status: "DRAFT",
           active: true,
           price: String(TIER_PRICING[tier].priceUsdc),
           annualPrice: platformAnnualPrice(tier),
@@ -79,14 +120,13 @@ async function ensurePlatformPlan(
     } catch (error) {
       if (!(typeof error === "object" && error !== null && "code" in error && error.code === "P2002")) throw error;
       plan = await db.catalogPlan.findFirstOrThrow({
-        where: { teamId: providerTeamId, environmentId, name },
+        where: { teamId: providerTeamId, environmentId, name: { in: platformPlanNames(tier) } },
       });
     }
   } else {
     plan = await db.catalogPlan.update({
       where: { id: plan.id },
       data: {
-        status: "PUBLISHED",
         active: true,
         price: String(TIER_PRICING[tier].priceUsdc),
         annualPrice: platformAnnualPrice(tier),
@@ -191,6 +231,7 @@ export async function getPlatformBillingStatus(workspaceTeamId: string) {
           currentPeriodEnd: true,
           pastDueAt: true,
           graceEndsAt: true,
+          metadata: true,
         },
       })
     : null;
@@ -199,7 +240,11 @@ export async function getPlatformBillingStatus(workspaceTeamId: string) {
     where: {
       teamId: account.providerTeamId,
       environmentId: account.environmentId,
-      metadata: { path: ["isFirstPartyPlan"], equals: toPrismaJson(true) },
+      OR: [
+        { metadata: { path: ["isFirstPartyPlan"], equals: toPrismaJson(true) } },
+        { metadata: { path: ["isPlatformTierPlan"], equals: toPrismaJson(true) } },
+        { name: { in: [...platformPlanNames("FREE"), ...platformPlanNames("PLUS"), ...platformPlanNames("PRO")] } },
+      ],
       active: true,
     },
     select: { id: true, name: true, tier: true, price: true, annualPrice: true, chainId: true, onChainPlanId: true },
@@ -209,10 +254,49 @@ export async function getPlatformBillingStatus(workspaceTeamId: string) {
   const availablePlans = plans.filter(
     (plan) => plan.tier === "starter" || Boolean(plan.chainId && plan.onChainPlanId),
   );
+  const canonicalFreePlan = plans.find((plan) => plan.tier === "starter") ?? null;
+  const currentSubscriptionPlan = subscription?.catalogPlanId
+    ? await db.catalogPlan.findUnique({
+        where: { id: subscription.catalogPlanId },
+        select: { tier: true },
+      })
+    : null;
+  const subscriptionMetadata =
+    subscription?.metadata &&
+    typeof subscription.metadata === "object" &&
+    !Array.isArray(subscription.metadata)
+      ? (subscription.metadata as Record<string, unknown>)
+      : {};
+  const isFirstPartyFreeSubscription = Boolean(
+    subscription &&
+      (!currentSubscriptionPlan ||
+        currentSubscriptionPlan.tier === "starter" ||
+        subscriptionMetadata.tier === "FREE"),
+  );
+  const needsFreePlanRepair = Boolean(
+    validCustomer &&
+      subscription &&
+      canonicalFreePlan &&
+      subscription.catalogPlanId !== canonicalFreePlan.id &&
+      isFirstPartyFreeSubscription,
+  );
+  const needsFreeStatusRepair = Boolean(
+    validCustomer &&
+      subscription &&
+      isFirstPartyFreeSubscription &&
+      subscription.status !== "ACTIVE",
+  );
 
   return {
     configured: true as const,
-    enrolled: Boolean(validCustomer && subscription),
+    // A stale first-party Free pointer is treated as not fully enrolled so
+    // the idempotent enrollment path can repair it to the canonical plan.
+    enrolled: Boolean(
+      validCustomer &&
+        subscription &&
+        !needsFreePlanRepair &&
+        !needsFreeStatusRepair,
+    ),
     providerTeamId: account.providerTeamId,
     environmentId: account.environmentId,
     portalComponentId: account.portalComponentId,
@@ -292,13 +376,10 @@ export async function enrollWorkspaceInPlatformBilling(input: {
 
   const existing = await db.subscriptionState.findUnique({
     where: { companyId: company.id },
-    select: { id: true },
+    select: { id: true, status: true, catalogPlanId: true },
   });
-  const state = existing
-    ? await db.subscriptionState.update({
-        where: { id: existing.id },
-        data: { environmentId: account.environmentId, catalogPlanId: freePlan.id },
-      })
+  let state = existing
+    ? await db.subscriptionState.findUniqueOrThrow({ where: { id: existing.id } })
     : await upsertSubscriptionLedgerState({
         teamId: account.providerTeamId,
         companyId: company.id,
@@ -316,6 +397,54 @@ export async function enrollWorkspaceInPlatformBilling(input: {
         },
       });
   if (!state) throw new Error("Failed to create platform billing subscription state.");
+
+  // Older enrollments could point at a stale Free catalog row without the
+  // first-party feature metadata. Keep only the first-party workspace
+  // subscription on the canonical Free plan created above.
+  const currentPlan = existing?.catalogPlanId
+    ? await db.catalogPlan.findUnique({
+        where: { id: existing.catalogPlanId },
+        select: { tier: true },
+      })
+    : null;
+  const stateMetadata =
+    state.metadata && typeof state.metadata === "object" && !Array.isArray(state.metadata)
+      ? (state.metadata as Record<string, unknown>)
+      : {};
+  const isFirstPartyFreeState =
+    !currentPlan ||
+    currentPlan.tier === "starter" ||
+    stateMetadata.tier === "FREE";
+  if (existing && isFirstPartyFreeState) {
+    if (existing.catalogPlanId !== freePlan.id || existing.status !== "ACTIVE") {
+      state = await db.subscriptionState.update({
+        where: { id: state.id },
+        data: {
+          status: "ACTIVE",
+          catalogPlanId: freePlan.id,
+          cancelAtPeriodEnd: false,
+          cancelledAt: null,
+          pastDueAt: null,
+          graceEndsAt: null,
+          metadata: toPrismaJson({
+            ...stateMetadata,
+            source: "platform-billing-enrollment",
+            tier: "FREE",
+            isPlatformSubscription: true,
+          }),
+        },
+      });
+    }
+  }
+
+  // Keep the company projection and subscription ledger on the exact same
+  // catalog plan. The embed uses both fields in different rendering paths.
+  if (company.activePlanId !== state.catalogPlanId) {
+    await db.arcenCompany.update({
+      where: { id: company.id },
+      data: { activePlanId: state.catalogPlanId },
+    });
+  }
 
   await projectPlatformBillingEntitlement({
     providerTeamId: account.providerTeamId,
@@ -342,12 +471,27 @@ export async function enrollWorkspaceInPlatformBilling(input: {
   };
 }
 
+/**
+ * Automatic first-party provisioning used at workspace/account creation.
+ * This is deliberately idempotent: callers may invoke it from both user and
+ * environment provisioning without creating another customer or subscription.
+ */
+export async function ensureWorkspacePlatformBilling(input: {
+  workspaceTeamId: string;
+  workspaceEnvironmentId?: string | null;
+  email?: string | null;
+  name?: string | null;
+}): Promise<void> {
+  await enrollWorkspaceInPlatformBilling(input);
+}
+
 export async function issuePlatformBillingEmbedToken(input: {
   workspaceTeamId: string;
   providerTeamId: string;
   companyId: string;
   componentId: string;
   environmentId: string;
+  teamRole: "OWNER" | "ADMIN" | "FINANCE";
 }): Promise<{ token: string; expiresAt: Date }> {
   const secret = process.env.ACCESS_TOKEN_SECRET?.trim();
   if (!secret) throw new Error("ACCESS_TOKEN_SECRET is not configured.");
@@ -359,6 +503,8 @@ export async function issuePlatformBillingEmbedToken(input: {
     companyId: input.companyId,
     componentId: input.componentId,
     workspaceTeamId: input.workspaceTeamId,
+    teamRole: input.teamRole,
+    platformBilling: true,
     exp: Math.floor(expiresAt.getTime() / 1000),
     iat: Math.floor(Date.now() / 1000),
     jti: randomBytes(16).toString("hex"),

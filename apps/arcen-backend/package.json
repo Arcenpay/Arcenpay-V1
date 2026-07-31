@@ -15,6 +15,7 @@
     "typecheck": "prisma generate && tsc --noEmit --incremental false",
     "report:duplicate-subscription-charges": "tsx scripts/report-duplicate-subscription-charges.ts",
     "repair:platform-billing": "tsx scripts/repair-platform-billing.ts",
+    "reset:platform-catalog": "tsx scripts/reset-platform-catalog.ts",
     "setup:platform-billing": "tsx scripts/setup-platform-billing.ts",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",

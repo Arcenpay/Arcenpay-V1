@@ -146,8 +146,7 @@ export function Sidebar({
   const { envMode, activeEnvironment } = useEnvironment();
   const { data: sessionData, refresh: refreshSessionData } = useDashboardSession();
   const [mounted, setMounted] = useState(false);
-  const { theme, resolvedTheme, setTheme } = useTheme();
-  const isDark = resolvedTheme === "dark";
+  const { theme, setTheme } = useTheme();
 
   // Accordion: only one group open at a time, default all closed
   const [expandedGroup, setExpandedGroup] = useState<string | null>(null);
@@ -269,10 +268,7 @@ export function Sidebar({
             alt="ArcenPay"
             width={140}
             height={36}
-            className={cn(
-              "h-7 w-auto object-contain",
-              isDark && "brightness-0 invert"
-            )}
+            className="h-7 w-auto object-contain dark:brightness-0 dark:invert"
             priority
             unoptimized
           />
@@ -299,10 +295,7 @@ export function Sidebar({
             alt="ArcenPay"
             width={140}
             height={36}
-            className={cn(
-              "h-7 w-auto object-contain",
-              isDark && "brightness-0 invert"
-            )}
+            className="h-7 w-auto object-contain dark:brightness-0 dark:invert"
             priority
             unoptimized
           />
@@ -392,17 +385,17 @@ export function Sidebar({
         {/* Bottom section */}
         <div className="px-3 pb-3 space-y-1">
           {/* Promo card */}
-          <div className="rounded-xl bg-white/[0.04] border border-sidebar-border/60 p-3.5 mb-2">
+          <div className="rounded-xl bg-[var(--sidebar)] border border-sidebar-border p-3.5 mb-2 text-sidebar-foreground shadow-sm">
             <div className="flex items-center gap-2 mb-2">
-              <Sparkles className="w-4 h-4 text-sidebar-foreground" strokeWidth={1.5} />
-              <span className="text-[13px] font-medium text-sidebar-foreground">Introducing ZK Plans</span>
+              <Sparkles className="w-4 h-4 text-blue-600 dark:text-blue-400" strokeWidth={1.5} />
+              <span className="text-[13px] font-medium text-sidebar-foreground">Annual plan savings</span>
             </div>
-            <p className="text-[12px] text-sidebar-foreground/50 leading-relaxed mb-2">
-              Get a lower fee with our subscription plans
+            <p className="text-[12px] text-sidebar-foreground/60 leading-relaxed mb-2">
+              Save 20% with annual billing on eligible plans.
             </p>
             <button
               onClick={() => onSectionChange("billing")}
-              className="text-[13px] font-medium text-sidebar-foreground hover:text-sidebar-foreground/80 transition-colors"
+              className="text-[13px] font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
             >
               Upgrade
             </button>

@@ -964,6 +964,42 @@ function getUsageItems(data: ComponentRenderData): ComponentUsageItem[] {
   return Array.from(usageMap.values());
 }
 
+function normalizeComponentRenderData(value: unknown): ComponentRenderData {
+  const raw = value && typeof value === "object" ? (value as Record<string, unknown>) : {};
+  const rawComponent =
+    raw.component && typeof raw.component === "object"
+      ? (raw.component as Record<string, unknown>)
+      : {};
+
+  return {
+    ...(raw as Partial<ComponentRenderData>),
+    component: {
+      id: typeof rawComponent.id === "string" ? rawComponent.id : "",
+      name: typeof rawComponent.name === "string" ? rawComponent.name : "",
+      elements: Array.isArray(rawComponent.elements)
+        ? (rawComponent.elements as ComponentElement[])
+        : [],
+      design:
+        rawComponent.design && typeof rawComponent.design === "object"
+          ? (rawComponent.design as ComponentRenderData["component"]["design"])
+          : {},
+    },
+    activePlan:
+      raw.activePlan && typeof raw.activePlan === "object"
+        ? (raw.activePlan as ComponentRenderData["activePlan"])
+        : null,
+    plans: Array.isArray(raw.plans)
+      ? (raw.plans as ComponentPlanSummary[])
+      : [],
+    entitlements: Array.isArray(raw.entitlements)
+      ? (raw.entitlements as ComponentEntitlement[])
+      : [],
+    usage: Array.isArray(raw.usage)
+      ? (raw.usage as ComponentUsageItem[])
+      : [],
+  };
+}
+
 function getSubscriptionTransition(
   data: ComponentRenderData,
 ): ComponentSubscriptionTransition | null {
@@ -1228,7 +1264,7 @@ function getActivePlanBooleanFeatures(
       )
       .filter(
         (entry) =>
-          entry.enabled === true && (!entry.type || entry.type === "BOOLEAN"),
+          entry.enabled !== false && (!entry.type || entry.type === "BOOLEAN"),
       )
       .map((entry) => ({
         featureKey: entry.featureKey,
@@ -1238,7 +1274,7 @@ function getActivePlanBooleanFeatures(
         icon: entry.icon ?? null,
       }));
 
-    return metadataBooleanFeatures;
+    if (metadataBooleanFeatures.length > 0) return metadataBooleanFeatures;
   }
 
   return entitlements
@@ -2910,13 +2946,13 @@ export function renderElement(
             marginBottom: 12,
           }}
         >
-          <div style={{ padding: "24px 24px 20px" }}>
+          <div style={{ padding: "20px 24px 16px" }}>
             <div
               style={{
                 display: "flex",
                 alignItems: "flex-start",
                 justifyContent: "space-between",
-                marginBottom: 16,
+                marginBottom: 12,
                 gap: 12,
               }}
             >
@@ -3374,13 +3410,31 @@ export function renderElement(
                 p,
                 cardBillingPeriod,
               );
+              const featurePreview = (p.metadata?.entitlements ?? [])
+                .filter((entitlement) => entitlement.enabled !== false)
+                .slice(0, 3);
+              const remainingFeatureCount = Math.max(
+                0,
+                (p.metadata?.entitlements?.filter(
+                  (entitlement) => entitlement.enabled !== false,
+                ).length ?? 0) - featurePreview.length,
+              );
               return (
                 <div
                   key={p.id}
+                  onClick={onChangePlan}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      onChangePlan();
+                    }
+                  }}
+                  role="button"
+                  tabIndex={0}
                   style={{
                     minWidth: 0,
-                    minHeight: 176,
-                    padding: 16,
+                    minHeight: 0,
+                    padding: 20,
                     borderRadius: tokens.radius,
                     border: isActive
                       ? `2px solid ${tokens.primary}`
@@ -3388,19 +3442,32 @@ export function renderElement(
                     background: isActive ? `${tokens.primary}08` : tokens.bg,
                     display: "flex",
                     flexDirection: "column",
+                    cursor: "pointer",
+                    boxSizing: "border-box",
                   }}
                 >
                   <div
                     style={{
                       fontWeight: 700,
-                      fontSize: tokens.size,
+                      fontSize: tokens.size + 3,
                       color: tokens.textColor,
                       marginBottom: 4,
                       lineHeight: 1.3,
-                      minHeight: 42,
+                      minHeight: 0,
                     }}
                   >
                     {p.name}
+                  </div>
+                  <div
+                    style={{
+                      minHeight: 0,
+                      marginBottom: 10,
+                      color: tokens.mutedColor,
+                      fontSize: tokens.size - 1,
+                      lineHeight: 1.45,
+                    }}
+                  >
+                    {p.description || "A flexible plan for your workspace."}
                   </div>
                   <div
                     style={{
@@ -3425,6 +3492,49 @@ export function renderElement(
                       </span>
                     ) : null}
                   </div>
+                  {featurePreview.length > 0 ? (
+                    <div
+                      style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: 5,
+                        marginBottom: 14,
+                        color: tokens.mutedColor,
+                        fontSize: tokens.size - 2,
+                      }}
+                    >
+                      {featurePreview.map((entitlement) => (
+                        <div
+                          key={entitlement.featureKey}
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 6,
+                            minWidth: 0,
+                          }}
+                        >
+                          <span style={{ color: tokens.primary, fontWeight: 800 }}>
+                            ✓
+                          </span>
+                          <span
+                            style={{
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                              whiteSpace: "nowrap",
+                            }}
+                            title={entitlement.featureName}
+                          >
+                            {entitlement.featureName}
+                          </span>
+                        </div>
+                      ))}
+                      {remainingFeatureCount > 0 ? (
+                        <span style={{ color: tokens.textColor, fontWeight: 600 }}>
+                          +{remainingFeatureCount} more features
+                        </span>
+                      ) : null}
+                    </div>
+                  ) : null}
                   {isActive ? (
                     <div
                       style={{
@@ -3446,7 +3556,10 @@ export function renderElement(
                     </div>
                   ) : (
                     <button
-                      onClick={onChangePlan}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        onChangePlan();
+                      }}
                       style={{
                         width: "100%",
                         padding: "6px 0",
@@ -4179,9 +4292,9 @@ function PortalContent({
   allowCancellation: boolean;
   containerWidth: number;
 }) {
-  const elements = data.component.elements as Array<
-    ComponentElement & Record<string, unknown>
-  >;
+  const elements = Array.isArray(data.component.elements)
+    ? (data.component.elements as Array<ComponentElement & Record<string, unknown>>)
+    : [];
 
   const [showAllFeatures, setShowAllFeatures] = useState(false);
 
@@ -4828,13 +4941,13 @@ function PortalContent({
               <div style={leftCard}>
                 {/* Plan manager section */}
                 {hasPlanManager && (
-                  <div style={{ padding: "24px 24px 20px" }}>
+                  <div style={{ padding: "20px 24px 16px" }}>
                     <div
                       style={{
                         display: "flex",
                         alignItems: "flex-start",
                         justifyContent: "space-between",
-                        marginBottom: 16,
+                          marginBottom: 12,
                         gap: 12,
                       }}
                     >
@@ -5599,19 +5712,23 @@ function CheckoutContent({
             return (
               <div
                 key={plan.id}
-                onClick={() => onSelectPlan(plan.id)}
+                onClick={() => {
+                  // The active plan is already assigned. It must never enter
+                  // the subscribe/checkout path, especially for FREE.
+                  if (!isActive) onSelectPlan(plan.id);
+                }}
                 style={{
-                  padding: isMobile ? "18px 14px" : "24px 20px",
+                  padding: isMobile ? "18px 14px" : "28px 24px",
                   borderRadius: tokens.radius,
                   border: isSelected
                     ? `2px solid ${tokens.primary}`
                     : `1px solid #e5e7eb`,
                   background: tokens.bg,
-                  cursor: "pointer",
+                  cursor: isActive ? "default" : "pointer",
                   position: "relative",
                   display: "flex",
                   flexDirection: "column",
-                  minHeight: isMobile ? 140 : 180,
+                  minHeight: isMobile ? 180 : 240,
                   boxSizing: "border-box",
                 }}
               >
@@ -5636,9 +5753,9 @@ function CheckoutContent({
                 <div
                   style={{
                     fontWeight: 700,
-                    fontSize: tokens.size + 6,
+                    fontSize: tokens.size + 8,
                     color: tokens.textColor,
-                    marginBottom: 4,
+                    marginBottom: 8,
                   }}
                 >
                   {plan.name}
@@ -5698,12 +5815,12 @@ function CheckoutContent({
                       </div>
                     )}
                 </div>
-                <div style={{ flex: 1 }}>
+                <div>
                   {(() => {
                     const planEntitlements: any[] =
                       (plan.metadata as any)?.entitlements ?? [];
                     const features = planEntitlements.filter(
-                      (e: any) => e.enabled === true,
+                      (e: any) => e.enabled !== false,
                     );
                     if (features.length === 0) return null;
 
@@ -5887,6 +6004,7 @@ function CheckoutContent({
                       cursor: "pointer",
                       fontSize: tokens.size,
                       fontWeight: 600,
+                      marginTop: "auto",
                       pointerEvents: "none",
                     }}
                   >
@@ -9334,10 +9452,10 @@ function FullScreenModal({
         }
         @media (min-width: 641px) {
           .${idRef.current}-inner {
-            width: 92vw;
-            max-width: 1100px;
-            height: 92vh;
-            max-height: 1100px;
+            width: 94vw;
+            max-width: 1180px;
+            height: 94vh;
+            max-height: 1180px;
             border-radius: ${tokens.radius * 1.5}px;
           }
         }
@@ -9737,7 +9855,7 @@ export function ArcenEmbed({
         throw new Error(await readResponseError(res, `HTTP ${res.status}`));
       }
       const json = await res.json();
-      return json.data as ComponentRenderData;
+      return normalizeComponentRenderData(json.data);
     },
     [resolvedId],
   );
