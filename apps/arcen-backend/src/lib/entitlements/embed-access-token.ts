@@ -1,5 +1,6 @@
 import { createHash, createHmac } from "crypto";
 import { db } from "../../db.js";
+import { ACCESS_TOKEN_SECRET } from "../../config.js";
 
 export interface EmbedAccessTokenContext {
   teamId: string;
@@ -87,10 +88,9 @@ export async function resolveEmbedAccessToken(
 ): Promise<EmbedAccessTokenContext | null> {
   if (!token) return null;
 
-  const secret = (process.env.ACCESS_TOKEN_SECRET || "").trim();
-  if (!secret) return null;
+  if (!ACCESS_TOKEN_SECRET) return null;
 
-  const verified = verifySignedEmbedAccessToken(token, secret);
+  const verified = verifySignedEmbedAccessToken(token, ACCESS_TOKEN_SECRET);
   if (!verified) return null;
 
   const tokenHash = createHash("sha256").update(token).digest("hex");

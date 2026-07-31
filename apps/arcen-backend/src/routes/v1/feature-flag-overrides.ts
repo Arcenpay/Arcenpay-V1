@@ -19,7 +19,7 @@ async function requireFlagForTeam(id: string, teamId: string) {
 
 export async function GET(c: Context) {
   const auth = await requirePermission(c, "catalog:read");
-  if (isErrorResponse(auth)) return c.json({ ok: false, error: auth.error }, auth.status as any as any);
+  if (isErrorResponse(auth)) return c.json({ ok: false, error: auth.error }, auth.status as any);
 
   const id = c.req.param("id");
   const flag = await requireFlagForTeam(id, auth.team.teamId);
@@ -50,7 +50,7 @@ export async function GET(c: Context) {
 
 export async function POST(c: Context) {
   const auth = await requirePermission(c, "catalog:write");
-  if (isErrorResponse(auth)) return c.json({ ok: false, error: auth.error }, auth.status as any as any);
+  if (isErrorResponse(auth)) return c.json({ ok: false, error: auth.error }, auth.status as any);
 
   const id = c.req.param("id");
   const flag = await requireFlagForTeam(id, auth.team.teamId);
@@ -109,7 +109,7 @@ export async function POST(c: Context) {
 
 export async function DELETE(c: Context) {
   const auth = await requirePermission(c, "catalog:write");
-  if (isErrorResponse(auth)) return c.json({ ok: false, error: auth.error }, auth.status as any as any);
+  if (isErrorResponse(auth)) return c.json({ ok: false, error: auth.error }, auth.status as any);
 
   const id = c.req.param("id");
   const flag = await requireFlagForTeam(id, auth.team.teamId);

@@ -4,6 +4,7 @@
 //  when balance drops below the configured threshold.
 // ============================================================
 
+import { randomUUID } from "node:crypto";
 import type { PublicClient } from "viem";
 import { formatUnits } from "viem";
 import { SessionVaultABI } from "@arcenpay/internal-core";
@@ -159,7 +160,7 @@ export class BalanceMonitor {
         const agentAddress = session.agent;
 
         const record: DispatchRecord = {
-          requestId: `dispatch_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+          requestId: `dispatch_${Date.now()}_${randomUUID()}`,
           teamId,
           agentAddress,
           amount: capped.toString(),

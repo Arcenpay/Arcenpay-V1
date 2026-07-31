@@ -9,6 +9,7 @@ import * as Sentry from "@sentry/node";
 import dotenv from "dotenv";
 import fs from "fs";
 import path from "path";
+import { randomUUID } from "node:crypto";
 
 const FACILITATOR_ENV_PATHS = [
   path.resolve(process.cwd(), ".env.local"),
@@ -4347,9 +4348,7 @@ app.post(
         return;
       }
 
-      const quoteId = `sponsor_${Date.now().toString(36)}_${Math.random()
-        .toString(36)
-        .slice(2, 8)}`;
+      const quoteId = `sponsor_${Date.now().toString(36)}_${randomUUID()}`;
 
       res.status(200).json({
         sponsored: true,

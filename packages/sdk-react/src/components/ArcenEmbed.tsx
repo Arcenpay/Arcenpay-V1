@@ -73,6 +73,7 @@ import {
 } from "viem";
 import { resolveDashboardBaseUrl } from "../lib/api";
 import { useArcenPay } from "../providers/ArcenPayProvider";
+import { sanitizeSvg } from "@arcenpay/internal-core";
 
 export interface ArcenEmbedProps {
   /** Short-lived access token. When omitted, auto-reads from NEXT_PUBLIC_ARCENPAY_ACCESS_TOKEN env var. */
@@ -454,7 +455,7 @@ function renderFeatureIconNode(
           display: "inline-flex",
           alignItems: "center",
         }}
-        dangerouslySetInnerHTML={{ __html: icon }}
+        dangerouslySetInnerHTML={{ __html: sanitizeSvg(icon) }}
       />
     );
   }

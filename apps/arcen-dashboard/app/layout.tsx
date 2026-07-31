@@ -43,7 +43,15 @@ export default async function RootLayout({
                     }
                     localStorage.setItem('arcenpay-theme', 'system');
                   }
-                } catch (e) {}
+                } catch (e) {
+                  // Fallback to system preference if localStorage is unavailable
+                  var m = window.matchMedia('(prefers-color-scheme: dark)');
+                  if (m.matches) {
+                    root.classList.add('dark');
+                  } else {
+                    root.classList.remove('dark');
+                  }
+                }
               })();
             `,
           }}

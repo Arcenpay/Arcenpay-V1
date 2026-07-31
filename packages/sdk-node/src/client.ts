@@ -6,6 +6,8 @@
  *  2. Call checkFlag() / checkEntitlement() / track() with no keys
  */
 
+import { randomUUID } from "node:crypto";
+
 import type {
   ArcenCompanyKeys,
   ArcenUserKeys,
@@ -634,7 +636,7 @@ export class ArcenClient {
   async chargeCustomer(
     input: ChargeCustomerInput,
   ): Promise<ChargeCustomerResult> {
-    const idempotencyKey = input.idempotencyKey || `idem_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+    const idempotencyKey = input.idempotencyKey || `idem_${Date.now()}_${randomUUID()}`;
 
     const appearanceMeta: Record<string, unknown> = {};
     if (input.appearance) {
@@ -695,7 +697,7 @@ export class ArcenClient {
   async createHostedCheckout(
     input: HostedCheckoutInput,
   ): Promise<HostedCheckoutResult> {
-    const idempotencyKey = input.idempotencyKey || `idem_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+    const idempotencyKey = input.idempotencyKey || `idem_${Date.now()}_${randomUUID()}`;
 
     let slug = input.paymentLinkSlug;
 
@@ -746,7 +748,7 @@ export class ArcenClient {
     paymentLinkId: string,
     options?: { expiresInSeconds?: number },
   ): Promise<HostedCheckoutResult> {
-    const idempotencyKey = `idem_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+    const idempotencyKey = `idem_${Date.now()}_${randomUUID()}`;
     const link = await this.getPaymentLink(paymentLinkId);
     const result = await this.createHostedCheckout({
       paymentLinkSlug: link.paymentLink.slug,

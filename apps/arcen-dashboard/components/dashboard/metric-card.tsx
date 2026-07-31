@@ -25,7 +25,7 @@ export function MetricCard({
 }: MetricCardProps) {
   return (
     <div
-      className="group bg-card border border-border rounded-xl p-5 transition-colors duration-200 hover:border-[#333333]"
+      className="group bg-card border border-border rounded-xl p-5 transition-colors duration-200 hover:border-muted-foreground/30"
       style={{ animationDelay: `${delay * 100}ms`, animationFillMode: "both" }}
     >
       <div className="flex items-start justify-between mb-3">

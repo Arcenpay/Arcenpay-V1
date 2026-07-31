@@ -216,6 +216,15 @@ export const SIWE_JWT_SECRET: string = (() => {
   return requireInProd("SIWE_JWT_SECRET", val) || "dev_siwe_jwt_secret_not_for_production";
 })();
 
+/**
+ * Secret used to sign embed access tokens and preview tokens.
+ * Required in production.
+ */
+export const ACCESS_TOKEN_SECRET: string = (() => {
+  const val = process.env.ACCESS_TOKEN_SECRET?.trim();
+  return requireInProd("ACCESS_TOKEN_SECRET", val) || SIWE_JWT_SECRET;
+})();
+
 // ── Email ─────────────────────────────────────────────────────────────────────
 
 /** Resend API key. Required when sending any transactional email. */

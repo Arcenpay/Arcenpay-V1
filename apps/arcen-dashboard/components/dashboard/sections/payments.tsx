@@ -180,7 +180,8 @@ const PRESET_COLORS = [
 ];
 
 function generateIdempotencyKey(): string {
-  return `idem_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+  const suffix = crypto.randomUUID?.() ?? Math.random().toString(36).slice(2, 10);
+  return `idem_${Date.now()}_${suffix}`;
 }
 
 function CollapsibleSection({

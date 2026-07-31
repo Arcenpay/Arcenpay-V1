@@ -45,6 +45,7 @@ import {
 import { toast } from "sonner";
 import { SkeletonTable } from "@/components/ui/skeleton";
 import { useTeamTier } from "@/hooks/use-team-tier";
+import { sanitizeSvg } from "@arcenpay/internal-core";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -575,7 +576,7 @@ export function FeatureAvatar({
             "inline-flex [&>svg]:h-5 [&>svg]:w-5",
             meta.color,
           )}
-          dangerouslySetInnerHTML={{ __html: icon ?? "" }}
+          dangerouslySetInnerHTML={{ __html: sanitizeSvg(icon) }}
         />
       ) : isLucideIconToken(icon) ? (
         <DynamicLucidePreview

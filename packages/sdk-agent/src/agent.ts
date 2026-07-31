@@ -4,6 +4,7 @@
 //  persistent nonce/session management, and permission controls.
 // ============================================================
 
+import { randomUUID } from "node:crypto";
 import {
   createPublicClient,
   createWalletClient,
@@ -553,7 +554,7 @@ export class MEAPAgent {
     const requests: TopUpRequest[] = [];
 
     for (const provider of enabled) {
-      const requestId = `topup_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+      const requestId = `topup_${Date.now()}_${randomUUID()}`;
       const target = provider.botToken
         ? `${provider.chatId}` : provider.webhookUrl
         ? provider.webhookUrl : provider.email ?? 'unknown';
