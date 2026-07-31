@@ -2847,6 +2847,8 @@ function useContainerWidth(
 
 // ─── Portal element renderers ─────────────────────────────────────────────────
 
+const FEATURE_PREVIEW_COUNT = 6;
+
 export function renderElement(
   el: ComponentElement & Record<string, unknown>,
   index: number,
@@ -3045,7 +3047,7 @@ export function renderElement(
                 {(() => {
                   const visibleFeats = showAllFeatures
                     ? boolFeats
-                    : boolFeats.slice(0, 5);
+                    : boolFeats.slice(0, FEATURE_PREVIEW_COUNT);
                   return (
                     <>
                       {visibleFeats.map((e, i) => (
@@ -3058,7 +3060,7 @@ export function renderElement(
                             padding: "10px 0",
                             borderBottom:
                               i < visibleFeats.length - 1 ||
-                              boolFeats.length > 5
+                              boolFeats.length > FEATURE_PREVIEW_COUNT
                                 ? "1px solid #f5f5f5"
                                 : undefined,
                           }}
@@ -3088,7 +3090,7 @@ export function renderElement(
                           </span>
                         </div>
                       ))}
-                      {boolFeats.length > 5 && (
+                      {boolFeats.length > FEATURE_PREVIEW_COUNT && (
                         <button
                           onClick={() => toggleShowAllFeatures?.()}
                           style={{
@@ -3105,7 +3107,7 @@ export function renderElement(
                         >
                           {showAllFeatures
                             ? "Show less"
-                            : `Show all ${boolFeats.length} features`}
+                            : `Show ${boolFeats.length - FEATURE_PREVIEW_COUNT} more features`}
                         </button>
                       )}
                     </>
@@ -3349,11 +3351,17 @@ export function renderElement(
               )}
             </div>
           ) : null}
-          <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
+              gap: 14,
+              alignItems: "stretch",
+            }}
+          >
             {data.plans.map((p: ComponentPlanSummary) => {
               const isActive = p.id === data.activePlan?.id;
               const isPendingTarget = p.id === pendingTransition?.targetPlanId;
-              const isCompact = data.plans.length > 2;
               const cardBillingPeriod =
                 isActive
                   ? activeBillingPeriod
@@ -3370,15 +3378,16 @@ export function renderElement(
                 <div
                   key={p.id}
                   style={{
-                    flex: isCompact ? "1 1 130px" : "1 1 160px",
-                    minWidth: isCompact ? 120 : 140,
-                    maxWidth: isCompact ? 180 : 220,
+                    minWidth: 0,
+                    minHeight: 176,
                     padding: 16,
                     borderRadius: tokens.radius,
                     border: isActive
                       ? `2px solid ${tokens.primary}`
                       : `1px solid #e5e7eb`,
                     background: isActive ? `${tokens.primary}08` : tokens.bg,
+                    display: "flex",
+                    flexDirection: "column",
                   }}
                 >
                   <div
@@ -3387,6 +3396,8 @@ export function renderElement(
                       fontSize: tokens.size,
                       color: tokens.textColor,
                       marginBottom: 4,
+                      lineHeight: 1.3,
+                      minHeight: 42,
                     }}
                   >
                     {p.name}
@@ -3446,6 +3457,7 @@ export function renderElement(
                         cursor: "pointer",
                         fontSize: tokens.size - 1,
                         fontWeight: 600,
+                        marginTop: "auto",
                       }}
                     >
                       Select plan
