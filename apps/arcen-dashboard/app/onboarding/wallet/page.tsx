@@ -268,7 +268,7 @@ export default function ConnectWalletPage() {
               </Button>
               <Button
                 onClick={() => router.push("/onboarding/provider-profile")}
-                className="min-w-[140px] bg-brand hover:bg-brand-dark text-white"
+                className="min-w-[140px] bg-brand hover:bg-brand-dark text-primary-foreground"
               >
                 Continue
                 <ArrowRight className="ml-1.5 w-4 h-4" />
@@ -336,7 +336,7 @@ export default function ConnectWalletPage() {
                 ) : null}
 
                 <Button
-                  className="w-full h-11 bg-brand hover:bg-brand-dark text-white"
+                  className="w-full h-11 bg-brand hover:bg-brand-dark text-primary-foreground"
                   onClick={handleLinkWallet}
                   disabled={isSigning || isWrongNetwork}
                 >
@@ -366,7 +366,7 @@ export default function ConnectWalletPage() {
                 </div>
 
                 <Button 
-                  className="w-full h-11 bg-brand hover:bg-brand-dark text-white text-sm font-medium" 
+                  className="w-full h-11 bg-brand hover:bg-brand-dark text-primary-foreground text-sm font-medium"
                   onClick={() => void openConnectModal()}
                 >
                   <Wallet className="w-4 h-4 mr-2" />

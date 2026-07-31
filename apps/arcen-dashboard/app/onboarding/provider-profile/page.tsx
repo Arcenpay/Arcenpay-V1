@@ -452,7 +452,7 @@ export default function ProviderProfilePage() {
           <Button
             onClick={() => void handleSave()}
             disabled={submitting || !providerName.trim()}
-            className="min-w-[140px] bg-brand hover:bg-brand-dark text-white"
+            className="min-w-[140px] bg-brand hover:bg-brand-dark text-primary-foreground"
           >
             {submitting ? (
               <>

@@ -207,7 +207,7 @@ export default function EnvironmentOnboardingPage() {
           <Button
             onClick={() => void handleCreate()}
             disabled={submitting || !name.trim()}
-            className="min-w-[140px] bg-brand hover:bg-brand-dark text-white"
+            className="min-w-[140px] bg-brand hover:bg-brand-dark text-primary-foreground"
           >
             {submitting ? (
               <>

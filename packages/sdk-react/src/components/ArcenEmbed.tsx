@@ -7689,7 +7689,7 @@ function PaymentContent({
                     width: 32,
                     height: 32,
                     borderRadius: "50%",
-                    background: "#2775ca",
+                    background: tokens.primary,
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
@@ -8494,8 +8494,8 @@ function PaymentContent({
           style={{
             width: isNarrowPayment ? "100%" : 260,
             flexShrink: 0,
-            background: "#fff",
-            border: "1px solid #e5e7eb",
+            background: tokens.bg,
+            border: tokens.cardBorder,
             borderRadius: tokens.radius,
             overflow: "hidden",
           }}
@@ -8503,8 +8503,8 @@ function PaymentContent({
           <div
             style={{
               padding: "14px 18px",
-              borderBottom: "1px solid #f0f0f0",
-              background: "#fafafa",
+              borderBottom: tokens.cardBorder,
+              background: tokens.bg,
             }}
           >
             <div
