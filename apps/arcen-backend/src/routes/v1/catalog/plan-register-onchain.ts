@@ -112,7 +112,10 @@ function resolveMaxOnChainChargeMicros(plan: {
   const annualMicros = Math.round(
     parseFloat(String(plan.annualPrice ?? "0")) * 1_000_000,
   );
-  return BigInt(Math.max(monthlyMicros, annualMicros, 0));
+  // The on-chain plan price is the charge per billing interval.
+  // Use the monthly price by default; the annual price acts as
+  // the autopay max cap enforced separately in the autopay config.
+  return BigInt(Math.max(monthlyMicros, 0));
 }
 
 export async function registerPlanOnChain(c: Context) {

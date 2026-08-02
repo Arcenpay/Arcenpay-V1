@@ -446,6 +446,7 @@ export async function GET(c: Context) {
   const id = c.req.param("id");
   const origin = c.req.header("origin");
 
+  try {
   // Extract token from Authorization header or query param
   const token = extractEmbedAccessToken(
     { get: (name: string) => c.req.header(name) },
@@ -1443,6 +1444,16 @@ export async function GET(c: Context) {
 
     if (companyId && billingPaymentAccount) {
       try {
+        const existingState = await db.subscriptionState.findUnique({
+          where: { companyId },
+          select: { metadata: true },
+        });
+        const existingMeta = (
+          existingState?.metadata &&
+          typeof existingState.metadata === "object" &&
+          !Array.isArray(existingState.metadata)
+        ) ? existingState.metadata as Record<string, unknown> : {};
+
         await upsertSubscriptionLedgerState({
           teamId,
           companyId,
@@ -1462,6 +1473,7 @@ export async function GET(c: Context) {
           lastEvent: "subscription.render_reconciled",
           lastEventAt: new Date(),
           metadata: {
+            ...existingMeta,
             source: "component.render",
             reconciliation: "live_onchain_subscription",
           },
@@ -1551,4 +1563,13 @@ export async function GET(c: Context) {
     200,
     corsHeaders(origin),
   );
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error("[component-render] Error:", message);
+    return c.json(
+      { error: "Unable to load portal. Please try again." },
+      500,
+      corsHeaders(origin),
+    );
+  }
 }

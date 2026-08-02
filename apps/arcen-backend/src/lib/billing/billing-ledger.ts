@@ -127,6 +127,21 @@ export async function upsertSubscriptionLedgerState(
     input.environmentId !== undefined
       ? input.environmentId
       : (company.environmentId ?? null);
+
+  const existingState = await client.subscriptionState.findUnique({
+    where: { companyId: company.id },
+    select: { metadata: true },
+  });
+  const existingMeta = (
+    existingState?.metadata &&
+    typeof existingState.metadata === "object" &&
+    !Array.isArray(existingState.metadata)
+  ) ? existingState.metadata as Record<string, unknown> : {};
+
+  const mergedMetadata = input.metadata
+    ? { ...existingMeta, ...input.metadata }
+    : undefined;
+
   const subscriptionState = await client.subscriptionState.upsert({
     where: { companyId: company.id },
     update: {
@@ -167,7 +182,7 @@ export async function upsertSubscriptionLedgerState(
       ...(input.lastSourceTxHash !== undefined
         ? { lastSourceTxHash: input.lastSourceTxHash }
         : {}),
-      ...(input.metadata ? { metadata: toPrismaJson(input.metadata) } : {}),
+      ...(mergedMetadata ? { metadata: toPrismaJson(mergedMetadata) } : {}),
     },
     create: {
       teamId: input.teamId,

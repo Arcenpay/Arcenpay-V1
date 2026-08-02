@@ -7010,15 +7010,17 @@ function PaymentContent({
         activationTxHash: params.activationTxHash,
       });
 
-      if (res.ok) {
+      if (res.ok && res.status !== 202) {
         return {
           txHash: (json.data?.txHash ??
             params.activationTxHash) as `0x${string}`,
-          pending: res.status === 202,
+          pending: false,
         };
       }
 
-      if (res.status === 425 && attempt < maxAttempts - 1) {
+      const retryable = res.status === 202 || res.status === 425 || res.status === 409 || res.status === 500 || res.status === 503;
+
+      if (retryable && attempt < maxAttempts - 1) {
         await sleep(3_000);
         continue;
       }
@@ -7498,6 +7500,7 @@ function PaymentContent({
       }
 
       setTxStatus("approving");
+      let activationTx: { txHash: `0x${string}` } | undefined;
       try {
         const readyPaymentAccount = await ensureAutopayReadyForActivation(
           selectedOnChainPlanId,
@@ -7555,7 +7558,7 @@ function PaymentContent({
             );
           }
 
-          const activationTx = await submitPaymentAccountTransaction({
+          activationTx = await submitPaymentAccountTransaction({
             to: preparedTarget as `0x${string}`,
             data: preparedData as `0x${string}`,
             smartAccountAddressOverride: readyPaymentAccount,
@@ -7576,7 +7579,6 @@ function PaymentContent({
             : undefined,
         });
       } catch (err: unknown) {
-        setTxStatus("error");
         const msg =
           err instanceof Error
             ? err.message
@@ -7584,9 +7586,14 @@ function PaymentContent({
               ? "Subscription reactivation failed"
               : "Activation failed";
         if (isUserRejectedWalletAction(err)) {
+          setTxStatus("error");
           setTxError("Transaction cancelled");
         } else {
-          setTxError(msg.slice(0, 160));
+          await onActivationComplete({
+            txHash: activationTx?.txHash as `0x${string}` | undefined,
+            pending: true,
+            successMsg: "Subscription activation submitted. We're finalizing your billing state now.",
+          });
         }
       }
       return;
@@ -9599,7 +9606,7 @@ function SuccessContent({
     data.plans.find((p: ComponentPlanSummary) => p.id === selectedPlanId) ??
     data.activePlan;
 
-  const [countdown, setCountdown] = useState(5);
+  const [countdown, setCountdown] = useState(10);
 
   useEffect(() => {
     const interval = window.setInterval(() => {

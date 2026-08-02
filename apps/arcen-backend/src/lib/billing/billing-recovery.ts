@@ -875,6 +875,20 @@ export async function finalizeSubscriptionActivation(
     console.warn("[billing-recovery] Failed to send invoice receipt:", err);
   });
 
+  // Always project platform billing entitlement after activation.
+  // This ensures the workspace tier is updated even if the billing
+  // event was deduped (facilitator already processed it) or if the
+  // event processing path didn't call projectPlatformBillingEntitlement.
+  try {
+    const { projectPlatformBillingEntitlement } = await import("./platform-billing-customer.js");
+    await projectPlatformBillingEntitlement({
+      providerTeamId: input.teamId,
+      companyId: input.payload.companyId,
+    });
+  } catch (err) {
+    console.warn("[billing-recovery] Failed to project platform billing entitlement:", err);
+  }
+
   return {
     subscriptionState,
     invoiceId: invoice.id,

@@ -454,6 +454,27 @@ async function upsertCompanyForActivation(
   },
   paymentAccount?: string | null,
 ): Promise<{ id: string; activePlanId: string | null; created: boolean }> {
+  // First: try direct ID lookup (SDK sends ArcenCompany.id as company.id,
+  // but flag-engine.resolveCompany maps keys.id to externalId — mismatch)
+  if (keys.id) {
+    const directMatch = await db.arcenCompany.findFirst({
+      where: { id: keys.id, teamId, ...(environmentId ? { environmentId } : {}) },
+      select: { id: true, activePlanId: true, walletAddress: true, email: true },
+    });
+    if (directMatch) {
+      const updates: Record<string, unknown> = {};
+      if (keys.name?.trim()) updates.name = keys.name.trim();
+      if (keys.email?.trim()) updates.email = keys.email.trim().toLowerCase();
+      if (keys.wallet?.trim()) updates.walletAddress = keys.wallet.trim().toLowerCase();
+      if (Object.keys(updates).length > 0) {
+        try {
+          await db.arcenCompany.update({ where: { id: directMatch.id }, data: updates });
+        } catch { /* ignore unique constraint races */ }
+      }
+      return { id: directMatch.id, activePlanId: directMatch.activePlanId, created: false };
+    }
+  }
+
   const existing =
     (await resolveCompany(teamId, {
       ...keys,
@@ -1336,15 +1357,34 @@ export async function POST(c: Context) {
       );
     });
 
+    let tokenId = 0n;
+
     if (!latestBillingLog) {
-      return c.json(
-        {
-          error:
-            "Activation transaction did not emit BillingExecuted for the current payment account and merchant.",
-        },
-        409,
-        corsHeaders(origin),
-      );
+      // Don't give up — try to resolve tokenId from SubscriptionMinted events
+      // or directly from the on-chain registry. BillingExecuted may not be
+      // indexed yet, but the subscription NFT may already exist.
+      const fallbackTokenId = await readActiveWalletSubscriptionTokenId({
+        publicClient,
+        subscriptionRegistryAddress,
+        wallet: paymentAccount,
+      }).catch(() => 0n);
+
+      if (fallbackTokenId <= 0n) {
+        return c.json(
+          {
+            error:
+              "Activation transaction is still being indexed. Please retry shortly.",
+          },
+          202,
+          corsHeaders(origin),
+        );
+      }
+
+      // Token found on-chain — proceed with fallback tokenId
+      tokenId = fallbackTokenId;
+    } else {
+      tokenId = ((latestBillingLog?.args as { tokenId?: bigint } | undefined)
+        ?.tokenId ?? 0n) as bigint;
     }
 
     const receiptBlock =
@@ -1355,9 +1395,6 @@ export async function POST(c: Context) {
       receiptBlock?.timestamp != null
         ? new Date(Number(receiptBlock.timestamp) * 1000)
         : new Date();
-
-    let tokenId = ((latestBillingLog?.args as { tokenId?: bigint } | undefined)
-      ?.tokenId ?? 0n) as bigint;
 
     const mintedLogs = parseEventLogs({
       abi: SubscriptionRegistryABI,
