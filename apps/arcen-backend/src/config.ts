@@ -13,15 +13,20 @@
 // ============================================================
 
 import "./load-env.js";
-import { createPublicClient, fallback, http, type Transport, type PublicClient } from "viem";
+import {
+  createPublicClient,
+  fallback,
+  http,
+  type Transport,
+  type PublicClient,
+} from "viem";
 import * as ArcenPayCore from "@arcenpay/internal-core";
 import { DEFAULT_CHAIN_ID } from "./lib/platform/default-chain.js";
 import { SUBGRAPH_REQUIRED } from "./lib/platform/launch-flags.js";
 
 export const PORT = parseInt(process.env.PORT ?? "3300", 10);
 
-const isProd =
-  process.env.NODE_ENV === "production";
+const isProd = process.env.NODE_ENV === "production";
 
 function resolveDefaultChainEnvironment() {
   try {
@@ -34,11 +39,17 @@ function resolveDefaultChainEnvironment() {
 const DEFAULT_CHAIN_ENV = resolveDefaultChainEnvironment();
 
 function getChainEnvironmentCompat(chainId: number) {
-  const maybe = (ArcenPayCore as unknown as {
-    getChainEnvironment?: (id: number) => {
-      services: { rpcUrl: string; subgraphUrl?: string; facilitatorUrl?: string };
-    };
-  }).getChainEnvironment;
+  const maybe = (
+    ArcenPayCore as unknown as {
+      getChainEnvironment?: (id: number) => {
+        services: {
+          rpcUrl: string;
+          subgraphUrl?: string;
+          facilitatorUrl?: string;
+        };
+      };
+    }
+  ).getChainEnvironment;
   if (typeof maybe === "function") {
     return maybe(chainId);
   }
@@ -58,7 +69,6 @@ function getChainEnvironmentCompat(chainId: number) {
     },
   };
 }
-
 
 function requireInProd(name: string, value: string | undefined): string {
   if (!value && isProd) {
@@ -115,9 +125,7 @@ export const FACILITATOR_URL: string = (() => {
  * Resolves from: APP_URL → DASHBOARD_URL
  */
 export const APP_URL: string = (() => {
-  const val =
-    process.env.APP_URL ||
-    process.env.DASHBOARD_URL;
+  const val = process.env.APP_URL || process.env.DASHBOARD_URL;
   return requireInProd("APP_URL", val) || "http://localhost:3000";
 })();
 
@@ -135,13 +143,10 @@ export const GRAPH_URL: string = (() => {
       `GRAPH_URL_${DEFAULT_CHAIN_ID}`,
       "ARCENPAY_SUBGRAPH_URL",
       "GRAPH_URL",
-    ]) ||
-    DEFAULT_CHAIN_ENV.services.subgraphUrl;
+    ]) || DEFAULT_CHAIN_ENV.services.subgraphUrl;
   if (!val) {
     if (isProd && SUBGRAPH_REQUIRED) {
-      throw new Error(
-        "[config] GRAPH_URL must be set in production.",
-      );
+      throw new Error("[config] GRAPH_URL must be set in production.");
     }
     return "";
   }
@@ -169,10 +174,7 @@ export function getGraphUrl(chainId: number): string {
   ]);
   if (specific) return specific;
 
-  const global = getEnvValue([
-    "ARCENPAY_SUBGRAPH_URL",
-    "GRAPH_URL",
-  ]);
+  const global = getEnvValue(["ARCENPAY_SUBGRAPH_URL", "GRAPH_URL"]);
   if (global) return global;
 
   try {
@@ -214,7 +216,10 @@ export const PLATFORM_BILLING_ACCEPTED_TOKEN: string = (() => {
  */
 export const SIWE_JWT_SECRET: string = (() => {
   const val = process.env.SIWE_JWT_SECRET;
-  return requireInProd("SIWE_JWT_SECRET", val) || "dev_siwe_jwt_secret_not_for_production";
+  return (
+    requireInProd("SIWE_JWT_SECRET", val) ||
+    "dev_siwe_jwt_secret_not_for_production"
+  );
 })();
 
 /**
@@ -291,6 +296,34 @@ function parseRpcList(raw: string): string[] {
     .filter(Boolean);
 }
 
+function collectRpcCandidates(chainId: number): string[] {
+  const rawSpecific = process.env[`RPC_URL_${chainId}`];
+  const rawGlobal = process.env.RPC_URL;
+  const rawManifest = (() => {
+    try {
+      return getChainEnvironmentCompat(chainId).services.rpcUrl;
+    } catch {
+      return "";
+    }
+  })();
+  const chainRpcs =
+    ArcenPayCore.getChain(chainId)?.rpcUrls?.default?.http ?? [];
+
+  const seen = new Set<string>();
+  const candidates: string[] = [];
+  for (const value of [
+    ...parseRpcList(rawSpecific ?? ""),
+    ...parseRpcList(rawGlobal ?? ""),
+    ...parseRpcList(rawManifest ?? ""),
+    ...chainRpcs,
+  ]) {
+    if (!value || seen.has(value)) continue;
+    seen.add(value);
+    candidates.push(value);
+  }
+  return candidates;
+}
+
 // Per-chain round-robin cursor (server-side, resets on cold start)
 const rpcRotationCursors: Record<number, number> = {};
 
@@ -302,13 +335,7 @@ const rpcRotationCursors: Record<number, number> = {};
  *   RPC_URL_11155111=https://alchemy.../key,https://infura.../key
  */
 export function getRpcUrl(chainId: number): string {
-  const rawSpecific = process.env[`RPC_URL_${chainId}`];
-  const rawGlobal = process.env.RPC_URL;
-  const rawManifest = (() => {
-    try { return getChainEnvironmentCompat(chainId).services.rpcUrl; } catch { return ""; }
-  })();
-
-  const candidates = parseRpcList(rawSpecific ?? rawGlobal ?? rawManifest ?? "");
+  const candidates = collectRpcCandidates(chainId);
 
   if (candidates.length > 0) {
     if (candidates.length === 1) return candidates[0];
@@ -321,7 +348,7 @@ export function getRpcUrl(chainId: number): string {
   if (isProd) {
     throw new Error(
       `[config] RPC_URL_${chainId} (or RPC_URL) must be set in production. ` +
-      `Comma-separate multiple URLs for automatic failover.`,
+        `Comma-separate multiple URLs for automatic failover.`,
     );
   }
 
@@ -331,7 +358,8 @@ export function getRpcUrl(chainId: number): string {
     8453: "https://mainnet.base.org",
     84532: "https://sepolia.base.org",
     // Arc Testnet: use QuikNode paid endpoint as dev fallback (higher rate limits)
-    5042002: "https://sleek-sleek-resonance.arc-testnet.quiknode.pro/9447b76a1f0e822664b55dc6858f4ba4beebc153/",
+    5042002:
+      "https://sleek-sleek-resonance.arc-testnet.quiknode.pro/9447b76a1f0e822664b55dc6858f4ba4beebc153/",
     1: "https://cloudflare-eth.com",
   };
   return publicRpcs[chainId] ?? "";
@@ -342,17 +370,8 @@ export function getRpcUrl(chainId: number): string {
  * Returns a single-element array if only one is configured.
  */
 export function getAllRpcUrls(chainId: number): string[] {
-  const rawSpecific = process.env[`RPC_URL_${chainId}`];
-  const rawGlobal = process.env.RPC_URL;
-  const rawManifest = (() => {
-    try { return getChainEnvironmentCompat(chainId).services.rpcUrl; } catch { return ""; }
-  })();
-
-  const candidates = parseRpcList(rawSpecific ?? rawGlobal ?? rawManifest ?? "");
+  const candidates = collectRpcCandidates(chainId);
   if (candidates.length > 0) return candidates;
-
-  const chainRpcs = ArcenPayCore.getChain(chainId)?.rpcUrls?.default?.http ?? [];
-  if (chainRpcs.length > 0) return [...chainRpcs];
 
   const fallback = getRpcUrl(chainId);
   return fallback ? [fallback] : [];
@@ -408,10 +427,7 @@ export function createResilientPublicClient(chainId: number): PublicClient {
  * When present, Pimlico becomes the preferred hosted provider.
  */
 export const PIMLICO_API_KEY: string = (() => {
-  const val = getEnvValue([
-    "PIMLICO_API_KEY",
-    "NEXT_PUBLIC_PIMLICO_API_KEY",
-  ]);
+  const val = getEnvValue(["PIMLICO_API_KEY", "NEXT_PUBLIC_PIMLICO_API_KEY"]);
   return val ?? "";
 })();
 
@@ -420,10 +436,7 @@ export const PIMLICO_API_KEY: string = (() => {
  * via direct env access inside the route layer.
  */
 export const PIMLICO_RPC_URL: string = (() => {
-  const val = getEnvValue([
-    "PIMLICO_RPC",
-    "NEXT_PUBLIC_PIMLICO_RPC",
-  ]);
+  const val = getEnvValue(["PIMLICO_RPC", "NEXT_PUBLIC_PIMLICO_RPC"]);
   return val ?? "";
 })();
 

@@ -6,14 +6,22 @@ import { normalizeWallet } from "./utils.js";
 
 type BillingLedgerDb = Pick<
   typeof db,
-  "arcenCompany" | "subscriptionState" | "payment" | "paymentAttempt" | "invoice"
+  | "arcenCompany"
+  | "subscriptionState"
+  | "payment"
+  | "paymentAttempt"
+  | "invoice"
 >;
 
-async function resolveCompany(input: {
-  teamId: string;
-  companyId?: string | null;
-  walletAddress?: string | null;
-}, client: BillingLedgerDb = db) {
+async function resolveCompany(
+  input: {
+    teamId: string;
+    companyId?: string | null;
+    walletAddress?: string | null;
+    onChainTokenId?: string | null;
+  },
+  client: BillingLedgerDb = db,
+) {
   if (input.companyId) {
     return client.arcenCompany.findFirst({
       where: { id: input.companyId, teamId: input.teamId },
@@ -25,6 +33,28 @@ async function resolveCompany(input: {
         activePlanId: true,
       },
     });
+  }
+
+  const onChainTokenId = input.onChainTokenId?.trim();
+  if (onChainTokenId) {
+    const companyByToken = await client.subscriptionState.findFirst({
+      where: { teamId: input.teamId, onChainTokenId },
+      select: {
+        company: {
+          select: {
+            id: true,
+            teamId: true,
+            environmentId: true,
+            walletAddress: true,
+            activePlanId: true,
+          },
+        },
+      },
+    });
+
+    if (companyByToken?.company) {
+      return companyByToken.company;
+    }
   }
 
   const walletAddress = normalizeWallet(input.walletAddress);
@@ -62,48 +92,58 @@ async function resolveCompany(input: {
   return subscriptionMatch?.company ?? null;
 }
 
-export async function upsertSubscriptionLedgerState(input: {
-  teamId: string;
-  environmentId?: string | null;
-  companyId?: string | null;
-  walletAddress?: string | null;
-  chainId?: number | null;
-  status: "ACTIVE" | "PAST_DUE" | "CANCELLED";
-  catalogPlanId?: string | null;
-  onChainPlanId?: string | null;
-  onChainTokenId?: string | null;
-  currentPeriodStart?: Date | null;
-  currentPeriodEnd?: Date | null;
-  cancelAtPeriodEnd?: boolean;
-  cancelledAt?: Date | null;
-  pastDueAt?: Date | null;
-  graceEndsAt?: Date | null;
-  lastEvent?: string | null;
-  lastEventAt?: Date | null;
-  lastSourceTxHash?: string | null;
-  metadata?: Record<string, unknown>;
-}, client: BillingLedgerDb = db) {
+export async function upsertSubscriptionLedgerState(
+  input: {
+    teamId: string;
+    environmentId?: string | null;
+    companyId?: string | null;
+    walletAddress?: string | null;
+    onChainTokenId?: string | null;
+    chainId?: number | null;
+    status: "ACTIVE" | "PAST_DUE" | "CANCELLED";
+    catalogPlanId?: string | null;
+    onChainPlanId?: string | null;
+    currentPeriodStart?: Date | null;
+    currentPeriodEnd?: Date | null;
+    cancelAtPeriodEnd?: boolean;
+    cancelledAt?: Date | null;
+    pastDueAt?: Date | null;
+    graceEndsAt?: Date | null;
+    lastEvent?: string | null;
+    lastEventAt?: Date | null;
+    lastSourceTxHash?: string | null;
+    metadata?: Record<string, unknown>;
+  },
+  client: BillingLedgerDb = db,
+) {
   const company = await resolveCompany(input, client);
   if (!company) return null;
 
   const nextCatalogPlanId =
     input.catalogPlanId !== undefined
       ? input.catalogPlanId
-      : company.activePlanId ?? null;
+      : (company.activePlanId ?? null);
   const resolvedEnvironmentId =
     input.environmentId !== undefined
       ? input.environmentId
-      : company.environmentId ?? null;
+      : (company.environmentId ?? null);
   const subscriptionState = await client.subscriptionState.upsert({
     where: { companyId: company.id },
     update: {
       environmentId: resolvedEnvironmentId,
-      walletAddress: normalizeWallet(input.walletAddress) ?? company.walletAddress ?? null,
+      walletAddress:
+        normalizeWallet(input.walletAddress) ?? company.walletAddress ?? null,
       status: input.status,
       ...(input.chainId != null ? { chainId: input.chainId } : {}),
-      ...(input.catalogPlanId !== undefined ? { catalogPlanId: input.catalogPlanId } : {}),
-      ...(input.onChainPlanId !== undefined ? { onChainPlanId: input.onChainPlanId } : {}),
-      ...(input.onChainTokenId !== undefined ? { onChainTokenId: input.onChainTokenId } : {}),
+      ...(input.catalogPlanId !== undefined
+        ? { catalogPlanId: input.catalogPlanId }
+        : {}),
+      ...(input.onChainPlanId !== undefined
+        ? { onChainPlanId: input.onChainPlanId }
+        : {}),
+      ...(input.onChainTokenId !== undefined
+        ? { onChainTokenId: input.onChainTokenId }
+        : {}),
       ...(input.currentPeriodStart !== undefined
         ? { currentPeriodStart: input.currentPeriodStart }
         : {}),
@@ -113,11 +153,17 @@ export async function upsertSubscriptionLedgerState(input: {
       ...(input.cancelAtPeriodEnd !== undefined
         ? { cancelAtPeriodEnd: input.cancelAtPeriodEnd }
         : {}),
-      ...(input.cancelledAt !== undefined ? { cancelledAt: input.cancelledAt } : {}),
+      ...(input.cancelledAt !== undefined
+        ? { cancelledAt: input.cancelledAt }
+        : {}),
       ...(input.pastDueAt !== undefined ? { pastDueAt: input.pastDueAt } : {}),
-      ...(input.graceEndsAt !== undefined ? { graceEndsAt: input.graceEndsAt } : {}),
+      ...(input.graceEndsAt !== undefined
+        ? { graceEndsAt: input.graceEndsAt }
+        : {}),
       ...(input.lastEvent !== undefined ? { lastEvent: input.lastEvent } : {}),
-      ...(input.lastEventAt !== undefined ? { lastEventAt: input.lastEventAt } : {}),
+      ...(input.lastEventAt !== undefined
+        ? { lastEventAt: input.lastEventAt }
+        : {}),
       ...(input.lastSourceTxHash !== undefined
         ? { lastSourceTxHash: input.lastSourceTxHash }
         : {}),
@@ -127,7 +173,8 @@ export async function upsertSubscriptionLedgerState(input: {
       teamId: input.teamId,
       environmentId: resolvedEnvironmentId,
       companyId: company.id,
-      walletAddress: normalizeWallet(input.walletAddress) ?? company.walletAddress ?? null,
+      walletAddress:
+        normalizeWallet(input.walletAddress) ?? company.walletAddress ?? null,
       status: input.status,
       ...(input.chainId != null ? { chainId: input.chainId } : {}),
       catalogPlanId: nextCatalogPlanId,
@@ -146,14 +193,13 @@ export async function upsertSubscriptionLedgerState(input: {
     },
   });
 
-  if (
-    input.status === "ACTIVE" ||
-    input.status === "PAST_DUE"
-  ) {
+  if (input.status === "ACTIVE" || input.status === "PAST_DUE") {
     await client.arcenCompany.update({
       where: { id: company.id },
       data: {
-        ...(nextCatalogPlanId !== undefined ? { activePlanId: nextCatalogPlanId } : {}),
+        ...(nextCatalogPlanId !== undefined
+          ? { activePlanId: nextCatalogPlanId }
+          : {}),
       },
     });
   }
@@ -161,10 +207,13 @@ export async function upsertSubscriptionLedgerState(input: {
   return subscriptionState;
 }
 
-async function resolvePaymentRecord(input: {
-  idempotencyKey: string;
-  txHash?: string | null;
-}, client: BillingLedgerDb = db) {
+async function resolvePaymentRecord(
+  input: {
+    idempotencyKey: string;
+    txHash?: string | null;
+  },
+  client: BillingLedgerDb = db,
+) {
   if (input.txHash) {
     const existingByTxHash = await client.payment.findUnique({
       where: { txHash: input.txHash },
@@ -177,55 +226,61 @@ async function resolvePaymentRecord(input: {
   });
 }
 
-export async function recordSuccessfulPayment(input: {
-  idempotencyKey: string;
-  teamId: string;
-  environmentId?: string | null;
-  companyId?: string | null;
-  walletAddress?: string | null;
-  invoiceId?: string | null;
-  subscriptionStateId?: string | null;
-  kind:
-    | "SUBSCRIPTION_ACTIVATION"
-    | "SUBSCRIPTION_RENEWAL"
-    | "SUBSCRIPTION_PLAN_CHANGE_UPGRADE"
-    | "MANUAL_INVOICE_PAYMENT"
-    | "ADDON_PURCHASE"
-    | "CUSTOM_PAYMENT";
-  amount: number;
-  currency?: string;
-  payerWallet?: string | null;
-  recipientWallet?: string | null;
-  acceptedToken?: string | null;
-  txHash?: string | null;
-  externalRef?: string | null;
-  occurredAt?: Date | null;
-  settledAt?: Date | null;
-  metadata?: Record<string, unknown>;
-  preserveScheduledCancellation?: boolean;
-}, client: BillingLedgerDb = db) {
+export async function recordSuccessfulPayment(
+  input: {
+    idempotencyKey: string;
+    teamId: string;
+    environmentId?: string | null;
+    companyId?: string | null;
+    walletAddress?: string | null;
+    onChainTokenId?: string | null;
+    invoiceId?: string | null;
+    subscriptionStateId?: string | null;
+    kind:
+      | "SUBSCRIPTION_ACTIVATION"
+      | "SUBSCRIPTION_RENEWAL"
+      | "SUBSCRIPTION_PLAN_CHANGE_UPGRADE"
+      | "MANUAL_INVOICE_PAYMENT"
+      | "ADDON_PURCHASE"
+      | "CUSTOM_PAYMENT";
+    amount: number;
+    currency?: string;
+    payerWallet?: string | null;
+    recipientWallet?: string | null;
+    acceptedToken?: string | null;
+    txHash?: string | null;
+    externalRef?: string | null;
+    occurredAt?: Date | null;
+    settledAt?: Date | null;
+    metadata?: Record<string, unknown>;
+    preserveScheduledCancellation?: boolean;
+  },
+  client: BillingLedgerDb = db,
+) {
   const company = await resolveCompany(input, client);
-  const subscriptionState =
-    input.subscriptionStateId
-        ? await client.subscriptionState.findUnique({
-            where: { id: input.subscriptionStateId },
-            select: { id: true, environmentId: true },
-          })
-        : company
-        ? await client.subscriptionState.findUnique({
-            where: { companyId: company.id },
-            select: { id: true, environmentId: true },
-          })
-        : null;
+  const subscriptionState = input.subscriptionStateId
+    ? await client.subscriptionState.findUnique({
+        where: { id: input.subscriptionStateId },
+        select: { id: true, environmentId: true },
+      })
+    : company
+      ? await client.subscriptionState.findUnique({
+          where: { companyId: company.id },
+          select: { id: true, environmentId: true },
+        })
+      : null;
   const resolvedEnvironmentId =
     input.environmentId !== undefined
       ? input.environmentId
-      : subscriptionState?.environmentId ?? company?.environmentId ?? null;
+      : (subscriptionState?.environmentId ?? company?.environmentId ?? null);
 
-  const existing = await resolvePaymentRecord({
-    idempotencyKey: input.idempotencyKey,
-    txHash: input.txHash,
-  }, client);
+  const existing = await resolvePaymentRecord(
+    {
+      idempotencyKey: input.idempotencyKey,
+      txHash: input.txHash,
+    },
+    client,
+  );
 
   const payment = existing
     ? await client.payment.update({
@@ -312,10 +367,13 @@ export async function recordSuccessfulPayment(input: {
   }
 
   if (input.invoiceId) {
-    await applyInvoicePayment({
-      invoiceId: input.invoiceId,
-      amount: input.amount,
-    }, client);
+    await applyInvoicePayment(
+      {
+        invoiceId: input.invoiceId,
+        amount: input.amount,
+      },
+      client,
+    );
   }
 
   return payment;
@@ -326,6 +384,7 @@ export async function recordFailedPayment(input: {
   teamId: string;
   companyId?: string | null;
   walletAddress?: string | null;
+  onChainTokenId?: string | null;
   subscriptionStateId?: string | null;
   kind:
     | "SUBSCRIPTION_ACTIVATION"
@@ -343,18 +402,17 @@ export async function recordFailedPayment(input: {
   metadata?: Record<string, unknown>;
 }) {
   const company = await resolveCompany(input);
-  const subscriptionState =
-    input.subscriptionStateId
+  const subscriptionState = input.subscriptionStateId
+    ? await db.subscriptionState.findUnique({
+        where: { id: input.subscriptionStateId },
+        select: { id: true },
+      })
+    : company
       ? await db.subscriptionState.findUnique({
-          where: { id: input.subscriptionStateId },
+          where: { companyId: company.id },
           select: { id: true },
         })
-      : company
-        ? await db.subscriptionState.findUnique({
-            where: { companyId: company.id },
-            select: { id: true },
-          })
-        : null;
+      : null;
 
   const occurredAt = input.occurredAt ?? new Date();
   const graceEndsAt = new Date(occurredAt.getTime() + 7 * 24 * 60 * 60 * 1000);

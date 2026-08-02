@@ -153,8 +153,7 @@ const BACKEND_URL = (
 const DASHBOARD_URL = (process.env.DASHBOARD_URL || "").replace(/\/$/, "");
 const INTERNAL_API_BASE_URL = BACKEND_URL || DASHBOARD_URL;
 const BACKEND_API_PREFIX = "/api/v1";
-const DASHBOARD_PLAN_RESOLVER_PATH =
-  `${BACKEND_API_PREFIX}/internal/catalog/resolve-plan`;
+const DASHBOARD_PLAN_RESOLVER_PATH = `${BACKEND_API_PREFIX}/internal/catalog/resolve-plan`;
 const LIT_ENABLED = process.env.ENABLE_LIT_PROTOCOL === "true";
 const BILLING_MAINTENANCE_ENABLED =
   process.env.ENABLE_BILLING_MAINTENANCE_AUTOMATION === "true";
@@ -578,7 +577,10 @@ app.use(
 );
 app.use(express.json({ limit: "50kb" })); // 50KB body limit (PRD §11.2)
 app.use(async (req, res, next) => {
-  if (FACILITATOR_SECRET && req.headers.authorization === `Bearer ${FACILITATOR_SECRET}`) {
+  if (
+    FACILITATOR_SECRET &&
+    req.headers.authorization === `Bearer ${FACILITATOR_SECRET}`
+  ) {
     return next();
   }
 
@@ -835,20 +837,21 @@ async function buildBillingEventRequest(
     },
   );
 
-  const resolvedTeamId = teamId || (process.env.FALLBACK_TEAM_ID || "").trim() || null;
+  const resolvedTeamId =
+    teamId || (process.env.FALLBACK_TEAM_ID || "").trim() || null;
 
   if (!resolvedTeamId) {
     throw new Error(
       `Unable to resolve teamId for billing event ${payload.eventType} (${payload.idempotencyKey}). ` +
-      `onChainPlanId=${payload.onChainPlanId ?? "null"}, tokenId=${payload.sourceTokenId ?? "null"}. ` +
-      `Set FALLBACK_TEAM_ID env var in the facilitator to route events when plan resolution fails.`,
+        `onChainPlanId=${payload.onChainPlanId ?? "null"}, tokenId=${payload.sourceTokenId ?? "null"}. ` +
+        `Set FALLBACK_TEAM_ID env var in the facilitator to route events when plan resolution fails.`,
     );
   }
 
   if (!teamId) {
     console.warn(
       `[Facilitator] Using FALLBACK_TEAM_ID for billing event ${payload.eventType} (${payload.idempotencyKey}) — plan scope could not be resolved from the dashboard. ` +
-      `onChainPlanId=${payload.onChainPlanId ?? "null"}. Ensure the plan exists in the dashboard catalog with this onChainPlanId.`,
+        `onChainPlanId=${payload.onChainPlanId ?? "null"}. Ensure the plan exists in the dashboard catalog with this onChainPlanId.`,
     );
   }
 
@@ -1210,13 +1213,17 @@ async function postToDashboard(
 
 async function resolvePlanScopeFromDashboard(
   onChainPlanId: string,
-): Promise<{ teamId: string; planId: string | null; environmentId: string | null } | null> {
+): Promise<{
+  teamId: string;
+  planId: string | null;
+  environmentId: string | null;
+} | null> {
   const internalBaseUrl = INTERNAL_API_BASE_URL || DASHBOARD_URL;
   if (!internalBaseUrl) {
     console.warn(
       "[Facilitator] Neither INTERNAL_API_BASE_URL nor DASHBOARD_URL is configured — unable to resolve plan scope from dashboard. " +
-      "Billing event routing will depend solely on the subscription route store. " +
-      "Set DASHBOARD_URL so on-chain plan IDs can be matched to team/plan records.",
+        "Billing event routing will depend solely on the subscription route store. " +
+        "Set DASHBOARD_URL so on-chain plan IDs can be matched to team/plan records.",
     );
     return null;
   }
@@ -2173,6 +2180,21 @@ eventListener.on("billing_executed", async (event) => {
       sourceTokenId: tokenId,
       wallet: subscriberWallet ?? null,
     },
+  );
+
+  enqueueSubscriptionSync({
+    teamId,
+    wallet: subscriberWallet,
+    onChainPlanId,
+    event: billingReason === 0 ? "minted" : "renewed",
+    occurredAt: occurredAtIso,
+    sourceTxHash: event.transactionHash,
+    sourceTokenId: tokenId,
+  }).catch((err) =>
+    console.error(
+      "[Facilitator] sync-subscription (billing_executed) failed:",
+      err,
+    ),
   );
 
   if (
@@ -4291,7 +4313,8 @@ app.post(
     if (!INTERNAL_API_BASE_URL) {
       res.status(200).json({
         sponsored: false,
-        reason: "Gas budget service not configured (BACKEND_URL/DASHBOARD_URL missing)",
+        reason:
+          "Gas budget service not configured (BACKEND_URL/DASHBOARD_URL missing)",
       });
       return;
     }

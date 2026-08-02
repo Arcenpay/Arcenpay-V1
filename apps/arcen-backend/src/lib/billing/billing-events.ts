@@ -170,7 +170,8 @@ export async function createIssuedChargeInvoice(
       metadata: toPrismaJson({
         ...(input.metadata ?? {}),
         ...(input.customerName ? { customerName: input.customerName } : {}),
-        emailDeliveryStrategy: input.sendInvoiceEmail === true ? "invoice_email" : "receipt_only",
+        emailDeliveryStrategy:
+          input.sendInvoiceEmail === true ? "invoice_email" : "receipt_only",
       }),
       lineItems: {
         create: {
@@ -213,7 +214,10 @@ export async function createIssuedChargeInvoice(
     status: invoice.status,
     planId: invoice.planId,
   }).catch((err) => {
-    console.warn("[billing-events] Failed to deliver webhook for invoice payment:", err);
+    console.warn(
+      "[billing-events] Failed to deliver webhook for invoice payment:",
+      err,
+    );
   });
 
   const pendingDelivery = invoice.deliveries[0];
@@ -248,7 +252,10 @@ export async function createIssuedChargeInvoice(
         customerWallet: invoice.customerWallet,
         error: error?.message || "send failed",
       }).catch((err) => {
-        console.warn("[billing-events] Failed to deliver webhook for invoice send error:", err);
+        console.warn(
+          "[billing-events] Failed to deliver webhook for invoice send error:",
+          err,
+        );
       });
     }
   }
@@ -320,7 +327,8 @@ async function processStoredBillingEvent(
       reason = "zero_amount";
     } else {
       const resolvedPlanId =
-        typeof payload.catalogPlanId === "string" && payload.catalogPlanId.trim()
+        typeof payload.catalogPlanId === "string" &&
+        payload.catalogPlanId.trim()
           ? payload.catalogPlanId.trim()
           : typeof payload.planId === "string" && payload.planId.trim()
             ? payload.planId.trim()
@@ -331,7 +339,10 @@ async function processStoredBillingEvent(
         amount,
         description: String(payload.description || options.canonicalEventName),
         customerEmail: typeof payload.email === "string" ? payload.email : null,
-        customerName: typeof payload.customerName === "string" ? payload.customerName : null,
+        customerName:
+          typeof payload.customerName === "string"
+            ? payload.customerName
+            : null,
         customerWallet:
           typeof payload.customerWallet === "string"
             ? payload.customerWallet
@@ -363,6 +374,12 @@ async function processStoredBillingEvent(
         : null;
   const companyId =
     typeof payload.companyId === "string" ? payload.companyId : null;
+  const onChainTokenId =
+    typeof payload.sourceTokenId === "string" && payload.sourceTokenId.trim()
+      ? payload.sourceTokenId.trim()
+      : typeof payload.tokenId === "string" && payload.tokenId.trim()
+        ? payload.tokenId.trim()
+        : null;
   const catalogPlanId =
     typeof payload.catalogPlanId === "string" && payload.catalogPlanId.trim()
       ? payload.catalogPlanId.trim()
@@ -371,8 +388,6 @@ async function processStoredBillingEvent(
         : null;
   const onChainPlanId =
     typeof payload.onChainPlanId === "string" ? payload.onChainPlanId : null;
-  const onChainTokenId =
-    typeof payload.tokenId === "string" ? payload.tokenId : null;
   const amount = Number(payload.amount ?? 0);
   const occurredAt = options.occurredAt ?? occurredAtFromPayload ?? new Date();
   const currentPeriodEnd = resolveExpirationDate();
@@ -387,10 +402,10 @@ async function processStoredBillingEvent(
       environmentId: payloadEnvironmentId,
       companyId,
       walletAddress: customerWallet,
+      onChainTokenId,
       status: "ACTIVE",
       catalogPlanId,
       onChainPlanId,
-      onChainTokenId,
       currentPeriodStart: occurredAt,
       currentPeriodEnd,
       cancelAtPeriodEnd: false,
@@ -399,7 +414,8 @@ async function processStoredBillingEvent(
       graceEndsAt: null,
       lastEvent: options.canonicalEventName,
       lastEventAt: occurredAt,
-      lastSourceTxHash: typeof payload.txHash === "string" ? payload.txHash : null,
+      lastSourceTxHash:
+        typeof payload.txHash === "string" ? payload.txHash : null,
       metadata: {
         source: "billing-event",
         billingEventId: event.id,
@@ -413,6 +429,7 @@ async function processStoredBillingEvent(
         environmentId: payloadEnvironmentId,
         companyId,
         walletAddress: customerWallet,
+        onChainTokenId,
         invoiceId,
         subscriptionStateId: subscriptionState?.id,
         kind:
@@ -441,15 +458,16 @@ async function processStoredBillingEvent(
       environmentId: payloadEnvironmentId,
       companyId,
       walletAddress: customerWallet,
+      onChainTokenId,
       status: "PAST_DUE",
       catalogPlanId,
       onChainPlanId,
-      onChainTokenId,
       pastDueAt: occurredAt,
       graceEndsAt: new Date(occurredAt.getTime() + 7 * 24 * 60 * 60 * 1000),
       lastEvent: options.canonicalEventName,
       lastEventAt: occurredAt,
-      lastSourceTxHash: typeof payload.txHash === "string" ? payload.txHash : null,
+      lastSourceTxHash:
+        typeof payload.txHash === "string" ? payload.txHash : null,
       metadata: {
         source: "billing-event",
         billingEventId: event.id,
@@ -486,15 +504,16 @@ async function processStoredBillingEvent(
       environmentId: payloadEnvironmentId,
       companyId,
       walletAddress: customerWallet,
+      onChainTokenId,
       status: "CANCELLED",
       catalogPlanId,
       onChainPlanId,
-      onChainTokenId,
       cancelAtPeriodEnd: false,
       cancelledAt: occurredAt,
       lastEvent: options.canonicalEventName,
       lastEventAt: occurredAt,
-      lastSourceTxHash: typeof payload.txHash === "string" ? payload.txHash : null,
+      lastSourceTxHash:
+        typeof payload.txHash === "string" ? payload.txHash : null,
       metadata: {
         source: "billing-event",
         billingEventId: event.id,
@@ -546,7 +565,10 @@ async function processStoredBillingEvent(
         ? { error: payload.error.trim() }
         : {}),
     }).catch((err) => {
-      console.warn("[billing-events] Failed to deliver payment failed webhook:", err);
+      console.warn(
+        "[billing-events] Failed to deliver payment failed webhook:",
+        err,
+      );
     });
   }
 

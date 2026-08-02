@@ -41,8 +41,14 @@ import { createResilientPublicClient, getRpcUrl } from "../../config.js";
 import { DEFAULT_CHAIN_ID } from "../../lib/platform/default-chain.js";
 import { getLatestSubscriptionChangeRequest } from "../../lib/billing/subscription-change-requests.js";
 import { toPrismaJson } from "../../utils/prisma-json.js";
-import { requireAnyAuth, isAnyAuthError } from "../../lib/auth/require-any-auth.js";
-import { resolveCompany, type CompanyKeys } from "../../lib/entitlements/flag-engine.js";
+import {
+  requireAnyAuth,
+  isAnyAuthError,
+} from "../../lib/auth/require-any-auth.js";
+import {
+  resolveCompany,
+  type CompanyKeys,
+} from "../../lib/entitlements/flag-engine.js";
 import { resolveEmbedAccessToken } from "../../lib/entitlements/embed-access-token.js";
 import { getSession } from "../../lib/auth/auth.server.js";
 import { resolveDashboardSessionIdentityDefaults } from "../../lib/auth/dashboard-session-identity.js";
@@ -76,8 +82,14 @@ const bodySchema = z.object({
   planId: z.union([z.string().trim().min(1), z.number().int().positive()]),
   paymentAccount: addressSchema,
   subscriberEmail: z.string().email().optional(),
-  activationTxHash: z.string().regex(/^0x[0-9a-fA-F]{64}$/).optional(),
-  txHash: z.string().regex(/^0x[0-9a-fA-F]{64}$/).optional(),
+  activationTxHash: z
+    .string()
+    .regex(/^0x[0-9a-fA-F]{64}$/)
+    .optional(),
+  txHash: z
+    .string()
+    .regex(/^0x[0-9a-fA-F]{64}$/)
+    .optional(),
   company: companySchema,
 });
 
@@ -147,7 +159,10 @@ async function clearScheduledCancellationTransition(
     teamId: company.teamId,
     companyId,
   });
-  if (latestChangeRequest?.id && latestChangeRequest.changeType === "cancellation") {
+  if (
+    latestChangeRequest?.id &&
+    latestChangeRequest.changeType === "cancellation"
+  ) {
     await db.subscriptionChangeRequest.update({
       where: { id: latestChangeRequest.id },
       data: {
@@ -181,7 +196,9 @@ function sleep(ms: number): Promise<void> {
 
 function isTransientActivationLookupError(error: unknown): boolean {
   const message =
-    error instanceof Error ? error.message.toLowerCase() : String(error).toLowerCase();
+    error instanceof Error
+      ? error.message.toLowerCase()
+      : String(error).toLowerCase();
 
   return (
     (message.includes("transaction") && message.includes("not found")) ||
@@ -198,7 +215,9 @@ async function readSubmittedActivationTransaction(params: {
   txHash: `0x${string}`;
 }): Promise<{
   transaction: Awaited<ReturnType<typeof params.publicClient.getTransaction>>;
-  receipt: Awaited<ReturnType<typeof params.publicClient.getTransactionReceipt>>;
+  receipt: Awaited<
+    ReturnType<typeof params.publicClient.getTransactionReceipt>
+  >;
 }> {
   const attempts = 8;
 
@@ -211,7 +230,10 @@ async function readSubmittedActivationTransaction(params: {
 
       return { transaction, receipt };
     } catch (error) {
-      if (!isTransientActivationLookupError(error) || attempt === attempts - 1) {
+      if (
+        !isTransientActivationLookupError(error) ||
+        attempt === attempts - 1
+      ) {
         throw error;
       }
 
@@ -573,7 +595,10 @@ export async function POST(c: Context) {
       embedTokenContext.teamRole !== "FINANCE"
     ) {
       return c.json(
-        { error: "Only workspace billing administrators can change the platform subscription" },
+        {
+          error:
+            "Only workspace billing administrators can change the platform subscription",
+        },
         403,
         corsHeaders(origin),
       );
@@ -582,7 +607,11 @@ export async function POST(c: Context) {
   } else {
     const auth = await requireAnyAuth(c);
     if (isAnyAuthError(auth)) {
-      return c.json({ ok: false, error: auth.error }, auth.status as any as any, corsHeaders(origin));
+      return c.json(
+        { ok: false, error: auth.error },
+        auth.status as any as any,
+        corsHeaders(origin),
+      );
     }
     teamId = auth.teamId;
     if (auth.source === "session") {
@@ -601,11 +630,7 @@ export async function POST(c: Context) {
   try {
     body = await c.req.json();
   } catch {
-    return c.json(
-      { error: "Invalid JSON body" },
-      400,
-      corsHeaders(origin),
-    );
+    return c.json({ error: "Invalid JSON body" }, 400, corsHeaders(origin));
   }
 
   const parsed = bodySchema.safeParse(body);
@@ -642,596 +667,590 @@ export async function POST(c: Context) {
   // readContract / getTransaction call below is caught and normalized
   // into a proper HTTP response instead of an unhandled 500.
   try {
-  const catalogPlan = await db.catalogPlan.findFirst({
-    where: {
-      teamId,
-      active: true,
-      status: "PUBLISHED",
-      onChainPlanId: onChainPlanId.toString(),
-    },
-    select: {
-      id: true,
-      name: true,
-      acceptedToken: true,
-      chainId: true,
-      environmentId: true,
-    },
-  });
-
-  if (!catalogPlan) {
-    return c.json(
-      {
-        error:
-          "Published team plan not found for the supplied on-chain planId.",
+    const catalogPlan = await db.catalogPlan.findFirst({
+      where: {
+        teamId,
+        active: true,
+        status: "PUBLISHED",
+        onChainPlanId: onChainPlanId.toString(),
       },
-      404,
-      corsHeaders(origin),
-    );
-  }
-
-  const company = await upsertCompanyForActivation(
-    teamId,
-    catalogPlan.environmentId ?? null,
-    activationCompanyInput,
-    paymentAccount,
-  );
-
-  // Use the chain the plan was registered on. Fall back to DEFAULT_CHAIN_ID for
-  // legacy plans that pre-date the chainId column (they'll have the default 84532).
-  const chainId = catalogPlan.chainId ?? DEFAULT_CHAIN_ID;
-  const chain = getChain(chainId);
-  const rpcUrl = getRpcUrl(chainId);
-  const contracts = getContractAddresses(chainId);
-
-  const autopayAddress = contracts.autopayModule as `0x${string}`;
-  const subscriptionRegistryAddress =
-    contracts.subscriptionRegistry as `0x${string}`;
-  const planFactoryAddress = contracts.planFactory as `0x${string}`;
-
-  const zeroAddress = "0x0000000000000000000000000000000000000000";
-  if (
-    !autopayAddress ||
-    !subscriptionRegistryAddress ||
-    !planFactoryAddress ||
-    autopayAddress === zeroAddress ||
-    subscriptionRegistryAddress === zeroAddress ||
-    planFactoryAddress === zeroAddress
-  ) {
-    return c.json(
-      {
-        error: `Subscription contracts are not configured for chain ${chainId}.`,
-      },
-      503,
-      corsHeaders(origin),
-    );
-  }
-
-  const publicClient = createResilientPublicClient(chainId);
-
-  const onChainPlan = (await publicClient.readContract({
-    address: planFactoryAddress,
-    abi: PlanFactoryABI,
-    functionName: "getPlan",
-    args: [onChainPlanId],
-  })) as {
-    provider?: string;
-    active?: boolean;
-    price?: bigint;
-    acceptedToken?: string;
-  };
-
-  const merchantAddress = String(onChainPlan?.provider ?? "").toLowerCase();
-  if (!onChainPlan?.active) {
-    return c.json(
-      { error: "The requested on-chain plan is inactive." },
-      409,
-      corsHeaders(origin),
-    );
-  }
-
-  const autopaySnapshot = await waitForAutopayActivationSnapshot({
-    publicClient,
-    autopayAddress,
-    paymentAccount,
-    expectedPlanId: onChainPlanId,
-    expectedMerchant: merchantAddress,
-  });
-  const isInitialized = autopaySnapshot.isInitialized;
-
-  if (!isInitialized) {
-    return c.json(
-      {
-        error:
-          "Autopay is not installed for this payment account yet. Complete checkout setup before requesting activation.",
-      },
-      409,
-      corsHeaders(origin),
-    );
-  }
-
-  const autopayConfig = autopaySnapshot.config;
-
-  const configPlanId = BigInt(autopayConfig?.planId ?? 0n);
-  if (configPlanId !== onChainPlanId) {
-    return c.json(
-      {
-        error: `Autopay config mismatch. Payment account is configured for on-chain plan ${configPlanId.toString()}, not ${onChainPlanId.toString()}.`,
-      },
-      409,
-      corsHeaders(origin),
-    );
-  }
-
-  const configMerchant = String(autopayConfig?.merchant ?? "").toLowerCase();
-  if (configMerchant !== merchantAddress) {
-    return c.json(
-      {
-        error:
-          `Autopay merchant mismatch. Payment account expects ${configMerchant}, ` +
-          `but the on-chain plan provider is ${merchantAddress}.`,
-      },
-      409,
-      corsHeaders(origin),
-    );
-  }
-
-  const chargeAmount = BigInt(autopayConfig?.maxAmount ?? 0n);
-  if (chargeAmount <= 0n) {
-    return c.json(
-      { error: "Autopay config has no billable amount configured." },
-      409,
-      corsHeaders(origin),
-    );
-  }
-
-  const autopayIntervalSeconds = Number(autopayConfig?.interval ?? 0n);
-  const resolvedBillingPeriod: "monthly" | "annual" =
-    autopayIntervalSeconds >= ANNUAL_BILLING_INTERVAL_SECONDS
-      ? "annual"
-      : "monthly";
-
-  const acceptedTokenAddress = isAddress(
-    String(onChainPlan?.acceptedToken ?? catalogPlan.acceptedToken ?? ""),
-  )
-    ? (String(
-        onChainPlan?.acceptedToken ?? catalogPlan.acceptedToken,
-      ).toLowerCase() as `0x${string}`)
-    : null;
-
-  if (!acceptedTokenAddress) {
-    return c.json(
-      { error: "Catalog plan accepted token is not configured correctly." },
-      409,
-      corsHeaders(origin),
-    );
-  }
-
-  const submittedActivationTxHash =
-    (parsed.data.activationTxHash ?? parsed.data.txHash)?.toLowerCase() as
-      | `0x${string}`
-      | undefined;
-
-  const existingTokenId = await readActiveWalletSubscriptionTokenId({
-    publicClient,
-    subscriptionRegistryAddress,
-    wallet: paymentAccount,
-  });
-
-  if (existingTokenId > 0n) {
-    const [existingExpiration, existingPlanFeatures] = await Promise.all([
-      publicClient.readContract({
-        address: subscriptionRegistryAddress,
-        abi: SubscriptionRegistryABI,
-        functionName: "expiresAt",
-        args: [existingTokenId],
-      }) as Promise<bigint>,
-      publicClient.readContract({
-        address: subscriptionRegistryAddress,
-        abi: SubscriptionRegistryABI,
-        functionName: "getPlanFeatures",
-        args: [existingTokenId],
-      }) as Promise<[bigint, string]>,
-    ]);
-
-    const existingOnChainPlanId = existingPlanFeatures[0].toString();
-    const existingCatalogPlan =
-      (await db.catalogPlan.findFirst({
-        where: {
-          teamId,
-          onChainPlanId: existingOnChainPlanId,
-        },
-        select: { id: true, name: true },
-      })) ?? null;
-
-    await upsertSubscriptionLedgerState({
-      teamId,
-      companyId: company.id,
-      walletAddress: paymentAccount,
-      chainId,
-      status: "ACTIVE",
-      catalogPlanId: existingCatalogPlan?.id ?? catalogPlan.id,
-      onChainPlanId: existingOnChainPlanId,
-      onChainTokenId: existingTokenId.toString(),
-      currentPeriodEnd:
-        existingExpiration > 0n
-          ? new Date(Number(existingExpiration) * 1000)
-          : null,
-      cancelAtPeriodEnd: false,
-      cancelledAt: null,
-      pastDueAt: null,
-      graceEndsAt: null,
-      lastEvent: "subscription.reconciled",
-      lastEventAt: new Date(),
-      metadata: {
-        source: "subscription.activate",
-        activationMode: "existing_token_reconciliation",
+      select: {
+        id: true,
+        name: true,
+        acceptedToken: true,
+        chainId: true,
+        environmentId: true,
       },
     });
 
-    if (existingOnChainPlanId === onChainPlanId.toString()) {
-      let invoiceId: string | null = null;
-      let paymentId: string | null = null;
-      let recoveryTaskId: string | null = null;
-      let recoveryPending = false;
-
-      if (submittedActivationTxHash) {
-        const [activationTransaction, activationReceipt, subscriberEmail] =
-          await Promise.all([
-            publicClient
-              .getTransaction({ hash: submittedActivationTxHash })
-              .catch(() => null),
-            publicClient
-              .getTransactionReceipt({ hash: submittedActivationTxHash })
-              .catch(() => null),
-            resolveBillingRecipientEmail({
-              teamId,
-              environmentId: catalogPlan.environmentId ?? null,
-              explicitEmail:
-                parsed.data.subscriberEmail ?? sessionDefaults?.userEmail ?? null,
-              accessTokenUserId: embedTokenContext?.userId ?? null,
-              accessTokenCompanyId: embedTokenContext?.companyId ?? null,
-              companyId: company.id,
-              walletAddress: paymentAccount,
-            }),
-          ]);
-
-        let activationTxMatches = false;
-        if (
-          activationTransaction?.to?.toLowerCase() ===
-            autopayAddress.toLowerCase() &&
-          activationReceipt?.status === "success"
-        ) {
-          try {
-            const decoded = decodeFunctionData({
-              abi: ERC7579AutopayModuleABI,
-              data: activationTransaction.input,
-            });
-            const [decodedAccount, decodedAmount] = decoded.args as [
-              `0x${string}`,
-              bigint,
-            ];
-            activationTxMatches =
-              decoded.functionName === "execute" &&
-              decodedAccount.toLowerCase() === paymentAccount &&
-              decodedAmount === chargeAmount;
-          } catch {
-            activationTxMatches = false;
-          }
-        }
-
-        if (!activationTxMatches) {
-          console.warn(
-            "[subscriptions/activate] Skipping existing-token invoice finalization because the supplied activation tx could not be verified.",
-          );
-        } else {
-          let occurredAt = new Date();
-          if (activationReceipt?.blockNumber != null) {
-            const activationBlock = await publicClient
-              .getBlock({ blockNumber: activationReceipt.blockNumber })
-              .catch(() => null);
-            if (activationBlock?.timestamp != null) {
-              occurredAt = new Date(Number(activationBlock.timestamp) * 1000);
-            }
-          }
-
-          const finalizationPayload = {
-            companyId: company.id,
-            customerUserId:
-              embedTokenContext?.userId ?? sessionDefaults?.userId ?? null,
-            environmentId: catalogPlan.environmentId ?? null,
-            walletAddress: paymentAccount,
-            catalogPlanId: existingCatalogPlan?.id ?? catalogPlan.id,
-            catalogPlanName: existingCatalogPlan?.name ?? catalogPlan.name,
-            billingPeriod: resolvedBillingPeriod,
-            customerName:
-              typeof activationCompanyInput.name === "string" &&
-              activationCompanyInput.name.trim()
-                ? activationCompanyInput.name.trim()
-                : null,
-            onChainPlanId: existingOnChainPlanId,
-            onChainTokenId: existingTokenId.toString(),
-            expiration: existingExpiration.toString(),
-            txHash: submittedActivationTxHash,
-            amount: Number(chargeAmount) / 1e6,
-            currency: "USDC",
-            merchantAddress,
-            acceptedToken: catalogPlan.acceptedToken ?? null,
-            subscriberEmail,
-            occurredAt: occurredAt.toISOString(),
-            previousPlanId: company.activePlanId ?? null,
-          };
-
-          try {
-            const finalization = await finalizeSubscriptionActivation({
-              teamId,
-              payload: finalizationPayload,
-              source: "subscription.activate.reconcile",
-            });
-            invoiceId = finalization.invoiceId;
-            paymentId = finalization.paymentId;
-          } catch (finalizationError) {
-            console.error(
-              "[subscriptions/activate] Existing active subscription finalization failed; queuing recovery task.",
-              finalizationError,
-            );
-
-            const recoveryTask = await enqueueSubscriptionActivationRecovery({
-              teamId,
-              ...finalizationPayload,
-              occurredAt,
-            });
-            recoveryTaskId = recoveryTask.id;
-
-            const recoveryResult = await processBillingRecoveryTask({
-              taskId: recoveryTask.id,
-            });
-            recoveryPending = !recoveryResult.ok;
-          }
-        }
-      }
-
-      const resumedCancellation =
-        await clearScheduledCancellationTransition(company.id);
-
+    if (!catalogPlan) {
       return c.json(
         {
-          data: {
-            tokenId: existingTokenId.toString(),
-            companyId: company.id,
-            planId: existingCatalogPlan?.id ?? catalogPlan.id,
-            paymentAccount,
-            alreadyActive: true,
-            reconciled: true,
-            resumedCancellation,
-            invoiceId,
-            paymentId,
-            recoveryTaskId,
-            recoveryPending,
-          },
+          error:
+            "Published team plan not found for the supplied on-chain planId.",
         },
-        recoveryPending ? 202 : 200,
+        404,
         corsHeaders(origin),
       );
     }
 
-    return c.json(
-      {
-        error:
-          `This payment account already has an active subscription for on-chain plan ${existingOnChainPlanId}. ` +
-          "Use a plan change flow instead of activation.",
-        data: {
-          tokenId: existingTokenId.toString(),
-          companyId: company.id,
-          currentPlanId: existingCatalogPlan?.id ?? null,
-          requestedPlanId: catalogPlan.id,
-          paymentAccount,
-          reconciled: true,
-        },
-      },
-      409,
-      corsHeaders(origin),
+    const company = await upsertCompanyForActivation(
+      teamId,
+      catalogPlan.environmentId ?? null,
+      activationCompanyInput,
+      paymentAccount,
     );
-  }
 
-  let tokenBalance = 0n;
-  let tokenAllowance = 0n;
-  let tokenDecimals = 6;
-  let tokenSymbol = "USDC";
+    // Use the chain the plan was registered on. Fall back to DEFAULT_CHAIN_ID for
+    // legacy plans that pre-date the chainId column (they'll have the default 84532).
+    const chainId = catalogPlan.chainId ?? DEFAULT_CHAIN_ID;
+    const chain = getChain(chainId);
+    const rpcUrl = getRpcUrl(chainId);
+    const contracts = getContractAddresses(chainId);
 
-  try {
-    const [balanceResult, allowanceResult, decimalsResult, symbolResult] =
-      await Promise.all([
-        publicClient
-          .readContract({
-            address: acceptedTokenAddress,
-            abi: erc20ReadAbi,
-            functionName: "balanceOf",
-            args: [paymentAccount],
-          })
-          .catch(() => 0n),
-        publicClient
-          .readContract({
-            address: acceptedTokenAddress,
-            abi: erc20ReadAbi,
-            functionName: "allowance",
-            args: [paymentAccount, autopayAddress],
-          })
-          .catch(() => 0n),
-        publicClient
-          .readContract({
-            address: acceptedTokenAddress,
-            abi: erc20ReadAbi,
-            functionName: "decimals",
-          })
-          .then((value) => Number(value))
-          .catch(() => 6),
-        publicClient
-          .readContract({
-            address: acceptedTokenAddress,
-            abi: erc20ReadAbi,
-            functionName: "symbol",
-          })
-          .then((value) => String(value))
-          .catch(() => "USDC"),
-      ]);
+    const autopayAddress = contracts.autopayModule as `0x${string}`;
+    const subscriptionRegistryAddress =
+      contracts.subscriptionRegistry as `0x${string}`;
+    const planFactoryAddress = contracts.planFactory as `0x${string}`;
 
-    tokenBalance = BigInt(balanceResult ?? 0n);
-    tokenAllowance = BigInt(allowanceResult ?? 0n);
-    tokenDecimals = decimalsResult;
-    tokenSymbol = symbolResult;
-  } catch (err) {
-    console.warn(
-      "[subscriptions-activate] Warning reading token balance/allowance:",
-      err,
-    );
-  }
-
-  // If token allowance is less than chargeAmount, retry reading allowance up to 4 times
-  // (1s delay between retries) to account for RPC node block indexing lag right after spending limit confirmation.
-  if (tokenAllowance < chargeAmount) {
-    for (let retry = 0; retry < 4; retry += 1) {
-      await sleep(1000);
-      try {
-        const recheck = (await publicClient.readContract({
-          address: acceptedTokenAddress,
-          abi: erc20ReadAbi,
-          functionName: "allowance",
-          args: [paymentAccount, autopayAddress],
-        })) as bigint;
-        if (recheck >= chargeAmount) {
-          tokenAllowance = recheck;
-          break;
-        }
-      } catch {
-        // Retry next tick
-      }
-    }
-  }
-
-  if (tokenBalance < chargeAmount && !isInitialized) {
-    return c.json(
-      {
-        error:
-          `The payment account does not have enough ${tokenSymbol} for the first charge. ` +
-          `Required: ${formatTokenAmount(chargeAmount, tokenDecimals, tokenSymbol)}. ` +
-          `Available: ${formatTokenAmount(tokenBalance, tokenDecimals, tokenSymbol)}.`,
-      },
-      409,
-      corsHeaders(origin),
-    );
-  }
-
-  if (tokenBalance < chargeAmount && isInitialized) {
-    console.warn(
-      `[subscriptions-activate] Payment account balance (${formatTokenAmount(tokenBalance, tokenDecimals, tokenSymbol)}) ` +
-      `is below the charge amount (${formatTokenAmount(chargeAmount, tokenDecimals, tokenSymbol)}), ` +
-      `but autopay is already initialized — the first charge may have already been processed during installation.`,
-    );
-  }
-
-  if (tokenAllowance < chargeAmount) {
-    return c.json(
-      {
-        error:
-          `The payment account has not approved enough ${tokenSymbol} for autopay. ` +
-          `Required: ${formatTokenAmount(chargeAmount, tokenDecimals, tokenSymbol)}. ` +
-          `Approved: ${formatTokenAmount(tokenAllowance, tokenDecimals, tokenSymbol)}.`,
-      },
-      409,
-      corsHeaders(origin),
-    );
-  }
-
-  const startTime = Number(autopayConfig?.startTime ?? 0n);
-  const latestBlock = await publicClient.getBlock({ blockTag: "latest" });
-  const nowSeconds = Number(latestBlock.timestamp);
-  if (startTime > nowSeconds) {
-    const waitSeconds = startTime - nowSeconds;
-
-    if (waitSeconds > 45) {
+    const zeroAddress = "0x0000000000000000000000000000000000000000";
+    if (
+      !autopayAddress ||
+      !subscriptionRegistryAddress ||
+      !planFactoryAddress ||
+      autopayAddress === zeroAddress ||
+      subscriptionRegistryAddress === zeroAddress ||
+      planFactoryAddress === zeroAddress
+    ) {
       return c.json(
         {
-          error: `Autopay cannot start yet. The configured start time is ${new Date(startTime * 1000).toISOString()}.`,
+          error: `Subscription contracts are not configured for chain ${chainId}.`,
+        },
+        503,
+        corsHeaders(origin),
+      );
+    }
+
+    const publicClient = createResilientPublicClient(chainId);
+
+    const onChainPlan = (await publicClient.readContract({
+      address: planFactoryAddress,
+      abi: PlanFactoryABI,
+      functionName: "getPlan",
+      args: [onChainPlanId],
+    })) as {
+      provider?: string;
+      active?: boolean;
+      price?: bigint;
+      acceptedToken?: string;
+    };
+
+    const merchantAddress = String(onChainPlan?.provider ?? "").toLowerCase();
+    if (!onChainPlan?.active) {
+      return c.json(
+        { error: "The requested on-chain plan is inactive." },
+        409,
+        corsHeaders(origin),
+      );
+    }
+
+    const autopaySnapshot = await waitForAutopayActivationSnapshot({
+      publicClient,
+      autopayAddress,
+      paymentAccount,
+      expectedPlanId: onChainPlanId,
+      expectedMerchant: merchantAddress,
+    });
+    const isInitialized = autopaySnapshot.isInitialized;
+
+    if (!isInitialized) {
+      return c.json(
+        {
+          error:
+            "Autopay is not installed for this payment account yet. Complete checkout setup before requesting activation.",
         },
         409,
         corsHeaders(origin),
       );
     }
 
-    await sleep((waitSeconds + 1) * 1000);
-  }
+    const autopayConfig = autopaySnapshot.config;
 
-  const walletConflict = await db.arcenCompany.findFirst({
-    where: {
-      teamId,
-      environmentId: catalogPlan.environmentId ?? null,
-      id: { not: company.id },
-      OR: [
-        { walletAddress: paymentAccount },
+    const configPlanId = BigInt(autopayConfig?.planId ?? 0n);
+    if (configPlanId !== onChainPlanId) {
+      return c.json(
         {
-          subscriptionState: {
-            is: {
+          error: `Autopay config mismatch. Payment account is configured for on-chain plan ${configPlanId.toString()}, not ${onChainPlanId.toString()}.`,
+        },
+        409,
+        corsHeaders(origin),
+      );
+    }
+
+    const configMerchant = String(autopayConfig?.merchant ?? "").toLowerCase();
+    if (configMerchant !== merchantAddress) {
+      return c.json(
+        {
+          error:
+            `Autopay merchant mismatch. Payment account expects ${configMerchant}, ` +
+            `but the on-chain plan provider is ${merchantAddress}.`,
+        },
+        409,
+        corsHeaders(origin),
+      );
+    }
+
+    const chargeAmount = BigInt(autopayConfig?.maxAmount ?? 0n);
+    if (chargeAmount <= 0n) {
+      return c.json(
+        { error: "Autopay config has no billable amount configured." },
+        409,
+        corsHeaders(origin),
+      );
+    }
+
+    const autopayIntervalSeconds = Number(autopayConfig?.interval ?? 0n);
+    const resolvedBillingPeriod: "monthly" | "annual" =
+      autopayIntervalSeconds >= ANNUAL_BILLING_INTERVAL_SECONDS
+        ? "annual"
+        : "monthly";
+
+    const acceptedTokenAddress = isAddress(
+      String(onChainPlan?.acceptedToken ?? catalogPlan.acceptedToken ?? ""),
+    )
+      ? (String(
+          onChainPlan?.acceptedToken ?? catalogPlan.acceptedToken,
+        ).toLowerCase() as `0x${string}`)
+      : null;
+
+    if (!acceptedTokenAddress) {
+      return c.json(
+        { error: "Catalog plan accepted token is not configured correctly." },
+        409,
+        corsHeaders(origin),
+      );
+    }
+
+    const submittedActivationTxHash = (
+      parsed.data.activationTxHash ?? parsed.data.txHash
+    )?.toLowerCase() as `0x${string}` | undefined;
+
+    const existingTokenId = await readActiveWalletSubscriptionTokenId({
+      publicClient,
+      subscriptionRegistryAddress,
+      wallet: paymentAccount,
+    });
+
+    if (existingTokenId > 0n) {
+      const [existingExpiration, existingPlanFeatures] = await Promise.all([
+        publicClient.readContract({
+          address: subscriptionRegistryAddress,
+          abi: SubscriptionRegistryABI,
+          functionName: "expiresAt",
+          args: [existingTokenId],
+        }) as Promise<bigint>,
+        publicClient.readContract({
+          address: subscriptionRegistryAddress,
+          abi: SubscriptionRegistryABI,
+          functionName: "getPlanFeatures",
+          args: [existingTokenId],
+        }) as Promise<[bigint, string]>,
+      ]);
+
+      const existingOnChainPlanId = existingPlanFeatures[0].toString();
+      const existingCatalogPlan =
+        (await db.catalogPlan.findFirst({
+          where: {
+            teamId,
+            onChainPlanId: existingOnChainPlanId,
+          },
+          select: { id: true, name: true },
+        })) ?? null;
+
+      await upsertSubscriptionLedgerState({
+        teamId,
+        companyId: company.id,
+        walletAddress: paymentAccount,
+        chainId,
+        status: "ACTIVE",
+        catalogPlanId: existingCatalogPlan?.id ?? catalogPlan.id,
+        onChainPlanId: existingOnChainPlanId,
+        onChainTokenId: existingTokenId.toString(),
+        currentPeriodEnd:
+          existingExpiration > 0n
+            ? new Date(Number(existingExpiration) * 1000)
+            : null,
+        cancelAtPeriodEnd: false,
+        cancelledAt: null,
+        pastDueAt: null,
+        graceEndsAt: null,
+        lastEvent: "subscription.reconciled",
+        lastEventAt: new Date(),
+        metadata: {
+          source: "subscription.activate",
+          activationMode: "existing_token_reconciliation",
+        },
+      });
+
+      if (existingOnChainPlanId === onChainPlanId.toString()) {
+        let invoiceId: string | null = null;
+        let paymentId: string | null = null;
+        let recoveryTaskId: string | null = null;
+        let recoveryPending = false;
+
+        if (submittedActivationTxHash) {
+          const [activationTransaction, activationReceipt, subscriberEmail] =
+            await Promise.all([
+              publicClient
+                .getTransaction({ hash: submittedActivationTxHash })
+                .catch(() => null),
+              publicClient
+                .getTransactionReceipt({ hash: submittedActivationTxHash })
+                .catch(() => null),
+              resolveBillingRecipientEmail({
+                teamId,
+                environmentId: catalogPlan.environmentId ?? null,
+                explicitEmail:
+                  parsed.data.subscriberEmail ??
+                  sessionDefaults?.userEmail ??
+                  null,
+                accessTokenUserId: embedTokenContext?.userId ?? null,
+                accessTokenCompanyId: embedTokenContext?.companyId ?? null,
+                companyId: company.id,
+                walletAddress: paymentAccount,
+              }),
+            ]);
+
+          let activationTxMatches = false;
+          if (
+            activationTransaction?.to?.toLowerCase() ===
+              autopayAddress.toLowerCase() &&
+            activationReceipt?.status === "success"
+          ) {
+            try {
+              const decoded = decodeFunctionData({
+                abi: ERC7579AutopayModuleABI,
+                data: activationTransaction.input,
+              });
+              const [decodedAccount, decodedAmount] = decoded.args as [
+                `0x${string}`,
+                bigint,
+              ];
+              activationTxMatches =
+                decoded.functionName === "execute" &&
+                decodedAccount.toLowerCase() === paymentAccount &&
+                decodedAmount === chargeAmount;
+            } catch {
+              activationTxMatches = false;
+            }
+          }
+
+          if (!activationTxMatches) {
+            console.warn(
+              "[subscriptions/activate] Skipping existing-token invoice finalization because the supplied activation tx could not be verified.",
+            );
+          } else {
+            let occurredAt = new Date();
+            if (activationReceipt?.blockNumber != null) {
+              const activationBlock = await publicClient
+                .getBlock({ blockNumber: activationReceipt.blockNumber })
+                .catch(() => null);
+              if (activationBlock?.timestamp != null) {
+                occurredAt = new Date(Number(activationBlock.timestamp) * 1000);
+              }
+            }
+
+            const finalizationPayload = {
+              companyId: company.id,
+              customerUserId:
+                embedTokenContext?.userId ?? sessionDefaults?.userId ?? null,
+              environmentId: catalogPlan.environmentId ?? null,
               walletAddress: paymentAccount,
+              catalogPlanId: existingCatalogPlan?.id ?? catalogPlan.id,
+              catalogPlanName: existingCatalogPlan?.name ?? catalogPlan.name,
+              billingPeriod: resolvedBillingPeriod,
+              customerName:
+                typeof activationCompanyInput.name === "string" &&
+                activationCompanyInput.name.trim()
+                  ? activationCompanyInput.name.trim()
+                  : null,
+              onChainPlanId: existingOnChainPlanId,
+              onChainTokenId: existingTokenId.toString(),
+              expiration: existingExpiration.toString(),
+              txHash: submittedActivationTxHash,
+              amount: Number(chargeAmount) / 1e6,
+              currency: "USDC",
+              merchantAddress,
+              acceptedToken: catalogPlan.acceptedToken ?? null,
+              subscriberEmail,
+              occurredAt: occurredAt.toISOString(),
+              previousPlanId: company.activePlanId ?? null,
+            };
+
+            try {
+              const finalization = await finalizeSubscriptionActivation({
+                teamId,
+                payload: finalizationPayload,
+                source: "subscription.activate.reconcile",
+              });
+              invoiceId = finalization.invoiceId;
+              paymentId = finalization.paymentId;
+            } catch (finalizationError) {
+              console.error(
+                "[subscriptions/activate] Existing active subscription finalization failed; queuing recovery task.",
+                finalizationError,
+              );
+
+              const recoveryTask = await enqueueSubscriptionActivationRecovery({
+                teamId,
+                ...finalizationPayload,
+                occurredAt,
+              });
+              recoveryTaskId = recoveryTask.id;
+
+              const recoveryResult = await processBillingRecoveryTask({
+                taskId: recoveryTask.id,
+              });
+              recoveryPending = !recoveryResult.ok;
+            }
+          }
+        }
+
+        const resumedCancellation = await clearScheduledCancellationTransition(
+          company.id,
+        );
+
+        return c.json(
+          {
+            data: {
+              tokenId: existingTokenId.toString(),
+              companyId: company.id,
+              planId: existingCatalogPlan?.id ?? catalogPlan.id,
+              paymentAccount,
+              alreadyActive: true,
+              reconciled: true,
+              resumedCancellation,
+              invoiceId,
+              paymentId,
+              recoveryTaskId,
+              recoveryPending,
+            },
+          },
+          recoveryPending ? 202 : 200,
+          corsHeaders(origin),
+        );
+      }
+
+      return c.json(
+        {
+          error:
+            `This payment account already has an active subscription for on-chain plan ${existingOnChainPlanId}. ` +
+            "Use a plan change flow instead of activation.",
+          data: {
+            tokenId: existingTokenId.toString(),
+            companyId: company.id,
+            currentPlanId: existingCatalogPlan?.id ?? null,
+            requestedPlanId: catalogPlan.id,
+            paymentAccount,
+            reconciled: true,
+          },
+        },
+        409,
+        corsHeaders(origin),
+      );
+    }
+
+    let tokenBalance = 0n;
+    let tokenAllowance = 0n;
+    let tokenDecimals = 6;
+    let tokenSymbol = "USDC";
+
+    try {
+      const [balanceResult, allowanceResult, decimalsResult, symbolResult] =
+        await Promise.all([
+          publicClient
+            .readContract({
+              address: acceptedTokenAddress,
+              abi: erc20ReadAbi,
+              functionName: "balanceOf",
+              args: [paymentAccount],
+            })
+            .catch(() => 0n),
+          publicClient
+            .readContract({
+              address: acceptedTokenAddress,
+              abi: erc20ReadAbi,
+              functionName: "allowance",
+              args: [paymentAccount, autopayAddress],
+            })
+            .catch(() => 0n),
+          publicClient
+            .readContract({
+              address: acceptedTokenAddress,
+              abi: erc20ReadAbi,
+              functionName: "decimals",
+            })
+            .then((value) => Number(value))
+            .catch(() => 6),
+          publicClient
+            .readContract({
+              address: acceptedTokenAddress,
+              abi: erc20ReadAbi,
+              functionName: "symbol",
+            })
+            .then((value) => String(value))
+            .catch(() => "USDC"),
+        ]);
+
+      tokenBalance = BigInt(balanceResult ?? 0n);
+      tokenAllowance = BigInt(allowanceResult ?? 0n);
+      tokenDecimals = decimalsResult;
+      tokenSymbol = symbolResult;
+    } catch (err) {
+      console.warn(
+        "[subscriptions-activate] Warning reading token balance/allowance:",
+        err,
+      );
+    }
+
+    // If token allowance is less than chargeAmount, retry reading allowance up to 4 times
+    // (1s delay between retries) to account for RPC node block indexing lag right after spending limit confirmation.
+    if (tokenAllowance < chargeAmount) {
+      for (let retry = 0; retry < 4; retry += 1) {
+        await sleep(1000);
+        try {
+          const recheck = (await publicClient.readContract({
+            address: acceptedTokenAddress,
+            abi: erc20ReadAbi,
+            functionName: "allowance",
+            args: [paymentAccount, autopayAddress],
+          })) as bigint;
+          if (recheck >= chargeAmount) {
+            tokenAllowance = recheck;
+            break;
+          }
+        } catch {
+          // Retry next tick
+        }
+      }
+    }
+
+    if (tokenBalance < chargeAmount) {
+      return c.json(
+        {
+          error:
+            `The payment account does not have enough ${tokenSymbol} for the first charge. ` +
+            `Required: ${formatTokenAmount(chargeAmount, tokenDecimals, tokenSymbol)}. ` +
+            `Available: ${formatTokenAmount(tokenBalance, tokenDecimals, tokenSymbol)}.`,
+        },
+        409,
+        corsHeaders(origin),
+      );
+    }
+
+    if (tokenAllowance < chargeAmount) {
+      return c.json(
+        {
+          error:
+            `The payment account has not approved enough ${tokenSymbol} for autopay. ` +
+            `Required: ${formatTokenAmount(chargeAmount, tokenDecimals, tokenSymbol)}. ` +
+            `Approved: ${formatTokenAmount(tokenAllowance, tokenDecimals, tokenSymbol)}.`,
+        },
+        409,
+        corsHeaders(origin),
+      );
+    }
+
+    const startTime = Number(autopayConfig?.startTime ?? 0n);
+    const latestBlock = await publicClient.getBlock({ blockTag: "latest" });
+    const nowSeconds = Number(latestBlock.timestamp);
+    if (startTime > nowSeconds) {
+      const waitSeconds = startTime - nowSeconds;
+
+      if (waitSeconds > 45) {
+        return c.json(
+          {
+            error: `Autopay cannot start yet. The configured start time is ${new Date(startTime * 1000).toISOString()}.`,
+          },
+          409,
+          corsHeaders(origin),
+        );
+      }
+
+      await sleep((waitSeconds + 1) * 1000);
+    }
+
+    const walletConflict = await db.arcenCompany.findFirst({
+      where: {
+        teamId,
+        environmentId: catalogPlan.environmentId ?? null,
+        id: { not: company.id },
+        OR: [
+          { walletAddress: paymentAccount },
+          {
+            subscriptionState: {
+              is: {
+                walletAddress: paymentAccount,
+              },
+            },
+          },
+        ],
+      },
+      select: { id: true },
+    });
+
+    if (walletConflict) {
+      return c.json(
+        {
+          error:
+            "This payment account is already linked to a different company in this workspace environment. Reconcile the company mapping before activating the subscription.",
+        },
+        409,
+        corsHeaders(origin),
+      );
+    }
+
+    const previousCompany = await db.arcenCompany.findUnique({
+      where: { id: company.id },
+      select: { activePlanId: true },
+    });
+
+    if (!submittedActivationTxHash) {
+      const activationCalldata = encodeFunctionData({
+        abi: ERC7579AutopayModuleABI,
+        functionName: "execute",
+        args: [paymentAccount, chargeAmount],
+      });
+
+      return c.json(
+        {
+          data: {
+            activationRequired: true,
+            paymentAccount,
+            chargeAmountAtomic: chargeAmount.toString(),
+            chargeAmountDisplay: formatTokenAmount(
+              chargeAmount,
+              tokenDecimals,
+              tokenSymbol,
+            ),
+            preparedTransaction: {
+              target: autopayAddress,
+              value: "0",
+              data: activationCalldata,
+              functionSignature: "execute(address,uint256)",
+            },
+            verification: {
+              chainId,
+              acceptedToken: acceptedTokenAddress,
+              merchantAddress,
+              onChainPlanId: onChainPlanId.toString(),
             },
           },
         },
-      ],
-    },
-    select: { id: true },
-  });
-
-  if (walletConflict) {
-    return c.json(
-      {
-        error:
-          "This payment account is already linked to a different company in this workspace environment. Reconcile the company mapping before activating the subscription.",
-      },
-      409,
-      corsHeaders(origin),
-    );
-  }
-
-  const previousCompany = await db.arcenCompany.findUnique({
-    where: { id: company.id },
-    select: { activePlanId: true },
-  });
-
-  if (!submittedActivationTxHash) {
-    const activationCalldata = encodeFunctionData({
-      abi: ERC7579AutopayModuleABI,
-      functionName: "execute",
-      args: [paymentAccount, chargeAmount],
-    });
-
-    return c.json(
-      {
-        data: {
-          activationRequired: true,
-          paymentAccount,
-          chargeAmountAtomic: chargeAmount.toString(),
-          chargeAmountDisplay: formatTokenAmount(
-            chargeAmount,
-            tokenDecimals,
-            tokenSymbol,
-          ),
-          preparedTransaction: {
-            target: autopayAddress,
-            value: "0",
-            data: activationCalldata,
-            functionSignature: "execute(address,uint256)",
-          },
-          verification: {
-            chainId,
-            acceptedToken: acceptedTokenAddress,
-            merchantAddress,
-            onChainPlanId: onChainPlanId.toString(),
-          },
-        },
-      },
-      202,
-      corsHeaders(origin),
-    );
-  }
+        202,
+        corsHeaders(origin),
+      );
+    }
 
     const { transaction, receipt } = await readSubmittedActivationTransaction({
       publicClient,
