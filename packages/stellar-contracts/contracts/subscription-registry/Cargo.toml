@@ -1,0 +1,17 @@
+[package]
+name = "arcenpay-subscription-registry"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+soroban-sdk.workspace = true
+arcenpay-common.workspace = true
+
+[dev-dependencies]
+soroban-sdk = { version = "27", features = ["testutils"] }
+arcenpay-common.workspace = true
