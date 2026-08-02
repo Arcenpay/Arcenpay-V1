@@ -1,0 +1,30 @@
+[workspace]
+resolver = "2"
+members = [
+    "common",
+    "contracts/flag-registry",
+    "contracts/plan-factory",
+    "contracts/fee-collector",
+    "contracts/session-vault",
+    "contracts/subscription-registry",
+    "contracts/autopay-account",
+    "contracts/usage-verifier",
+    "contracts/mirror-registry",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85"
+license = "MIT"
+
+[workspace.dependencies]
+soroban-sdk = "27"
+arcenpay-common = { path = "common" }
+
+[profile.release]
+opt-level = "z"
+lto = true
+strip = true
+panic = "abort"
+codegen-units = 1
