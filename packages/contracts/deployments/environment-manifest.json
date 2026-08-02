@@ -26,13 +26,13 @@
       "chainName": "Arc Testnet",
       "isTestnet": true,
       "contracts": {
-        "subscriptionRegistry": "0xc0cB8B3F507ac7A0920102C3f58FB8Ef4F935a8c",
-        "autopayModule": "0xB36336A2924581E71BCA50F5a96238a0Db8dD1cf",
-        "planFactory": "0x0d9b6C0108B0978a65672Fe54250a62182B4BBD9",
-        "feeCollector": "0x429e802066694D929a851323d9D05499b99f61d6",
-        "sessionVault": "0x41B5cB5Ac8E57ccee966f827ec56Bda5cEC0d3c7",
-        "zkUsageVerifier": "0xB2189b0018838D395b324909616C8673e48ADdE8",
-        "mirrorRegistry": "0xb1C798a44A450589254040E16EBf79095B32947A"
+        "subscriptionRegistry": "0xaf0DCFf5508d7d141F1E7dc410c1a9B056a28027",
+        "autopayModule": "0xf17E77Ef8Fb83bD6F0cF46F50e62eFE4A4775804",
+        "planFactory": "0xFAB48C36BBd8b70213d68DEe3323c89A238d8aCa",
+        "feeCollector": "0xF863E915dca39A5438C0337f4dc531d693013a29",
+        "sessionVault": "0xd3d6fD086Df4EBDA629CAAD40b0bd2d10131443a",
+        "zkUsageVerifier": "0x2c4DD76dF9F066874b1225dC7Ab7D1fABb557dd6",
+        "mirrorRegistry": "0x7Bd7fE4a7fe227dF67cF28dbb5362fc15A1C75BC"
       },
       "services": {
         "rpcUrl": "https://rpc.testnet.arc.network",

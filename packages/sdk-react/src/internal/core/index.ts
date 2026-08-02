@@ -172,3 +172,6 @@ export {
   formatUsdc,
   formatInvoiceTotal,
 } from "./format";
+
+// SVG sanitization
+export { sanitizeSvg } from "./svg";

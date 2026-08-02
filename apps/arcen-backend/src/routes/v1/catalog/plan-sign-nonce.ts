@@ -1,11 +1,11 @@
 import type { Context } from "hono";
-import { createPublicClient, http } from "viem";
+import { isAddress } from "viem";
 import { db } from "../../../db.js";
 import { requirePermission, isErrorResponse } from "../../../lib/auth/api-auth.js";
-import { getChain, getContractAddresses, PlanFactoryABI } from "@arcenpay/internal-core";
-import { getRpcUrl } from "../../../config.js";
+import { requireResolvedActiveEnvironment } from "../../../lib/environments/workspace-environments.js";
+import { getContractAddresses, PlanFactoryABI } from "@arcenpay/internal-core";
+import { createResilientPublicClient } from "../../../config.js";
 import { resolvePlanNetwork } from "../../../lib/catalog/plan-network.js";
-import { isAddress } from "viem";
 
 const NONCES_ABI = [
   {
@@ -19,74 +19,53 @@ const NONCES_ABI = [
 
 export async function getPlanSignNonce(c: Context) {
   const auth = await requirePermission(c, "catalog:read");
-  if (isErrorResponse(auth)) return c.json({ ok: false, error: auth.error }, auth.status as any as any);
+  if (isErrorResponse(auth)) return c.json({ ok: false, error: auth.error }, auth.status as any);
+
   const planId = c.req.param("id");
-
-  const userAddress = auth.team.walletAddress;
-  const providerAddress = userAddress ?? null;
-
-  if (!providerAddress || !isAddress(providerAddress)) {
-    return c.json({
-        error:
-          "No provider wallet is linked to this team. Link your wallet first to register plans on-chain.",
-      }, 400 as any);
-  }
 
   const plan = await db.catalogPlan.findFirst({
     where: { id: planId, teamId: auth.team.teamId },
-    select: {
-      id: true,
-      environmentMode: true,
-      environment: {
-        select: {
-          mode: true,
-          chainId: true,
-        },
-      },
-      name: true,
-      tier: true,
-      billingInterval: true,
-      acceptedToken: true,
-      chainId: true,
-      onChainPlanId: true,
-    },
   });
+
   if (!plan) {
     return c.json({ error: "Plan not found" }, 404 as any);
   }
 
-  const resolvedNetwork = resolvePlanNetwork({
-    environmentMode: plan.environment?.mode ?? plan.environmentMode,
-    acceptedToken: plan.acceptedToken,
-    requestedChainId: plan.environment?.chainId ?? plan.chainId,
-  });
-  if (!resolvedNetwork) {
-    return c.json({
-      error:
-        "Plan has an invalid billing network configuration. Update the plan and try again.",
-    }, 400 as any);
-  }
+  const activeEnv = await requireResolvedActiveEnvironment(
+    auth.session,
+    auth.team.teamId,
+  );
 
-  if (
-    !plan.onChainPlanId &&
-    (plan.chainId !== resolvedNetwork.chainId ||
-      plan.acceptedToken.toLowerCase() !== resolvedNetwork.acceptedToken.toLowerCase())
-  ) {
-    await db.catalogPlan.update({
-      where: { id: plan.id },
-      data: {
-        chainId: resolvedNetwork.chainId,
-        acceptedToken: resolvedNetwork.acceptedToken,
-        chainSyncStatus: "PENDING",
-        chainSyncError: null,
-        chainSyncedAt: null,
-      },
-    });
+  const resolvedNetwork = resolvePlanNetwork({
+    environmentMode: activeEnv?.mode ?? "DEVELOPMENT",
+    acceptedToken: plan.acceptedToken,
+    requestedChainId: activeEnv?.chainId,
+  });
+
+  if (!resolvedNetwork) {
+    return c.json({ error: "Chain or accepted token not supported for this plan" }, 400 as any);
   }
 
   const chainId = resolvedNetwork.chainId;
-  const rpcUrl = getRpcUrl(chainId);
-  const chain = getChain(chainId);
+  const providerAddress = auth.team.walletAddress;
+
+  if (!providerAddress || !isAddress(providerAddress)) {
+    return c.json(
+      { error: "No valid provider wallet linked to this account." },
+      400 as any,
+    );
+  }
+
+  const userAddress = c.req.query("userAddress");
+  if (userAddress && isAddress(userAddress) && userAddress.toLowerCase() !== providerAddress.toLowerCase()) {
+    return c.json(
+      {
+        error: `Connected wallet (${userAddress}) does not match team provider wallet (${providerAddress}). Switch your wallet to sign.`,
+      },
+      403 as any,
+    );
+  }
+
   const contracts = getContractAddresses(chainId);
   const planFactoryAddress = contracts.planFactory as `0x${string}`;
 
@@ -97,7 +76,7 @@ export async function getPlanSignNonce(c: Context) {
     return c.json({ error: "PlanFactory not deployed on this chain" }, 503 as any);
   }
 
-  const publicClient = createPublicClient({ chain, transport: http(rpcUrl) });
+  const publicClient = createResilientPublicClient(chainId);
 
   try {
     const nonce = await publicClient.readContract({
@@ -151,7 +130,7 @@ export async function getPlanSignNonce(c: Context) {
       nonce: nonce.toString(),
       chainId,
       planFactoryAddress,
-      userAddress,
+      userAddress: providerAddress,
       providerAddress,
       signingRequired: true,
       signatureMode,
@@ -165,6 +144,14 @@ export async function getPlanSignNonce(c: Context) {
   } catch (err: unknown) {
     const message =
       err instanceof Error ? err.message : "Failed to fetch nonce";
-    return c.json({ error: message }, 500 as any);
+    const isRateLimited =
+      message.includes("request limit reached") ||
+      message.includes("429") ||
+      message.includes("rate limit");
+    const status = isRateLimited ? 429 : 500;
+    const cleanMessage = isRateLimited
+      ? "RPC node rate limit reached. Please wait a few seconds and try again."
+      : message;
+    return c.json({ error: cleanMessage }, status as any);
   }
 }

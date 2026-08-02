@@ -4,10 +4,12 @@
 //  SubscriptionCancelled events from SubscriptionRegistry
 // ============================================================
 
-import { createPublicClient, http } from "viem";
+import { parseEventLogs } from "viem";
+import { createResilientFacilitatorClient } from "../rpc-client.js";
 import { sepolia, baseSepolia, base } from "viem/chains";
 import {
   DEFAULT_CHAIN_ID,
+  SubscriptionRegistryABI,
   getContractAddresses,
 } from "@arcenpay/internal-core";
 
@@ -77,10 +79,7 @@ export class EventListenerService {
       config.registryAddress || contracts.subscriptionRegistry;
     this.autopayModuleAddress = contracts.autopayModule;
 
-    this.publicClient = createPublicClient({
-      chain,
-      transport: http(config.rpcUrl),
-    }) as any;
+    this.publicClient = createResilientFacilitatorClient(config.rpcUrl, chainId) as any;
   }
 
   /**
@@ -106,7 +105,7 @@ export class EventListenerService {
   /**
    * Start polling for events at the given interval
    */
-  async start(intervalMs = 12000): Promise<void> {
+  async start(intervalMs = 15000): Promise<void> {
     try {
       this.lastBlock = await this.publicClient.getBlockNumber();
     } catch {
@@ -140,72 +139,16 @@ export class EventListenerService {
     try {
       const currentBlock = await this.publicClient.getBlockNumber();
       if (currentBlock <= this.lastBlock) return;
-
       const addr = this.registryAddress as `0x${string}`;
       const from = this.lastBlock + 1n;
 
-      // Fetch all subscription lifecycle event types in parallel
-      const [
-        mintedLogs,
-        renewedLogs,
-        cancelledLogs,
-        planChangedLogs,
-        billingLogs,
-      ] = await Promise.all([
+      // Single log query for SubscriptionRegistry events + 1 query for BillingExecuted
+      const [registryLogs, billingLogs] = await Promise.all([
         this.publicClient.getLogs({
           address: addr,
-          event: {
-            type: "event",
-            name: "SubscriptionMinted",
-            inputs: [
-              { name: "subscriber", type: "address", indexed: true },
-              { name: "tokenId", type: "uint256", indexed: true },
-              { name: "planId", type: "uint256", indexed: true },
-              { name: "expiration", type: "uint64", indexed: false },
-            ],
-          },
           fromBlock: from,
           toBlock: currentBlock,
-        }),
-        this.publicClient.getLogs({
-          address: addr,
-          event: {
-            type: "event",
-            name: "SubscriptionRenewed",
-            inputs: [
-              { name: "tokenId", type: "uint256", indexed: true },
-              { name: "newExpiration", type: "uint64", indexed: false },
-              { name: "amountPaid", type: "uint256", indexed: false },
-            ],
-          },
-          fromBlock: from,
-          toBlock: currentBlock,
-        }),
-        this.publicClient.getLogs({
-          address: addr,
-          event: {
-            type: "event",
-            name: "SubscriptionCancelled",
-            inputs: [{ name: "tokenId", type: "uint256", indexed: true }],
-          },
-          fromBlock: from,
-          toBlock: currentBlock,
-        }),
-        this.publicClient.getLogs({
-          address: addr,
-          event: {
-            type: "event",
-            name: "SubscriptionPlanChanged",
-            inputs: [
-              { name: "tokenId", type: "uint256", indexed: true },
-              { name: "previousPlanId", type: "uint256", indexed: true },
-              { name: "newPlanId", type: "uint256", indexed: true },
-              { name: "expiration", type: "uint64", indexed: false },
-            ],
-          },
-          fromBlock: from,
-          toBlock: currentBlock,
-        }),
+        }).catch(() => []),
         this.publicClient.getLogs({
           address: this.autopayModuleAddress as `0x${string}`,
           event: {
@@ -225,59 +168,56 @@ export class EventListenerService {
           },
           fromBlock: from,
           toBlock: currentBlock,
-        }),
+        }).catch(() => []),
       ]);
 
-      // Process minted events
-      for (const log of mintedLogs) {
-        await this.emit({
-          type: "minted",
-          tokenId: (log as any).args.tokenId,
-          subscriber: (log as any).args.subscriber,
-          planId: (log as any).args.planId,
-          expiration: (log as any).args.expiration,
-          transactionHash: log.transactionHash,
-          blockNumber: log.blockNumber,
-          timestamp: Date.now(),
-        });
-      }
+      const parsedRegistryLogs = parseEventLogs({
+        abi: SubscriptionRegistryABI,
+        logs: registryLogs,
+      });
 
-      // Process renewed events
-      for (const log of renewedLogs) {
-        await this.emit({
-          type: "renewed",
-          tokenId: (log as any).args.tokenId,
-          expiration: (log as any).args.newExpiration,
-          amountPaid: (log as any).args.amountPaid,
-          transactionHash: log.transactionHash,
-          blockNumber: log.blockNumber,
-          timestamp: Date.now(),
-        });
-      }
-
-      // Process cancelled events
-      for (const log of cancelledLogs) {
-        await this.emit({
-          type: "cancelled",
-          tokenId: (log as any).args.tokenId,
-          transactionHash: log.transactionHash,
-          blockNumber: log.blockNumber,
-          timestamp: Date.now(),
-        });
-      }
-
-      // Process plan-changed events
-      for (const log of planChangedLogs) {
-        await this.emit({
-          type: "plan_changed",
-          tokenId: (log as any).args.tokenId,
-          planId: (log as any).args.newPlanId,
-          previousPlanId: (log as any).args.previousPlanId,
-          expiration: (log as any).args.expiration,
-          transactionHash: log.transactionHash,
-          blockNumber: log.blockNumber,
-          timestamp: Date.now(),
-        });
+      for (const log of parsedRegistryLogs) {
+        if (log.eventName === "SubscriptionMinted") {
+          await this.emit({
+            type: "minted",
+            tokenId: (log.args as any).tokenId,
+            subscriber: (log.args as any).subscriber,
+            planId: (log.args as any).planId,
+            expiration: (log.args as any).expiration,
+            transactionHash: log.transactionHash,
+            blockNumber: log.blockNumber,
+            timestamp: Date.now(),
+          });
+        } else if (log.eventName === "SubscriptionRenewed") {
+          await this.emit({
+            type: "renewed",
+            tokenId: (log.args as any).tokenId,
+            expiration: (log.args as any).newExpiration,
+            amountPaid: (log.args as any).amountPaid,
+            transactionHash: log.transactionHash,
+            blockNumber: log.blockNumber,
+            timestamp: Date.now(),
+          });
+        } else if (log.eventName === "SubscriptionCancelled") {
+          await this.emit({
+            type: "cancelled",
+            tokenId: (log.args as any).tokenId,
+            transactionHash: log.transactionHash,
+            blockNumber: log.blockNumber,
+            timestamp: Date.now(),
+          });
+        } else if (log.eventName === "SubscriptionPlanChanged") {
+          await this.emit({
+            type: "plan_changed",
+            tokenId: (log.args as any).tokenId,
+            previousPlanId: (log.args as any).previousPlanId,
+            planId: (log.args as any).newPlanId,
+            expiration: (log.args as any).expiration,
+            transactionHash: log.transactionHash,
+            blockNumber: log.blockNumber,
+            timestamp: Date.now(),
+          });
+        }
       }
 
       for (const log of billingLogs) {
@@ -298,8 +238,13 @@ export class EventListenerService {
       }
 
       this.lastBlock = currentBlock;
-    } catch (err) {
-      console.error("[EventListener] Polling error:", err);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg.includes("request limit reached") || msg.includes("429") || msg.includes("-32011")) {
+        console.warn("[EventListener] RPC rate limit encountered. Will retry next tick.");
+      } else {
+        console.error("[EventListener] Polling error:", err);
+      }
     }
   }
 

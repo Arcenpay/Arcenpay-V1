@@ -5,12 +5,11 @@
 // ============================================================
 
 import {
-  createPublicClient,
   createWalletClient,
-  http,
   encodeFunctionData,
   type Hex,
 } from "viem";
+import { createResilientFacilitatorClient, getFacilitatorRpcTransport } from "../rpc-client.js";
 import { privateKeyToAccount } from "viem/accounts";
 import { sepolia, baseSepolia, base } from "viem/chains";
 import { DEFAULT_CHAIN_ID } from "@arcenpay/internal-core";
@@ -123,15 +122,12 @@ export class AxelarTransport {
     const account = privateKeyToAccount(config.privateKey);
     this.signerAddress = account.address;
 
-    this.publicClient = createPublicClient({
-      chain,
-      transport: http(config.rpcUrl),
-    }) as any;
+    this.publicClient = createResilientFacilitatorClient(config.rpcUrl, this.chainId) as any;
 
     this.walletClient = createWalletClient({
       account,
       chain,
-      transport: http(config.rpcUrl),
+      transport: getFacilitatorRpcTransport(config.rpcUrl, this.chainId),
     }) as any;
   }
 

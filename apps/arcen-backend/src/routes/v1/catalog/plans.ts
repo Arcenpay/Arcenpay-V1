@@ -9,7 +9,7 @@ import { resolvePlanNetwork } from "../../../lib/catalog/plan-network.js";
 import { toPrismaNullableJson } from "../../../utils/prisma-json.js";
 import { assertCanCreatePlan } from "../../../lib/catalog/tier-guard.js";
 import { requireResolvedActiveEnvironment } from "../../../lib/environments/workspace-environments.js";
-import { getRpcUrl } from "../../../config.js";
+import { createResilientPublicClient, getRpcUrl } from "../../../config.js";
 import {
   getChain,
   MONTHLY_INTERVAL,
@@ -150,10 +150,7 @@ export async function listPlans(c: Context) {
         if (parseFloat(plan.price.toString()) === 0) return plan;
 
         try {
-          const publicClient = createPublicClient({
-            chain: getChain(activeEnvironment.chainId),
-            transport: http(getRpcUrl(activeEnvironment.chainId)),
-          });
+          const publicClient = createResilientPublicClient(activeEnvironment.chainId);
           const contracts = getContractAddresses(activeEnvironment.chainId);
           const livePlan = (await publicClient.readContract({
             address: contracts.planFactory as `0x${string}`,

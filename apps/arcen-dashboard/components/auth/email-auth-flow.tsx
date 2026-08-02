@@ -349,7 +349,7 @@ export function EmailAuthFlow({ inviteToken }: EmailAuthFlowProps) {
                 <Button
                   type="button"
                   variant={isConnected ? "outline" : "default"}
-                  className="h-12 w-full bg-brand hover:bg-brand-dark text-white"
+                  className="h-12 w-full bg-brand hover:bg-brand-dark text-primary-foreground"
                   onClick={() => void (isConnected ? reconnectWallet() : openConnectModal())}
                 >
                   <Wallet className="mr-2 h-4 w-4" />
@@ -377,7 +377,7 @@ export function EmailAuthFlow({ inviteToken }: EmailAuthFlowProps) {
 
                 <Button
                   type="button"
-                  className="h-12 w-full bg-brand hover:bg-brand-dark text-white"
+                  className="h-12 w-full bg-brand hover:bg-brand-dark text-primary-foreground"
                   disabled={!isConnected || !address || !isOnRequiredNetwork}
                   onClick={() => {
                     setError(null);
@@ -415,7 +415,7 @@ export function EmailAuthFlow({ inviteToken }: EmailAuthFlowProps) {
                   type="button"
                   onClick={submitEmail}
                   disabled={isPending || isLinkingWallet || !email.trim()}
-                  className="h-12 w-full bg-brand hover:bg-brand-dark text-white"
+                  className="h-12 w-full bg-brand hover:bg-brand-dark text-primary-foreground"
                 >
                   {isPending ? (
                     <>
@@ -494,7 +494,7 @@ export function EmailAuthFlow({ inviteToken }: EmailAuthFlowProps) {
                   type="button"
                   onClick={submitCode}
                   disabled={isPending || isLinkingWallet || code.length !== 6}
-                  className="h-12 w-full bg-brand hover:bg-brand-dark text-white"
+                  className="h-12 w-full bg-brand hover:bg-brand-dark text-primary-foreground"
                 >
                   {isPending ? (
                     <>
@@ -576,7 +576,7 @@ export function EmailAuthFlow({ inviteToken }: EmailAuthFlowProps) {
                   disabled={
                     isLinkingWallet || !isConnected || !address || !isOnRequiredNetwork
                   }
-                  className="h-12 w-full bg-brand hover:bg-brand-dark text-white"
+                  className="h-12 w-full bg-brand hover:bg-brand-dark text-primary-foreground"
                 >
                   {isLinkingWallet ? (
                     <>
@@ -638,7 +638,7 @@ export function EmailAuthFlow({ inviteToken }: EmailAuthFlowProps) {
 
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 rounded-full bg-brand flex items-center justify-center">
-                <span className="text-sm font-semibold text-white">{testimonial.initials}</span>
+                <span className="text-sm font-semibold text-primary-foreground">{testimonial.initials}</span>
               </div>
               <div>
                 <p className="font-semibold">{testimonial.name}</p>

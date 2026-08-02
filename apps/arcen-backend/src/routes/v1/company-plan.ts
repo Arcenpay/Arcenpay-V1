@@ -63,7 +63,7 @@ import {
   getContractAddresses,
   SubscriptionRegistryABI,
 } from "@arcenpay/internal-core";
-import { getRpcUrl } from "../../config.js";
+import { createResilientPublicClient, getRpcUrl } from "../../config.js";
 import { DEFAULT_CHAIN_ID } from "../../lib/platform/default-chain.js";
 
 type PlanRouteDb = Pick<
@@ -231,10 +231,7 @@ function createChainClients(chainId?: number) {
   const chain = getChain(resolvedChainId);
   return {
     chain,
-    publicClient: createPublicClient({
-      chain,
-      transport: http(getRpcUrl(resolvedChainId)),
-    }),
+    publicClient: createResilientPublicClient(resolvedChainId),
     contracts: getContractAddresses(resolvedChainId),
   };
 }

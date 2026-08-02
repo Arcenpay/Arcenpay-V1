@@ -12,7 +12,7 @@ import {
   PlanFactoryABI,
   SubscriptionRegistryABI,
 } from "@arcenpay/internal-core";
-import { getRpcUrl } from "../../config.js";
+import { createResilientPublicClient, getRpcUrl } from "../../config.js";
 import { DEFAULT_CHAIN_ID } from "../platform/default-chain.js";
 
 const ERC20_TRANSFER_ABI = [
@@ -116,10 +116,7 @@ function createChainPublicClient(chainId?: number) {
   return {
     chain,
     contracts: getContractAddresses(chain.id),
-    publicClient: createPublicClient({
-      chain,
-      transport: http(getRpcUrl(chain.id)),
-    }),
+    publicClient: createResilientPublicClient(chain.id),
   };
 }
 

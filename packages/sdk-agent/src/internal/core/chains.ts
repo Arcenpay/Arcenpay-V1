@@ -52,7 +52,16 @@ export const arcTestnet: Chain = defineChain({
   name: 'Arc Testnet',
   nativeCurrency: { name: 'USDC', symbol: 'USDC', decimals: 18 },
   rpcUrls: {
-    default: { http: ['https://rpc.testnet.arc.network'] },
+    default: {
+      http: [
+        // Primary: QuikNode paid endpoint — high rate limits
+        'https://sleek-sleek-resonance.arc-testnet.quiknode.pro/9447b76a1f0e822664b55dc6858f4ba4beebc153/',
+        // Fallback 1: Thirdweb — CORS-friendly
+        'https://5042002.rpc.thirdweb.com',
+        // Fallback 2: Arc public node
+        'https://rpc.testnet.arc.network',
+      ],
+    },
   },
   blockExplorers: {
     default: { name: 'ArcScan', url: 'https://testnet.arcscan.app' },

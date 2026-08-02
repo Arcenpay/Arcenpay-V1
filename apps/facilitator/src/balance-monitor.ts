@@ -106,8 +106,13 @@ export class BalanceMonitor {
       }
       const data = await res.json();
       return Array.isArray(data.configs) ? data.configs : [];
-    } catch (err) {
-      console.warn("[BalanceMonitor] Error fetching configs:", err);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg.includes("ECONNREFUSED") || msg.includes("fetch failed")) {
+        console.warn(`[BalanceMonitor] Backend API offline at ${this.opts.apiBaseUrl}. Retrying next tick.`);
+      } else {
+        console.warn("[BalanceMonitor] Error fetching configs:", msg);
+      }
       return [];
     }
   }

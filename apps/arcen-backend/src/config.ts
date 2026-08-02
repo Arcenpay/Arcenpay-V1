@@ -13,6 +13,7 @@
 // ============================================================
 
 import "./load-env.js";
+import { createPublicClient, fallback, http, type Transport, type PublicClient } from "viem";
 import * as ArcenPayCore from "@arcenpay/internal-core";
 import { DEFAULT_CHAIN_ID } from "./lib/platform/default-chain.js";
 import { SUBGRAPH_REQUIRED } from "./lib/platform/launch-flags.js";
@@ -329,7 +330,8 @@ export function getRpcUrl(chainId: number): string {
     11155111: "https://rpc.sepolia.org",
     8453: "https://mainnet.base.org",
     84532: "https://sepolia.base.org",
-    5042002: "https://rpc.testnet.arc.network",
+    // Arc Testnet: use QuikNode paid endpoint as dev fallback (higher rate limits)
+    5042002: "https://sleek-sleek-resonance.arc-testnet.quiknode.pro/9447b76a1f0e822664b55dc6858f4ba4beebc153/",
     1: "https://cloudflare-eth.com",
   };
   return publicRpcs[chainId] ?? "";
@@ -349,8 +351,54 @@ export function getAllRpcUrls(chainId: number): string[] {
   const candidates = parseRpcList(rawSpecific ?? rawGlobal ?? rawManifest ?? "");
   if (candidates.length > 0) return candidates;
 
+  const chainRpcs = ArcenPayCore.getChain(chainId)?.rpcUrls?.default?.http ?? [];
+  if (chainRpcs.length > 0) return [...chainRpcs];
+
   const fallback = getRpcUrl(chainId);
   return fallback ? [fallback] : [];
+}
+
+/**
+ * Creates a resilient Viem Transport configured with exponential retry backoff
+ * (retryCount: 4, retryDelay: 1000ms, timeout: 15s) and automatic RPC failover
+ * via fallback() transport when multiple RPC URLs are configured.
+ */
+export function getRpcTransport(chainId: number): Transport {
+  const urls = getAllRpcUrls(chainId);
+  if (urls.length === 0) {
+    const single = getRpcUrl(chainId);
+    if (single) urls.push(single);
+  }
+
+  const httpOptions = {
+    retryCount: 2,
+    retryDelay: 1500,
+    timeout: 15_000,
+  };
+
+  if (urls.length > 1) {
+    return fallback(
+      urls.map((url) => http(url, httpOptions)),
+      { rank: false, retryCount: 1 },
+    );
+  }
+
+  if (urls.length === 1) {
+    return http(urls[0], httpOptions);
+  }
+
+  return http("", httpOptions);
+}
+
+/**
+ * Standardized factory for Viem PublicClient with automatic retry policies and RPC failover.
+ */
+export function createResilientPublicClient(chainId: number): PublicClient {
+  const chain = ArcenPayCore.getChain(chainId);
+  return createPublicClient({
+    chain,
+    transport: getRpcTransport(chainId),
+  });
 }
 
 // ── Smart Account Infra ───────────────────────────────────────────────────────

@@ -7,7 +7,8 @@ import { createHash } from "crypto";
 import fs from "fs";
 import path from "path";
 import { pathToFileURL } from "url";
-import { createPublicClient, createWalletClient, http } from "viem";
+import { createWalletClient } from "viem";
+import { createResilientFacilitatorClient, getFacilitatorRpcTransport } from "../rpc-client.js";
 import { privateKeyToAccount } from "viem/accounts";
 import { sepolia, baseSepolia, base } from "viem/chains";
 import type {
@@ -168,16 +169,13 @@ export class UsageService {
       this.signerAccount = null;
     }
 
-    this.publicClient = createPublicClient({
-      chain,
-      transport: http(rpcUrl),
-    });
+    this.publicClient = createResilientFacilitatorClient(rpcUrl, chainId);
 
     if (this.signerAccount) {
       this.walletClient = createWalletClient({
         account: this.signerAccount,
         chain,
-        transport: http(rpcUrl),
+        transport: getFacilitatorRpcTransport(rpcUrl, chainId),
       });
     } else {
       this.walletClient = null;

@@ -4,12 +4,11 @@
 // ============================================================
 
 import {
-  createPublicClient,
   createWalletClient,
-  http,
   isAddress,
   type Hex,
 } from "viem";
+import { createResilientFacilitatorClient, getFacilitatorRpcTransport } from "../rpc-client.js";
 import { privateKeyToAccount } from "viem/accounts";
 import { sepolia, baseSepolia, base } from "viem/chains";
 import {
@@ -150,15 +149,12 @@ export class SettlementWriterService {
       throw new Error("Invalid provider address for SettlementWriterService");
     }
 
-    this.publicClient = createPublicClient({
-      chain,
-      transport: http(config.rpcUrl || chain.rpcUrls.default.http[0]),
-    }) as any;
+    this.publicClient = createResilientFacilitatorClient(config.rpcUrl, this.chainId) as any;
 
     this.walletClient = createWalletClient({
       account,
       chain,
-      transport: http(config.rpcUrl || chain.rpcUrls.default.http[0]),
+      transport: getFacilitatorRpcTransport(config.rpcUrl, this.chainId),
     }) as any;
   }
 

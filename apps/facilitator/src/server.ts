@@ -62,6 +62,7 @@ import {
   type PlanTier,
   type X402VerifiedPaymentContext,
 } from "@arcenpay/internal-core";
+import { createResilientFacilitatorClient } from "./rpc-client.js";
 import {
   createPublicClient,
   encodeAbiParameters,
@@ -113,9 +114,7 @@ const RPC_URL =
   RUNTIME_CHAIN_PROFILE.rpcUrl ||
   "https://sepolia.base.org";
 const CONTRACTS = CHAIN_ENV.contracts;
-const chainClient = createPublicClient({
-  transport: http(RPC_URL),
-});
+const chainClient = createResilientFacilitatorClient(RPC_URL, CHAIN_ID);
 const FACILITATOR_PROFILE = (
   process.env.FACILITATOR_PROFILE || "development"
 ).toLowerCase();
@@ -2416,51 +2415,60 @@ if (axelarTransport || ccipTransport) {
     }
   };
 
-  void (async () => {
-    try {
-      lastCrossChainDispatchBlock = await chainClient.getBlockNumber();
-    } catch (err) {
-      console.error(
-        "[Facilitator] Cross-chain dispatch watcher failed to read initial block:",
-        err,
-      );
-      lastCrossChainDispatchBlock = 0n;
-    }
-
-    setInterval(async () => {
+  setTimeout(() => {
+    void (async () => {
       try {
-        const currentBlock = await chainClient.getBlockNumber();
-        const fromBlock =
-          lastCrossChainDispatchBlock == null
-            ? currentBlock
-            : lastCrossChainDispatchBlock + 1n;
-
-        if (currentBlock < fromBlock) return;
-
-        const logs = await chainClient.getContractEvents({
-          address: CONTRACTS.subscriptionRegistry as `0x${string}`,
-          abi: SubscriptionRegistryABI,
-          eventName: "CrossChainDispatchRequested",
-          fromBlock,
-          toBlock: currentBlock,
-        });
-
-        if (logs.length > 0) {
-          await handleCrossChainDispatchLogs(
-            logs as Array<{ args: unknown; blockNumber: bigint }>,
-          );
-        }
-
-        lastCrossChainDispatchBlock = currentBlock;
-      } catch (err) {
-        console.error(
-          "[Facilitator] CrossChainDispatchRequested watcher error:",
-          err,
-        );
+        lastCrossChainDispatchBlock = await chainClient.getBlockNumber();
+      } catch {
+        lastCrossChainDispatchBlock = 0n;
       }
-    }, 12000);
-  })();
-  console.log("[Facilitator] Cross-chain dispatch watcher active");
+
+      setInterval(async () => {
+        try {
+          const currentBlock = await chainClient.getBlockNumber();
+          const fromBlock =
+            lastCrossChainDispatchBlock == null
+              ? currentBlock
+              : lastCrossChainDispatchBlock + 1n;
+
+          if (currentBlock < fromBlock) return;
+
+          const logs = await chainClient.getContractEvents({
+            address: CONTRACTS.subscriptionRegistry as `0x${string}`,
+            abi: SubscriptionRegistryABI,
+            eventName: "CrossChainDispatchRequested",
+            fromBlock,
+            toBlock: currentBlock,
+          });
+
+          if (logs.length > 0) {
+            await handleCrossChainDispatchLogs(
+              logs as Array<{ args: unknown; blockNumber: bigint }>,
+            );
+          }
+
+          lastCrossChainDispatchBlock = currentBlock;
+        } catch (err: unknown) {
+          const msg = err instanceof Error ? err.message : String(err);
+          if (
+            msg.includes("request limit reached") ||
+            msg.includes("429") ||
+            msg.includes("-32011")
+          ) {
+            console.warn(
+              "[Facilitator] CrossChainDispatchRequested watcher rate-limited. Retrying next tick.",
+            );
+          } else {
+            console.error(
+              "[Facilitator] CrossChainDispatchRequested watcher error:",
+              err,
+            );
+          }
+        }
+      }, 25000);
+    })();
+    console.log("[Facilitator] Cross-chain dispatch watcher active");
+  }, 5000);
 }
 
 // Watch for settlement events

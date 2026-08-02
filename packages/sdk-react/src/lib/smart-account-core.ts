@@ -348,6 +348,10 @@ export function isUnsupportedEip7702AuthorizationError(
   return (
     lower.includes("could not sign the eip-7702 gas-sponsorship authorization") ||
     lower.includes("wallet_signauthorization") ||
+    lower.includes("eth_sign") ||
+    lower.includes("-32601") ||
+    lower.includes("does not exist") ||
+    lower.includes("is not available") ||
     lower.includes("does not support json-rpc accounts") ||
     lower.includes("wallet returned an unsupported") ||
     lower.includes("user rejected")
@@ -381,7 +385,7 @@ async function createKernelAccountForWallet(params: {
     params.publicClient ??
     (createPublicClient({
       chain,
-      transport: http(),
+      transport: http(undefined, { retryCount: 4, retryDelay: 1000, timeout: 15_000 }),
     }) as PublicClient);
 
   const connectedWalletAddress = params.walletClient.account?.address;
@@ -443,7 +447,7 @@ export async function getCounterfactualSmartAccountAddress(
   const chain = CHAIN_MAP[chainId] || baseSepolia;
   const publicClient = createPublicClient({
     chain,
-    transport: http(),
+    transport: http(undefined, { retryCount: 4, retryDelay: 1000, timeout: 15_000 }),
   }) as PublicClient;
 
   const { kernelAccount } = await createKernelAccountForWallet({
@@ -546,7 +550,7 @@ async function createKernelExecutionContext(config: {
 
   const publicClient = createPublicClient({
     chain,
-    transport: http(),
+    transport: http(undefined, { retryCount: 4, retryDelay: 1000, timeout: 15_000 }),
   }) as PublicClient;
 
   const { kernelAccount, sponsoredMode } = await createKernelAccountForWallet({
@@ -888,7 +892,7 @@ export async function revokeAutopayModule(
 
   const publicClient = createPublicClient({
     chain,
-    transport: http(),
+    transport: http(undefined, { retryCount: 4, retryDelay: 1000, timeout: 15_000 }),
   }) as PublicClient;
 
   const initialized = (await publicClient.readContract({

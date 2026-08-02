@@ -3,7 +3,7 @@
 //  Real viem integration for on-chain reads and event watching
 // ============================================================
 
-import { createPublicClient, http } from "viem";
+import { createResilientFacilitatorClient } from "../rpc-client.js";
 import { sepolia, baseSepolia, base } from "viem/chains";
 import type { BillingSettlement } from "@arcenpay/internal-core";
 import {
@@ -51,11 +51,7 @@ export class SettlementService {
     this.sessionVaultAddress =
       config.sessionVaultAddress || contracts.sessionVault;
 
-    const chain = CHAIN_MAP[this.chainId] || baseSepolia;
-    this.publicClient = createPublicClient({
-      chain,
-      transport: http(this.rpcUrl),
-    }) as any;
+    this.publicClient = createResilientFacilitatorClient(this.rpcUrl, this.chainId) as any;
   }
 
   /**
@@ -99,16 +95,18 @@ export class SettlementService {
    */
   watchSettlements(
     callback: SettlementCallback,
-    intervalMs = 10000,
+    intervalMs = 30000,
   ): () => void {
     this.watchers.push(callback);
 
     if (!this.pollInterval) {
-      this.initBlockNumber().then(() => {
-        this.pollInterval = setInterval(async () => {
-          await this.pollSettlements();
-        }, intervalMs);
-      });
+      setTimeout(() => {
+        this.initBlockNumber().then(() => {
+          this.pollInterval = setInterval(async () => {
+            await this.pollSettlements();
+          }, intervalMs);
+        });
+      }, 10000);
     }
 
     return () => {
@@ -172,8 +170,19 @@ export class SettlementService {
       }
 
       this.lastBlock = currentBlock;
-    } catch (err) {
-      console.error("[SettlementService] Polling error:", err);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (
+        msg.includes("request limit reached") ||
+        msg.includes("429") ||
+        msg.includes("-32011")
+      ) {
+        console.warn(
+          "[SettlementService] RPC rate limit encountered. Retrying next tick.",
+        );
+      } else {
+        console.error("[SettlementService] Polling error:", err);
+      }
     }
   }
 

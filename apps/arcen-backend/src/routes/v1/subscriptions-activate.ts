@@ -37,7 +37,7 @@ import {
 } from "@arcenpay/internal-core";
 import { Prisma } from "../../generated/client/client.js";
 import { db } from "../../db.js";
-import { getRpcUrl } from "../../config.js";
+import { createResilientPublicClient, getRpcUrl } from "../../config.js";
 import { DEFAULT_CHAIN_ID } from "../../lib/platform/default-chain.js";
 import { getLatestSubscriptionChangeRequest } from "../../lib/billing/subscription-change-requests.js";
 import { toPrismaJson } from "../../utils/prisma-json.js";
@@ -179,6 +179,51 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+function isTransientActivationLookupError(error: unknown): boolean {
+  const message =
+    error instanceof Error ? error.message.toLowerCase() : String(error).toLowerCase();
+
+  return (
+    (message.includes("transaction") && message.includes("not found")) ||
+    (message.includes("receipt") && message.includes("not found")) ||
+    message.includes("could not be found") ||
+    message.includes("unknown transaction") ||
+    message.includes("missing transaction") ||
+    message.includes("missing receipt")
+  );
+}
+
+async function readSubmittedActivationTransaction(params: {
+  publicClient: any;
+  txHash: `0x${string}`;
+}): Promise<{
+  transaction: Awaited<ReturnType<typeof params.publicClient.getTransaction>>;
+  receipt: Awaited<ReturnType<typeof params.publicClient.getTransactionReceipt>>;
+}> {
+  const attempts = 8;
+
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    try {
+      const [transaction, receipt] = await Promise.all([
+        params.publicClient.getTransaction({ hash: params.txHash }),
+        params.publicClient.getTransactionReceipt({ hash: params.txHash }),
+      ]);
+
+      return { transaction, receipt };
+    } catch (error) {
+      if (!isTransientActivationLookupError(error) || attempt === attempts - 1) {
+        throw error;
+      }
+
+      await sleep(1_500);
+    }
+  }
+
+  throw new Error(
+    "Activation transaction is still propagating. Please wait a moment and try again.",
+  );
+}
+
 type AutopayActivationSnapshot = {
   isInitialized: boolean;
   config: {
@@ -292,10 +337,61 @@ function normalizeActivationError(message: string): {
     };
   }
 
+  if (
+    lower.includes("request limit reached") ||
+    lower.includes("rate limit") ||
+    lower.includes("too many requests") ||
+    lower.includes("429") ||
+    lower.includes("fetch failed") ||
+    lower.includes("-32011") ||
+    lower.includes("econnrefused") ||
+    lower.includes("rpc request failed") ||
+    lower.includes("http request failed") ||
+    lower.includes("timeout") ||
+    lower.includes("timed out") ||
+    lower.includes("network error") ||
+    lower.includes("etimedout") ||
+    lower.includes("socket hang up") ||
+    lower.includes("connect econnreset")
+  ) {
+    return {
+      status: 429,
+      error:
+        "RPC network error or rate limit reached. Please wait a moment and click Activate subscription again.",
+    };
+  }
+
+  if (
+    (lower.includes("transaction") || lower.includes("receipt")) &&
+    lower.includes("not found")
+  ) {
+    return {
+      status: 425,
+      error:
+        "Activation transaction is still propagating. Please wait a moment and try again.",
+    };
+  }
+
   if (lower.includes("confirmation")) {
     return {
       status: 425,
       error: message,
+    };
+  }
+
+  if (
+    lower.includes("execution reverted") ||
+    lower.includes("revert") ||
+    lower.includes("contract call failed") ||
+    lower.includes("unknown error") ||
+    lower.includes("internal error") ||
+    lower.includes("-32603") ||
+    lower.includes("-32000")
+  ) {
+    return {
+      status: 409,
+      error:
+        "The blockchain transaction was reverted. Please ensure your wallet has sufficient token balance and try again.",
     };
   }
 
@@ -541,6 +637,11 @@ export async function POST(c: Context) {
     }),
   };
 
+  // ── Wrap all post-validation logic in one top-level try/catch ───────────────
+  // This ensures any RPC error (rate limit, timeout, CORS) thrown by any
+  // readContract / getTransaction call below is caught and normalized
+  // into a proper HTTP response instead of an unhandled 500.
+  try {
   const catalogPlan = await db.catalogPlan.findFirst({
     where: {
       teamId,
@@ -605,10 +706,7 @@ export async function POST(c: Context) {
     );
   }
 
-  const publicClient = createPublicClient({
-    chain,
-    transport: http(rpcUrl),
-  });
+  const publicClient = createResilientPublicClient(chainId);
 
   const onChainPlan = (await publicClient.readContract({
     address: planFactoryAddress,
@@ -935,37 +1033,80 @@ export async function POST(c: Context) {
     );
   }
 
-  const [tokenBalance, tokenAllowance, tokenDecimals, tokenSymbol] =
-    await Promise.all([
-      publicClient.readContract({
-        address: acceptedTokenAddress,
-        abi: erc20ReadAbi,
-        functionName: "balanceOf",
-        args: [paymentAccount],
-      }) as Promise<bigint>,
-      publicClient.readContract({
-        address: acceptedTokenAddress,
-        abi: erc20ReadAbi,
-        functionName: "allowance",
-        args: [paymentAccount, autopayAddress],
-      }) as Promise<bigint>,
-      publicClient
-        .readContract({
+  let tokenBalance = 0n;
+  let tokenAllowance = 0n;
+  let tokenDecimals = 6;
+  let tokenSymbol = "USDC";
+
+  try {
+    const [balanceResult, allowanceResult, decimalsResult, symbolResult] =
+      await Promise.all([
+        publicClient
+          .readContract({
+            address: acceptedTokenAddress,
+            abi: erc20ReadAbi,
+            functionName: "balanceOf",
+            args: [paymentAccount],
+          })
+          .catch(() => 0n),
+        publicClient
+          .readContract({
+            address: acceptedTokenAddress,
+            abi: erc20ReadAbi,
+            functionName: "allowance",
+            args: [paymentAccount, autopayAddress],
+          })
+          .catch(() => 0n),
+        publicClient
+          .readContract({
+            address: acceptedTokenAddress,
+            abi: erc20ReadAbi,
+            functionName: "decimals",
+          })
+          .then((value) => Number(value))
+          .catch(() => 6),
+        publicClient
+          .readContract({
+            address: acceptedTokenAddress,
+            abi: erc20ReadAbi,
+            functionName: "symbol",
+          })
+          .then((value) => String(value))
+          .catch(() => "USDC"),
+      ]);
+
+    tokenBalance = BigInt(balanceResult ?? 0n);
+    tokenAllowance = BigInt(allowanceResult ?? 0n);
+    tokenDecimals = decimalsResult;
+    tokenSymbol = symbolResult;
+  } catch (err) {
+    console.warn(
+      "[subscriptions-activate] Warning reading token balance/allowance:",
+      err,
+    );
+  }
+
+  // If token allowance is less than chargeAmount, retry reading allowance up to 4 times
+  // (1s delay between retries) to account for RPC node block indexing lag right after spending limit confirmation.
+  if (tokenAllowance < chargeAmount) {
+    for (let retry = 0; retry < 4; retry += 1) {
+      await sleep(1000);
+      try {
+        const recheck = (await publicClient.readContract({
           address: acceptedTokenAddress,
           abi: erc20ReadAbi,
-          functionName: "decimals",
-        })
-        .then((value) => Number(value))
-        .catch(() => 6),
-      publicClient
-        .readContract({
-          address: acceptedTokenAddress,
-          abi: erc20ReadAbi,
-          functionName: "symbol",
-        })
-        .then((value) => String(value))
-        .catch(() => "tokens"),
-    ]);
+          functionName: "allowance",
+          args: [paymentAccount, autopayAddress],
+        })) as bigint;
+        if (recheck >= chargeAmount) {
+          tokenAllowance = recheck;
+          break;
+        }
+      } catch {
+        // Retry next tick
+      }
+    }
+  }
 
   if (tokenBalance < chargeAmount && !isInitialized) {
     return c.json(
@@ -1092,13 +1233,10 @@ export async function POST(c: Context) {
     );
   }
 
-  try {
-    const [transaction, receipt] = await Promise.all([
-      publicClient.getTransaction({ hash: submittedActivationTxHash }),
-      publicClient.getTransactionReceipt({
-        hash: submittedActivationTxHash,
-      }),
-    ]);
+    const { transaction, receipt } = await readSubmittedActivationTransaction({
+      publicClient,
+      txHash: submittedActivationTxHash,
+    });
 
     if (
       !transaction.to ||
@@ -1367,13 +1505,17 @@ export async function POST(c: Context) {
       corsHeaders(origin),
     );
   } catch (error) {
+    console.error("[subscriptions/activate] Error during activation:", error);
     const message =
       error instanceof Error
         ? error.message
         : "Failed to activate subscription.";
     const normalized = normalizeActivationError(message);
     return c.json(
-      { error: normalized.error },
+      {
+        error: normalized.error,
+        details: message,
+      },
       normalized.status as any,
       corsHeaders(origin),
     );

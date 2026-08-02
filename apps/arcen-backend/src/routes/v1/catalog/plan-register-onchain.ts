@@ -2,7 +2,7 @@ import type { Context } from "hono";
 import { db } from "../../../db.js";
 import { requirePermission, isErrorResponse } from "../../../lib/auth/api-auth.js";
 import { writeAuditEvent } from "../../../lib/platform/audit.js";
-import { getRpcUrl } from "../../../config.js";
+import { createResilientPublicClient, getRpcUrl } from "../../../config.js";
 import { isSupportedDashboardChainId } from "../../../lib/platform/default-chain.js";
 import { resolvePlanNetwork } from "../../../lib/catalog/plan-network.js";
 import {
@@ -246,7 +246,7 @@ export async function registerPlanOnChain(c: Context) {
     return c.json({ error: "PlanFactory not deployed on this chain" }, 503 as any);
   }
 
-  const publicClient = createPublicClient({ chain, transport: http(rpcUrl) });
+  const publicClient = createResilientPublicClient(chainId);
 
   const priceInUsdc = resolveMaxOnChainChargeMicros(plan);
   // CatalogPlan.billingInterval is persisted in seconds and maps directly to
@@ -260,12 +260,7 @@ export async function registerPlanOnChain(c: Context) {
 
   if (plan.onChainPlanId) {
     const onChainPlanId = BigInt(plan.onChainPlanId);
-    const onChainPlan = (await publicClient.readContract({
-      address: planFactoryAddress,
-      abi: PlanFactoryABI,
-      functionName: "getPlan",
-      args: [onChainPlanId],
-    })) as {
+    let onChainPlan: {
       id: bigint;
       provider: `0x${string}`;
       name: string;
@@ -276,6 +271,26 @@ export async function registerPlanOnChain(c: Context) {
       active: boolean;
       metadataURI: string;
     };
+
+    try {
+      onChainPlan = (await publicClient.readContract({
+        address: planFactoryAddress,
+        abi: PlanFactoryABI,
+        functionName: "getPlan",
+        args: [onChainPlanId],
+      })) as typeof onChainPlan;
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Failed to query on-chain plan";
+      const isRateLimited =
+        message.includes("request limit reached") ||
+        message.includes("429") ||
+        message.includes("rate limit");
+      const status = isRateLimited ? 429 : 503;
+      const cleanMessage = isRateLimited
+        ? "RPC node rate limit reached. Please wait a few seconds and try again."
+        : `RPC node error when reading on-chain plan: ${message}`;
+      return c.json({ error: cleanMessage }, status as any);
+    }
 
     if (!sameAddress(onChainPlan.provider, providerAddress)) {
       const message = `Configured provider wallet ${providerAddress} does not own on-chain plan ${plan.onChainPlanId}. Current owner is ${onChainPlan.provider}.`;

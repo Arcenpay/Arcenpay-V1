@@ -1,10 +1,9 @@
-import { createPublicClient, http, isAddress } from "viem";
+import { isAddress } from "viem";
 import {
   ERC7579AutopayModuleABI,
-  getChain,
   getContractAddresses,
 } from "@arcenpay/internal-core";
-import { getRpcUrl } from "../../config.js";
+import { createResilientPublicClient } from "../../config.js";
 
 export type AutopayAccountState = "ACTIVE" | "PAUSED" | "REVOKED" | null;
 
@@ -18,10 +17,7 @@ export async function readAutopayAccountState(
   const autopayAddress = contracts.autopayModule as `0x${string}` | undefined;
   if (!autopayAddress || !isAddress(autopayAddress)) return null;
 
-  const publicClient = createPublicClient({
-    chain: getChain(chainId),
-    transport: http(getRpcUrl(chainId)),
-  });
+  const publicClient = createResilientPublicClient(chainId);
 
   const isInitialized = (await publicClient.readContract({
     address: autopayAddress,

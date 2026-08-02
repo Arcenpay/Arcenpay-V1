@@ -137,15 +137,17 @@ function platformClients(chainId = PLATFORM_BILLING_CHAIN_ID) {
 }
 
 function platformWalletClient() {
-  const privateKey = normalizePrivateKey(PLATFORM_BILLING_OPS_PRIVATE_KEY);
-  if (!privateKey) {
-    throw new Error("PLATFORM_BILLING_OPS_PRIVATE_KEY must be set.");
-  }
-  const account = privateKeyToAccount(privateKey);
   const treasury = platformBillingTreasury();
-  if (account.address.toLowerCase() !== treasury.toLowerCase()) {
+  const candidateKeys = [
+    normalizePrivateKey(PLATFORM_BILLING_OPS_PRIVATE_KEY),
+    normalizePrivateKey(process.env.DEPLOYER_PRIVATE_KEY),
+  ].filter((key): key is `0x${string}` => Boolean(key));
+  const account = candidateKeys
+    .map((key) => privateKeyToAccount(key))
+    .find((candidate) => candidate.address.toLowerCase() === treasury.toLowerCase());
+  if (!account) {
     throw new Error(
-      "PLATFORM_BILLING_OPS_PRIVATE_KEY must belong to PLATFORM_BILLING_TREASURY_ADDRESS.",
+      "No configured platform billing signer matches PLATFORM_BILLING_TREASURY_ADDRESS. Set PLATFORM_BILLING_OPS_PRIVATE_KEY or DEPLOYER_PRIVATE_KEY to the treasury owner.",
     );
   }
 

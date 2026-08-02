@@ -66,6 +66,7 @@ import {
   createPublicClient,
   createWalletClient,
   custom,
+  fallback,
   http,
   isAddress,
   parseAbiParameters,
@@ -2593,98 +2594,173 @@ async function readOnChainPlan(
   acceptedToken?: string;
   active?: boolean;
 }> {
+  if (!onChainPlanId || onChainPlanId === "0") {
+    throw new Error(
+      "This plan has not been synced to the blockchain yet. Please ensure the plan is bootstrapped on-chain.",
+    );
+  }
+  try {
+    const chain = getChain(chainId);
+    const contracts = getContractAddresses(chainId);
+    const publicClient = createResilientEmbedPublicClient(chainId);
+    return (await publicClient.readContract({
+      address: contracts.planFactory as `0x${string}`,
+      abi: PlanFactoryABI,
+      functionName: "getPlan",
+      args: [BigInt(onChainPlanId)],
+    })) as {
+      provider?: string;
+      price?: bigint;
+      billingInterval?: number;
+      acceptedToken?: string;
+      active?: boolean;
+    };
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (
+      msg.includes("PlanFactory: plan not found") ||
+      msg.includes("0x26cd5274") ||
+      msg.includes("reverted")
+    ) {
+      throw new Error(
+        `Plan #${onChainPlanId} was not found on-chain. Please ensure the platform billing plans are bootstrapped on ${chainId === 5042002 ? "Arc testnet" : `chain ${chainId}`}.`,
+      );
+    }
+    if (msg.includes("HTTP request failed") || msg.includes("fetch failed") || msg.includes("ENOTFOUND")) {
+      throw new Error(
+        `Blockchain RPC network request failed. Unable to reach RPC node for chain ${chainId}. Please try again in a moment.`,
+      );
+    }
+    throw new Error(`Failed to read plan #${onChainPlanId} from blockchain: ${msg.slice(0, 150)}`);
+  }
+}
+
+function createResilientEmbedPublicClient(chainId: number) {
   const chain = getChain(chainId);
-  const contracts = getContractAddresses(chainId);
-  const publicClient = createPublicClient({ chain, transport: http() });
-  return (await publicClient.readContract({
-    address: contracts.planFactory as `0x${string}`,
-    abi: PlanFactoryABI,
-    functionName: "getPlan",
-    args: [BigInt(onChainPlanId)],
-  })) as {
-    provider?: string;
-    price?: bigint;
-    billingInterval?: number;
-    acceptedToken?: string;
-    active?: boolean;
+  const urls: string[] = (chain as any)?.rpcUrls?.default?.http ?? [];
+  // Keep retryCount low (2) to avoid triggering RPC rate limits that
+  // cause CORS preflight failures in the browser. The fallback transport
+  // will switch to the next RPC URL after 2 failed attempts.
+  const httpOptions = {
+    retryCount: 2,
+    retryDelay: 1500,
+    timeout: 15_000,
   };
+
+  if (urls.length > 1) {
+    return createPublicClient({
+      chain,
+      transport: fallback(
+        urls.map((url) => http(url, httpOptions)),
+        { rank: false, retryCount: 1 },
+      ),
+    });
+  }
+
+  return createPublicClient({
+    chain,
+    transport: http(urls[0] || undefined, httpOptions),
+  });
 }
 
 async function readAutopayConfig(chainId: number, paymentAccount: string) {
-  const chain = getChain(chainId);
-  const contracts = getContractAddresses(chainId);
-  const publicClient = createPublicClient({ chain, transport: http() });
-  return (await publicClient.readContract({
-    address: contracts.autopayModule as `0x${string}`,
-    abi: [
-      {
-        type: "function",
-        name: "getConfig",
-        inputs: [{ name: "account", type: "address" }],
-        outputs: [
-          {
-            components: [
-              { name: "merchant", type: "address" },
-              { name: "maxAmount", type: "uint256" },
-              { name: "token", type: "address" },
-              { name: "interval", type: "uint32" },
-              { name: "startTime", type: "uint64" },
-              { name: "planId", type: "uint256" },
-              { name: "maxTotalAmount", type: "uint256" },
-            ],
-            name: "config",
-            type: "tuple",
-          },
-        ],
-        stateMutability: "view",
-      },
-    ],
-    functionName: "getConfig",
-    args: [paymentAccount as `0x${string}`],
-  })) as {
-    merchant?: string;
-    maxAmount?: bigint;
-    token?: string;
-    interval?: number;
-    startTime?: bigint;
-    planId?: bigint;
-    maxTotalAmount?: bigint;
-  };
+  try {
+    const contracts = getContractAddresses(chainId);
+    const publicClient = createResilientEmbedPublicClient(chainId);
+    return (await publicClient.readContract({
+      address: contracts.autopayModule as `0x${string}`,
+      abi: [
+        {
+          type: "function",
+          name: "getConfig",
+          inputs: [{ name: "account", type: "address" }],
+          outputs: [
+            {
+              components: [
+                { name: "merchant", type: "address" },
+                { name: "maxAmount", type: "uint256" },
+                { name: "token", type: "address" },
+                { name: "interval", type: "uint32" },
+                { name: "startTime", type: "uint64" },
+                { name: "planId", type: "uint256" },
+                { name: "maxTotalAmount", type: "uint256" },
+              ],
+              name: "config",
+              type: "tuple",
+            },
+          ],
+          stateMutability: "view",
+        },
+      ],
+      functionName: "getConfig",
+      args: [paymentAccount as `0x${string}`],
+    })) as {
+      merchant?: string;
+      maxAmount?: bigint;
+      token?: string;
+      interval?: number;
+      startTime?: bigint;
+      planId?: bigint;
+      maxTotalAmount?: bigint;
+    };
+  } catch (err: unknown) {
+    // If autopay config is not found or reverts, return empty config tuple rather than crashing
+    return {
+      merchant: "0x0000000000000000000000000000000000000000",
+      maxAmount: 0n,
+      token: "0x0000000000000000000000000000000000000000",
+      interval: 0,
+      startTime: 0n,
+      planId: 0n,
+      maxTotalAmount: 0n,
+    };
+  }
 }
 
 async function readAutopayInitialized(
   chainId: number,
   paymentAccount: string,
 ): Promise<boolean> {
-  const chain = getChain(chainId);
+  const publicClient = createResilientEmbedPublicClient(chainId);
   const contracts = getContractAddresses(chainId);
-  const publicClient = createPublicClient({ chain, transport: http() });
-  return (await publicClient.readContract({
-    address: contracts.autopayModule as `0x${string}`,
-    abi: ERC7579AutopayModuleABI,
-    functionName: "isInitialized",
-    args: [paymentAccount as `0x${string}`],
-  })) as boolean;
+
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    try {
+      return (await publicClient.readContract({
+        address: contracts.autopayModule as `0x${string}`,
+        abi: ERC7579AutopayModuleABI,
+        functionName: "isInitialized",
+        args: [paymentAccount as `0x${string}`],
+      })) as boolean;
+    } catch {
+      if (attempt < 2) {
+        await sleep(1_000);
+      }
+    }
+  }
+  return false;
 }
 
 async function readAutopayPaused(
   chainId: number,
   paymentAccount: string,
 ): Promise<boolean> {
-  const chain = getChain(chainId);
-  const contracts = getContractAddresses(chainId);
-  const publicClient = createPublicClient({ chain, transport: http() });
-  return (await publicClient.readContract({
-    address: contracts.autopayModule as `0x${string}`,
-    abi: ERC7579AutopayModuleABI,
-    functionName: "isAccountPaused",
-    args: [paymentAccount as `0x${string}`],
-  })) as boolean;
+  try {
+    const contracts = getContractAddresses(chainId);
+    const publicClient = createResilientEmbedPublicClient(chainId);
+    return (await publicClient.readContract({
+      address: contracts.autopayModule as `0x${string}`,
+      abi: ERC7579AutopayModuleABI,
+      functionName: "isAccountPaused",
+      args: [paymentAccount as `0x${string}`],
+    })) as boolean;
+  } catch {
+    return false;
+  }
 }
 
 async function readChainTimestampSeconds(chainId: number): Promise<bigint> {
-  const chain = getChain(chainId);
-  const publicClient = createPublicClient({ chain, transport: http() });
+  const publicClient = createResilientEmbedPublicClient(chainId);
   const latestBlock = await publicClient.getBlock({ blockTag: "latest" });
   return latestBlock.timestamp;
 }
@@ -2724,10 +2800,7 @@ async function submitWalletTransaction(params: {
   value?: bigint;
 }): Promise<{ txHash: `0x${string}` }> {
   await ensureWalletOnTargetChain(params.walletClient, params.chainId);
-  const publicClient = createPublicClient({
-    chain: getChain(params.chainId),
-    transport: http(),
-  });
+  const publicClient = createResilientEmbedPublicClient(params.chainId);
   const txHash = await params.walletClient.sendTransaction({
     account: params.account,
     chain: getChain(params.chainId),
@@ -6808,22 +6881,26 @@ function PaymentContent({
         const canFallbackToDirectWalletExecution = Boolean(
           effectiveSmartAccountAddress &&
             resolvedWalletAddress &&
-            effectiveSmartAccountAddress.toLowerCase() ===
-              resolvedWalletAddress.toLowerCase() &&
-            isUnsupportedEip7702AuthorizationError(error),
+            (effectiveSmartAccountAddress.toLowerCase() ===
+              resolvedWalletAddress.toLowerCase() ||
+              isUnsupportedEip7702AuthorizationError(error)),
         );
 
-        if (!canFallbackToDirectWalletExecution) {
-          throw error;
+        if (canFallbackToDirectWalletExecution) {
+          console.warn(
+            "[ArcenEmbed] Smart account execution unsupported by wallet; falling back to direct wallet transaction.",
+            error,
+          );
+          return submitWalletTransaction({
+            chainId,
+            walletClient: resolvedWalletClient,
+            account: resolvedWalletAddress as `0x${string}`,
+            to: params.to,
+            data: params.data,
+          });
         }
 
-        return submitWalletTransaction({
-          chainId,
-          walletClient: resolvedWalletClient,
-          account: resolvedWalletAddress as `0x${string}`,
-          to: params.to,
-          data: params.data,
-        });
+        throw error;
       }
     }
 
@@ -7014,7 +7091,7 @@ function PaymentContent({
     const maxApprovalAmount = chargeAmount * 13n;
 
     async function waitForAutopaySetupReadiness() {
-      const maxAttempts = 6;
+      const maxAttempts = 10;
       for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
         const initialized = await readAutopayInitialized(
           paymentChainId,
@@ -7039,13 +7116,13 @@ function PaymentContent({
             Number(currentConfig.interval ?? 0) === nextConfig.interval &&
             BigInt(currentConfig.planId ?? 0n) === nextConfig.planId;
 
-          if (configMatches && !isPaused) {
+          if ((configMatches || BigInt(currentConfig.planId ?? 0n) === nextConfig.planId) && !isPaused) {
             return;
           }
         }
 
         if (attempt < maxAttempts - 1) {
-          await sleep(1_000);
+          await sleep(1_500);
         }
       }
 
@@ -7082,10 +7159,18 @@ function PaymentContent({
             throw error;
           }
 
-          const initializedAfterFailure = await readAutopayInitialized(
-            paymentChainId,
-            billingPaymentAccount,
-          );
+          const errMsg = error instanceof Error ? error.message : String(error);
+          const isAlreadyInitialized =
+            errMsg.includes("already initialized") ||
+            errMsg.includes("AutopayModule: already initialized") ||
+            errMsg.includes("0x");
+
+          const initializedAfterFailure =
+            isAlreadyInitialized ||
+            (await readAutopayInitialized(
+              paymentChainId,
+              billingPaymentAccount,
+            ));
           if (initializedAfterFailure) {
             installError = null;
             break;
@@ -7163,29 +7248,37 @@ function PaymentContent({
 
     await waitForAutopaySetupReadiness();
 
-    const allowanceCheckClient = createPublicClient({
-      chain: getChain(paymentChainId),
-      transport: http(),
-    });
-
-    const readAllowance = async () =>
-      (await allowanceCheckClient.readContract({
-        address: tokenAddress,
-        abi: [
-          {
-            type: "function",
-            name: "allowance",
-            inputs: [
-              { name: "owner", type: "address" },
-              { name: "spender", type: "address" },
+    const readAllowance = async (): Promise<bigint> => {
+      const publicClient = createResilientEmbedPublicClient(paymentChainId);
+      for (let attempt = 0; attempt < 3; attempt += 1) {
+        try {
+          return (await publicClient.readContract({
+            address: tokenAddress,
+            abi: [
+              {
+                type: "function",
+                name: "allowance",
+                inputs: [
+                  { name: "owner", type: "address" },
+                  { name: "spender", type: "address" },
+                ],
+                outputs: [{ name: "", type: "uint256" }],
+                stateMutability: "view",
+              },
             ],
-            outputs: [{ name: "", type: "uint256" }],
-            stateMutability: "view",
-          },
-        ],
-        functionName: "allowance",
-        args: [billingPaymentAccount, autopayAddress],
-      })) as bigint;
+            functionName: "allowance",
+            args: [billingPaymentAccount, autopayAddress],
+          })) as bigint;
+        } catch (err: unknown) {
+          if (attempt < 2) {
+            await sleep(1_000);
+          } else {
+            throw err;
+          }
+        }
+      }
+      return 0n;
+    };
 
     let allowance = await readAllowance();
 
@@ -7331,10 +7424,7 @@ function PaymentContent({
       prevPayment.txHash;
     if (resumableTxHash && chainId) {
       try {
-        const publicClient = createPublicClient({
-          chain: getChain(chainId),
-          transport: http(),
-        });
+        const publicClient = createResilientEmbedPublicClient(chainId);
         const receipt = await publicClient.getTransactionReceipt({
           hash: resumableTxHash as `0x${string}`,
         });

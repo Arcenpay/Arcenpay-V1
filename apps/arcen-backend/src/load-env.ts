@@ -25,9 +25,18 @@ function resolveEnvLocations() {
 }
 
 if (!globalThis.__ARCENPAY_BACKEND_ENV_LOADED__) {
-  for (const envPath of resolveEnvLocations()) {
+  const envPaths = resolveEnvLocations();
+  const appDir = process.cwd().endsWith(path.join("apps", "arcen-backend"))
+    ? process.cwd()
+    : path.resolve(process.cwd(), "apps/arcen-backend");
+  for (const envPath of envPaths) {
     if (fs.existsSync(envPath)) {
-      dotenv.config({ path: envPath, override: false });
+      // Load shared workspace defaults first, then let the app-local env win.
+      // Otherwise a stale root signer/contract override silently masks the
+      // backend's deployment-specific configuration.
+      const isAppLocal = envPath === path.resolve(appDir, ".env") ||
+        envPath === path.resolve(appDir, ".env.local");
+      dotenv.config({ path: envPath, override: isAppLocal });
     }
   }
   globalThis.__ARCENPAY_BACKEND_ENV_LOADED__ = true;
