@@ -58,6 +58,7 @@ import {
   formatRuntimeChainMismatch,
   getContractAddresses,
   getChainEnvironment,
+  getChainFamily,
   validateChainEnvironment,
   type PlanTier,
   type X402VerifiedPaymentContext,
@@ -102,6 +103,12 @@ import { ProofOrchestrator } from "./services/proof-orchestrator.js";
 import { BillingKeeper } from "./services/keeper.js";
 import { AxelarTransport } from "./services/transport-axelar.js";
 import { CCIPTransport } from "./services/transport-ccip.js";
+import {
+  registerChainAdapter,
+  type ChainAdapter,
+} from "./services/chain-adapter.js";
+import { EvmChainAdapter } from "./services/evm-adapter.js";
+import { StellarChainAdapter } from "./services/stellar-adapter.js";
 
 const app = express();
 const PORT = process.env.PORT || 3402;
@@ -865,6 +872,11 @@ async function buildBillingEventRequest(
     payload: payload.payload,
     triggerInvoice: payload.triggerInvoice,
     source: payload.source,
+    // Top-level chainId so the backend can derive `chainFamily` for any rows
+    // it creates (SubscriptionState, etc.). The backend Zod accepts this
+    // optionally; if absent, it falls back to reading from payload.chainId
+    // (legacy path) or to its schema default (84532 = EVM).
+    chainId: payload.chainId ?? CHAIN_ID,
   };
 }
 
@@ -1002,6 +1014,42 @@ const eventListener = new EventListenerService({
   rpcUrl: RPC_URL,
   chainId: CHAIN_ID,
 });
+
+// ── Chain Adapter Registry ────────────────────────────────────────────────
+//
+// Every chain the facilitator watches is registered with a family-aware
+// ChainAdapter. Today only the runtime CHAIN_ID is registered (via the EVM
+// adapter for EVM ids, the Stellar adapter for Stellar synthetic ids). When
+// the facilitator later supports multi-chain watchers, register an adapter
+// per chain here.
+//
+// The EvmChainAdapter wraps the existing viem-based EventListenerService
+// (above) so the existing event pipeline keeps working unchanged. The
+// StellarChainAdapter skeleton throws StellarAdapterNotImplemented until
+// the Soroban RPC client is wired in — booting with it on a Stellar chain
+// is therefore expected to fail at startEventListener() until that lands.
+const chainFamily = getChainFamily(CHAIN_ID);
+let primaryChainAdapter: ChainAdapter;
+if (chainFamily === "evm") {
+  primaryChainAdapter = new EvmChainAdapter({
+    chainId: CHAIN_ID,
+    rpcUrl: RPC_URL,
+  });
+  registerChainAdapter(primaryChainAdapter);
+} else if (chainFamily === "stellar") {
+  primaryChainAdapter = new StellarChainAdapter({
+    chainId: CHAIN_ID,
+    // The server-level RPC_URL is normally an EVM-style URL for the runtime
+    // CHAIN_ID; for Stellar we DON'T pass it — let the adapter resolve the
+    // Soroban RPC URL via getStellarSorobanRpcUrl() honoring env vars.
+  });
+  registerChainAdapter(primaryChainAdapter);
+} else {
+  console.warn(
+    `[Facilitator] No ChainAdapter available for chainId ${CHAIN_ID} (family ${chainFamily ?? "unknown"}). ` +
+      `On-chain listeners will not be armed.`,
+  );
+}
 
 // Optional: Webhook service (if webhook URL is configured)
 // Accepts WEBHOOK_SIGNING_SECRET or SVIX_SIGNING_SECRET (alias)
@@ -1143,6 +1191,11 @@ type BillingEventJobPayload = {
   onChainPlanId?: string | null;
   sourceTokenId?: string;
   wallet?: string | null;
+  // ChainId is threaded through the durable queue so the backend can derive
+  // `chainFamily` for any rows it creates from this event (SubscriptionState,
+  // Payment, etc.). Defaults to the facilitator's runtime CHAIN_ID; for
+  // Stellar synthetic ids (9_000_000+) the backend resolves "STELLAR".
+  chainId?: number;
 };
 
 type SubscriptionSyncJobPayload = {
@@ -1335,6 +1388,7 @@ async function persistBillingEvent(
       onChainPlanId: routing?.onChainPlanId ?? null,
       sourceTokenId: routing?.sourceTokenId,
       wallet: routing?.wallet ?? null,
+      chainId: CHAIN_ID,
     } satisfies BillingEventJobPayload,
     { idempotencyKey: `billing:${eventEnvelope.idempotencyKey}` },
   );

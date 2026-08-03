@@ -260,6 +260,23 @@ export type JsonNullableWithAggregatesFilterBase<$PrismaModel = never> = {
   _max?: Prisma.NestedJsonNullableFilter<$PrismaModel>
 }
 
+export type EnumChainFamilyFilter<$PrismaModel = never> = {
+  equals?: $Enums.ChainFamily | Prisma.EnumChainFamilyFieldRefInput<$PrismaModel>
+  in?: $Enums.ChainFamily[] | Prisma.ListEnumChainFamilyFieldRefInput<$PrismaModel>
+  notIn?: $Enums.ChainFamily[] | Prisma.ListEnumChainFamilyFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumChainFamilyFilter<$PrismaModel> | $Enums.ChainFamily
+}
+
+export type EnumChainFamilyWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.ChainFamily | Prisma.EnumChainFamilyFieldRefInput<$PrismaModel>
+  in?: $Enums.ChainFamily[] | Prisma.ListEnumChainFamilyFieldRefInput<$PrismaModel>
+  notIn?: $Enums.ChainFamily[] | Prisma.ListEnumChainFamilyFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumChainFamilyWithAggregatesFilter<$PrismaModel> | $Enums.ChainFamily
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumChainFamilyFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumChainFamilyFilter<$PrismaModel>
+}
+
 export type EnumTeamRoleFilter<$PrismaModel = never> = {
   equals?: $Enums.TeamRole | Prisma.EnumTeamRoleFieldRefInput<$PrismaModel>
   in?: $Enums.TeamRole[] | Prisma.ListEnumTeamRoleFieldRefInput<$PrismaModel>
@@ -1227,6 +1244,23 @@ export type NestedJsonNullableFilterBase<$PrismaModel = never> = {
   gt?: runtime.InputJsonValue | Prisma.JsonFieldRefInput<$PrismaModel>
   gte?: runtime.InputJsonValue | Prisma.JsonFieldRefInput<$PrismaModel>
   not?: runtime.InputJsonValue | Prisma.JsonFieldRefInput<$PrismaModel> | Prisma.JsonNullValueFilter
+}
+
+export type NestedEnumChainFamilyFilter<$PrismaModel = never> = {
+  equals?: $Enums.ChainFamily | Prisma.EnumChainFamilyFieldRefInput<$PrismaModel>
+  in?: $Enums.ChainFamily[] | Prisma.ListEnumChainFamilyFieldRefInput<$PrismaModel>
+  notIn?: $Enums.ChainFamily[] | Prisma.ListEnumChainFamilyFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumChainFamilyFilter<$PrismaModel> | $Enums.ChainFamily
+}
+
+export type NestedEnumChainFamilyWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.ChainFamily | Prisma.EnumChainFamilyFieldRefInput<$PrismaModel>
+  in?: $Enums.ChainFamily[] | Prisma.ListEnumChainFamilyFieldRefInput<$PrismaModel>
+  notIn?: $Enums.ChainFamily[] | Prisma.ListEnumChainFamilyFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumChainFamilyWithAggregatesFilter<$PrismaModel> | $Enums.ChainFamily
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumChainFamilyFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumChainFamilyFilter<$PrismaModel>
 }
 
 export type NestedEnumTeamRoleFilter<$PrismaModel = never> = {

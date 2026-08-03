@@ -5,6 +5,7 @@ import { createPublicClient, http } from "viem";
 import { requirePermission, isErrorResponse } from "../../../lib/auth/api-auth.js";
 import { listAllMetadataEntitlements } from "../../../lib/catalog/catalog-entitlements.js";
 import { writeAuditEvent } from "../../../lib/platform/audit.js";
+import { resolveChainFamilyForPrisma } from "../../../lib/platform/chain-family.js";
 import { resolvePlanNetwork } from "../../../lib/catalog/plan-network.js";
 import { toPrismaNullableJson } from "../../../utils/prisma-json.js";
 import { assertCanCreatePlan } from "../../../lib/catalog/tier-guard.js";
@@ -202,6 +203,7 @@ export async function listPlans(c: Context) {
         where: { id: plan.id },
         data: {
           chainId: activeEnvironment.chainId,
+          chainFamily: resolveChainFamilyForPrisma(activeEnvironment.chainId),
           acceptedToken: resolved.acceptedToken,
           chainSyncStatus:
             parseFloat(plan.price.toString()) === 0 ? "NOT_APPLICABLE" : "PENDING",
@@ -316,6 +318,7 @@ export async function createPlan(c: Context) {
       billingInterval: data.billingInterval,
       acceptedToken: resolvedNetwork.acceptedToken,
       chainId: activeEnvironment.chainId,
+      chainFamily: resolveChainFamilyForPrisma(activeEnvironment.chainId),
       metadata: toPrismaNullableJson(data.metadata),
       status: "DRAFT",
       active: true,
@@ -502,6 +505,7 @@ export async function updatePlan(c: Context) {
         parsed.data.chainId !== undefined) && {
         acceptedToken: resolvedNetwork.acceptedToken,
         chainId: activeEnvironment.chainId,
+        chainFamily: resolveChainFamilyForPrisma(activeEnvironment.chainId),
       }),
       ...(parsed.data.metadata !== undefined && {
         metadata: toPrismaNullableJson(parsed.data.metadata),

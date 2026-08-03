@@ -391,6 +391,10 @@ async function processStoredBillingEvent(
   const amount = Number(payload.amount ?? 0);
   const occurredAt = options.occurredAt ?? occurredAtFromPayload ?? new Date();
   const currentPeriodEnd = resolveExpirationDate();
+  const payloadChainId =
+    typeof payload.chainId === "number" && Number.isFinite(payload.chainId)
+      ? payload.chainId
+      : null;
 
   if (
     (event.eventType === "SUBSCRIPTION_MINTED" ||
@@ -403,6 +407,7 @@ async function processStoredBillingEvent(
       companyId,
       walletAddress: customerWallet,
       onChainTokenId,
+      chainId: payloadChainId,
       status: "ACTIVE",
       catalogPlanId,
       onChainPlanId,
@@ -459,6 +464,7 @@ async function processStoredBillingEvent(
       companyId,
       walletAddress: customerWallet,
       onChainTokenId,
+      chainId: payloadChainId,
       status: "PAST_DUE",
       catalogPlanId,
       onChainPlanId,
@@ -505,6 +511,7 @@ async function processStoredBillingEvent(
       companyId,
       walletAddress: customerWallet,
       onChainTokenId,
+      chainId: payloadChainId,
       status: "CANCELLED",
       catalogPlanId,
       onChainPlanId,

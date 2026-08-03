@@ -29,6 +29,7 @@ import { deliverWebhook } from "../webhooks/deliver-webhook.js";
 import { TIER_PRICING } from "../catalog/tier-guard.js";
 import { sendPaidInvoiceReceipt } from "./invoice-notifications.js";
 import { syncEntitlementsToFlagRules } from "../entitlements/sync-entitlements.js";
+import { resolveChainFamilyForPrisma } from "../platform/chain-family.js";
 import {
   PLATFORM_BILLING_ACCEPTED_TOKEN,
   PLATFORM_BILLING_CHAIN_ID,
@@ -233,17 +234,18 @@ async function ensurePlatformBillingPlanRow(tier: PlatformTier) {
       acceptedToken,
       treasuryWallet,
     },
-    create: {
-      environmentId: account.environmentId,
-      chainId: PLATFORM_BILLING_CHAIN_ID,
-      tier,
-      planName,
-      priceMicros: amountMicros,
-      billingIntervalSeconds: PLATFORM_BILLING_INTERVAL_SECONDS,
-      acceptedToken,
-      treasuryWallet,
-      syncStatus: "PENDING",
-    },
+create: {
+       environmentId: account.environmentId,
+       chainId: PLATFORM_BILLING_CHAIN_ID,
+       chainFamily: resolveChainFamilyForPrisma(PLATFORM_BILLING_CHAIN_ID),
+       tier,
+       planName,
+       priceMicros: amountMicros,
+       billingIntervalSeconds: PLATFORM_BILLING_INTERVAL_SECONDS,
+       acceptedToken,
+       treasuryWallet,
+       syncStatus: "PENDING",
+     },
   });
 }
 
@@ -389,6 +391,7 @@ export async function bootstrapPlatformBillingPlans(): Promise<{
       data: {
         onChainPlanId,
         chainId: PLATFORM_BILLING_CHAIN_ID,
+        chainFamily: resolveChainFamilyForPrisma(PLATFORM_BILLING_CHAIN_ID),
         chainSyncStatus: "SYNCED",
         acceptedToken: platformBillingToken(),
       },
@@ -763,6 +766,7 @@ export async function ensureTierCatalogPlan(
         billingInterval: MONTHLY_INTERVAL,
         environmentMode: environment?.mode ?? "DEVELOPMENT",
         chainId: catalogChainId,
+        chainFamily: resolveChainFamilyForPrisma(catalogChainId),
         acceptedToken: catalogToken,
         metadata: toPrismaJson(metadata),
       },
@@ -779,6 +783,7 @@ export async function ensureTierCatalogPlan(
           ? {
               environmentMode: environment?.mode ?? "DEVELOPMENT",
               chainId: catalogChainId,
+              chainFamily: resolveChainFamilyForPrisma(catalogChainId),
               acceptedToken: catalogToken,
             }
           : {}),

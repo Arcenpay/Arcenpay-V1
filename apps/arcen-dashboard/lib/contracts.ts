@@ -109,7 +109,8 @@ export interface TokenOption {
   chainLabel: string;
   tag: "testnet" | "mainnet";
   symbol: string;
-  address: `0x${string}`;
+  // Family-agnostic: EVM addresses are 0x-hex; Stellar SAC issuers are G… accounts.
+  address: string;
   source: "default" | "override";
 }
 

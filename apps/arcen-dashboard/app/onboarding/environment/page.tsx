@@ -15,31 +15,56 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  ARC_TESTNET_CHAIN_ID,
-  BASE_MAINNET_CHAIN_ID,
   BASE_SEPOLIA_CHAIN_ID,
+  STELLAR_TESTNET_CHAIN_ID,
   getChainLabel,
+  getChainIdsForEnvironment,
   type EnvironmentMode,
 } from "@/lib/default-chain";
+import { getChainFamily } from "@arcenpay/internal-core";
+import { getOnboardingChainFamily } from "@/lib/onboarding-chain-family";
 import { useDashboardSession } from "@/hooks/use-dashboard-session";
 import { OnboardingShell } from "@/components/onboarding/onboarding-shell";
+import type { ChainFamily } from "@arcenpay/internal-core";
+
+const selectedFamily: ChainFamily | null =
+  typeof window !== "undefined" ? getOnboardingChainFamily() : null;
+
+// Chain picker filtered to only the selected family — EVM users see
+// Base/Arc/Sepolia; Stellar users see Stellar Testnet/Mainnet/Futurenet.
+function buildChainOptions(mode: EnvironmentMode) {
+  return getChainIdsForEnvironment(mode)
+    .filter((chainId) => {
+      if (!selectedFamily) return true; // fallback: show all
+      return getChainFamily(chainId) === selectedFamily;
+    })
+    .map((chainId) => ({
+      chainId,
+      label: getChainLabel(chainId),
+    }));
+}
 
 const CHAINS: Record<EnvironmentMode, Array<{ chainId: number; label: string }>> = {
-  DEVELOPMENT: [
-    { chainId: BASE_SEPOLIA_CHAIN_ID, label: getChainLabel(BASE_SEPOLIA_CHAIN_ID) },
-    { chainId: ARC_TESTNET_CHAIN_ID, label: getChainLabel(ARC_TESTNET_CHAIN_ID) },
-  ],
-  PRODUCTION: [
-    { chainId: BASE_MAINNET_CHAIN_ID, label: getChainLabel(BASE_MAINNET_CHAIN_ID) },
-  ],
+  DEVELOPMENT: buildChainOptions("DEVELOPMENT"),
+  PRODUCTION: buildChainOptions("PRODUCTION"),
 };
+
+function defaultChainIdForFamily(
+  mode: EnvironmentMode,
+  family: ChainFamily | null,
+): number {
+  if (family === "stellar") return STELLAR_TESTNET_CHAIN_ID;
+  return BASE_SEPOLIA_CHAIN_ID;
+}
 
 export default function EnvironmentOnboardingPage() {
   const router = useRouter();
   const { data, isLoading, refresh } = useDashboardSession();
   const [name, setName] = useState("");
   const [mode, setMode] = useState<EnvironmentMode>("DEVELOPMENT");
-  const [chainId, setChainId] = useState<number>(BASE_SEPOLIA_CHAIN_ID);
+  const [chainId, setChainId] = useState<number>(
+    defaultChainIdForFamily("DEVELOPMENT", selectedFamily),
+  );
   const [productionEnabled, setProductionEnabled] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -52,8 +77,10 @@ export default function EnvironmentOnboardingPage() {
   const hasExistingEnvironments = existingEnvironments.length > 0;
 
   useEffect(() => {
-    setChainId(chainOptions[0]?.chainId ?? BASE_SEPOLIA_CHAIN_ID);
-  }, [chainOptions]);
+    setChainId(
+      chainOptions[0]?.chainId ?? defaultChainIdForFamily(mode, selectedFamily),
+    );
+  }, [chainOptions, mode]);
 
   useEffect(() => {
     fetch("/api/environments", { cache: "no-store" })

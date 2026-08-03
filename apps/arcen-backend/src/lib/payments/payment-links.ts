@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { db } from "../../db.js";
 import { toPrismaJson, toPrismaNullableJson } from "../../utils/prisma-json.js";
 import { DEFAULT_CHAIN_ID } from "../platform/default-chain.js";
+import { resolveChainFamilyForPrisma } from "../platform/chain-family.js";
 
 function slugify(value: string): string {
   return value
@@ -39,6 +40,8 @@ export async function createPaymentLink(input: {
   const baseSlug = slugify(input.name) || "payment";
   const slug = `${baseSlug}-${randomUUID().slice(0, 8)}`;
 
+  const resolvedChainId = input.chainId ?? DEFAULT_CHAIN_ID;
+
   return db.paymentLink.create({
     data: {
       teamId: input.teamId,
@@ -53,7 +56,8 @@ export async function createPaymentLink(input: {
       currency: input.currency ?? "USDC",
       amount: input.amount.toFixed(6),
       acceptedToken: normalizeWallet(input.acceptedToken) || input.acceptedToken,
-      chainId: input.chainId ?? DEFAULT_CHAIN_ID,
+      chainId: resolvedChainId,
+      chainFamily: resolveChainFamilyForPrisma(resolvedChainId),
       recipientWallet:
         normalizeWallet(input.recipientWallet) || input.recipientWallet,
       successUrl: input.successUrl ?? null,

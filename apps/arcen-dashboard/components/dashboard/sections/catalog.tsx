@@ -263,7 +263,7 @@ function getInitialTokenForEnvironment(
   env: EnvMode,
   connectedChainId?: number,
   lockedChainId?: number,
-): `0x${string}` {
+): string {
   const resolvedChainId = lockedChainId ?? resolveEnvironmentChainId(env);
   const envTokens = lockedChainId
     ? getTokenOptionsForChain(lockedChainId)

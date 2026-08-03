@@ -4,16 +4,35 @@
 //
 //  Runtime override: set ARCENPAY_CONTRACT_<chainId>_<key> to inject
 //  addresses without redeploying the package — e.g.:
-//    ARCENPAY_CONTRACT_8453_planFactory=0xAbCd...
+//    ARCENPAY_CONTRACT_8453_planFactory=0xAbCd...          (EVM)
+//    ARCENPAY_CONTRACT_9000001_subscriptionRegistry=C…      (Stellar)
 //
-//  Zero-address guard: calling getContractAddresses() for a chain
-//  whose addresses are all zero-address placeholders throws in
-//  NODE_ENV=production so misconfigured deployments fail fast.
+//  Family awareness: EVM contracts use 20-byte hex 0x addresses with the
+//  0x000…000 zero-address as the "unset" sentinel. Stellar contracts use
+//  56-char C… (contract id) or 64-hex; the "unset" sentinel for Stellar
+//  is the empty string. This module rejects only the sentinel that matches
+//  the chain's family.
 // ============================================================
 
 import type { ContractAddresses } from './types';
+import {
+  getChainFamily,
+  isUnsetAddressForChain,
+  unsetAddressForFamily,
+  type ChainFamily,
+} from './chain-family';
+import {
+  STELLAR_MAINNET_CHAIN_ID,
+  STELLAR_TESTNET_CHAIN_ID,
+  STELLAR_FUTURENET_CHAIN_ID,
+} from './chain-family';
 
 // --- Contract Addresses per Chain ---
+//
+// For Stellar chains we leave the addresses as "" (family unset sentinel).
+// Deployments inject real contract ids via env vars or `setContractAddresses`.
+const STELLAR_UNSET = "";
+
 const ADDRESSES: Record<number, ContractAddresses> = {
   // Ethereum Sepolia (Testnet) — Deployed 2026-03-19
   11155111: {
@@ -55,6 +74,39 @@ const ADDRESSES: Record<number, ContractAddresses> = {
     zkUsageVerifier: '0xf45A9E5280F72260a713c50b0Ca4e4FB1e22Cc8A',
     mirrorRegistry: '0x05BdaB1b4A87a4a5DF3Af1Ebb9Da853A0d31592E',
   },
+
+  // ── Stellar Mainnet — synthetic chainId 9_000_000 ──
+  // Addresses are C… Soroban contract ids; deploy via env overrides.
+  900000: {
+    subscriptionRegistry: STELLAR_UNSET,
+    autopayModule: STELLAR_UNSET, // Stellar analogue: autopay-account
+    planFactory: STELLAR_UNSET,
+    feeCollector: STELLAR_UNSET,
+    sessionVault: STELLAR_UNSET,
+    zkUsageVerifier: STELLAR_UNSET,
+    mirrorRegistry: STELLAR_UNSET,
+  },
+// ── Stellar Testnet — synthetic chainId 9_000_001 ──
+  // Deployed 2026-08-03, source: GAPTLSU5SPPGZBGS3Y45EJG5U6ZJ7VARO4OLD76TSQGG25RNEFCTG2P3
+  [STELLAR_TESTNET_CHAIN_ID]: {
+    subscriptionRegistry: "CBNUA7RLTYRKNQVYOCH4IFMLGTLFL56C5NTS5BEWC2AQGYQEQA4BSOOG",
+    autopayModule:       "CBIESVR5J3CWARGTUFX5N5B35L6YMW55G7XFLL2H2U3W6ZOH7X6SD657",
+    planFactory:         "CAF4VS5OMM6DW5ZN5JFJH4U2RJD6DODZYBHNXMTS6RSUMPDO3T4C73S7",
+    feeCollector:        "CCYRIQZNSWWO7KO6ZBA2AU4GAGQHR44ZQO577JYFVFXAHJW6WNB2XL5A",
+    sessionVault:        "CCFU6CXODJEGZLKYNSWI4Z5L5CGN7TCVGHZ33IPKPZK6HBXVDZKMVTLY",
+    zkUsageVerifier:     "CB5UVWDVPATDHJUKLMJXH5FJRNRDPXENXQYOXTT5FYDOXSJGDPUSIDU6",
+    mirrorRegistry:      "CB5GW6VAYJXMRTPKSEIFAJDT2WID2J5PSDLMAFH5LL7IAVQJNMS2OCO2",
+  },
+  // ── Stellar Futurenet — synthetic chainId 9_000_002 ──
+  9000002: {
+    subscriptionRegistry: STELLAR_UNSET,
+    autopayModule: STELLAR_UNSET,
+    planFactory: STELLAR_UNSET,
+    feeCollector: STELLAR_UNSET,
+    sessionVault: STELLAR_UNSET,
+    zkUsageVerifier: STELLAR_UNSET,
+    mirrorRegistry: STELLAR_UNSET,
+  },
 };
 
 const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
@@ -71,39 +123,61 @@ const CONTRACT_KEYS: (keyof ContractAddresses)[] = [
 /**
  * Applies ARCENPAY_CONTRACT_<chainId>_<key> (or legacy MEAP_CONTRACT_<chainId>_<key>) env var
  * overrides to a base addresses object.
- * This allows injecting deployed addresses for new chains without redeploying the package.
+ *
+ * Family-aware validation:
+ *   - EVM: requires value to start with '0x'.
+ *   - Stellar: requires value to be non-empty (any string form C… or hex is accepted).
+ *
+ * This allows injecting deployed addresses for new chains (EVM or otherwise)
+ * without redeploying the package.
  */
 function applyEnvOverrides(chainId: number, base: ContractAddresses): ContractAddresses {
   if (typeof process === 'undefined') return base;
+  const family = getChainFamily(chainId);
   const result = { ...base };
   for (const key of CONTRACT_KEYS) {
     // Check new prefix first, fall back to legacy MEAP_ prefix
     const envKey = `ARCENPAY_CONTRACT_${chainId}_${key}`;
     const legacyKey = `MEAP_CONTRACT_${chainId}_${key}`;
     const override = process.env[envKey] ?? process.env[legacyKey];
-    if (override && override.startsWith('0x')) {
+    if (override && isAcceptableAddressForFamily(override, family)) {
       (result as unknown as Record<string, string>)[key] = override;
     }
   }
   // optional extension contracts
   const mirrorOverride = process.env[`ARCENPAY_CONTRACT_${chainId}_mirrorRegistry`] ?? process.env[`MEAP_CONTRACT_${chainId}_mirrorRegistry`];
-  if (mirrorOverride && mirrorOverride.startsWith('0x')) {
+  if (mirrorOverride && isAcceptableAddressForFamily(mirrorOverride, family)) {
     result.mirrorRegistry = mirrorOverride;
   }
-  const yieldOverride = process.env[`ARCENPAY_CONTRACT_${chainId}_yieldSessionVault`] ?? process.env[`MEAP_CONTRACT_${chainId}_yieldSessionVault`];
-  if (yieldOverride && yieldOverride.startsWith('0x')) {
-    result.yieldSessionVault = yieldOverride;
+  // yieldSessionVault is EVM-only — ignore env overrides for non-EVM chains.
+  if (family === 'evm') {
+    const yieldOverride = process.env[`ARCENPAY_CONTRACT_${chainId}_yieldSessionVault`] ?? process.env[`MEAP_CONTRACT_${chainId}_yieldSessionVault`];
+    if (yieldOverride && isAcceptableAddressForFamily(yieldOverride, family)) {
+      result.yieldSessionVault = yieldOverride;
+    }
   }
   return result;
+}
+
+/** True if `value` is a non-empty, family-appropriate override address. */
+function isAcceptableAddressForFamily(
+  value: string,
+  family: ChainFamily | null,
+): boolean {
+  if (!value) return false;
+  if (family === 'evm') return value.startsWith('0x');
+  // Stellar and unknown families: accept any non-empty string; the empty
+  // string is the unset sentinel and is rejected by the truthiness check.
+  return value.length > 0;
 }
 
 /**
  * Returns contract addresses for a given chain.
  *
  * In NODE_ENV=production, throws if all core contract addresses are still
- * zero-address placeholders — the chain has not been deployed to.
+ * the family-appropriate "unset" sentinel — the chain has not been deployed to.
  *
- * @param chainId - The chain ID
+ * @param chainId - The chain ID (EVM real id or Stellar synthetic id)
  * @returns Contract addresses for the chain, with any env var overrides applied
  */
 export function getContractAddresses(chainId: number): ContractAddresses {
@@ -114,13 +188,16 @@ export function getContractAddresses(chainId: number): ContractAddresses {
 
   const addresses = applyEnvOverrides(chainId, base);
 
-  // In production, reject chains with only zero-address placeholders.
-  // A chain is considered undeployed if ALL core contracts are zero.
+  // In production, reject chains with only "unset" sentinel placeholders.
+  // A chain is considered undeployed if ALL core contracts are the sentinel.
   if (typeof process !== 'undefined' && process.env.NODE_ENV === 'production') {
-    const allZero = CONTRACT_KEYS.every(
-      (k) => (addresses as unknown as Record<string, string>)[k] === ZERO_ADDRESS,
+    const allUnset = CONTRACT_KEYS.every((k) =>
+      isUnsetAddressForChain(
+        (addresses as unknown as Record<string, string>)[k],
+        chainId,
+      ),
     );
-    if (allZero) {
+    if (allUnset) {
       throw new Error(
         `[getContractAddresses] Chain ${chainId} has no deployed contracts. ` +
           `Set ARCENPAY_CONTRACT_${chainId}_<key> env vars or deploy contracts before using this chain in production.`,

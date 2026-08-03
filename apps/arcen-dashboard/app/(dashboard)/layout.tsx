@@ -20,7 +20,7 @@ export default async function DashboardLayout({
   if (!session) redirect("/login");
 
   if (!session.walletAddress) {
-    redirect("/onboarding/wallet");
+    redirect("/onboarding/chain");
   }
 
   // Check if provider profile exists (OWNER/ADMIN only — others skip)

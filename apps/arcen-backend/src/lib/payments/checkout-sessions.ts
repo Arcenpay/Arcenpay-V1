@@ -1,6 +1,7 @@
 import { db } from "../../db.js";
 import { toPrismaJson } from "../../utils/prisma-json.js";
 import { DEFAULT_CHAIN_ID } from "../platform/default-chain.js";
+import { resolveChainFamilyForPrisma } from "../platform/chain-family.js";
 import {
   decimalToAtomicUnits,
   verifyDirectErc20Transfer,
@@ -235,6 +236,7 @@ export async function createCheckoutSession(input: {
       currency: input.currency ?? "USDC",
       acceptedToken: normalizeWallet(input.acceptedToken) || input.acceptedToken,
       chainId: input.chainId ?? DEFAULT_CHAIN_ID,
+      chainFamily: resolveChainFamilyForPrisma(input.chainId ?? DEFAULT_CHAIN_ID),
       recipientWallet:
         normalizeWallet(input.recipientWallet) || input.recipientWallet,
       successUrl: input.successUrl ?? null,

@@ -5,6 +5,10 @@ import { NetworkIcon, TokenIcon } from "@web3icons/react/dynamic";
 import { Network, Coins } from "lucide-react";
 
 // ── Chain ID → web3icons network mapping ─────────────────────────────────
+//
+// Stellar synthetic chainIds (9_000_000 / 9_000_001 / 9_000_002) come from
+// packages/internal-core/src/chain-family.ts. They have no EVM equivalent
+// so we map them to the web3icons "stellar" sprite directly.
 
 const chainIdToNetworkName: Record<number, string> = {
   1: "ethereum",
@@ -12,6 +16,9 @@ const chainIdToNetworkName: Record<number, string> = {
   84532: "base-sepolia",
   11155111: "sepolia",
   5042002: "Arc",
+  9000000: "stellar", // STELLAR_MAINNET_CHAIN_ID
+  9000001: "stellar", // STELLAR_TESTNET_CHAIN_ID
+  9000002: "stellar", // STELLAR_FUTURENET_CHAIN_ID
 };
 
 const chainLabelToNetworkName: Record<string, string> = {
@@ -20,6 +27,9 @@ const chainLabelToNetworkName: Record<string, string> = {
   Sepolia: "sepolia",
   "Arc Testnet": "Arc",
   Ethereum: "ethereum",
+  Stellar: "stellar",
+  "Stellar Testnet": "stellar",
+  "Stellar Futurenet": "stellar",
 };
 
 // ── Public component ──────────────────────────────────────────────────────

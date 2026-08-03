@@ -1,10 +1,16 @@
 #![no_std]
+#![allow(clippy::too_many_arguments)]
 
-use soroban_sdk::{contract, contractimpl, contracttype, Address, Env, String, Vec, BytesN, xdr::FromXdr, xdr::ToXdr};
+extern crate alloc;
+
 use arcenpay_common::{
     auth::*,
-    errors::ArcenPayError,
+    errors::{ArcenPayError, fail},
     types::*,
+};
+use soroban_sdk::{
+    Address, BytesN, Env, IntoVal, String, contract, contractevent, contractimpl, contracttype,
+    xdr::ToXdr,
 };
 
 #[contracttype]
@@ -113,19 +119,23 @@ fn read_subscription(env: &Env, token_id: u128) -> SubscriptionRecord {
     env.storage()
         .persistent()
         .get(&DataKey::SubscriptionByToken(token_id))
-        .expect("Subscription not found")
+        .unwrap_or_else(|| fail(env, ArcenPayError::NotFound))
 }
 
 fn write_subscription(env: &Env, token_id: u128, sub: &SubscriptionRecord) {
-    env.storage().persistent().set(&DataKey::SubscriptionByToken(token_id), sub);
-    env.storage().persistent().set(&DataKey::SubscriptionByWallet(sub.owner.clone()), &token_id);
+    env.storage()
+        .persistent()
+        .set(&DataKey::SubscriptionByToken(token_id), sub);
+    env.storage()
+        .persistent()
+        .set(&DataKey::SubscriptionByWallet(sub.owner.clone()), &token_id);
 }
 
 fn read_plan_factory_addr(env: &Env) -> Address {
     env.storage()
         .instance()
         .get(&DataKey::PlanFactoryAddr)
-        .expect("PlanFactory not configured")
+        .unwrap_or_else(|| fail(env, ArcenPayError::NotInitialized))
 }
 
 fn is_biller(env: &Env, biller: &Address) -> bool {
@@ -136,9 +146,12 @@ fn is_biller(env: &Env, biller: &Address) -> bool {
 }
 
 fn require_biller(env: &Env, caller: &Address) {
-    assert!(is_biller(env, caller), "Not an authorized biller");
+    if !is_biller(env, caller) {
+        fail(env, ArcenPayError::UnauthorizedBiller);
+    }
 }
 
+#[allow(dead_code)]
 fn is_bridge(env: &Env, bridge: &Address) -> bool {
     env.storage()
         .persistent()
@@ -146,8 +159,11 @@ fn is_bridge(env: &Env, bridge: &Address) -> bool {
         .unwrap_or(false)
 }
 
+#[allow(dead_code)]
 fn require_bridge(env: &Env, caller: &Address) {
-    assert!(is_bridge(env, caller), "Not an authorized bridge");
+    if !is_bridge(env, caller) {
+        fail(env, ArcenPayError::NotAuthorized);
+    }
 }
 
 fn migration_enabled(env: &Env) -> bool {
@@ -158,20 +174,28 @@ fn migration_enabled(env: &Env) -> bool {
 }
 
 fn increment_token_id(env: &Env) -> u128 {
-    let id: u128 = env.storage().instance().get(&DataKey::NextTokenId).unwrap_or(1);
-    env.storage().instance().set(&DataKey::NextTokenId, &(id + 1));
+    let id: u128 = env
+        .storage()
+        .instance()
+        .get(&DataKey::NextTokenId)
+        .unwrap_or(1);
+    env.storage()
+        .instance()
+        .set(&DataKey::NextTokenId, &(id + 1));
     id
 }
 
-fn build_mirror_payload(env: &Env, sub: &SubscriptionRecord) -> Vec<u8> {
-    let mut payload = Vec::new(env);
-    payload.append(&sub.owner.to_xdr(env));
-    payload.append(&sub.token_id.to_xdr(env));
-    payload.append(&sub.plan_id.to_xdr(env));
-    payload.append(&sub.plan_tier.to_xdr(env));
-    payload.append(&sub.expiration.to_xdr(env));
-    payload.append(&env.ledger().timestamp().to_xdr(env));
-    payload
+fn build_mirror_payload(env: &Env, sub: &SubscriptionRecord) -> BytesN<32> {
+    let payload = MirrorPayload {
+        subscriber: sub.owner.clone(),
+        source_token_id: sub.token_id,
+        plan_id: sub.plan_id,
+        plan_tier: sub.plan_tier.clone(),
+        expiration: sub.expiration,
+        source_updated_at: env.ledger().timestamp(),
+    };
+    let bytes = payload.to_xdr(env);
+    env.crypto().sha256(&bytes).into()
 }
 
 #[contract]
@@ -180,15 +204,23 @@ pub struct SubscriptionRegistry;
 #[contractimpl]
 impl SubscriptionRegistry {
     pub fn __constructor(env: Env, admin: Address, plan_factory: Address) {
-        assert!(!read_initialized(&env), "Already initialized");
+        if read_initialized(&env) {
+            fail(&env, ArcenPayError::AlreadyInitialized);
+        }
         write_admin(&env, &admin);
-        env.storage().instance().set(&DataKey::PlanFactoryAddr, &plan_factory);
+        env.storage()
+            .instance()
+            .set(&DataKey::PlanFactoryAddr, &plan_factory);
         env.storage().instance().set(&DataKey::NextTokenId, &1u128);
-        env.storage().instance().set(&DataKey::MigrationEnabled, &true);
+        env.storage()
+            .instance()
+            .set(&DataKey::MigrationEnabled, &true);
         write_initialized(&env);
     }
 
-    pub fn version() -> u32 { 1 }
+    pub fn version() -> u32 {
+        1
+    }
 
     pub fn admin(env: Env) -> Address {
         read_admin(&env)
@@ -196,54 +228,76 @@ impl SubscriptionRegistry {
 
     pub fn transfer_admin(env: Env, new_admin: Address) {
         let current = read_admin(&env);
+        if new_admin == current {
+            fail(&env, ArcenPayError::InvalidAddress);
+        }
         current.require_auth();
-        assert_ne!(new_admin, current);
         write_admin(&env, &new_admin);
     }
 
     pub fn pause(env: Env, admin: Address) {
         let stored = read_admin(&env);
-        assert_eq!(admin, stored);
+        if admin != stored {
+            fail(&env, ArcenPayError::NotAuthorized);
+        }
         admin.require_auth();
         write_paused(&env, true);
     }
 
     pub fn unpause(env: Env, admin: Address) {
         let stored = read_admin(&env);
-        assert_eq!(admin, stored);
+        if admin != stored {
+            fail(&env, ArcenPayError::NotAuthorized);
+        }
         admin.require_auth();
         write_paused(&env, false);
     }
 
     pub fn authorize_biller(env: Env, admin: Address, biller: Address) {
         let stored = read_admin(&env);
-        assert_eq!(admin, stored);
+        if admin != stored {
+            fail(&env, ArcenPayError::NotAuthorized);
+        }
         admin.require_auth();
-        env.storage().persistent().set(&DataKey::AuthorizedBiller(biller.clone()), &true);
+        env.storage()
+            .persistent()
+            .set(&DataKey::AuthorizedBiller(biller.clone()), &true);
         BillerAuthorized { biller }.publish(&env);
     }
 
     pub fn revoke_biller(env: Env, admin: Address, biller: Address) {
         let stored = read_admin(&env);
-        assert_eq!(admin, stored);
+        if admin != stored {
+            fail(&env, ArcenPayError::NotAuthorized);
+        }
         admin.require_auth();
-        env.storage().persistent().set(&DataKey::AuthorizedBiller(biller.clone()), &false);
+        env.storage()
+            .persistent()
+            .set(&DataKey::AuthorizedBiller(biller.clone()), &false);
         BillerRevoked { biller }.publish(&env);
     }
 
     pub fn authorize_bridge(env: Env, admin: Address, bridge: Address) {
         let stored = read_admin(&env);
-        assert_eq!(admin, stored);
+        if admin != stored {
+            fail(&env, ArcenPayError::NotAuthorized);
+        }
         admin.require_auth();
-        env.storage().persistent().set(&DataKey::AuthorizedBridge(bridge.clone()), &true);
+        env.storage()
+            .persistent()
+            .set(&DataKey::AuthorizedBridge(bridge.clone()), &true);
         BridgeAuthorized { bridge }.publish(&env);
     }
 
     pub fn revoke_bridge(env: Env, admin: Address, bridge: Address) {
         let stored = read_admin(&env);
-        assert_eq!(admin, stored);
+        if admin != stored {
+            fail(&env, ArcenPayError::NotAuthorized);
+        }
         admin.require_auth();
-        env.storage().persistent().set(&DataKey::AuthorizedBridge(bridge.clone()), &false);
+        env.storage()
+            .persistent()
+            .set(&DataKey::AuthorizedBridge(bridge.clone()), &false);
         BridgeRevoked { bridge }.publish(&env);
     }
 
@@ -254,18 +308,30 @@ impl SubscriptionRegistry {
         ccip_transport: Address,
     ) {
         let stored = read_admin(&env);
-        assert_eq!(admin, stored);
+        if admin != stored {
+            fail(&env, ArcenPayError::NotAuthorized);
+        }
         admin.require_auth();
-        env.storage().instance().set(&DataKey::AxelarTransport, &axelar_transport);
-        env.storage().instance().set(&DataKey::CcipTransport, &ccip_transport);
+        env.storage()
+            .instance()
+            .set(&DataKey::AxelarTransport, &axelar_transport);
+        env.storage()
+            .instance()
+            .set(&DataKey::CcipTransport, &ccip_transport);
     }
 
     pub fn finalize_migration(env: Env, admin: Address) {
         let stored = read_admin(&env);
-        assert_eq!(admin, stored);
+        if admin != stored {
+            fail(&env, ArcenPayError::NotAuthorized);
+        }
         admin.require_auth();
-        assert!(migration_enabled(&env), "Migration already finalized");
-        env.storage().instance().set(&DataKey::MigrationEnabled, &false);
+        if !migration_enabled(&env) {
+            fail(&env, ArcenPayError::MigrationFinalized);
+        }
+        env.storage()
+            .instance()
+            .set(&DataKey::MigrationEnabled, &false);
         RegistryMigrationFinalized {}.publish(&env);
     }
 
@@ -278,17 +344,31 @@ impl SubscriptionRegistry {
         expiration: u64,
     ) {
         let stored = read_admin(&env);
-        assert_eq!(admin, stored);
+        if admin != stored {
+            fail(&env, ArcenPayError::NotAuthorized);
+        }
         admin.require_auth();
         require_not_paused(&env);
-        assert!(migration_enabled(&env), "Migration not enabled");
-        assert!(expiration > env.ledger().timestamp(), "Already expired");
-
-        if env.storage().persistent().has(&DataKey::SubscriptionByToken(token_id)) {
-            panic!("Token already exists");
+        if !migration_enabled(&env) {
+            fail(&env, ArcenPayError::MigrationNotEnabled);
         }
-        if env.storage().persistent().has(&DataKey::SubscriptionByWallet(to.clone())) {
-            panic!("Wallet already has a subscription");
+        if expiration <= env.ledger().timestamp() {
+            fail(&env, ArcenPayError::InvalidConfig);
+        }
+
+        if env
+            .storage()
+            .persistent()
+            .has(&DataKey::SubscriptionByToken(token_id))
+        {
+            fail(&env, ArcenPayError::AlreadyExists);
+        }
+        if env
+            .storage()
+            .persistent()
+            .has(&DataKey::SubscriptionByWallet(to.clone()))
+        {
+            fail(&env, ArcenPayError::AlreadyExists);
         }
 
         let plan_factory = read_plan_factory_addr(&env);
@@ -310,8 +390,18 @@ impl SubscriptionRegistry {
 
         write_subscription(&env, token_id, &sub);
 
-        SubscriptionImported { subscriber: to, token_id, plan_id, expiration }.publish(&env);
-        SubscriptionUpdate { token_id, expiration }.publish(&env);
+        SubscriptionImported {
+            subscriber: to,
+            token_id,
+            plan_id,
+            expiration,
+        }
+        .publish(&env);
+        SubscriptionUpdate {
+            token_id,
+            expiration,
+        }
+        .publish(&env);
     }
 
     pub fn mint(
@@ -320,34 +410,71 @@ impl SubscriptionRegistry {
         to: Address,
         plan_id: u128,
         duration: u64,
+        amount_paid: i128,
     ) -> u128 {
         biller.require_auth();
         require_biller(&env, &biller);
         require_not_paused(&env);
-        assert!(duration > 0, "Duration must be positive");
+        if duration == 0 {
+            fail(&env, ArcenPayError::InvalidInterval);
+        }
+        if amount_paid < 0 {
+            fail(&env, ArcenPayError::InvalidAmount);
+        }
+
+        let plan_factory = read_plan_factory_addr(&env);
+        if !Self::plan_is_active(&env, &plan_factory, plan_id) {
+            fail(&env, ArcenPayError::PlanNotActive);
+        }
 
         let now = env.ledger().timestamp();
-        let expiration = now + duration;
 
-        if env.storage().persistent().has(&DataKey::SubscriptionByWallet(to.clone())) {
-            let existing_token_id: u128 = env.storage().persistent().get(&DataKey::SubscriptionByWallet(to.clone())).unwrap();
+        // EVM behavior: if the wallet already has an active token on the SAME
+        // plan, the request silently renews the existing token rather than
+        // minting a new one. Match that here.
+        if env
+            .storage()
+            .persistent()
+            .has(&DataKey::SubscriptionByWallet(to.clone()))
+        {
+            let existing_token_id: u128 = env
+                .storage()
+                .persistent()
+                .get(&DataKey::SubscriptionByWallet(to.clone()))
+                .unwrap();
             let existing = read_subscription(&env, existing_token_id);
             if existing.plan_id == plan_id {
                 let mut sub = existing;
                 if sub.expiration < now {
-                    sub.expiration = expiration;
+                    sub.expiration = now + duration;
                 } else {
                     sub.expiration += duration;
                 }
                 sub.last_renewed_at = now;
+                sub.total_paid += amount_paid;
+                // Renewal implicitly re-activates a previously cancelled
+                // token (EVM has no `active` flag; the NFT just exists,
+                // rolled over by renewal). Match that here.
+                sub.active = true;
                 write_subscription(&env, existing_token_id, &sub);
-                SubscriptionRenewed { token_id: existing_token_id, new_expiration: sub.expiration, amount_paid: 0 }.publish(&env);
-                SubscriptionUpdate { token_id: existing_token_id, expiration: sub.expiration }.publish(&env);
+                SubscriptionRenewed {
+                    token_id: existing_token_id,
+                    new_expiration: sub.expiration,
+                    amount_paid,
+                }
+                .publish(&env);
+                SubscriptionUpdate {
+                    token_id: existing_token_id,
+                    expiration: sub.expiration,
+                }
+                .publish(&env);
                 return existing_token_id;
             }
+            // Wallet already subscribed to a different plan — require
+            // change_plan / cancel flow, not a fresh mint.
+            fail(&env, ArcenPayError::AlreadyExists);
         }
 
-        let plan_factory = read_plan_factory_addr(&env);
         let plan_tier = Self::resolve_plan_tier(&env, &plan_factory, plan_id);
 
         let token_id = increment_token_id(&env);
@@ -357,46 +484,73 @@ impl SubscriptionRegistry {
             owner: to.clone(),
             plan_id,
             plan_tier,
-            expiration,
+            expiration: now + duration,
             active: true,
             minted_at: now,
             last_renewed_at: now,
-            total_paid: 0,
+            total_paid: amount_paid,
         };
 
         write_subscription(&env, token_id, &sub);
 
-        SubscriptionMinted { subscriber: to, token_id, plan_id, expiration }.publish(&env);
-        SubscriptionUpdate { token_id, expiration }.publish(&env);
+        SubscriptionMinted {
+            subscriber: to,
+            token_id,
+            plan_id,
+            expiration: sub.expiration,
+        }
+        .publish(&env);
+        SubscriptionUpdate {
+            token_id,
+            expiration: sub.expiration,
+        }
+        .publish(&env);
 
         token_id
     }
 
-    pub fn renew(
-        env: Env,
-        biller: Address,
-        token_id: u128,
-        extension: u64,
-    ) {
+    pub fn renew(env: Env, biller: Address, token_id: u128, extension: u64, amount_paid: i128) {
         biller.require_auth();
         require_biller(&env, &biller);
         require_not_paused(&env);
-        assert!(extension > 0, "Extension must be positive");
+        if extension == 0 {
+            fail(&env, ArcenPayError::InvalidInterval);
+        }
+        if amount_paid < 0 {
+            fail(&env, ArcenPayError::InvalidAmount);
+        }
 
         let mut sub = read_subscription(&env, token_id);
-        let now = env.ledger().timestamp();
+        let plan_factory = read_plan_factory_addr(&env);
+        if !Self::plan_is_active(&env, &plan_factory, sub.plan_id) {
+            fail(&env, ArcenPayError::PlanNotActive);
+        }
 
+        let now = env.ledger().timestamp();
         if sub.expiration < now {
             sub.expiration = now + extension;
         } else {
             sub.expiration += extension;
         }
         sub.last_renewed_at = now;
+        sub.total_paid += amount_paid;
+        // Renewal implicitly re-activates a previously cancelled token
+        // (matches EVM behavior — the NFT just exists, no separate `active`).
+        sub.active = true;
 
         write_subscription(&env, token_id, &sub);
 
-        SubscriptionRenewed { token_id, new_expiration: sub.expiration, amount_paid: 0 }.publish(&env);
-        SubscriptionUpdate { token_id, expiration: sub.expiration }.publish(&env);
+        SubscriptionRenewed {
+            token_id,
+            new_expiration: sub.expiration,
+            amount_paid,
+        }
+        .publish(&env);
+        SubscriptionUpdate {
+            token_id,
+            expiration: sub.expiration,
+        }
+        .publish(&env);
     }
 
     pub fn cancel(env: Env, caller: Address, token_id: u128) {
@@ -404,10 +558,9 @@ impl SubscriptionRegistry {
         require_not_paused(&env);
 
         let sub = read_subscription(&env, token_id);
-        assert!(
-            caller == sub.owner || is_biller(&env, &caller),
-            "Not owner and not authorized biller"
-        );
+        if caller != sub.owner && !is_biller(&env, &caller) {
+            fail(&env, ArcenPayError::NotAuthorized);
+        }
 
         let mut sub = sub;
         sub.expiration = env.ledger().timestamp();
@@ -415,7 +568,11 @@ impl SubscriptionRegistry {
         write_subscription(&env, token_id, &sub);
 
         SubscriptionCancelled { token_id }.publish(&env);
-        SubscriptionUpdate { token_id, expiration: sub.expiration }.publish(&env);
+        SubscriptionUpdate {
+            token_id,
+            expiration: sub.expiration,
+        }
+        .publish(&env);
     }
 
     pub fn cancel_subscription(env: Env, owner: Address, token_id: u128) {
@@ -423,7 +580,9 @@ impl SubscriptionRegistry {
         require_not_paused(&env);
 
         let sub = read_subscription(&env, token_id);
-        assert_eq!(sub.owner, owner, "Not the subscription owner");
+        if sub.owner != owner {
+            fail(&env, ArcenPayError::NotOwner);
+        }
 
         let mut sub = sub;
         sub.expiration = env.ledger().timestamp();
@@ -431,7 +590,11 @@ impl SubscriptionRegistry {
         write_subscription(&env, token_id, &sub);
 
         SubscriptionCancelled { token_id }.publish(&env);
-        SubscriptionUpdate { token_id, expiration: sub.expiration }.publish(&env);
+        SubscriptionUpdate {
+            token_id,
+            expiration: sub.expiration,
+        }
+        .publish(&env);
     }
 
     pub fn change_plan(env: Env, biller: Address, token_id: u128, new_plan_id: u128) {
@@ -441,19 +604,44 @@ impl SubscriptionRegistry {
 
         let mut sub = read_subscription(&env, token_id);
         let previous_plan_id = sub.plan_id;
+        if previous_plan_id == new_plan_id {
+            fail(&env, ArcenPayError::InvalidConfig);
+        }
 
         let plan_factory = read_plan_factory_addr(&env);
+        if !Self::plan_is_active(&env, &plan_factory, new_plan_id) {
+            fail(&env, ArcenPayError::PlanNotActive);
+        }
         let plan_tier = Self::resolve_plan_tier(&env, &plan_factory, new_plan_id);
 
         sub.plan_id = new_plan_id;
         sub.plan_tier = plan_tier;
+        // EVM SubscriptionRegistry.changePlan only swaps plan_id _without_
+        // recomputing expiration or charging proration. The FeeCollector
+        // proration flow runs out-of-band on the facilitator side today.
+        // TODO(stellar): once a FeeCollector cross-contract proration call is
+        // implemented, charge/credit the subscriber and adjust expiration.
         write_subscription(&env, token_id, &sub);
 
-        SubscriptionPlanChanged { token_id, previous_plan_id, new_plan_id, expiration: sub.expiration }.publish(&env);
+        SubscriptionPlanChanged {
+            token_id,
+            previous_plan_id,
+            new_plan_id,
+            expiration: sub.expiration,
+        }
+        .publish(&env);
+        SubscriptionUpdate {
+            token_id,
+            expiration: sub.expiration,
+        }
+        .publish(&env);
     }
 
     pub fn is_valid(env: Env, token_id: u128) -> bool {
-        let sub: Option<SubscriptionRecord> = env.storage().persistent().get(&DataKey::SubscriptionByToken(token_id));
+        let sub: Option<SubscriptionRecord> = env
+            .storage()
+            .persistent()
+            .get(&DataKey::SubscriptionByToken(token_id));
         match sub {
             Some(s) => s.active && s.expiration > env.ledger().timestamp(),
             None => false,
@@ -466,7 +654,9 @@ impl SubscriptionRegistry {
     }
 
     pub fn is_renewable(env: Env, token_id: u128) -> bool {
-        env.storage().persistent().has(&DataKey::SubscriptionByToken(token_id))
+        env.storage()
+            .persistent()
+            .has(&DataKey::SubscriptionByToken(token_id))
     }
 
     pub fn get_wallet_subscription(env: Env, wallet: Address) -> u128 {
@@ -477,7 +667,11 @@ impl SubscriptionRegistry {
     }
 
     pub fn has_active_subscription(env: Env, wallet: Address) -> bool {
-        let token_id: u128 = env.storage().persistent().get(&DataKey::SubscriptionByWallet(wallet)).unwrap_or(0);
+        let token_id: u128 = env
+            .storage()
+            .persistent()
+            .get(&DataKey::SubscriptionByWallet(wallet))
+            .unwrap_or(0);
         if token_id == 0 {
             return false;
         }
@@ -499,7 +693,11 @@ impl SubscriptionRegistry {
     }
 
     pub fn get_subscription_by_wallet(env: Env, wallet: Address) -> Option<SubscriptionRecord> {
-        let token_id: u128 = env.storage().persistent().get(&DataKey::SubscriptionByWallet(wallet)).unwrap_or(0);
+        let token_id: u128 = env
+            .storage()
+            .persistent()
+            .get(&DataKey::SubscriptionByWallet(wallet))
+            .unwrap_or(0);
         if token_id == 0 {
             return None;
         }
@@ -517,8 +715,7 @@ impl SubscriptionRegistry {
         require_not_paused(&env);
 
         let sub = read_subscription(&env, token_id);
-        let payload = build_mirror_payload(&env, &sub);
-        let payload_hash: BytesN<32> = env.crypto().sha256(&payload);
+        let payload_hash = build_mirror_payload(&env, &sub);
 
         let route: u32 = if env.storage().instance().has(&DataKey::AxelarTransport) {
             1
@@ -528,26 +725,35 @@ impl SubscriptionRegistry {
             0
         };
 
-        CrossChainDispatchRequested { token_id, destination_chain_id, route, payload_hash }.publish(&env);
+        CrossChainDispatchRequested {
+            token_id,
+            destination_chain_id,
+            route,
+            payload_hash,
+        }
+        .publish(&env);
     }
 
-    pub fn get_pending_balance(env: Env, address: Address) -> i128 {
+    pub fn get_pending_balance(_env: Env, _address: Address) -> i128 {
         0i128
     }
 }
 
 impl SubscriptionRegistry {
+    fn plan_is_active(env: &Env, plan_factory: &Address, plan_id: u128) -> bool {
+        env.invoke_contract::<bool>(
+            plan_factory,
+            &soroban_sdk::Symbol::new(env, "get_plan_active"),
+            soroban_sdk::Vec::from_array(env, [plan_id.into_val(env)]),
+        )
+    }
+
     fn resolve_plan_tier(env: &Env, plan_factory: &Address, plan_id: u128) -> String {
-        let mut args = Vec::new(env);
-        args.push_back(plan_id.into_val(env));
-        let result: String = env
-            .invoke_contract(
-                plan_factory,
-                &soroban_sdk::Symbol::new(env, "get_plan_tier"),
-                args,
-            )
-            .try_into_val(env)
-            .unwrap_or(String::from_slice(env, "unknown"));
-        result
+        let args = soroban_sdk::Vec::from_array(env, [plan_id.into_val(env)]);
+        env.invoke_contract::<String>(
+            plan_factory,
+            &soroban_sdk::Symbol::new(env, "get_plan_tier"),
+            args,
+        )
     }
 }

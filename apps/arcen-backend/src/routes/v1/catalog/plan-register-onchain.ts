@@ -4,6 +4,7 @@ import { requirePermission, isErrorResponse } from "../../../lib/auth/api-auth.j
 import { writeAuditEvent } from "../../../lib/platform/audit.js";
 import { createResilientPublicClient, getRpcUrl } from "../../../config.js";
 import { isSupportedDashboardChainId } from "../../../lib/platform/default-chain.js";
+import { resolveChainFamilyForPrisma } from "../../../lib/platform/chain-family.js";
 import { resolvePlanNetwork } from "../../../lib/catalog/plan-network.js";
 import {
   createPublicClient,
@@ -200,6 +201,7 @@ export async function registerPlanOnChain(c: Context) {
         where: { id: storedPlan.id },
         data: {
           chainId: resolvedNetwork.chainId,
+          chainFamily: resolveChainFamilyForPrisma(resolvedNetwork.chainId),
           acceptedToken: resolvedNetwork.acceptedToken,
           chainSyncStatus:
             parseFloat(storedPlan.price.toString()) === 0

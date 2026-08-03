@@ -2,6 +2,7 @@ import { randomBytes } from "node:crypto";
 import { db } from "../../db.js";
 import { toPrismaJson } from "../../utils/prisma-json.js";
 import { PLATFORM_BILLING_CHAIN_ID } from "../../config.js";
+import { resolveChainFamilyForPrisma } from "../platform/chain-family.js";
 import { TIER_PRICING } from "../catalog/tier-guard.js";
 import { syncEntitlementsToFlagRules } from "../entitlements/sync-entitlements.js";
 import {
@@ -114,6 +115,13 @@ async function ensurePlatformPlan(
           annualPrice: platformAnnualPrice(tier),
           billingInterval: 2_592_000,
           acceptedToken: "0x0000000000000000000000000000000000000000",
+          // Tag this plan with the platform billing chainId + derived chainFamily
+          // (previously relied on the schema default 84532 = EVM, which is
+          // correct as long as platform billing stays EVM-only; making it
+          // explicit so a future Stellar platform-billing rollout tags rows
+          // correctly without further changes here).
+          chainId: PLATFORM_BILLING_CHAIN_ID,
+          chainFamily: resolveChainFamilyForPrisma(PLATFORM_BILLING_CHAIN_ID),
           metadata,
         },
       });
@@ -155,6 +163,7 @@ async function ensurePlatformPlan(
         where: { id: plan.id },
         data: {
           chainId: platformPlan.chainId,
+          chainFamily: resolveChainFamilyForPrisma(platformPlan.chainId),
           onChainPlanId: platformPlan.onChainPlanId,
           chainSyncStatus: "SYNCED",
           acceptedToken: platformPlan.acceptedToken,

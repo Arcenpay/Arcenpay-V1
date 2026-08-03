@@ -13,6 +13,7 @@ import { writeAuditEvent } from "../../../lib/platform/audit.js";
 import { getTierLimits } from "../../../lib/catalog/tier-guard.js";
 import { sendWelcomeEmail } from "../../../lib/billing/email.js";
 import { ensureWorkspacePlatformBilling } from "../../../lib/billing/platform-enrollment.js";
+import { resolveChainFamilyForPrisma } from "../../../lib/platform/chain-family.js";
 import { PRODUCTION_ENVIRONMENTS_ENABLED } from "../../../lib/platform/launch-flags.js";
 
 const manageRoles = ["OWNER", "ADMIN"] as const;
@@ -230,6 +231,7 @@ async function createEnvironment(c: Context) {
       name: parsed.data.name,
       mode: parsed.data.mode,
       chainId: parsed.data.chainId,
+      chainFamily: resolveChainFamilyForPrisma(parsed.data.chainId),
     },
   });
 

@@ -56,3 +56,6 @@ yarn-error.log*
 
 # Subgraph generated files
 subgraph/generated/
+
+# rust generated files
+**/target/

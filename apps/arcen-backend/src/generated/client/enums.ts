@@ -362,3 +362,11 @@ export const PlatformTier = {
 } as const
 
 export type PlatformTier = (typeof PlatformTier)[keyof typeof PlatformTier]
+
+
+export const ChainFamily = {
+  EVM: 'EVM',
+  STELLAR: 'STELLAR'
+} as const
+
+export type ChainFamily = (typeof ChainFamily)[keyof typeof ChainFamily]

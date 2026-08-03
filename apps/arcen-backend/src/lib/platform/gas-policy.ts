@@ -16,6 +16,7 @@ import { db } from "../../db.js";
 import { getTierLimits } from "../catalog/tier-guard.js";
 import { FACILITATOR_SECRET, FACILITATOR_URL } from "../../config.js";
 import { PlatformTier, Prisma } from "../../generated/client/client.js";
+import { resolveChainFamilyForPrisma } from "./chain-family.js";
 
 // ── Allowed chains for gas sponsorship (L2 only) ─────────────────────────────
 
@@ -344,6 +345,7 @@ export async function recordGasSpend(params: {
         data: {
             teamId: params.teamId,
             chainId: params.chainId,
+            chainFamily: resolveChainFamilyForPrisma(params.chainId),
             txHash: params.txHash,
             gasUsedWei: params.gasUsedWei,
             gasCostUsd: new Prisma.Decimal(params.gasCostUsd),

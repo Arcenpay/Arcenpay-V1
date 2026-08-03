@@ -1,10 +1,16 @@
 #![no_std]
+#![allow(clippy::too_many_arguments)]
 
-use soroban_sdk::{contract, contractimpl, contracttype, Address, Env, BytesN, String, Vec, Map, xdr::FromXdr};
+extern crate alloc;
+
 use arcenpay_common::{
     auth::*,
-    errors::ArcenPayError,
+    errors::{ArcenPayError, fail},
     types::*,
+};
+use soroban_sdk::{
+    Address, BytesN, Env, Map, String, Vec, contract, contractevent, contractimpl, contracttype,
+    xdr::FromXdr, xdr::ToXdr,
 };
 
 #[contracttype]
@@ -19,7 +25,9 @@ enum DataKey {
     AxelarGateway,
     CcipRouter,
     ValidatorThreshold,
-    Validator(Address),
+    // Validators are registered by their ed25519 public key so the
+    // multi-sig path can verify signatures via `env.crypto().ed25519_verify`.
+    Validator(BytesN<32>),
 }
 
 #[contractevent]
@@ -58,12 +66,12 @@ pub struct RoutedMessageProcessed {
 
 #[contractevent]
 pub struct ValidatorAdded {
-    pub validator: Address,
+    pub validator_pubkey: BytesN<32>,
 }
 
 #[contractevent]
 pub struct ValidatorRemoved {
-    pub validator: Address,
+    pub validator_pubkey: BytesN<32>,
 }
 
 #[contractevent]
@@ -78,10 +86,10 @@ fn is_authorized_bridge(env: &Env, source_chain_id: u64, bridge: &Address) -> bo
         .unwrap_or(false)
 }
 
-fn is_validator(env: &Env, validator: &Address) -> bool {
+fn is_validator(env: &Env, pubkey: &BytesN<32>) -> bool {
     env.storage()
         .persistent()
-        .get(&DataKey::Validator(validator.clone()))
+        .get(&DataKey::Validator(pubkey.clone()))
         .unwrap_or(false)
 }
 
@@ -126,10 +134,29 @@ fn read_mirror(env: &Env, subscriber: &Address) -> Option<MirroredSubscriptionRe
 }
 
 fn write_mirror(env: &Env, sub: &Address, record: &MirroredSubscriptionRecord) {
-    let key = soroban_sdk::Bytes::from_slice(env, &sub.to_xdr(env));
-    let source_key = env.crypto().sha256(&key);
-    env.storage().persistent().set(&DataKey::Mirror(sub.clone()), record);
-    env.storage().persistent().set(&DataKey::SourceToSubscriber(source_key), sub);
+    // Hash(source_chain_id || source_token_id) -> subscriber, matching the
+    // EVM `_sourceToSubscriber[keccak256(abi.encodePacked(chainId, tokenId))]`.
+    let mut key_bytes = soroban_sdk::Bytes::new(env);
+    key_bytes.append(&source_chain_id_for_hash(env, &record.source_chain_id));
+    key_bytes.append(&source_token_id_for_hash(env, &record.source_token_id));
+    let source_key: BytesN<32> = env.crypto().sha256(&key_bytes).into();
+    env.storage()
+        .persistent()
+        .set(&DataKey::Mirror(sub.clone()), record);
+    env.storage()
+        .persistent()
+        .set(&DataKey::SourceToSubscriber(source_key), sub);
+}
+
+fn source_chain_id_for_hash(env: &Env, chain_id: &u64) -> soroban_sdk::Bytes {
+    // u64 big-endian (8 bytes) — cross-chain deterministic encoding.
+    let bytes = chain_id.to_be_bytes();
+    soroban_sdk::Bytes::from_array(env, &bytes)
+}
+
+fn source_token_id_for_hash(env: &Env, token_id: &u128) -> soroban_sdk::Bytes {
+    let bytes = token_id.to_be_bytes();
+    soroban_sdk::Bytes::from_array(env, &bytes)
 }
 
 fn apply_mirror_update(
@@ -145,7 +172,10 @@ fn apply_mirror_update(
     let now = env.ledger().timestamp();
 
     if let Some(existing) = read_mirror(env, subscriber) {
+        // Ignore stale updates from the same source — they can be applied
+        // out-of-order across GMP routes.
         if existing.source_chain_id == source_chain_id
+            && existing.source_token_id == source_token_id
             && existing.source_updated_at > source_updated_at
         {
             return;
@@ -170,7 +200,28 @@ fn apply_mirror_update(
         source_token_id,
         source_chain_id,
         expiration,
-    }.publish(env);
+    }
+    .publish(env);
+}
+
+/// Decodes a cross-chain mirror payload serialized via `MirrorPayload::to_xdr`
+/// by the source `SubscriptionRegistry`, and applies the update.
+fn decode_and_apply_payload(env: &Env, source_chain_id: u64, payload: soroban_sdk::Bytes) {
+    if payload.is_empty() {
+        fail(env, ArcenPayError::InvalidConfig);
+    }
+    let decoded = MirrorPayload::from_xdr(env, &payload)
+        .unwrap_or_else(|_| fail(env, ArcenPayError::InvalidConfig));
+    apply_mirror_update(
+        env,
+        &decoded.subscriber,
+        decoded.source_token_id,
+        decoded.plan_id,
+        &decoded.plan_tier,
+        decoded.expiration,
+        source_chain_id,
+        decoded.source_updated_at,
+    );
 }
 
 #[contract]
@@ -179,14 +230,22 @@ pub struct MirrorRegistry;
 #[contractimpl]
 impl MirrorRegistry {
     pub fn __constructor(env: Env, admin: Address, threshold: u32) {
-        assert!(!read_initialized(&env), "Already initialized");
+        if read_initialized(&env) {
+            fail(&env, ArcenPayError::AlreadyInitialized);
+        }
         write_admin(&env, &admin);
-        assert!(threshold >= 1, "Threshold must be at least 1");
-        env.storage().instance().set(&DataKey::ValidatorThreshold, &threshold);
+        if threshold < 1 {
+            fail(&env, ArcenPayError::InvalidConfig);
+        }
+        env.storage()
+            .instance()
+            .set(&DataKey::ValidatorThreshold, &threshold);
         write_initialized(&env);
     }
 
-    pub fn version() -> u32 { 1 }
+    pub fn version() -> u32 {
+        1
+    }
 
     pub fn admin(env: Env) -> Address {
         read_admin(&env)
@@ -194,110 +253,174 @@ impl MirrorRegistry {
 
     pub fn transfer_admin(env: Env, new_admin: Address) {
         let current = read_admin(&env);
+        if new_admin == current {
+            fail(&env, ArcenPayError::InvalidAddress);
+        }
         current.require_auth();
-        assert_ne!(new_admin, current);
         write_admin(&env, &new_admin);
     }
 
     pub fn pause(env: Env, admin: Address) {
         let stored = read_admin(&env);
-        assert_eq!(admin, stored);
+        if admin != stored {
+            fail(&env, ArcenPayError::NotAuthorized);
+        }
         admin.require_auth();
         write_paused(&env, true);
     }
 
     pub fn unpause(env: Env, admin: Address) {
         let stored = read_admin(&env);
-        assert_eq!(admin, stored);
+        if admin != stored {
+            fail(&env, ArcenPayError::NotAuthorized);
+        }
         admin.require_auth();
         write_paused(&env, false);
     }
 
     pub fn authorize_bridge(env: Env, admin: Address, bridge: Address, source_chain_id: u64) {
         let stored = read_admin(&env);
-        assert_eq!(admin, stored);
+        if admin != stored {
+            fail(&env, ArcenPayError::NotAuthorized);
+        }
         admin.require_auth();
+        if source_chain_id == 0 {
+            fail(&env, ArcenPayError::InvalidConfig);
+        }
         env.storage().persistent().set(
             &DataKey::AuthorizedBridge(source_chain_id, bridge.clone()),
             &true,
         );
-        BridgeAuthorized { bridge, source_chain_id }.publish(&env);
+        BridgeAuthorized {
+            bridge,
+            source_chain_id,
+        }
+        .publish(&env);
     }
 
     pub fn revoke_bridge(env: Env, admin: Address, bridge: Address, source_chain_id: u64) {
         let stored = read_admin(&env);
-        assert_eq!(admin, stored);
+        if admin != stored {
+            fail(&env, ArcenPayError::NotAuthorized);
+        }
         admin.require_auth();
         env.storage().persistent().set(
             &DataKey::AuthorizedBridge(source_chain_id, bridge.clone()),
             &false,
         );
-        BridgeRevoked { bridge, source_chain_id }.publish(&env);
+        BridgeRevoked {
+            bridge,
+            source_chain_id,
+        }
+        .publish(&env);
     }
 
     pub fn set_axelar_gateway(env: Env, admin: Address, gateway: Address) {
         let stored = read_admin(&env);
-        assert_eq!(admin, stored);
+        if admin != stored {
+            fail(&env, ArcenPayError::NotAuthorized);
+        }
         admin.require_auth();
-        env.storage().instance().set(&DataKey::AxelarGateway, &gateway);
+        env.storage()
+            .instance()
+            .set(&DataKey::AxelarGateway, &gateway);
     }
 
     pub fn clear_axelar_gateway(env: Env, admin: Address) {
         let stored = read_admin(&env);
-        assert_eq!(admin, stored);
+        if admin != stored {
+            fail(&env, ArcenPayError::NotAuthorized);
+        }
         admin.require_auth();
         env.storage().instance().remove(&DataKey::AxelarGateway);
     }
 
     pub fn set_ccip_router(env: Env, admin: Address, router: Address) {
         let stored = read_admin(&env);
-        assert_eq!(admin, stored);
+        if admin != stored {
+            fail(&env, ArcenPayError::NotAuthorized);
+        }
         admin.require_auth();
         env.storage().instance().set(&DataKey::CcipRouter, &router);
     }
 
     pub fn clear_ccip_router(env: Env, admin: Address) {
         let stored = read_admin(&env);
-        assert_eq!(admin, stored);
+        if admin != stored {
+            fail(&env, ArcenPayError::NotAuthorized);
+        }
         admin.require_auth();
         env.storage().instance().remove(&DataKey::CcipRouter);
     }
 
-    pub fn set_trusted_source(env: Env, admin: Address, source_chain_id: u64, source_address: BytesN<32>) {
+    pub fn set_trusted_source(
+        env: Env,
+        admin: Address,
+        source_chain_id: u64,
+        source_address: BytesN<32>,
+    ) {
         let stored = read_admin(&env);
-        assert_eq!(admin, stored);
+        if admin != stored {
+            fail(&env, ArcenPayError::NotAuthorized);
+        }
         admin.require_auth();
-        let hash: BytesN<32> = env.crypto().sha256(&source_address);
-        env.storage().instance().set(&DataKey::TrustedSource(source_chain_id), &hash);
-        TrustedSourceConfigured { source_chain_id, source_hash: hash }.publish(&env);
+        if source_chain_id == 0 {
+            fail(&env, ArcenPayError::InvalidConfig);
+        }
+        let hash: BytesN<32> = env
+            .crypto()
+            .sha256(&soroban_sdk::Bytes::from(&source_address))
+            .into();
+        env.storage()
+            .instance()
+            .set(&DataKey::TrustedSource(source_chain_id), &hash);
+        TrustedSourceConfigured {
+            source_chain_id,
+            source_hash: hash,
+        }
+        .publish(&env);
     }
 
-    pub fn add_validator(env: Env, admin: Address, validator: Address) {
+    pub fn add_validator(env: Env, admin: Address, validator_pubkey: BytesN<32>) {
         let stored = read_admin(&env);
-        assert_eq!(admin, stored);
+        if admin != stored {
+            fail(&env, ArcenPayError::NotAuthorized);
+        }
         admin.require_auth();
-        env.storage().persistent().set(&DataKey::Validator(validator.clone()), &true);
-        ValidatorAdded { validator }.publish(&env);
+        env.storage()
+            .persistent()
+            .set(&DataKey::Validator(validator_pubkey.clone()), &true);
+        ValidatorAdded { validator_pubkey }.publish(&env);
     }
 
-    pub fn remove_validator(env: Env, admin: Address, validator: Address) {
+    pub fn remove_validator(env: Env, admin: Address, validator_pubkey: BytesN<32>) {
         let stored = read_admin(&env);
-        assert_eq!(admin, stored);
+        if admin != stored {
+            fail(&env, ArcenPayError::NotAuthorized);
+        }
         admin.require_auth();
-        env.storage().persistent().set(&DataKey::Validator(validator.clone()), &false);
-        ValidatorRemoved { validator }.publish(&env);
+        env.storage()
+            .persistent()
+            .set(&DataKey::Validator(validator_pubkey.clone()), &false);
+        ValidatorRemoved { validator_pubkey }.publish(&env);
     }
 
-    pub fn is_validator(env: Env, validator: Address) -> bool {
-        is_validator(&env, &validator)
+    pub fn is_validator(env: Env, validator_pubkey: BytesN<32>) -> bool {
+        is_validator(&env, &validator_pubkey)
     }
 
     pub fn set_threshold(env: Env, admin: Address, threshold: u32) {
         let stored = read_admin(&env);
-        assert_eq!(admin, stored);
+        if admin != stored {
+            fail(&env, ArcenPayError::NotAuthorized);
+        }
         admin.require_auth();
-        assert!(threshold >= 1, "Threshold must be at least 1");
-        env.storage().instance().set(&DataKey::ValidatorThreshold, &threshold);
+        if threshold < 1 {
+            fail(&env, ArcenPayError::InvalidConfig);
+        }
+        env.storage()
+            .instance()
+            .set(&DataKey::ValidatorThreshold, &threshold);
         ThresholdUpdated { threshold }.publish(&env);
     }
 
@@ -311,15 +434,21 @@ impl MirrorRegistry {
         source_chain_id: u64,
         source_address: BytesN<32>,
         message_id: BytesN<32>,
-        payload: Vec<u8>,
+        payload: soroban_sdk::Bytes,
     ) {
         caller.require_auth();
         require_not_paused(&env);
-        assert!(
-            is_authorized_bridge(&env, source_chain_id, &caller),
-            "Not an authorized bridge"
+        if !is_authorized_bridge(&env, source_chain_id, &caller) {
+            fail(&env, ArcenPayError::NotAuthorized);
+        }
+        Self::process_routed_message(
+            &env,
+            0,
+            source_chain_id,
+            &source_address,
+            &message_id,
+            &payload,
         );
-        Self::process_routed_message(&env, 0, source_chain_id, &source_address, &message_id, &payload);
     }
 
     pub fn on_axelar_message(
@@ -328,14 +457,23 @@ impl MirrorRegistry {
         source_chain_id: u64,
         source_address: BytesN<32>,
         message_id: BytesN<32>,
-        payload: Vec<u8>,
+        payload: soroban_sdk::Bytes,
     ) {
         caller.require_auth();
         require_not_paused(&env);
         let gateway = read_axelar_gateway(&env);
-        assert!(gateway.is_some(), "Axelar gateway not configured");
-        assert_eq!(gateway.unwrap(), caller, "Caller is not the Axelar gateway");
-        Self::process_routed_message(&env, 1, source_chain_id, &source_address, &message_id, &payload);
+        match gateway {
+            Some(g) if g == caller => {}
+            _ => fail(&env, ArcenPayError::NotAuthorized),
+        }
+        Self::process_routed_message(
+            &env,
+            1,
+            source_chain_id,
+            &source_address,
+            &message_id,
+            &payload,
+        );
     }
 
     pub fn on_ccip_message(
@@ -344,64 +482,110 @@ impl MirrorRegistry {
         source_chain_id: u64,
         source_address: BytesN<32>,
         message_id: BytesN<32>,
-        payload: Vec<u8>,
+        payload: soroban_sdk::Bytes,
     ) {
         caller.require_auth();
         require_not_paused(&env);
         let router = read_ccip_router(&env);
-        assert!(router.is_some(), "CCIP router not configured");
-        assert_eq!(router.unwrap(), caller, "Caller is not the CCIP router");
-        Self::process_routed_message(&env, 2, source_chain_id, &source_address, &message_id, &payload);
+        match router {
+            Some(r) if r == caller => {}
+            _ => fail(&env, ArcenPayError::NotAuthorized),
+        }
+        Self::process_routed_message(
+            &env,
+            2,
+            source_chain_id,
+            &source_address,
+            &message_id,
+            &payload,
+        );
     }
 
-    pub fn apply_bridge_update_with_signatures(
+    /// Apply a cross-chain update authorized by an m-of-n multi-sig of the
+    /// registered validators. Each (public_key, signature) pair is verified
+    /// against the canonical signed payload (source_chain_id || source_address
+    /// || message_id || payload) using Stellar's native ed25519 verifier.
+    ///
+    /// NOTE: signature change from the previous `apply_bridge_update_with_signatures`
+    /// — the renamed entrypoint `apply_signed_update` now takes paired
+    /// `(pubkeys, signatures)` vectors of equal length because ed25519 public
+    /// keys are not recoverable from signatures (the previous implementation
+    /// used a bogus `recover_validator` that always returned the same address
+    /// and silently accepted any input).
+    pub fn apply_signed_update(
         env: Env,
         source_chain_id: u64,
         source_address: BytesN<32>,
         message_id: BytesN<32>,
-        payload: Vec<u8>,
+        payload: soroban_sdk::Bytes,
+        pubkeys: Vec<BytesN<32>>,
         signatures: Vec<BytesN<64>>,
     ) {
         require_not_paused(&env);
 
-        assert!(!message_processed(&env, &message_id), "Message already processed");
+        if pubkeys.len() != signatures.len() {
+            fail(&env, ArcenPayError::InvalidSignature);
+        }
+        if message_processed(&env, &message_id) {
+            fail(&env, ArcenPayError::MessageAlreadyProcessed);
+        }
+        if message_id == BytesN::from_array(&env, &[0u8; 32]) {
+            fail(&env, ArcenPayError::InvalidConfig);
+        }
 
         let trusted = trusted_source_hash(&env, source_chain_id);
-        if trusted.is_some() {
-            let source_hash: BytesN<32> = env.crypto().sha256(&source_address);
-            assert_eq!(source_hash, trusted.unwrap(), "Untrusted source chain");
+        if let Some(expected) = trusted {
+            let source_hash: BytesN<32> = env
+                .crypto()
+                .sha256(&soroban_sdk::Bytes::from(&source_address))
+                .into();
+            if source_hash != expected {
+                fail(&env, ArcenPayError::NotAuthorized);
+            }
         }
 
         let threshold = read_validator_threshold(&env);
-        assert!(signatures.len() >= threshold, "Insufficient signatures");
+        if pubkeys.len() < threshold {
+            fail(&env, ArcenPayError::ThresholdNotMet);
+        }
 
-        let mut signed_payload = Vec::new(&env);
-        signed_payload.append(&source_chain_id.to_xdr(&env));
-        signed_payload.append(&source_address.to_xdr(&env));
-        signed_payload.append(&message_id.to_xdr(&env));
-        signed_payload.append(&payload.to_xdr(&env));
-
-        let payload_hash: BytesN<32> = env.crypto().sha256(&signed_payload);
+        // Build the canonical signed message envelope.
+        let mut signed = soroban_sdk::Bytes::new(&env);
+        signed.append(&source_chain_id_for_hash(&env, &source_chain_id));
+        signed.append(&source_address.to_xdr(&env));
+        signed.append(&message_id.clone().to_xdr(&env));
+        signed.append(&payload.clone().to_xdr(&env));
 
         let mut unique_validators = 0u32;
-        let mut seen: Map<Address, bool> = Map::new(&env);
+        let mut seen: Map<BytesN<32>, bool> = Map::new(&env);
 
-        for i in 0..signatures.len() {
+        for i in 0..pubkeys.len() {
+            let pk = pubkeys.get(i).unwrap();
             let sig = signatures.get(i).unwrap();
-            let validator = Self::recover_validator(&env, &payload_hash, &sig);
-            assert!(is_validator(&env, &validator), "Invalid validator");
-            if !seen.contains_key(validator.clone()) {
-                seen.set(validator, true);
+            if !is_validator(&env, &pk) {
+                fail(&env, ArcenPayError::InvalidSignature);
+            }
+            // ed25519_verify panics on invalid signatures (Soroban host).
+            env.crypto().ed25519_verify(&pk, &signed, &sig);
+            if !seen.contains_key(pk.clone()) {
+                seen.set(pk, true);
                 unique_validators += 1;
             }
         }
 
-        assert!(unique_validators >= threshold, "Insufficient unique validators");
+        if unique_validators < threshold {
+            fail(&env, ArcenPayError::ThresholdNotMet);
+        }
+
         mark_processed(&env, &message_id);
+        let message_id_for_event = message_id.clone();
+        decode_and_apply_payload(&env, source_chain_id, payload);
 
-        Self::decode_and_apply_payload(&env, source_chain_id, &payload);
-
-        RoutedMessageProcessed { message_id, route: 0 }.publish(&env);
+        RoutedMessageProcessed {
+            message_id: message_id_for_event,
+            route: 0,
+        }
+        .publish(&env);
     }
 
     pub fn is_valid(env: Env, subscriber: Address) -> bool {
@@ -420,7 +604,7 @@ impl MirrorRegistry {
         let mirror = read_mirror(&env, &subscriber);
         match mirror {
             Some(m) => m.plan_tier,
-            None => String::from_slice(&env, ""),
+            None => String::from_str(&env, ""),
         }
     }
 
@@ -440,65 +624,29 @@ impl MirrorRegistry {
         source_chain_id: u64,
         source_address: &BytesN<32>,
         message_id: &BytesN<32>,
-        payload: &Vec<u8>,
+        payload: &soroban_sdk::Bytes,
     ) {
-        assert!(!message_processed(env, message_id), "Message already processed");
-        let trusted = trusted_source_hash(env, source_chain_id);
-        if trusted.is_some() {
-            let source_hash: BytesN<32> = env.crypto().sha256(source_address);
-            assert_eq!(source_hash, trusted.unwrap(), "Untrusted source chain");
+        if message_processed(env, message_id) {
+            fail(env, ArcenPayError::MessageAlreadyProcessed);
+        }
+        if let Some(expected) = trusted_source_hash(env, source_chain_id) {
+            let source_hash: BytesN<32> = env
+                .crypto()
+                .sha256(&soroban_sdk::Bytes::from(source_address))
+                .into();
+            if source_hash != expected {
+                fail(env, ArcenPayError::NotAuthorized);
+            }
+        }
+        if *message_id == BytesN::from_array(env, &[0u8; 32]) {
+            fail(env, ArcenPayError::InvalidConfig);
         }
         mark_processed(env, message_id);
-        Self::decode_and_apply_payload(env, source_chain_id, payload);
-        RoutedMessageProcessed { message_id: message_id.clone(), route }.publish(env);
-    }
-
-    fn decode_and_apply_payload(
-        env: &Env,
-        source_chain_id: u64,
-        payload: &Vec<u8>,
-    ) {
-        assert!(payload.len() > 0, "Empty payload");
-
-        let payload_bytes = payload.to_xdr(env);
-        let payload_array = payload_bytes.to_array();
-
-        let subscriber_bytes: [u8; 32] = payload_array[..32].try_into().unwrap();
-        let subscriber = Address::from_xdr(env, &soroban_sdk::Bytes::from_array(env, &subscriber_bytes)).unwrap();
-
-        let token_id_bytes: [u8; 16] = payload_array[32..48].try_into().unwrap();
-        let source_token_id: u128 = u128::from_be_bytes(token_id_bytes);
-
-        let plan_id_bytes: [u8; 16] = payload_array[48..64].try_into().unwrap();
-        let plan_id: u128 = u128::from_be_bytes(plan_id_bytes);
-
-        let tier_len = u32::from_be_bytes(payload_array[64..68].try_into().unwrap()) as usize;
-        let tier_end = 68 + tier_len.min(64);
-        let plan_tier = core::str::from_utf8(&payload_array[68..tier_end])
-            .unwrap_or("unknown");
-
-        let exp_bytes: [u8; 8] = payload_array[tier_end..tier_end + 8].try_into().unwrap();
-        let expiration: u64 = u64::from_be_bytes(exp_bytes);
-
-        let updated_bytes: [u8; 8] = payload_array[tier_end + 8..tier_end + 16].try_into().unwrap();
-        let source_updated_at: u64 = u64::from_be_bytes(updated_bytes);
-
-        apply_mirror_update(
-            env,
-            &subscriber,
-            source_token_id,
-            plan_id,
-            &String::from_slice(env, plan_tier),
-            expiration,
-            source_chain_id,
-            source_updated_at,
-        );
-    }
-
-    fn recover_validator(env: &Env, _msg_hash: &BytesN<32>, signature: &BytesN<64>) -> Address {
-        let sig_bytes: [u8; 64] = signature.to_array();
-        let mut ek_bytes: [u8; 32] = [0u8; 32];
-        ek_bytes[..32].copy_from_slice(&sig_bytes[..32]);
-        Address::from_string(&String::from_slice(env, "validator"))
+        decode_and_apply_payload(env, source_chain_id, payload.clone());
+        RoutedMessageProcessed {
+            message_id: message_id.clone(),
+            route,
+        }
+        .publish(env);
     }
 }

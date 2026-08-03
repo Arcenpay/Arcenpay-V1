@@ -3,7 +3,8 @@
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useAccount, useChainId, useSignMessage } from "wagmi";
-import { ArrowLeft, CheckCircle2, Loader2, Mail, Wallet, Shield, Star } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Loader2, Mail, Wallet, Shield, AlertTriangle, ExternalLink, ArrowRight, Star } from "lucide-react";
+import { NetworkIcon } from "@web3icons/react/dynamic";
 import { CanvasRevealEffect } from "@/components/ui/canvas-reveal-effect";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,6 +14,12 @@ import {
   SUPPORTED_WALLET_CHAIN_LABEL,
   useDashboardWallet,
 } from "@/hooks/use-dashboard-wallet";
+import { useStellarWallet } from "@/hooks/use-stellar-wallet";
+import {
+  getOnboardingChainFamily,
+  setOnboardingChainFamily,
+} from "@/lib/onboarding-chain-family";
+import type { ChainFamily } from "@arcenpay/internal-core";
 import {
   InputOTP,
   InputOTPGroup,
@@ -23,10 +30,14 @@ type EmailAuthFlowProps = {
   inviteToken?: string | null;
 };
 
-type Step = "wallet" | "email" | "code" | "sign";
+type Step = "chain" | "wallet" | "email" | "code" | "sign";
 
 function shortAddress(address: string) {
   return `${address.slice(0, 6)}...${address.slice(-4)}`;
+}
+
+function stellarShortAddress(address: string) {
+  return `${address.slice(0, 8)}...${address.slice(-4)}`;
 }
 
 function formatTimer(targetIso: string | null): string {
@@ -69,7 +80,18 @@ export function EmailAuthFlow({ inviteToken }: EmailAuthFlowProps) {
   const { signMessageAsync } = useSignMessage();
   const { isOnRequiredNetwork, isSwitchingChain, openConnectModal, reconnectWallet, switchToRequiredNetwork } =
     useDashboardWallet();
-  const [step, setStep] = useState<Step>("wallet");
+  const stellarWallet = useStellarWallet();
+  const [step, setStep] = useState<Step>("chain");
+  const [chainFamily, setChainFamily] = useState<ChainFamily | null>(
+    () => getOnboardingChainFamily(),
+  );
+
+  const selectChainFamily = (family: ChainFamily) => {
+    setOnboardingChainFamily(family);
+    setChainFamily(family);
+    setStep("wallet");
+  };
+
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -110,6 +132,54 @@ export function EmailAuthFlow({ inviteToken }: EmailAuthFlowProps) {
   }, [retryAt, timerLabel]);
 
   const linkWalletForSession = async (): Promise<boolean> => {
+    // Stellar path
+    if (chainFamily === "stellar") {
+      if (!stellarWallet.address || !stellarWallet.isConnected) {
+        setError("Reconnect your Stellar wallet to finish signing.");
+        setStep("wallet");
+        return false;
+      }
+      setIsLinkingWallet(true);
+      setError(null);
+      try {
+        const nonceResponse = await fetch("/api/auth/nonce");
+        if (!nonceResponse.ok) throw new Error("Could not start wallet verification.");
+        const noncePayload = await nonceResponse.json();
+        const nonce = noncePayload?.nonce as string | undefined;
+        const issuedAt = noncePayload?.issuedAt as string | undefined;
+        if (!nonce || !issuedAt) throw new Error("Wallet verification challenge is invalid.");
+
+        const message = `ArcenPay Stellar Sign-In\n\nAddress: ${stellarWallet.address}\nNonce: ${nonce}\nIssued At: ${issuedAt}\nDomain: ${window.location.host}`;
+        const { signedMessage } = await stellarWallet.signMessage(message);
+
+        const linkResponse = await fetch("/api/auth/link-wallet", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            message,
+            signature: signedMessage,
+            address: stellarWallet.address,
+            chainId: 9000001,
+            nonce,
+          }),
+        });
+        const linkPayload = await linkResponse.json().catch(() => ({}));
+        if (!linkResponse.ok) {
+          if (linkResponse.status === 409 && linkPayload.maskedOwnerEmail)
+            throw new Error(`This wallet is already linked (${linkPayload.maskedOwnerEmail}).`);
+          throw new Error(linkPayload.error || "Could not link this wallet.");
+        }
+        router.push("/");
+        router.refresh();
+        return true;
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : "Could not link wallet.";
+        setError(msg.toLowerCase().includes("rejected") ? "Signature cancelled." : msg);
+        return false;
+      } finally { setIsLinkingWallet(false); }
+    }
+
+    // EVM path (existing)
     if (!isConnected || !address) {
       setError("Reconnect your wallet to finish signing.");
       setStep("wallet");
@@ -262,7 +332,9 @@ export function EmailAuthFlow({ inviteToken }: EmailAuthFlowProps) {
         return;
       }
 
-      const requiresWalletLink = (payload.redirectTo || "/") === "/onboarding/wallet";
+      const requiresWalletLink =
+        (payload.redirectTo || "/") === "/onboarding/wallet" ||
+        (payload.redirectTo || "/") === "/onboarding/chain";
       if (!requiresWalletLink) {
         router.push(payload.redirectTo || "/");
         router.refresh();
@@ -297,12 +369,16 @@ export function EmailAuthFlow({ inviteToken }: EmailAuthFlowProps) {
             {/* Header */}
             <div className="mb-6 sm:mb-8">
               <h1 className="text-2xl sm:text-[28px] font-semibold text-foreground tracking-tight">
-                {step === "wallet" && "Connect your wallet"}
+                {step === "chain" && "Choose your blockchain"}
+                {step === "wallet" && chainFamily === "stellar" && "Connect Stellar wallet"}
+                {step === "wallet" && chainFamily !== "stellar" && "Connect your wallet"}
                 {step === "email" && "Continue with email"}
                 {step === "code" && "Enter verification code"}
                 {step === "sign" && "Sign to finish"}
               </h1>
               <p className="text-sm sm:text-base text-muted-foreground mt-2 sm:mt-3 leading-relaxed">
+                {step === "chain" &&
+                  "Select your blockchain ecosystem first. You'll connect the appropriate wallet next."}
                 {step === "wallet" &&
                   `Connect a wallet on ${SUPPORTED_WALLET_CHAIN_LABEL}. After email verification, we'll request one signature and complete setup.`}
                 {step === "email" &&
@@ -326,7 +402,98 @@ export function EmailAuthFlow({ inviteToken }: EmailAuthFlowProps) {
               </div>
             ) : null}
 
-            {step === "wallet" ? (
+            {step === "chain" ? (
+              <div className="space-y-4">
+                {/* EVM Card */}
+                <button
+                  onClick={() => selectChainFamily("evm")}
+                  className="w-full flex items-center gap-4 p-5 rounded-xl border-2 border-border hover:border-brand/40 hover:bg-accent/5 transition-all text-left group"
+                >
+                  <div className="relative flex shrink-0" style={{ width: 56, height: 44 }}>
+                    <NetworkIcon name="base" variant="branded" size={28} className="rounded-full bg-white dark:bg-white p-[2px] absolute left-0 top-0 z-20 ring-2 ring-background" />
+                    <NetworkIcon name="Arc" variant="branded" size={28} className="rounded-full bg-white dark:bg-white p-[2px] absolute left-[14px] top-0 z-10 ring-2 ring-background" />
+                    <NetworkIcon name="ethereum" variant="branded" size={28} className="rounded-full bg-white dark:bg-white p-[2px] absolute left-[28px] top-0 z-0 ring-2 ring-background" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-sm font-semibold text-foreground group-hover:text-brand transition-colors">EVM Networks</h3>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Base, Arc, Ethereum — MetaMask, Rainbow, WalletConnect
+                    </p>
+                  </div>
+                  <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-brand transition-colors shrink-0" />
+                </button>
+
+                {/* Stellar Card */}
+                <button
+                  onClick={() => selectChainFamily("stellar")}
+                  className="w-full flex items-center gap-4 p-5 rounded-xl border-2 border-border hover:border-brand/40 hover:bg-accent/5 transition-all text-left group"
+                >
+                  <div className="w-[44px] h-[44px] rounded-full bg-white dark:bg-white flex items-center justify-center shrink-0 ring-2 ring-background">
+                    <NetworkIcon name="stellar" variant="branded" size={30} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-sm font-semibold text-foreground group-hover:text-brand transition-colors">Stellar Networks</h3>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Stellar Testnet &amp; Mainnet — Freighter, xBull, LOBSTR
+                    </p>
+                  </div>
+                  <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-brand transition-colors shrink-0" />
+                </button>
+              </div>
+            ) : step === "wallet" && chainFamily === "stellar" ? (
+              <div className="space-y-5">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
+                  <NetworkIcon name="stellar" variant="branded" size={20} className="rounded-full" />
+                  <span>Select a Stellar wallet to connect</span>
+                </div>
+
+                {stellarWallet.error && (
+                  <div className="p-3 rounded-lg bg-red-50 text-red-700 text-sm">{stellarWallet.error}</div>
+                )}
+
+                {stellarWallet.address ? (
+                  <>
+                    <div className="p-4 rounded-xl bg-brand/5 border border-brand/20">
+                      <div className="flex items-center gap-3">
+                        <CheckCircle2 className="w-5 h-5 text-brand shrink-0" />
+                        <div>
+                          <p className="text-sm font-medium text-foreground">Connected</p>
+                          <code className="text-xs font-mono text-muted-foreground">{stellarShortAddress(stellarWallet.address)}</code>
+                        </div>
+                      </div>
+                    </div>
+                    <Button
+                      type="button"
+                      className="h-12 w-full bg-brand hover:bg-brand-dark text-primary-foreground"
+                      onClick={() => { setError(null); setStep("email"); }}
+                    >
+                      Continue
+                    </Button>
+                  </>
+                ) : (
+                  <button
+                    type="button"
+                    className="h-12 w-full bg-brand hover:bg-brand-dark text-primary-foreground rounded-lg flex items-center justify-center gap-2 font-medium disabled:opacity-60"
+                    onClick={() => void stellarWallet.connect()}
+                    disabled={stellarWallet.isLoading || !stellarWallet.ready}
+                  >
+                    {!stellarWallet.ready || stellarWallet.isLoading ? (
+                      <><Loader2 className="h-4 w-4 animate-spin" />Initializing wallet kit...</>
+                    ) : (
+                      <><NetworkIcon name="stellar" variant="branded" size={18} className="rounded-full" />Connect Stellar wallet</>
+                    )}
+                  </button>
+                )}
+
+                <div className="flex gap-2 text-xs">
+                  <button
+                    type="button"
+                    className="text-muted-foreground hover:text-foreground underline underline-offset-2"
+                    onClick={() => { setChainFamily(null); setStep("chain"); }}
+                  >Back</button>
+                </div>
+              </div>
+            ) : step === "wallet" ? (
               <div className="space-y-5">
                 {/* Wallet Status */}
                 <div className="flex items-center justify-between py-3 border-b border-border">
@@ -386,6 +553,14 @@ export function EmailAuthFlow({ inviteToken }: EmailAuthFlowProps) {
                 >
                   Continue
                 </Button>
+
+                <button
+                  type="button"
+                  className="w-full text-xs text-muted-foreground hover:text-foreground underline underline-offset-2 mt-3"
+                  onClick={() => { setChainFamily(null); setStep("chain"); }}
+                >
+                  Back to chain selection
+                </button>
               </div>
             ) : null}
 

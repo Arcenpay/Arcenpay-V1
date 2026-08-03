@@ -196,7 +196,8 @@ export const WorkspaceEnvironmentScalarFieldEnum = {
   teamId: 'teamId',
   name: 'name',
   mode: 'mode',
-  chainId: 'chainId'
+  chainId: 'chainId',
+  chainFamily: 'chainFamily'
 } as const
 
 export type WorkspaceEnvironmentScalarFieldEnum = (typeof WorkspaceEnvironmentScalarFieldEnum)[keyof typeof WorkspaceEnvironmentScalarFieldEnum]
@@ -309,6 +310,7 @@ export const CatalogPlanScalarFieldEnum = {
   version: 'version',
   publishedAt: 'publishedAt',
   chainId: 'chainId',
+  chainFamily: 'chainFamily',
   onChainPlanId: 'onChainPlanId',
   chainSyncStatus: 'chainSyncStatus',
   chainTxHash: 'chainTxHash',
@@ -480,6 +482,7 @@ export const TemplateInstallScalarFieldEnum = {
   installedVersion: 'installedVersion',
   environmentMode: 'environmentMode',
   chainId: 'chainId',
+  chainFamily: 'chainFamily',
   status: 'status'
 } as const
 
@@ -640,6 +643,7 @@ export const SubscriptionStateScalarFieldEnum = {
   onChainPlanId: 'onChainPlanId',
   onChainTokenId: 'onChainTokenId',
   chainId: 'chainId',
+  chainFamily: 'chainFamily',
   currentPeriodStart: 'currentPeriodStart',
   currentPeriodEnd: 'currentPeriodEnd',
   lastEvent: 'lastEvent',
@@ -866,6 +870,7 @@ export const PlatformBillingPlanScalarFieldEnum = {
   tier: 'tier',
   environmentId: 'environmentId',
   chainId: 'chainId',
+  chainFamily: 'chainFamily',
   onChainPlanId: 'onChainPlanId',
   planName: 'planName',
   priceMicros: 'priceMicros',
@@ -912,6 +917,7 @@ export const GasSpendScalarFieldEnum = {
   createdAt: 'createdAt',
   teamId: 'teamId',
   chainId: 'chainId',
+  chainFamily: 'chainFamily',
   txHash: 'txHash',
   gasUsedWei: 'gasUsedWei',
   gasCostUsd: 'gasCostUsd',
@@ -1095,6 +1101,7 @@ export const PaymentLinkScalarFieldEnum = {
   amount: 'amount',
   acceptedToken: 'acceptedToken',
   chainId: 'chainId',
+  chainFamily: 'chainFamily',
   recipientWallet: 'recipientWallet',
   successUrl: 'successUrl',
   cancelUrl: 'cancelUrl',
@@ -1126,6 +1133,7 @@ export const CheckoutSessionScalarFieldEnum = {
   amount: 'amount',
   acceptedToken: 'acceptedToken',
   chainId: 'chainId',
+  chainFamily: 'chainFamily',
   recipientWallet: 'recipientWallet',
   txHash: 'txHash',
   verificationError: 'verificationError',

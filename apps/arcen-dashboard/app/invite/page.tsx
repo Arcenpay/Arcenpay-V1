@@ -74,7 +74,7 @@ export default function AcceptInvitePage() {
 
   useEffect(() => {
     if (status.state === "success") {
-      const redirectTo = status.needsWallet ? "/onboarding/wallet" : "/";
+      const redirectTo = status.needsWallet ? "/onboarding/chain" : "/";
       const timeout = setTimeout(() => {
         router.push(redirectTo);
         router.refresh();
@@ -127,7 +127,7 @@ export default function AcceptInvitePage() {
                 <button
                   type="button"
                   onClick={() => {
-                    router.push(status.needsWallet ? "/onboarding/wallet" : "/");
+                    router.push(status.needsWallet ? "/onboarding/chain" : "/");
                     router.refresh();
                   }}
                   className="text-sm font-medium text-primary hover:underline"

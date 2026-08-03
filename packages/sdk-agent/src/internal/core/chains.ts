@@ -70,6 +70,24 @@ export const arcTestnet: Chain = defineChain({
 });
 
 // --- Supported Chains Map ---
+//
+// EVM chain definitions live above (viem `defineChain`). Non-EVM chains
+// (Stellar) do NOT use viem — their identity is defined in chain-family.ts.
+// The SUPPORTED_CHAIN_IDS union below is the consolidated list spanning
+// ALL families; the synthetic Stellar IDs are re-exported from chain-family.
+//
+// To add an EVM chain: define it above AND add its id here + to TOKENS.
+// To add a non-EVM chain: register it in chain-family.ts CHAIN_REGISTRY
+//   AND add its synthetic id here. The viem `Chain` shape is EVM-only, so
+// non-EVM chains intentionally do not appear in SUPPORTED_CHAINS (which is
+// typed as `Record<…, Chain>`).
+
+import {
+  STELLAR_MAINNET_CHAIN_ID,
+  STELLAR_TESTNET_CHAIN_ID,
+  STELLAR_FUTURENET_CHAIN_ID,
+} from "./chain-family";
+
 export const SUPPORTED_CHAINS = {
   sepolia,
   baseSepolia,
@@ -77,17 +95,34 @@ export const SUPPORTED_CHAINS = {
   arcTestnet,
 } as const;
 
-export const SUPPORTED_CHAIN_IDS = [11155111, 84532, 8453, 5042002] as const;
+// EVM-only chainId list (preserved for call sites that genuinely require viem).
+export const EVM_SUPPORTED_CHAIN_IDS = [11155111, 84532, 8453, 5042002] as const;
+
+// Consolidated chainId list across all families — the source of truth.
+export const SUPPORTED_CHAIN_IDS = [
+  ...EVM_SUPPORTED_CHAIN_IDS,
+  STELLAR_MAINNET_CHAIN_ID,
+  STELLAR_TESTNET_CHAIN_ID,
+  STELLAR_FUTURENET_CHAIN_ID,
+] as const;
 
 export type SupportedChainId = (typeof SUPPORTED_CHAIN_IDS)[number];
+
+// Legacy alias — consumers that only cared about EVM ids can keep using this.
+export type EvmSupportedChainId = (typeof EVM_SUPPORTED_CHAIN_IDS)[number];
 
 // ─── Token Registry ──────────────────────────────────────────────────────────
 
 /**
  * Describes a stablecoin / ERC-20 token on a given chain.
+ *
+ * NOTE: For Stellar, the "address" field holds the SAC issuer account
+ * (a G… address for issued assets) or the empty string for the native
+ * XLM SAC. The `decimals` field is always 6 for USDC on Stellar (issued
+ * by Circle). Use {@link getChainFamily} to interpret the address shape.
  */
 export interface TokenInfo {
-  readonly address: `0x${string}`;
+  readonly address: `0x${string}` | string;
   readonly decimals: number;
 }
 
@@ -97,6 +132,12 @@ export interface TokenInfo {
  * To add a new chain or token, extend this object:
  *   <chainId>: { <SYMBOL>: { address: '0x…', decimals: 6 } }
  */
+// Stellar chains don't use viem, but USDC on Stellar is the Circle-issued
+// SAC asset (issuer G…, decimals 6). For the synthetic chainId range, the
+// address field holds the SAC issuer account (or "" for the native XLM SAC).
+// The STELLAR_*_CHAIN_ID constants are imported once at the top of the file
+// (next to the SUPPORTED_CHAIN_IDS declaration). We reference them inline.
+
 export const TOKENS = {
   // Ethereum Sepolia
   11155111: {
@@ -113,6 +154,17 @@ export const TOKENS = {
   // Arc Testnet — canonical default USDC.
   5042002: {
     USDC: { address: '0x3600000000000000000000000000000000000000' as const, decimals: 6 },
+  },
+  // Stellar Mainnet — Circle USDC (SAC issuer account). Address is the G…
+  // issuer; the asset code "USDC" is implied by the symbol key.
+  [STELLAR_MAINNET_CHAIN_ID]: {
+    USDC: { address: 'GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5REQK4DVZWA' as const, decimals: 6 },
+  },
+  // Stellar Testnet — test USDC issued by the Stellar testnet issuer.
+  // Replace with the actual testnet USDC issuer once a circle-style test
+  // asset is published. Until then this is a placeholder SAC issuer.
+  [STELLAR_TESTNET_CHAIN_ID]: {
+    USDC: { address: 'GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5REQK4DVZWA' as const, decimals: 6 },
   },
 } as const;
 
@@ -132,7 +184,7 @@ export const TOKENS = {
 export function getTokenAddress(
   chainId: number,
   symbol: string,
-): `0x${string}` | undefined {
+): string | undefined {
   const tokens = TOKENS[chainId as keyof typeof TOKENS];
   if (!tokens) return undefined;
   const info = (tokens as Record<string, TokenInfo>)[symbol];
@@ -155,8 +207,12 @@ export function getTokensForChain(chainId: number): string[] {
 }
 
 // ─── Chain Helpers ──────────────────────────────────────────────────────────
+//
+// `CHAIN_MAP` is EVM-only — Stellar chains don't have a viem `Chain`. Call
+// sites that need cross-family identity should use `getChainDescriptor` from
+// chain-family.ts; `getChain` below throws a clear error for non-EVM ids.
 
-const CHAIN_MAP: Record<SupportedChainId, Chain> = {
+const CHAIN_MAP: Record<number, Chain> = {
   11155111: sepolia,
   84532: baseSepolia,
   8453: baseMainnet,
@@ -168,30 +224,63 @@ export const DEFAULT_CHAIN_ID: SupportedChainId = 5042002; // Arc Testnet is the
 
 /**
  * Returns the block explorer transaction URL for a given chainId and tx hash.
- * Falls back to an empty string if the chainId is unknown.
+ * Works for ALL families via {@link getChainDescriptor}; falls back to "" if
+ * the chainId is unknown or the chain has no explorer URL.
+ *
+ * Note: for EVM this builds `/tx/<hash>` (etherscan style); for Stellar the
+ * explorer uses a different path (`/tx/` works on stellar.expert too). If a
+ * family-specific path is needed in future, branch on `getChainFamily`.
  */
 export function getBlockExplorerUrl(chainId: number, txHash: string): string {
-  const chain = isSupportedChainId(chainId) ? CHAIN_MAP[chainId] : undefined;
-  if (!chain) return '';
-  const explorerUrl = chain.blockExplorers?.default?.url;
-  if (!explorerUrl) return '';
+  const descriptor = getChainDescriptorForHosts(chainId);
+  const explorerUrl = descriptor?.blockExplorerUrl;
+  if (!explorerUrl) return "";
   return `${explorerUrl}/tx/${txHash}`;
 }
 
+/**
+ * Re-exported from chain-family.ts so callers in this module can resolve a
+ * descriptor without a circular import. (chain-family.ts does not import
+ * from chains.ts.)
+ */
+import { getChainDescriptor as getChainDescriptorForHosts } from "./chain-family";
+
+/**
+ * Returns true for any supported chainId across all families (EVM + Stellar).
+ */
 export function isSupportedChainId(chainId: number): chainId is SupportedChainId {
   return (SUPPORTED_CHAIN_IDS as readonly number[]).includes(chainId);
 }
 
 /**
- * Resolves a viem Chain object from a numeric chainId.
- * Throws if the chain is not supported.
+ * Returns true for EVM-supported chainIds only (legacy helper for code paths
+ * that genuinely require a viem `Chain`, such as the EVM event listener).
+ */
+export function isEvmSupportedChainId(chainId: number): chainId is EvmSupportedChainId {
+  return (EVM_SUPPORTED_CHAIN_IDS as readonly number[]).includes(chainId);
+}
+
+/**
+ * Resolves a viem `Chain` object from a numeric chainId.
+ *
+ * Throws for non-EVM chainIds — there is no viem `Chain` for Stellar.
+ * Callers that need cross-family identity should use `getChainDescriptor`
+ * from chain-family.ts instead.
  */
 export function getChain(chainId: number): Chain {
-  const chain = isSupportedChainId(chainId) ? CHAIN_MAP[chainId] : undefined;
+  const chain = isEvmSupportedChainId(chainId)
+    ? CHAIN_MAP[chainId]
+    : undefined;
   if (!chain) {
+    if (isSupportedChainId(chainId)) {
+      throw new Error(
+        `[getChain] chainId ${chainId} is supported but is not an EVM chain. ` +
+          `Use getChainDescriptor() from chain-family.ts for cross-family identity.`,
+      );
+    }
     throw new Error(
       `[getChain] Unsupported chainId: ${chainId}. ` +
-      `Supported: ${Object.keys(CHAIN_MAP).join(', ')}`
+      `Supported: ${Object.keys(CHAIN_MAP).join(', ')} (EVM) + Stellar synthetic ids.`,
     );
   }
   return chain;

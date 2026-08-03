@@ -41,6 +41,7 @@ export type GasSpendMinAggregateOutputType = {
   createdAt: Date | null
   teamId: string | null
   chainId: number | null
+  chainFamily: $Enums.ChainFamily | null
   txHash: string | null
   gasUsedWei: string | null
   gasCostUsd: runtime.Decimal | null
@@ -52,6 +53,7 @@ export type GasSpendMaxAggregateOutputType = {
   createdAt: Date | null
   teamId: string | null
   chainId: number | null
+  chainFamily: $Enums.ChainFamily | null
   txHash: string | null
   gasUsedWei: string | null
   gasCostUsd: runtime.Decimal | null
@@ -63,6 +65,7 @@ export type GasSpendCountAggregateOutputType = {
   createdAt: number
   teamId: number
   chainId: number
+  chainFamily: number
   txHash: number
   gasUsedWei: number
   gasCostUsd: number
@@ -86,6 +89,7 @@ export type GasSpendMinAggregateInputType = {
   createdAt?: true
   teamId?: true
   chainId?: true
+  chainFamily?: true
   txHash?: true
   gasUsedWei?: true
   gasCostUsd?: true
@@ -97,6 +101,7 @@ export type GasSpendMaxAggregateInputType = {
   createdAt?: true
   teamId?: true
   chainId?: true
+  chainFamily?: true
   txHash?: true
   gasUsedWei?: true
   gasCostUsd?: true
@@ -108,6 +113,7 @@ export type GasSpendCountAggregateInputType = {
   createdAt?: true
   teamId?: true
   chainId?: true
+  chainFamily?: true
   txHash?: true
   gasUsedWei?: true
   gasCostUsd?: true
@@ -206,6 +212,7 @@ export type GasSpendGroupByOutputType = {
   createdAt: Date
   teamId: string
   chainId: number
+  chainFamily: $Enums.ChainFamily
   txHash: string
   gasUsedWei: string
   gasCostUsd: runtime.Decimal
@@ -240,6 +247,7 @@ export type GasSpendWhereInput = {
   createdAt?: Prisma.DateTimeFilter<"GasSpend"> | Date | string
   teamId?: Prisma.StringFilter<"GasSpend"> | string
   chainId?: Prisma.IntFilter<"GasSpend"> | number
+  chainFamily?: Prisma.EnumChainFamilyFilter<"GasSpend"> | $Enums.ChainFamily
   txHash?: Prisma.StringFilter<"GasSpend"> | string
   gasUsedWei?: Prisma.StringFilter<"GasSpend"> | string
   gasCostUsd?: Prisma.DecimalFilter<"GasSpend"> | runtime.Decimal | runtime.DecimalJsLike | number | string
@@ -252,6 +260,7 @@ export type GasSpendOrderByWithRelationInput = {
   createdAt?: Prisma.SortOrder
   teamId?: Prisma.SortOrder
   chainId?: Prisma.SortOrder
+  chainFamily?: Prisma.SortOrder
   txHash?: Prisma.SortOrder
   gasUsedWei?: Prisma.SortOrder
   gasCostUsd?: Prisma.SortOrder
@@ -268,6 +277,7 @@ export type GasSpendWhereUniqueInput = Prisma.AtLeast<{
   createdAt?: Prisma.DateTimeFilter<"GasSpend"> | Date | string
   teamId?: Prisma.StringFilter<"GasSpend"> | string
   chainId?: Prisma.IntFilter<"GasSpend"> | number
+  chainFamily?: Prisma.EnumChainFamilyFilter<"GasSpend"> | $Enums.ChainFamily
   gasUsedWei?: Prisma.StringFilter<"GasSpend"> | string
   gasCostUsd?: Prisma.DecimalFilter<"GasSpend"> | runtime.Decimal | runtime.DecimalJsLike | number | string
   walletAddress?: Prisma.StringNullableFilter<"GasSpend"> | string | null
@@ -279,6 +289,7 @@ export type GasSpendOrderByWithAggregationInput = {
   createdAt?: Prisma.SortOrder
   teamId?: Prisma.SortOrder
   chainId?: Prisma.SortOrder
+  chainFamily?: Prisma.SortOrder
   txHash?: Prisma.SortOrder
   gasUsedWei?: Prisma.SortOrder
   gasCostUsd?: Prisma.SortOrder
@@ -298,6 +309,7 @@ export type GasSpendScalarWhereWithAggregatesInput = {
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"GasSpend"> | Date | string
   teamId?: Prisma.StringWithAggregatesFilter<"GasSpend"> | string
   chainId?: Prisma.IntWithAggregatesFilter<"GasSpend"> | number
+  chainFamily?: Prisma.EnumChainFamilyWithAggregatesFilter<"GasSpend"> | $Enums.ChainFamily
   txHash?: Prisma.StringWithAggregatesFilter<"GasSpend"> | string
   gasUsedWei?: Prisma.StringWithAggregatesFilter<"GasSpend"> | string
   gasCostUsd?: Prisma.DecimalWithAggregatesFilter<"GasSpend"> | runtime.Decimal | runtime.DecimalJsLike | number | string
@@ -308,6 +320,7 @@ export type GasSpendCreateInput = {
   id?: string
   createdAt?: Date | string
   chainId: number
+  chainFamily?: $Enums.ChainFamily
   txHash: string
   gasUsedWei: string
   gasCostUsd: runtime.Decimal | runtime.DecimalJsLike | number | string
@@ -320,6 +333,7 @@ export type GasSpendUncheckedCreateInput = {
   createdAt?: Date | string
   teamId: string
   chainId: number
+  chainFamily?: $Enums.ChainFamily
   txHash: string
   gasUsedWei: string
   gasCostUsd: runtime.Decimal | runtime.DecimalJsLike | number | string
@@ -330,6 +344,7 @@ export type GasSpendUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  chainFamily?: Prisma.EnumChainFamilyFieldUpdateOperationsInput | $Enums.ChainFamily
   txHash?: Prisma.StringFieldUpdateOperationsInput | string
   gasUsedWei?: Prisma.StringFieldUpdateOperationsInput | string
   gasCostUsd?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
@@ -342,6 +357,7 @@ export type GasSpendUncheckedUpdateInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   teamId?: Prisma.StringFieldUpdateOperationsInput | string
   chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  chainFamily?: Prisma.EnumChainFamilyFieldUpdateOperationsInput | $Enums.ChainFamily
   txHash?: Prisma.StringFieldUpdateOperationsInput | string
   gasUsedWei?: Prisma.StringFieldUpdateOperationsInput | string
   gasCostUsd?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
@@ -353,6 +369,7 @@ export type GasSpendCreateManyInput = {
   createdAt?: Date | string
   teamId: string
   chainId: number
+  chainFamily?: $Enums.ChainFamily
   txHash: string
   gasUsedWei: string
   gasCostUsd: runtime.Decimal | runtime.DecimalJsLike | number | string
@@ -363,6 +380,7 @@ export type GasSpendUpdateManyMutationInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  chainFamily?: Prisma.EnumChainFamilyFieldUpdateOperationsInput | $Enums.ChainFamily
   txHash?: Prisma.StringFieldUpdateOperationsInput | string
   gasUsedWei?: Prisma.StringFieldUpdateOperationsInput | string
   gasCostUsd?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
@@ -374,6 +392,7 @@ export type GasSpendUncheckedUpdateManyInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   teamId?: Prisma.StringFieldUpdateOperationsInput | string
   chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  chainFamily?: Prisma.EnumChainFamilyFieldUpdateOperationsInput | $Enums.ChainFamily
   txHash?: Prisma.StringFieldUpdateOperationsInput | string
   gasUsedWei?: Prisma.StringFieldUpdateOperationsInput | string
   gasCostUsd?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
@@ -395,6 +414,7 @@ export type GasSpendCountOrderByAggregateInput = {
   createdAt?: Prisma.SortOrder
   teamId?: Prisma.SortOrder
   chainId?: Prisma.SortOrder
+  chainFamily?: Prisma.SortOrder
   txHash?: Prisma.SortOrder
   gasUsedWei?: Prisma.SortOrder
   gasCostUsd?: Prisma.SortOrder
@@ -411,6 +431,7 @@ export type GasSpendMaxOrderByAggregateInput = {
   createdAt?: Prisma.SortOrder
   teamId?: Prisma.SortOrder
   chainId?: Prisma.SortOrder
+  chainFamily?: Prisma.SortOrder
   txHash?: Prisma.SortOrder
   gasUsedWei?: Prisma.SortOrder
   gasCostUsd?: Prisma.SortOrder
@@ -422,6 +443,7 @@ export type GasSpendMinOrderByAggregateInput = {
   createdAt?: Prisma.SortOrder
   teamId?: Prisma.SortOrder
   chainId?: Prisma.SortOrder
+  chainFamily?: Prisma.SortOrder
   txHash?: Prisma.SortOrder
   gasUsedWei?: Prisma.SortOrder
   gasCostUsd?: Prisma.SortOrder
@@ -479,6 +501,7 @@ export type GasSpendCreateWithoutTeamInput = {
   id?: string
   createdAt?: Date | string
   chainId: number
+  chainFamily?: $Enums.ChainFamily
   txHash: string
   gasUsedWei: string
   gasCostUsd: runtime.Decimal | runtime.DecimalJsLike | number | string
@@ -489,6 +512,7 @@ export type GasSpendUncheckedCreateWithoutTeamInput = {
   id?: string
   createdAt?: Date | string
   chainId: number
+  chainFamily?: $Enums.ChainFamily
   txHash: string
   gasUsedWei: string
   gasCostUsd: runtime.Decimal | runtime.DecimalJsLike | number | string
@@ -529,6 +553,7 @@ export type GasSpendScalarWhereInput = {
   createdAt?: Prisma.DateTimeFilter<"GasSpend"> | Date | string
   teamId?: Prisma.StringFilter<"GasSpend"> | string
   chainId?: Prisma.IntFilter<"GasSpend"> | number
+  chainFamily?: Prisma.EnumChainFamilyFilter<"GasSpend"> | $Enums.ChainFamily
   txHash?: Prisma.StringFilter<"GasSpend"> | string
   gasUsedWei?: Prisma.StringFilter<"GasSpend"> | string
   gasCostUsd?: Prisma.DecimalFilter<"GasSpend"> | runtime.Decimal | runtime.DecimalJsLike | number | string
@@ -539,6 +564,7 @@ export type GasSpendCreateManyTeamInput = {
   id?: string
   createdAt?: Date | string
   chainId: number
+  chainFamily?: $Enums.ChainFamily
   txHash: string
   gasUsedWei: string
   gasCostUsd: runtime.Decimal | runtime.DecimalJsLike | number | string
@@ -549,6 +575,7 @@ export type GasSpendUpdateWithoutTeamInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  chainFamily?: Prisma.EnumChainFamilyFieldUpdateOperationsInput | $Enums.ChainFamily
   txHash?: Prisma.StringFieldUpdateOperationsInput | string
   gasUsedWei?: Prisma.StringFieldUpdateOperationsInput | string
   gasCostUsd?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
@@ -559,6 +586,7 @@ export type GasSpendUncheckedUpdateWithoutTeamInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  chainFamily?: Prisma.EnumChainFamilyFieldUpdateOperationsInput | $Enums.ChainFamily
   txHash?: Prisma.StringFieldUpdateOperationsInput | string
   gasUsedWei?: Prisma.StringFieldUpdateOperationsInput | string
   gasCostUsd?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
@@ -569,6 +597,7 @@ export type GasSpendUncheckedUpdateManyWithoutTeamInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  chainFamily?: Prisma.EnumChainFamilyFieldUpdateOperationsInput | $Enums.ChainFamily
   txHash?: Prisma.StringFieldUpdateOperationsInput | string
   gasUsedWei?: Prisma.StringFieldUpdateOperationsInput | string
   gasCostUsd?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
@@ -582,6 +611,7 @@ export type GasSpendSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs
   createdAt?: boolean
   teamId?: boolean
   chainId?: boolean
+  chainFamily?: boolean
   txHash?: boolean
   gasUsedWei?: boolean
   gasCostUsd?: boolean
@@ -594,6 +624,7 @@ export type GasSpendSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Exte
   createdAt?: boolean
   teamId?: boolean
   chainId?: boolean
+  chainFamily?: boolean
   txHash?: boolean
   gasUsedWei?: boolean
   gasCostUsd?: boolean
@@ -606,6 +637,7 @@ export type GasSpendSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Exte
   createdAt?: boolean
   teamId?: boolean
   chainId?: boolean
+  chainFamily?: boolean
   txHash?: boolean
   gasUsedWei?: boolean
   gasCostUsd?: boolean
@@ -618,13 +650,14 @@ export type GasSpendSelectScalar = {
   createdAt?: boolean
   teamId?: boolean
   chainId?: boolean
+  chainFamily?: boolean
   txHash?: boolean
   gasUsedWei?: boolean
   gasCostUsd?: boolean
   walletAddress?: boolean
 }
 
-export type GasSpendOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "createdAt" | "teamId" | "chainId" | "txHash" | "gasUsedWei" | "gasCostUsd" | "walletAddress", ExtArgs["result"]["gasSpend"]>
+export type GasSpendOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "createdAt" | "teamId" | "chainId" | "chainFamily" | "txHash" | "gasUsedWei" | "gasCostUsd" | "walletAddress", ExtArgs["result"]["gasSpend"]>
 export type GasSpendInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   team?: boolean | Prisma.TeamDefaultArgs<ExtArgs>
 }
@@ -645,6 +678,7 @@ export type $GasSpendPayload<ExtArgs extends runtime.Types.Extensions.InternalAr
     createdAt: Date
     teamId: string
     chainId: number
+    chainFamily: $Enums.ChainFamily
     txHash: string
     gasUsedWei: string
     gasCostUsd: runtime.Decimal
@@ -1077,6 +1111,7 @@ export interface GasSpendFieldRefs {
   readonly createdAt: Prisma.FieldRef<"GasSpend", 'DateTime'>
   readonly teamId: Prisma.FieldRef<"GasSpend", 'String'>
   readonly chainId: Prisma.FieldRef<"GasSpend", 'Int'>
+  readonly chainFamily: Prisma.FieldRef<"GasSpend", 'ChainFamily'>
   readonly txHash: Prisma.FieldRef<"GasSpend", 'String'>
   readonly gasUsedWei: Prisma.FieldRef<"GasSpend", 'String'>
   readonly gasCostUsd: Prisma.FieldRef<"GasSpend", 'Decimal'>

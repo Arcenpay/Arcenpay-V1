@@ -265,8 +265,13 @@ export interface ContractAddresses {
   sessionVault: string;
   zkUsageVerifier: string;
   mirrorRegistry?: string;
-  /** Optional ERC-4626 yield vault — set ARCENPAY_CONTRACT_<chainId>_yieldSessionVault to enable */
+  /** Optional ERC-4626 yield vault — set ARCENPAY_CONTRACT_<chainId>_yieldSessionVault to enable (EVM only) */
   yieldSessionVault?: string;
+  /**
+   * EVM-only alias of zkUsageVerifier. Stellar's analogue is the
+   * usage-verifier contract; both map to the on-chain zk proof verifier.
+   * The `zkUsageVerifier` field is the canonical key for both families.
+   */
 }
 
 export interface ChainServiceEndpoints {

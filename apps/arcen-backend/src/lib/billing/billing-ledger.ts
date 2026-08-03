@@ -3,6 +3,7 @@ import { toPrismaJson } from "../../utils/prisma-json.js";
 import { toSix } from "./invoices.js";
 import { applyInvoicePayment } from "./billing-balances.js";
 import { normalizeWallet } from "./utils.js";
+import { resolveChainFamilyForPrisma } from "../platform/chain-family.js";
 
 type BillingLedgerDb = Pick<
   typeof db,
@@ -149,7 +150,12 @@ export async function upsertSubscriptionLedgerState(
       walletAddress:
         normalizeWallet(input.walletAddress) ?? company.walletAddress ?? null,
       status: input.status,
-      ...(input.chainId != null ? { chainId: input.chainId } : {}),
+      ...(input.chainId != null
+        ? {
+            chainId: input.chainId,
+            chainFamily: resolveChainFamilyForPrisma(input.chainId),
+          }
+        : {}),
       ...(input.catalogPlanId !== undefined
         ? { catalogPlanId: input.catalogPlanId }
         : {}),
@@ -191,7 +197,8 @@ export async function upsertSubscriptionLedgerState(
       walletAddress:
         normalizeWallet(input.walletAddress) ?? company.walletAddress ?? null,
       status: input.status,
-      ...(input.chainId != null ? { chainId: input.chainId } : {}),
+      chainId: input.chainId ?? 84532,
+      chainFamily: resolveChainFamilyForPrisma(input.chainId ?? 84532),
       catalogPlanId: nextCatalogPlanId,
       onChainPlanId: input.onChainPlanId ?? null,
       onChainTokenId: input.onChainTokenId ?? null,

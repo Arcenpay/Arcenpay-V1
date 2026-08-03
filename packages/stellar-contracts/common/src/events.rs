@@ -1,5 +1,5 @@
 /// Shared contract event structs emitted across the ArcenPay protocol.
-use soroban_sdk::{Address, BytesN, String, symbol_short};
+use soroban_sdk::{Address, String};
 
 #[soroban_sdk::contractevent]
 pub struct FeeCollected {

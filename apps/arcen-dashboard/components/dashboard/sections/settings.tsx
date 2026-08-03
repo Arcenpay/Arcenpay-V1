@@ -863,7 +863,7 @@ export function SettingsSection() {
                   <Button
                     variant="outline"
                     onClick={() => {
-                      window.location.href = "/onboarding/wallet";
+                      window.location.href = "/onboarding/chain";
                     }}
                   >
                     <Link2 className="w-4 h-4 mr-2" />
@@ -1424,7 +1424,7 @@ export function SettingsSection() {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => window.location.href = "/onboarding/wallet"}
+                    onClick={() => window.location.href = "/onboarding/chain"}
                   >
                     <Wallet className="w-4 h-4 mr-2" />
                     Link Wallet

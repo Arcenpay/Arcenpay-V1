@@ -47,6 +47,7 @@ export type SubscriptionStateMinAggregateOutputType = {
   onChainPlanId: string | null
   onChainTokenId: string | null
   chainId: number | null
+  chainFamily: $Enums.ChainFamily | null
   currentPeriodStart: Date | null
   currentPeriodEnd: Date | null
   lastEvent: string | null
@@ -71,6 +72,7 @@ export type SubscriptionStateMaxAggregateOutputType = {
   onChainPlanId: string | null
   onChainTokenId: string | null
   chainId: number | null
+  chainFamily: $Enums.ChainFamily | null
   currentPeriodStart: Date | null
   currentPeriodEnd: Date | null
   lastEvent: string | null
@@ -95,6 +97,7 @@ export type SubscriptionStateCountAggregateOutputType = {
   onChainPlanId: number
   onChainTokenId: number
   chainId: number
+  chainFamily: number
   currentPeriodStart: number
   currentPeriodEnd: number
   lastEvent: number
@@ -130,6 +133,7 @@ export type SubscriptionStateMinAggregateInputType = {
   onChainPlanId?: true
   onChainTokenId?: true
   chainId?: true
+  chainFamily?: true
   currentPeriodStart?: true
   currentPeriodEnd?: true
   lastEvent?: true
@@ -154,6 +158,7 @@ export type SubscriptionStateMaxAggregateInputType = {
   onChainPlanId?: true
   onChainTokenId?: true
   chainId?: true
+  chainFamily?: true
   currentPeriodStart?: true
   currentPeriodEnd?: true
   lastEvent?: true
@@ -178,6 +183,7 @@ export type SubscriptionStateCountAggregateInputType = {
   onChainPlanId?: true
   onChainTokenId?: true
   chainId?: true
+  chainFamily?: true
   currentPeriodStart?: true
   currentPeriodEnd?: true
   lastEvent?: true
@@ -290,6 +296,7 @@ export type SubscriptionStateGroupByOutputType = {
   onChainPlanId: string | null
   onChainTokenId: string | null
   chainId: number
+  chainFamily: $Enums.ChainFamily
   currentPeriodStart: Date | null
   currentPeriodEnd: Date | null
   lastEvent: string | null
@@ -338,6 +345,7 @@ export type SubscriptionStateWhereInput = {
   onChainPlanId?: Prisma.StringNullableFilter<"SubscriptionState"> | string | null
   onChainTokenId?: Prisma.StringNullableFilter<"SubscriptionState"> | string | null
   chainId?: Prisma.IntFilter<"SubscriptionState"> | number
+  chainFamily?: Prisma.EnumChainFamilyFilter<"SubscriptionState"> | $Enums.ChainFamily
   currentPeriodStart?: Prisma.DateTimeNullableFilter<"SubscriptionState"> | Date | string | null
   currentPeriodEnd?: Prisma.DateTimeNullableFilter<"SubscriptionState"> | Date | string | null
   lastEvent?: Prisma.StringNullableFilter<"SubscriptionState"> | string | null
@@ -370,6 +378,7 @@ export type SubscriptionStateOrderByWithRelationInput = {
   onChainPlanId?: Prisma.SortOrderInput | Prisma.SortOrder
   onChainTokenId?: Prisma.SortOrderInput | Prisma.SortOrder
   chainId?: Prisma.SortOrder
+  chainFamily?: Prisma.SortOrder
   currentPeriodStart?: Prisma.SortOrderInput | Prisma.SortOrder
   currentPeriodEnd?: Prisma.SortOrderInput | Prisma.SortOrder
   lastEvent?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -405,6 +414,7 @@ export type SubscriptionStateWhereUniqueInput = Prisma.AtLeast<{
   onChainPlanId?: Prisma.StringNullableFilter<"SubscriptionState"> | string | null
   onChainTokenId?: Prisma.StringNullableFilter<"SubscriptionState"> | string | null
   chainId?: Prisma.IntFilter<"SubscriptionState"> | number
+  chainFamily?: Prisma.EnumChainFamilyFilter<"SubscriptionState"> | $Enums.ChainFamily
   currentPeriodStart?: Prisma.DateTimeNullableFilter<"SubscriptionState"> | Date | string | null
   currentPeriodEnd?: Prisma.DateTimeNullableFilter<"SubscriptionState"> | Date | string | null
   lastEvent?: Prisma.StringNullableFilter<"SubscriptionState"> | string | null
@@ -437,6 +447,7 @@ export type SubscriptionStateOrderByWithAggregationInput = {
   onChainPlanId?: Prisma.SortOrderInput | Prisma.SortOrder
   onChainTokenId?: Prisma.SortOrderInput | Prisma.SortOrder
   chainId?: Prisma.SortOrder
+  chainFamily?: Prisma.SortOrder
   currentPeriodStart?: Prisma.SortOrderInput | Prisma.SortOrder
   currentPeriodEnd?: Prisma.SortOrderInput | Prisma.SortOrder
   lastEvent?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -470,6 +481,7 @@ export type SubscriptionStateScalarWhereWithAggregatesInput = {
   onChainPlanId?: Prisma.StringNullableWithAggregatesFilter<"SubscriptionState"> | string | null
   onChainTokenId?: Prisma.StringNullableWithAggregatesFilter<"SubscriptionState"> | string | null
   chainId?: Prisma.IntWithAggregatesFilter<"SubscriptionState"> | number
+  chainFamily?: Prisma.EnumChainFamilyWithAggregatesFilter<"SubscriptionState"> | $Enums.ChainFamily
   currentPeriodStart?: Prisma.DateTimeNullableWithAggregatesFilter<"SubscriptionState"> | Date | string | null
   currentPeriodEnd?: Prisma.DateTimeNullableWithAggregatesFilter<"SubscriptionState"> | Date | string | null
   lastEvent?: Prisma.StringNullableWithAggregatesFilter<"SubscriptionState"> | string | null
@@ -492,6 +504,7 @@ export type SubscriptionStateCreateInput = {
   onChainPlanId?: string | null
   onChainTokenId?: string | null
   chainId?: number
+  chainFamily?: $Enums.ChainFamily
   currentPeriodStart?: Date | string | null
   currentPeriodEnd?: Date | string | null
   lastEvent?: string | null
@@ -524,6 +537,7 @@ export type SubscriptionStateUncheckedCreateInput = {
   onChainPlanId?: string | null
   onChainTokenId?: string | null
   chainId?: number
+  chainFamily?: $Enums.ChainFamily
   currentPeriodStart?: Date | string | null
   currentPeriodEnd?: Date | string | null
   lastEvent?: string | null
@@ -550,6 +564,7 @@ export type SubscriptionStateUpdateInput = {
   onChainPlanId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   onChainTokenId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  chainFamily?: Prisma.EnumChainFamilyFieldUpdateOperationsInput | $Enums.ChainFamily
   currentPeriodStart?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   currentPeriodEnd?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastEvent?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -582,6 +597,7 @@ export type SubscriptionStateUncheckedUpdateInput = {
   onChainPlanId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   onChainTokenId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  chainFamily?: Prisma.EnumChainFamilyFieldUpdateOperationsInput | $Enums.ChainFamily
   currentPeriodStart?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   currentPeriodEnd?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastEvent?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -611,6 +627,7 @@ export type SubscriptionStateCreateManyInput = {
   onChainPlanId?: string | null
   onChainTokenId?: string | null
   chainId?: number
+  chainFamily?: $Enums.ChainFamily
   currentPeriodStart?: Date | string | null
   currentPeriodEnd?: Date | string | null
   lastEvent?: string | null
@@ -633,6 +650,7 @@ export type SubscriptionStateUpdateManyMutationInput = {
   onChainPlanId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   onChainTokenId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  chainFamily?: Prisma.EnumChainFamilyFieldUpdateOperationsInput | $Enums.ChainFamily
   currentPeriodStart?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   currentPeriodEnd?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastEvent?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -658,6 +676,7 @@ export type SubscriptionStateUncheckedUpdateManyInput = {
   onChainPlanId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   onChainTokenId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  chainFamily?: Prisma.EnumChainFamilyFieldUpdateOperationsInput | $Enums.ChainFamily
   currentPeriodStart?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   currentPeriodEnd?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastEvent?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -693,6 +712,7 @@ export type SubscriptionStateCountOrderByAggregateInput = {
   onChainPlanId?: Prisma.SortOrder
   onChainTokenId?: Prisma.SortOrder
   chainId?: Prisma.SortOrder
+  chainFamily?: Prisma.SortOrder
   currentPeriodStart?: Prisma.SortOrder
   currentPeriodEnd?: Prisma.SortOrder
   lastEvent?: Prisma.SortOrder
@@ -722,6 +742,7 @@ export type SubscriptionStateMaxOrderByAggregateInput = {
   onChainPlanId?: Prisma.SortOrder
   onChainTokenId?: Prisma.SortOrder
   chainId?: Prisma.SortOrder
+  chainFamily?: Prisma.SortOrder
   currentPeriodStart?: Prisma.SortOrder
   currentPeriodEnd?: Prisma.SortOrder
   lastEvent?: Prisma.SortOrder
@@ -746,6 +767,7 @@ export type SubscriptionStateMinOrderByAggregateInput = {
   onChainPlanId?: Prisma.SortOrder
   onChainTokenId?: Prisma.SortOrder
   chainId?: Prisma.SortOrder
+  chainFamily?: Prisma.SortOrder
   currentPeriodStart?: Prisma.SortOrder
   currentPeriodEnd?: Prisma.SortOrder
   lastEvent?: Prisma.SortOrder
@@ -960,6 +982,7 @@ export type SubscriptionStateCreateWithoutTeamInput = {
   onChainPlanId?: string | null
   onChainTokenId?: string | null
   chainId?: number
+  chainFamily?: $Enums.ChainFamily
   currentPeriodStart?: Date | string | null
   currentPeriodEnd?: Date | string | null
   lastEvent?: string | null
@@ -990,6 +1013,7 @@ export type SubscriptionStateUncheckedCreateWithoutTeamInput = {
   onChainPlanId?: string | null
   onChainTokenId?: string | null
   chainId?: number
+  chainFamily?: $Enums.ChainFamily
   currentPeriodStart?: Date | string | null
   currentPeriodEnd?: Date | string | null
   lastEvent?: string | null
@@ -1048,6 +1072,7 @@ export type SubscriptionStateScalarWhereInput = {
   onChainPlanId?: Prisma.StringNullableFilter<"SubscriptionState"> | string | null
   onChainTokenId?: Prisma.StringNullableFilter<"SubscriptionState"> | string | null
   chainId?: Prisma.IntFilter<"SubscriptionState"> | number
+  chainFamily?: Prisma.EnumChainFamilyFilter<"SubscriptionState"> | $Enums.ChainFamily
   currentPeriodStart?: Prisma.DateTimeNullableFilter<"SubscriptionState"> | Date | string | null
   currentPeriodEnd?: Prisma.DateTimeNullableFilter<"SubscriptionState"> | Date | string | null
   lastEvent?: Prisma.StringNullableFilter<"SubscriptionState"> | string | null
@@ -1070,6 +1095,7 @@ export type SubscriptionStateCreateWithoutEnvironmentInput = {
   onChainPlanId?: string | null
   onChainTokenId?: string | null
   chainId?: number
+  chainFamily?: $Enums.ChainFamily
   currentPeriodStart?: Date | string | null
   currentPeriodEnd?: Date | string | null
   lastEvent?: string | null
@@ -1100,6 +1126,7 @@ export type SubscriptionStateUncheckedCreateWithoutEnvironmentInput = {
   onChainPlanId?: string | null
   onChainTokenId?: string | null
   chainId?: number
+  chainFamily?: $Enums.ChainFamily
   currentPeriodStart?: Date | string | null
   currentPeriodEnd?: Date | string | null
   lastEvent?: string | null
@@ -1152,6 +1179,7 @@ export type SubscriptionStateCreateWithoutChangeRequestsInput = {
   onChainPlanId?: string | null
   onChainTokenId?: string | null
   chainId?: number
+  chainFamily?: $Enums.ChainFamily
   currentPeriodStart?: Date | string | null
   currentPeriodEnd?: Date | string | null
   lastEvent?: string | null
@@ -1183,6 +1211,7 @@ export type SubscriptionStateUncheckedCreateWithoutChangeRequestsInput = {
   onChainPlanId?: string | null
   onChainTokenId?: string | null
   chainId?: number
+  chainFamily?: $Enums.ChainFamily
   currentPeriodStart?: Date | string | null
   currentPeriodEnd?: Date | string | null
   lastEvent?: string | null
@@ -1224,6 +1253,7 @@ export type SubscriptionStateUpdateWithoutChangeRequestsInput = {
   onChainPlanId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   onChainTokenId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  chainFamily?: Prisma.EnumChainFamilyFieldUpdateOperationsInput | $Enums.ChainFamily
   currentPeriodStart?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   currentPeriodEnd?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastEvent?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1255,6 +1285,7 @@ export type SubscriptionStateUncheckedUpdateWithoutChangeRequestsInput = {
   onChainPlanId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   onChainTokenId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  chainFamily?: Prisma.EnumChainFamilyFieldUpdateOperationsInput | $Enums.ChainFamily
   currentPeriodStart?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   currentPeriodEnd?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastEvent?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1280,6 +1311,7 @@ export type SubscriptionStateCreateWithoutPaymentsInput = {
   onChainPlanId?: string | null
   onChainTokenId?: string | null
   chainId?: number
+  chainFamily?: $Enums.ChainFamily
   currentPeriodStart?: Date | string | null
   currentPeriodEnd?: Date | string | null
   lastEvent?: string | null
@@ -1311,6 +1343,7 @@ export type SubscriptionStateUncheckedCreateWithoutPaymentsInput = {
   onChainPlanId?: string | null
   onChainTokenId?: string | null
   chainId?: number
+  chainFamily?: $Enums.ChainFamily
   currentPeriodStart?: Date | string | null
   currentPeriodEnd?: Date | string | null
   lastEvent?: string | null
@@ -1352,6 +1385,7 @@ export type SubscriptionStateUpdateWithoutPaymentsInput = {
   onChainPlanId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   onChainTokenId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  chainFamily?: Prisma.EnumChainFamilyFieldUpdateOperationsInput | $Enums.ChainFamily
   currentPeriodStart?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   currentPeriodEnd?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastEvent?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1383,6 +1417,7 @@ export type SubscriptionStateUncheckedUpdateWithoutPaymentsInput = {
   onChainPlanId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   onChainTokenId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  chainFamily?: Prisma.EnumChainFamilyFieldUpdateOperationsInput | $Enums.ChainFamily
   currentPeriodStart?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   currentPeriodEnd?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastEvent?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1408,6 +1443,7 @@ export type SubscriptionStateCreateWithoutBillingAdjustmentsInput = {
   onChainPlanId?: string | null
   onChainTokenId?: string | null
   chainId?: number
+  chainFamily?: $Enums.ChainFamily
   currentPeriodStart?: Date | string | null
   currentPeriodEnd?: Date | string | null
   lastEvent?: string | null
@@ -1439,6 +1475,7 @@ export type SubscriptionStateUncheckedCreateWithoutBillingAdjustmentsInput = {
   onChainPlanId?: string | null
   onChainTokenId?: string | null
   chainId?: number
+  chainFamily?: $Enums.ChainFamily
   currentPeriodStart?: Date | string | null
   currentPeriodEnd?: Date | string | null
   lastEvent?: string | null
@@ -1480,6 +1517,7 @@ export type SubscriptionStateUpdateWithoutBillingAdjustmentsInput = {
   onChainPlanId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   onChainTokenId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  chainFamily?: Prisma.EnumChainFamilyFieldUpdateOperationsInput | $Enums.ChainFamily
   currentPeriodStart?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   currentPeriodEnd?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastEvent?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1511,6 +1549,7 @@ export type SubscriptionStateUncheckedUpdateWithoutBillingAdjustmentsInput = {
   onChainPlanId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   onChainTokenId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  chainFamily?: Prisma.EnumChainFamilyFieldUpdateOperationsInput | $Enums.ChainFamily
   currentPeriodStart?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   currentPeriodEnd?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastEvent?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1536,6 +1575,7 @@ export type SubscriptionStateCreateWithoutCompanyInput = {
   onChainPlanId?: string | null
   onChainTokenId?: string | null
   chainId?: number
+  chainFamily?: $Enums.ChainFamily
   currentPeriodStart?: Date | string | null
   currentPeriodEnd?: Date | string | null
   lastEvent?: string | null
@@ -1566,6 +1606,7 @@ export type SubscriptionStateUncheckedCreateWithoutCompanyInput = {
   onChainPlanId?: string | null
   onChainTokenId?: string | null
   chainId?: number
+  chainFamily?: $Enums.ChainFamily
   currentPeriodStart?: Date | string | null
   currentPeriodEnd?: Date | string | null
   lastEvent?: string | null
@@ -1608,6 +1649,7 @@ export type SubscriptionStateUpdateWithoutCompanyInput = {
   onChainPlanId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   onChainTokenId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  chainFamily?: Prisma.EnumChainFamilyFieldUpdateOperationsInput | $Enums.ChainFamily
   currentPeriodStart?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   currentPeriodEnd?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastEvent?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1638,6 +1680,7 @@ export type SubscriptionStateUncheckedUpdateWithoutCompanyInput = {
   onChainPlanId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   onChainTokenId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  chainFamily?: Prisma.EnumChainFamilyFieldUpdateOperationsInput | $Enums.ChainFamily
   currentPeriodStart?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   currentPeriodEnd?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastEvent?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1664,6 +1707,7 @@ export type SubscriptionStateCreateWithoutCheckoutSessionsInput = {
   onChainPlanId?: string | null
   onChainTokenId?: string | null
   chainId?: number
+  chainFamily?: $Enums.ChainFamily
   currentPeriodStart?: Date | string | null
   currentPeriodEnd?: Date | string | null
   lastEvent?: string | null
@@ -1695,6 +1739,7 @@ export type SubscriptionStateUncheckedCreateWithoutCheckoutSessionsInput = {
   onChainPlanId?: string | null
   onChainTokenId?: string | null
   chainId?: number
+  chainFamily?: $Enums.ChainFamily
   currentPeriodStart?: Date | string | null
   currentPeriodEnd?: Date | string | null
   lastEvent?: string | null
@@ -1736,6 +1781,7 @@ export type SubscriptionStateUpdateWithoutCheckoutSessionsInput = {
   onChainPlanId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   onChainTokenId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  chainFamily?: Prisma.EnumChainFamilyFieldUpdateOperationsInput | $Enums.ChainFamily
   currentPeriodStart?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   currentPeriodEnd?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastEvent?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1767,6 +1813,7 @@ export type SubscriptionStateUncheckedUpdateWithoutCheckoutSessionsInput = {
   onChainPlanId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   onChainTokenId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  chainFamily?: Prisma.EnumChainFamilyFieldUpdateOperationsInput | $Enums.ChainFamily
   currentPeriodStart?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   currentPeriodEnd?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastEvent?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1794,6 +1841,7 @@ export type SubscriptionStateCreateManyTeamInput = {
   onChainPlanId?: string | null
   onChainTokenId?: string | null
   chainId?: number
+  chainFamily?: $Enums.ChainFamily
   currentPeriodStart?: Date | string | null
   currentPeriodEnd?: Date | string | null
   lastEvent?: string | null
@@ -1816,6 +1864,7 @@ export type SubscriptionStateUpdateWithoutTeamInput = {
   onChainPlanId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   onChainTokenId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  chainFamily?: Prisma.EnumChainFamilyFieldUpdateOperationsInput | $Enums.ChainFamily
   currentPeriodStart?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   currentPeriodEnd?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastEvent?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1846,6 +1895,7 @@ export type SubscriptionStateUncheckedUpdateWithoutTeamInput = {
   onChainPlanId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   onChainTokenId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  chainFamily?: Prisma.EnumChainFamilyFieldUpdateOperationsInput | $Enums.ChainFamily
   currentPeriodStart?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   currentPeriodEnd?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastEvent?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1874,6 +1924,7 @@ export type SubscriptionStateUncheckedUpdateManyWithoutTeamInput = {
   onChainPlanId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   onChainTokenId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  chainFamily?: Prisma.EnumChainFamilyFieldUpdateOperationsInput | $Enums.ChainFamily
   currentPeriodStart?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   currentPeriodEnd?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastEvent?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1898,6 +1949,7 @@ export type SubscriptionStateCreateManyEnvironmentInput = {
   onChainPlanId?: string | null
   onChainTokenId?: string | null
   chainId?: number
+  chainFamily?: $Enums.ChainFamily
   currentPeriodStart?: Date | string | null
   currentPeriodEnd?: Date | string | null
   lastEvent?: string | null
@@ -1920,6 +1972,7 @@ export type SubscriptionStateUpdateWithoutEnvironmentInput = {
   onChainPlanId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   onChainTokenId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  chainFamily?: Prisma.EnumChainFamilyFieldUpdateOperationsInput | $Enums.ChainFamily
   currentPeriodStart?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   currentPeriodEnd?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastEvent?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1950,6 +2003,7 @@ export type SubscriptionStateUncheckedUpdateWithoutEnvironmentInput = {
   onChainPlanId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   onChainTokenId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  chainFamily?: Prisma.EnumChainFamilyFieldUpdateOperationsInput | $Enums.ChainFamily
   currentPeriodStart?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   currentPeriodEnd?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastEvent?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1978,6 +2032,7 @@ export type SubscriptionStateUncheckedUpdateManyWithoutEnvironmentInput = {
   onChainPlanId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   onChainTokenId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  chainFamily?: Prisma.EnumChainFamilyFieldUpdateOperationsInput | $Enums.ChainFamily
   currentPeriodStart?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   currentPeriodEnd?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastEvent?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -2061,6 +2116,7 @@ export type SubscriptionStateSelect<ExtArgs extends runtime.Types.Extensions.Int
   onChainPlanId?: boolean
   onChainTokenId?: boolean
   chainId?: boolean
+  chainFamily?: boolean
   currentPeriodStart?: boolean
   currentPeriodEnd?: boolean
   lastEvent?: boolean
@@ -2094,6 +2150,7 @@ export type SubscriptionStateSelectCreateManyAndReturn<ExtArgs extends runtime.T
   onChainPlanId?: boolean
   onChainTokenId?: boolean
   chainId?: boolean
+  chainFamily?: boolean
   currentPeriodStart?: boolean
   currentPeriodEnd?: boolean
   lastEvent?: boolean
@@ -2122,6 +2179,7 @@ export type SubscriptionStateSelectUpdateManyAndReturn<ExtArgs extends runtime.T
   onChainPlanId?: boolean
   onChainTokenId?: boolean
   chainId?: boolean
+  chainFamily?: boolean
   currentPeriodStart?: boolean
   currentPeriodEnd?: boolean
   lastEvent?: boolean
@@ -2150,6 +2208,7 @@ export type SubscriptionStateSelectScalar = {
   onChainPlanId?: boolean
   onChainTokenId?: boolean
   chainId?: boolean
+  chainFamily?: boolean
   currentPeriodStart?: boolean
   currentPeriodEnd?: boolean
   lastEvent?: boolean
@@ -2162,7 +2221,7 @@ export type SubscriptionStateSelectScalar = {
   metadata?: boolean
 }
 
-export type SubscriptionStateOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "createdAt" | "updatedAt" | "teamId" | "environmentId" | "companyId" | "walletAddress" | "status" | "catalogPlanId" | "onChainPlanId" | "onChainTokenId" | "chainId" | "currentPeriodStart" | "currentPeriodEnd" | "lastEvent" | "lastEventAt" | "lastSourceTxHash" | "cancelAtPeriodEnd" | "cancelledAt" | "pastDueAt" | "graceEndsAt" | "metadata", ExtArgs["result"]["subscriptionState"]>
+export type SubscriptionStateOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "createdAt" | "updatedAt" | "teamId" | "environmentId" | "companyId" | "walletAddress" | "status" | "catalogPlanId" | "onChainPlanId" | "onChainTokenId" | "chainId" | "chainFamily" | "currentPeriodStart" | "currentPeriodEnd" | "lastEvent" | "lastEventAt" | "lastSourceTxHash" | "cancelAtPeriodEnd" | "cancelledAt" | "pastDueAt" | "graceEndsAt" | "metadata", ExtArgs["result"]["subscriptionState"]>
 export type SubscriptionStateInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   team?: boolean | Prisma.TeamDefaultArgs<ExtArgs>
   environment?: boolean | Prisma.SubscriptionState$environmentArgs<ExtArgs>
@@ -2208,6 +2267,7 @@ export type $SubscriptionStatePayload<ExtArgs extends runtime.Types.Extensions.I
     onChainPlanId: string | null
     onChainTokenId: string | null
     chainId: number
+    chainFamily: $Enums.ChainFamily
     currentPeriodStart: Date | null
     currentPeriodEnd: Date | null
     lastEvent: string | null
@@ -2660,6 +2720,7 @@ export interface SubscriptionStateFieldRefs {
   readonly onChainPlanId: Prisma.FieldRef<"SubscriptionState", 'String'>
   readonly onChainTokenId: Prisma.FieldRef<"SubscriptionState", 'String'>
   readonly chainId: Prisma.FieldRef<"SubscriptionState", 'Int'>
+  readonly chainFamily: Prisma.FieldRef<"SubscriptionState", 'ChainFamily'>
   readonly currentPeriodStart: Prisma.FieldRef<"SubscriptionState", 'DateTime'>
   readonly currentPeriodEnd: Prisma.FieldRef<"SubscriptionState", 'DateTime'>
   readonly lastEvent: Prisma.FieldRef<"SubscriptionState", 'String'>
