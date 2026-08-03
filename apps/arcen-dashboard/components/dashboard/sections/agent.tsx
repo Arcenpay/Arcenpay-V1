@@ -38,7 +38,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { getUsdcAddress } from "@/lib/contracts";
+import { getEvmUsdcAddress } from "@/lib/contracts";
 import { SkeletonList, SkeletonTable } from "@/components/ui/skeleton";
 
 const ERC20_APPROVE_ABI = [{
@@ -637,7 +637,7 @@ function PermissionsTab() {
     if (!isConnected || !agentWallet || !chainId) return;
     setApproving(true);
     try {
-      const usdcAddress = getUsdcAddress(chainId);
+      const usdcAddress = getEvmUsdcAddress(chainId);
       const amountAtomic = parseUnits(approveAmount || "0", 6);
       const hash = await writeContractAsync({
         address: usdcAddress,

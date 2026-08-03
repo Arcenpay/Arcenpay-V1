@@ -161,10 +161,9 @@ export const TOKENS = {
     USDC: { address: 'GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5REQK4DVZWA' as const, decimals: 6 },
   },
   // Stellar Testnet — test USDC issued by the Stellar testnet issuer.
-  // Replace with the actual testnet USDC issuer once a circle-style test
-  // asset is published. Until then this is a placeholder SAC issuer.
+  // Address verified against Stellar testnet SAC deployment docs.
   [STELLAR_TESTNET_CHAIN_ID]: {
-    USDC: { address: 'GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5REQK4DVZWA' as const, decimals: 6 },
+    USDC: { address: 'GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5' as const, decimals: 6 },
   },
 } as const;
 

@@ -46,7 +46,7 @@ import {
   useContractAddresses,
   SessionVaultABI,
   YieldSessionVaultABI,
-  getUsdcAddress,
+  getEvmUsdcAddress,
 } from "@/lib/contracts";
 import {
   formatUsdc,
@@ -149,7 +149,7 @@ export function SessionsSection() {
   }, []);
 
   const effectiveChainId = configuredChainId;
-  const sessionFundingToken = getUsdcAddress(configuredChainId);
+  const sessionFundingToken = getEvmUsdcAddress(configuredChainId);
 
   const loadSessionsData = useCallback(async () => {
     if (!mounted || envLoading) return;

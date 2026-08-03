@@ -58,6 +58,18 @@ export function getBlockExplorerUrl(
   type: "tx" | "address" | "block",
   hash: string,
 ): string {
+  // Stellar chains use stellar.expert
+  const STELLAR_NETWORK: Record<number, string> = {
+    9000000: "public",
+    9000001: "testnet",
+    9000002: "futurenet",
+  };
+  if (STELLAR_NETWORK[chainId]) {
+    const network = STELLAR_NETWORK[chainId];
+    const stellarType = type === "address" ? "account" : type;
+    return `https://stellar.expert/explorer/${network}/${stellarType}/${hash}`;
+  }
+
   const BASE_URLS: Record<number, string> = {
     1: "https://etherscan.io",
     11155111: "https://sepolia.etherscan.io",
@@ -71,6 +83,15 @@ export function getBlockExplorerUrl(
 
 /** Returns the block explorer base URL for the given chain */
 export function getBlockExplorerBase(chainId: number): string {
+  const STELLAR_NETWORK: Record<number, string> = {
+    9000000: "public",
+    9000001: "testnet",
+    9000002: "futurenet",
+  };
+  if (STELLAR_NETWORK[chainId]) {
+    return `https://stellar.expert/explorer/${STELLAR_NETWORK[chainId]}`;
+  }
+
   const BASE_URLS: Record<number, string> = {
     1: "https://etherscan.io",
     11155111: "https://sepolia.etherscan.io",

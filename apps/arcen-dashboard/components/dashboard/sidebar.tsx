@@ -144,7 +144,8 @@ export function Sidebar({
   const router = useRouter();
   const { address, isConnected } = useAccount();
   const { envMode, activeEnvironment } = useEnvironment();
-  const { data: sessionData, refresh: refreshSessionData } = useDashboardSession();
+  const { data: sessionData, refresh: refreshSessionData } =
+    useDashboardSession();
   const [mounted, setMounted] = useState(false);
   const { theme, setTheme } = useTheme();
 
@@ -177,7 +178,10 @@ export function Sidebar({
   // Close account menu on outside click
   useEffect(() => {
     function handleClick(e: MouseEvent) {
-      if (accountRef.current && !accountRef.current.contains(e.target as Node)) {
+      if (
+        accountRef.current &&
+        !accountRef.current.contains(e.target as Node)
+      ) {
         setShowAccountMenu(false);
       }
     }
@@ -313,9 +317,12 @@ export function Sidebar({
         <nav className="flex-1 px-3 py-2 overflow-y-auto overflow-x-hidden">
           {navGroups.map((group, gi) => {
             const GroupIcon = group.icon;
-            const isExpanded = group.collapsible ? expandedGroup === group.label : true;
-            const isGroupActive = group.items.some((i) => i.id === activeSection);
-
+            const isExpanded = group.collapsible
+              ? expandedGroup === group.label
+              : true;
+            const isGroupActive = group.items.some(
+              (i) => i.id === activeSection,
+            );
 
             return (
               <div key={gi} className={gi > 0 ? "mt-0.5" : ""}>
@@ -347,10 +354,7 @@ export function Sidebar({
                       const isLast = ii === group.items.length - 1;
 
                       return (
-                        <div
-                          key={item.id}
-                          className="relative pl-[28px]"
-                        >
+                        <div key={item.id} className="relative pl-[28px]">
                           {/* Left vertical line — centered under group icon */}
                           <div
                             className={cn(
@@ -387,15 +391,17 @@ export function Sidebar({
           {/* Promo card */}
           <div className="rounded-xl bg-[var(--sidebar)] border border-sidebar-border p-3.5 mb-2 text-sidebar-foreground shadow-sm">
             <div className="flex items-center gap-2 mb-2">
-              <Sparkles className="w-4 h-4 text-brand" strokeWidth={1.5} />
-              <span className="text-[13px] font-medium text-sidebar-foreground">Annual plan savings</span>
+              
+              <span className="text-[13px] font-medium text-sidebar-foreground">
+                Annual plan savings
+              </span>
             </div>
             <p className="text-[12px] text-sidebar-foreground/60 leading-relaxed mb-2">
               Save 20% with annual billing on eligible plans.
             </p>
             <button
               onClick={() => onSectionChange("billing")}
-              className="text-[13px] font-medium text-brand hover:opacity-80 transition-opacity"
+              className="text-[13px] font-medium text-blue-700 hover:opacity-80 transition-opacity "
             >
               Upgrade
             </button>
@@ -404,7 +410,10 @@ export function Sidebar({
           {/* Support links */}
           <a
             href="#"
-            onClick={(e) => { e.preventDefault(); onSectionChange("settings"); }}
+            onClick={(e) => {
+              e.preventDefault();
+              onSectionChange("settings");
+            }}
             className="flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium text-sidebar-foreground/50 hover:text-sidebar-foreground/80 hover:bg-[var(--sidebar-hover)] transition-all duration-150"
           >
             <LifeBuoy className="w-4 h-4 shrink-0" strokeWidth={1.5} />
@@ -418,7 +427,10 @@ export function Sidebar({
           >
             <BookOpen className="w-4 h-4 shrink-0" strokeWidth={1.5} />
             <span>Documentation</span>
-            <ArrowUpRight className="ml-auto w-3.5 h-3.5 opacity-40" strokeWidth={1.5} />
+            <ArrowUpRight
+              className="ml-auto w-3.5 h-3.5 opacity-40"
+              strokeWidth={1.5}
+            />
           </a>
 
           {/* Divider */}
@@ -480,7 +492,10 @@ export function Sidebar({
                     className="h-7 w-7 rounded-full border border-sidebar-border bg-[var(--sidebar-hover)] shrink-0"
                   />
                 ) : (
-                  <UserRound className="h-7 w-7 shrink-0 text-sidebar-foreground/40" strokeWidth={1.5} />
+                  <UserRound
+                    className="h-7 w-7 shrink-0 text-sidebar-foreground/40"
+                    strokeWidth={1.5}
+                  />
                 )}
                 <div className="min-w-0 flex-1 text-left">
                   <p className="text-[13px] font-medium text-sidebar-foreground truncate">
@@ -494,7 +509,9 @@ export function Sidebar({
                   <div
                     className={cn(
                       "w-2 h-2 rounded-full",
-                      mounted && isConnected ? "bg-green-500" : "bg-yellow-500 animate-pulse",
+                      mounted && isConnected
+                        ? "bg-green-500"
+                        : "bg-yellow-500 animate-pulse",
                     )}
                   />
                   <ChevronUp
@@ -546,7 +563,9 @@ export function Sidebar({
                       type="button"
                       onClick={() => {
                         setShowAccountMenu(false);
-                        router.push("/?section=settings&tab=workspace", { scroll: false });
+                        router.push("/?section=settings&tab=workspace", {
+                          scroll: false,
+                        });
                       }}
                       className="flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm text-muted-foreground transition-colors hover:bg-secondary/50 hover:text-foreground"
                     >
@@ -574,7 +593,10 @@ export function Sidebar({
         </div>
       </aside>
 
-      <CommandPalette open={commandPaletteOpen} onOpenChange={setCommandPaletteOpen} />
+      <CommandPalette
+        open={commandPaletteOpen}
+        onOpenChange={setCommandPaletteOpen}
+      />
     </>
   );
 }

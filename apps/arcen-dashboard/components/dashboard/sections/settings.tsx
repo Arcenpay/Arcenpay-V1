@@ -1349,25 +1349,111 @@ export function SettingsSection() {
           value="profile"
           className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300"
         >
-          {/* EVM Identity Card */}
-          <Card className="border-accent/30 bg-card">
-            <CardHeader>
-              <CardTitle className="text-base font-medium flex items-center gap-2">
-                <Wallet className="w-4 h-4 text-accent" />
-                EVM Account Identity
-              </CardTitle>
-              <CardDescription>
-                Your linked wallet is the workspace signing identity used by the dashboard on{" "}
-                <span className="text-foreground font-medium">{SUPPORTED_WALLET_CHAIN_LABEL}</span>.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {linkedWallet ? (
+          {/* EVM Account Identity — only if user has an EVM wallet */}
+          {sessionData?.user.walletAddress && (
+            <Card className="border-accent/30 bg-card">
+              <CardHeader>
+                <CardTitle className="text-base font-medium flex items-center gap-2">
+                  <Wallet className="w-4 h-4 text-accent" />
+                  EVM Account Identity
+                </CardTitle>
+                <CardDescription>
+                  Your linked wallet is the workspace signing identity used by the dashboard on{" "}
+                  <span className="text-foreground font-medium">{SUPPORTED_WALLET_CHAIN_LABEL}</span>.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {linkedWallet ? (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between p-4 rounded-xl bg-secondary/50 border border-border">
+                      <div>
+                        <p className="text-xs text-muted-foreground mb-1">Linked wallet address</p>
+                        <code className="text-sm font-mono text-foreground break-all">{linkedWallet}</code>
+                      </div>
+                      <div className="flex items-center gap-2 ml-4 shrink-0">
+                        <Badge variant="secondary" className="bg-secondary text-foreground border-border">
+                          Linked
+                        </Badge>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8"
+                          onClick={() => {
+                            navigator.clipboard.writeText(linkedWallet);
+                            setCopiedAddress("wallet");
+                            setTimeout(() => setCopiedAddress(null), 2000);
+                          }}
+                        >
+                          {copiedAddress === "wallet" ? (
+                            <Check className="w-3.5 h-3.5 text-success" />
+                          ) : (
+                            <Copy className="w-3.5 h-3.5" />
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+                    {connectedAddress && connectedAddress.toLowerCase() !== linkedWallet.toLowerCase() && (
+                      <div className="flex items-start gap-2 p-3 rounded-lg bg-secondary border border-border">
+                        <AlertTriangle className="w-4 h-4 text-warning shrink-0 mt-0.5" />
+                        <p className="text-xs text-muted-foreground">
+                          Your connected wallet{" "}
+                          <code className="text-foreground">{connectedAddress.slice(0, 6)}…{connectedAddress.slice(-4)}</code>{" "}
+                          differs from your linked account wallet. Switch your wallet to the linked address to interact with on-chain features.
+                        </p>
+                      </div>
+                    )}
+                    <div className="flex items-start gap-2 p-3 rounded-lg bg-secondary/50 border border-border">
+                      <Info className="w-4 h-4 text-muted-foreground shrink-0 mt-0.5" />
+                      <p className="text-xs text-muted-foreground">
+                        Keep this wallet connected when you need to sign dashboard transactions on {SUPPORTED_WALLET_CHAIN_LABEL}.
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between p-4 rounded-xl bg-secondary/50 border border-border">
+                      <div>
+                        <p className="text-sm font-medium text-foreground">No wallet linked</p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Link your wallet to enable on-chain subscriptions, plan management, and usage billing.
+                        </p>
+                      </div>
+                      <Badge variant="secondary" className="bg-secondary text-foreground border-border shrink-0">
+                        Not Linked
+                      </Badge>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => window.location.href = "/onboarding/chain"}
+                    >
+                      <Wallet className="w-4 h-4 mr-2" />
+                      Link Wallet
+                    </Button>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Stellar Account Identity — only if user has a Stellar wallet */}
+          {sessionData?.user.stellarWalletAddress && (
+            <Card className="border-accent/30 bg-card">
+              <CardHeader>
+                <CardTitle className="text-base font-medium flex items-center gap-2">
+                  <Wallet className="w-4 h-4 text-accent" />
+                  Stellar Account Identity
+                </CardTitle>
+                <CardDescription>
+                  Your linked Stellar wallet is used for Soroban smart contract interactions on Stellar Testnet / Mainnet.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
                 <div className="space-y-3">
                   <div className="flex items-center justify-between p-4 rounded-xl bg-secondary/50 border border-border">
                     <div>
-                      <p className="text-xs text-muted-foreground mb-1">Linked wallet address</p>
-                      <code className="text-sm font-mono text-foreground break-all">{linkedWallet}</code>
+                      <p className="text-xs text-muted-foreground mb-1">Linked Stellar address</p>
+                      <code className="text-sm font-mono text-foreground break-all">{sessionData.user.stellarWalletAddress}</code>
                     </div>
                     <div className="flex items-center gap-2 ml-4 shrink-0">
                       <Badge variant="secondary" className="bg-secondary text-foreground border-border">
@@ -1378,12 +1464,12 @@ export function SettingsSection() {
                         size="sm"
                         className="h-8"
                         onClick={() => {
-                          navigator.clipboard.writeText(linkedWallet);
-                          setCopiedAddress("wallet");
+                          navigator.clipboard.writeText(sessionData.user.stellarWalletAddress!);
+                          setCopiedAddress("stellar");
                           setTimeout(() => setCopiedAddress(null), 2000);
                         }}
                       >
-                        {copiedAddress === "wallet" ? (
+                        {copiedAddress === "stellar" ? (
                           <Check className="w-3.5 h-3.5 text-success" />
                         ) : (
                           <Copy className="w-3.5 h-3.5" />
@@ -1391,48 +1477,16 @@ export function SettingsSection() {
                       </Button>
                     </div>
                   </div>
-                  {connectedAddress && connectedAddress.toLowerCase() !== linkedWallet.toLowerCase() && (
-                    <div className="flex items-start gap-2 p-3 rounded-lg bg-secondary border border-border">
-                      <AlertTriangle className="w-4 h-4 text-warning shrink-0 mt-0.5" />
-                      <p className="text-xs text-muted-foreground">
-                        Your connected wallet{" "}
-                        <code className="text-foreground">{connectedAddress.slice(0, 6)}…{connectedAddress.slice(-4)}</code>{" "}
-                        differs from your linked account wallet. Switch your wallet to the linked address to interact with on-chain features.
-                      </p>
-                    </div>
-                  )}
                   <div className="flex items-start gap-2 p-3 rounded-lg bg-secondary/50 border border-border">
                     <Info className="w-4 h-4 text-muted-foreground shrink-0 mt-0.5" />
                     <p className="text-xs text-muted-foreground">
-                      Keep this wallet connected when you need to sign dashboard transactions on {SUPPORTED_WALLET_CHAIN_LABEL}.
+                      Keep your Freighter wallet connected when you need to sign Stellar transactions.
                     </p>
                   </div>
                 </div>
-              ) : (
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between p-4 rounded-xl bg-secondary/50 border border-border">
-                    <div>
-                      <p className="text-sm font-medium text-foreground">No wallet linked</p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Link your wallet to enable on-chain subscriptions, plan management, and usage billing.
-                      </p>
-                    </div>
-                    <Badge variant="secondary" className="bg-secondary text-foreground border-border shrink-0">
-                      Not Linked
-                    </Badge>
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => window.location.href = "/onboarding/chain"}
-                  >
-                    <Wallet className="w-4 h-4 mr-2" />
-                    Link Wallet
-                  </Button>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          )}
 
           <Card className="border-border bg-card">
             <CardHeader>

@@ -107,7 +107,7 @@ import {
   resolveEnvironmentChainId,
 } from "@/lib/default-chain";
 import { toast } from "sonner";
-import { PlanFactoryABI, YEARLY_INTERVAL } from "@arcenpay/internal-core";
+import { PlanFactoryABI, YEARLY_INTERVAL, isEvmChain } from "@arcenpay/internal-core";
 import {
   isSmartAccountInfrastructureError,
   sendSmartAccountTransaction,
@@ -276,10 +276,14 @@ function getInitialTokenForEnvironment(
 
   if (
     preferredConnectedToken &&
-    envTokens.some(
-      (token) =>
-        token.address.toLowerCase() === preferredConnectedToken.toLowerCase(),
-    )
+    envTokens.some((token) => {
+      // EVM addresses are case-insensitive hex; Stellar addresses are
+      // base32 and case-sensitive (lowercasing corrupts them).
+      if (isEvmChain(resolvedChainId)) {
+        return token.address.toLowerCase() === preferredConnectedToken.toLowerCase();
+      }
+      return token.address === preferredConnectedToken;
+    })
   ) {
     return preferredConnectedToken;
   }

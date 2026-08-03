@@ -17,6 +17,10 @@ import {
   getTokenAddress,
   getTokensForChain,
   getChain,
+  isValidAddressForChain,
+  STELLAR_MAINNET_CHAIN_ID,
+  STELLAR_TESTNET_CHAIN_ID,
+  STELLAR_FUTURENET_CHAIN_ID,
 } from "@arcenpay/internal-core";
 import {
   BASE_SEPOLIA_CHAIN_ID,
@@ -39,13 +43,7 @@ export {
   getTokenAddress,
 };
 
-const EVM_ADDRESS_REGEX = /^0x[a-fA-F0-9]{40}$/;
-
-function isAddress(value: string | undefined | null): value is `0x${string}` {
-  return typeof value === "string" && EVM_ADDRESS_REGEX.test(value);
-}
-
-function resolveUsdcOverride(chainId: number): `0x${string}` | null {
+function resolveUsdcOverride(chainId: number): string | null {
   const globalOverride = process.env.NEXT_PUBLIC_USDC_ADDRESS;
 
   const chainOverrides: Record<number, string | undefined> = {
@@ -53,23 +51,41 @@ function resolveUsdcOverride(chainId: number): `0x${string}` | null {
     84532: process.env.NEXT_PUBLIC_USDC_ADDRESS_84532,
     8453: process.env.NEXT_PUBLIC_USDC_ADDRESS_8453,
     5042002: process.env.NEXT_PUBLIC_USDC_ADDRESS_5042002,
+    9000000: process.env.NEXT_PUBLIC_USDC_ADDRESS_9000000,
+    9000001: process.env.NEXT_PUBLIC_USDC_ADDRESS_9000001,
+    9000002: process.env.NEXT_PUBLIC_USDC_ADDRESS_9000002,
   };
 
   const candidate = chainOverrides[chainId] || globalOverride;
-  if (!isAddress(candidate)) return null;
+  if (!candidate || !isValidAddressForChain(candidate, chainId)) return null;
   return candidate;
 }
 
-export function getUsdcAddress(chainId: number): `0x${string}` {
+export function getUsdcAddress(chainId: number): string {
   const override = resolveUsdcOverride(chainId);
   if (override) return override;
 
   const token = getTokenAddress(chainId, "USDC");
-  if (isAddress(token)) return token;
+  if (token && isValidAddressForChain(token, chainId)) return token;
 
   throw new Error(
     `No USDC address configured for chain ${chainId}. Set NEXT_PUBLIC_USDC_ADDRESS_${chainId} or NEXT_PUBLIC_USDC_ADDRESS.`,
   );
+}
+
+/**
+ * EVM-only variant of {@link getUsdcAddress}. Throws for non-EVM chains so
+ * wagmi/viem call sites get the correct `0x${string}` type. Prefer
+ * {@link getUsdcAddress} for cross-family code.
+ */
+export function getEvmUsdcAddress(chainId: number): `0x${string}` {
+  const addr = getUsdcAddress(chainId);
+  if (!addr.startsWith("0x")) {
+    throw new Error(
+      `getEvmUsdcAddress called with non-EVM chain ${chainId}. Use getUsdcAddress for cross-family code.`,
+    );
+  }
+  return addr as `0x${string}`;
 }
 
 const TESTNET_CHAIN_LIST: Array<{
@@ -87,6 +103,16 @@ const TESTNET_CHAIN_LIST: Array<{
     label: getChainLabel(ARC_TESTNET_CHAIN_ID),
     tag: "testnet",
   },
+  {
+    chainId: STELLAR_TESTNET_CHAIN_ID,
+    label: getChainLabel(STELLAR_TESTNET_CHAIN_ID),
+    tag: "testnet",
+  },
+  {
+    chainId: STELLAR_FUTURENET_CHAIN_ID,
+    label: getChainLabel(STELLAR_FUTURENET_CHAIN_ID),
+    tag: "testnet",
+  },
 ];
 
 const MAINNET_CHAIN_LIST: Array<{
@@ -97,6 +123,11 @@ const MAINNET_CHAIN_LIST: Array<{
   {
     chainId: BASE_MAINNET_CHAIN_ID,
     label: getChainLabel(BASE_MAINNET_CHAIN_ID),
+    tag: "mainnet",
+  },
+  {
+    chainId: STELLAR_MAINNET_CHAIN_ID,
+    label: getChainLabel(STELLAR_MAINNET_CHAIN_ID),
     tag: "mainnet",
   },
 ];
