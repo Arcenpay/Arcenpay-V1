@@ -240,21 +240,29 @@ export async function resolveCompany(
     .catch(() => {});
 
   const now = new Date();
-  const subscriptionHasPaidAccess =
-    company.subscriptionState?.status === "ACTIVE" &&
-    (!company.subscriptionState.currentPeriodEnd ||
-      company.subscriptionState.currentPeriodEnd > now);
-  const subscriptionHasGraceAccess =
-    company.subscriptionState?.status === "PAST_DUE" &&
-    Boolean(company.subscriptionState.graceEndsAt) &&
-    company.subscriptionState.graceEndsAt! > now;
+  // Effective plan access mirrors the dashboard's company-render gate
+  // (apps/arcen-backend/src/routes/v1/component-render.ts and the companies
+  // listing handler): status is the source of truth. The dunning +
+  // maintenance sweeps are responsible for flipping ACTIVE -> PAST_DUE ->
+  // CANCELLED once a period lapses or grace ends, and they rewrite
+  // catalogPlanId/activePlanId at the same time.
+  //
+  // This previously additionally enforced `currentPeriodEnd > now`. That
+  // freshness check was STRICTER than the dashboard path, so an ACTIVE
+  // subscription whose renewal event had not yet rewritten currentPeriodEnd
+  // (or whose payload.expiration resolved to a stale date) silently collapsed
+  // activePlanId -> null here, while the dashboard still rendered the paid
+  // plan. The divergence is exactly the "ArcenPay shows Pro + invoices but
+  // my app sees free plan" bug. Keep the gates aligned.
+  const subscriptionHasAccess =
+    company.subscriptionState?.status === "ACTIVE" ||
+    company.subscriptionState?.status === "PAST_DUE";
 
-  let activePlanId =
-    subscriptionHasPaidAccess || subscriptionHasGraceAccess
-      ? company.subscriptionState?.catalogPlanId ?? company.activePlanId
-      : company.subscriptionState
-        ? null
-        : company.activePlanId;
+  let activePlanId = subscriptionHasAccess
+    ? (company.subscriptionState?.catalogPlanId ?? company.activePlanId)
+    : company.subscriptionState
+      ? null
+      : company.activePlanId;
 
   // On-chain fallback: if activePlanId is null but we have a wallet, try to resolve from chain
   if (!activePlanId && keys.wallet && !company.subscriptionState) {

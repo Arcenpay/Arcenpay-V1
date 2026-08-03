@@ -1,13 +1,22 @@
-import { getChain, getConfiguredRuntimeChainId } from "@arcenpay/internal-core";
+import { getChain, getChainDescriptor, getConfiguredRuntimeChainId, STELLAR_MAINNET_CHAIN_ID, STELLAR_TESTNET_CHAIN_ID, STELLAR_FUTURENET_CHAIN_ID } from "@arcenpay/internal-core";
 
 export const SEPOLIA_CHAIN_ID = 11155111 as const;
 export const BASE_SEPOLIA_CHAIN_ID = 84532 as const;
 export const BASE_MAINNET_CHAIN_ID = 8453 as const;
 export const ARC_TESTNET_CHAIN_ID = 5042002 as const;
+export { STELLAR_MAINNET_CHAIN_ID, STELLAR_TESTNET_CHAIN_ID, STELLAR_FUTURENET_CHAIN_ID };
 
 // All supported chains (testnet + mainnet) for the backend
-export const TESTNET_CHAIN_IDS = [BASE_SEPOLIA_CHAIN_ID, ARC_TESTNET_CHAIN_ID] as const;
-export const MAINNET_CHAIN_IDS = [BASE_MAINNET_CHAIN_ID] as const;
+export const TESTNET_CHAIN_IDS = [
+  BASE_SEPOLIA_CHAIN_ID,
+  ARC_TESTNET_CHAIN_ID,
+  STELLAR_TESTNET_CHAIN_ID,
+  STELLAR_FUTURENET_CHAIN_ID,
+] as const;
+export const MAINNET_CHAIN_IDS = [
+  BASE_MAINNET_CHAIN_ID,
+  STELLAR_MAINNET_CHAIN_ID,
+] as const;
 
 const ALL_SUPPORTED = [...TESTNET_CHAIN_IDS, ...MAINNET_CHAIN_IDS] as const;
 
@@ -74,6 +83,11 @@ export function resolveEnvironmentChainId(
 }
 
 export function getChainLabel(chainId: number): string {
+  // Stellar (and future non-EVM) chains use synthetic chainIds unknown to
+  // viem's registry. Resolve via the internal-core descriptor first, then
+  // fall back to viem for EVM chains.
+  const descriptor = getChainDescriptor(chainId);
+  if (descriptor) return descriptor.name;
   try {
     return getChain(chainId).name;
   } catch {

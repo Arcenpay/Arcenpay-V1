@@ -44,10 +44,10 @@ export default function ChainFamilyPage() {
                 style={{ width: 56, height: 44 }}
               >
                 <NetworkIcon
-                  name="base"
+                  name="ethereum"
                   variant="branded"
                   size={28}
-                  className="rounded-full bg-white dark:bg-white p-[2px] absolute left-0 top-0 z-20 ring-2 ring-background"
+                  className="rounded-full bg-white dark:bg-white p-[2px] absolute left-[28px] top-0 z-0 ring-2 ring-background"
                 />
                 <NetworkIcon
                   name="Arc"
@@ -56,10 +56,10 @@ export default function ChainFamilyPage() {
                   className="rounded-full bg-white dark:bg-white p-[2px] absolute left-[14px] top-0 z-10 ring-2 ring-background"
                 />
                 <NetworkIcon
-                  name="ethereum"
+                  name="base"
                   variant="branded"
                   size={28}
-                  className="rounded-full bg-white dark:bg-white p-[2px] absolute left-[28px] top-0 z-0 ring-2 ring-background"
+                  className="rounded-full bg-white dark:bg-white p-[2px] absolute left-0 top-0 z-20 ring-2 ring-background"
                 />
               </div>
               <div className="flex-1 min-w-0">
@@ -71,7 +71,7 @@ export default function ChainFamilyPage() {
                   WalletConnect-compatible wallet.
                 </p>
                 <div className="flex flex-wrap gap-1.5 mt-3">
-                  {["Base", "Arc Testnet", "Sepolia"].map((c) => (
+                  {["Ethereum", "Sepolia", "Base", "Arc Testnet"].map((c) => (
                     <span
                       key={c}
                       className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground font-medium"

@@ -11,6 +11,8 @@ import {
   upsertSubscriptionLedgerState,
 } from "./billing-ledger.js";
 import { projectPlatformBillingEntitlement } from "./platform-billing-customer.js";
+import { grantPlanCreditsForCompany } from "./usage-credits.js";
+import { deriveBillingPeriodFromInterval } from "./utils.js";
 
 export type BillingEventType =
   | "SUBSCRIPTION_MINTED"
@@ -396,12 +398,16 @@ async function processStoredBillingEvent(
       ? payload.chainId
       : null;
 
+  let subscriptionState = null as Awaited<
+    ReturnType<typeof upsertSubscriptionLedgerState>
+  > | null;
+
   if (
     (event.eventType === "SUBSCRIPTION_MINTED" ||
       event.eventType === "SUBSCRIPTION_RENEWED") &&
     (customerWallet || companyId)
   ) {
-    const subscriptionState = await upsertSubscriptionLedgerState({
+    subscriptionState = await upsertSubscriptionLedgerState({
       teamId: event.teamId,
       environmentId: payloadEnvironmentId,
       companyId,
@@ -455,10 +461,47 @@ async function processStoredBillingEvent(
         },
       });
     }
+
+    // Grant the plan's metered credits for the new billing period. This was
+    // previously only done on the explicit activation/plan-change paths
+    // (finalizeSubscriptionActivation in billing-recovery.ts and the
+    // /companies/plan route), so a subscription that flowed purely through
+    // the facilitator event listener ended up with an ACTIVE SubscriptionState
+    // but NO CompanyCreditGrant rows for the period. resolveCreditBurnConfig
+    // then found nothing and credit-burned Pro features reported
+    // "Insufficient credits" -> the consumer app saw the user as free.
+    //
+    // Idempotent: grantPlanCreditsForCompany keys each grant by
+    // planCreditGrantIdempotencyKey (companyId + planId + creditTypeId +
+    // billingPeriod + periodStartedAt-UTC-day/year), so a duplicate event
+    // or a replay that races finalizeSubscriptionActivation is a no-op.
+    if (companyId && catalogPlanId) {
+      const billingPeriod =
+        payload.billingPeriod === "monthly" || payload.billingPeriod === "annual"
+          ? payload.billingPeriod
+          : typeof payload.billingInterval === "number" &&
+              Number.isFinite(payload.billingInterval)
+            ? deriveBillingPeriodFromInterval(payload.billingInterval)
+            : "monthly";
+      await grantPlanCreditsForCompany({
+        teamId: event.teamId,
+        environmentId: payloadEnvironmentId,
+        companyId,
+        planId: catalogPlanId,
+        billingPeriod,
+        periodStartedAt: occurredAt,
+        periodEndsAt: currentPeriodEnd,
+        metadata: {
+          source: "billing-event",
+          billingEventId: event.id,
+          txHash: typeof payload.txHash === "string" ? payload.txHash : null,
+        },
+      });
+    }
   }
 
   if (event.eventType === "PAYMENT_FAILED") {
-    const subscriptionState = await upsertSubscriptionLedgerState({
+    subscriptionState = await upsertSubscriptionLedgerState({
       teamId: event.teamId,
       environmentId: payloadEnvironmentId,
       companyId,
@@ -505,7 +548,7 @@ async function processStoredBillingEvent(
   }
 
   if (event.eventType === "SUBSCRIPTION_CANCELLED") {
-    await upsertSubscriptionLedgerState({
+    subscriptionState = await upsertSubscriptionLedgerState({
       teamId: event.teamId,
       environmentId: payloadEnvironmentId,
       companyId,
@@ -530,10 +573,16 @@ async function processStoredBillingEvent(
 
   // A first-party platform subscription is otherwise an ordinary customer
   // subscription. Project it only after its canonical ledger mutation succeeds.
-  if (companyId) {
+  // Use the resolved companyId from the subscription state (upsertSubscriptionLedgerState
+  // resolves the company by wallet when payload.companyId is missing). The facilitator
+  // often omits companyId from the BillingExecuted payload, so relying solely on
+  // payload.companyId silently skipped the platform-tier projection and left
+  // Team.platformTier stuck at "FREE" forever.
+  const resolvedCompanyId = subscriptionState?.companyId ?? companyId;
+  if (resolvedCompanyId) {
     await projectPlatformBillingEntitlement({
       providerTeamId: event.teamId,
-      companyId,
+      companyId: resolvedCompanyId,
     });
   }
 

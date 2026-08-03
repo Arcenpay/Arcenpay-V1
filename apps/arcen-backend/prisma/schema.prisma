@@ -282,6 +282,7 @@ model User {
   email         String? @unique
   emailVerified Boolean @default(false)
   walletAddress String? @unique
+  stellarWalletAddress String? @unique
 
   currentTeamId String?
 
@@ -292,6 +293,7 @@ model User {
 
   @@index([email])
   @@index([walletAddress])
+  @@index([stellarWalletAddress])
 }
 
 // ─── Dashboard auth ───────────────────────────────────────────────────────────

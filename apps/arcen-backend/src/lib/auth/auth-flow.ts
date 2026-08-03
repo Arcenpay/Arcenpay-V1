@@ -18,7 +18,14 @@ export function normalizeEmail(email: string): string {
 }
 
 export function normalizeWalletAddress(address: string): string {
-  return address.toLowerCase();
+  // Stellar addresses (G…/C… account IDs) are case-sensitive base32 —
+  // lowercasing them corrupts the address and breaks DB lookups. Only
+  // EVM (0x-prefixed hex) addresses are case-insensitive and need
+  // lowercasing for consistent storage.
+  if (address.startsWith("0x") || address.startsWith("0X")) {
+    return address.toLowerCase();
+  }
+  return address;
 }
 
 export function maskEmail(email: string): string {
@@ -35,8 +42,14 @@ export async function findWalletConflict(
   const normalizedWallet = normalizeWalletAddress(walletAddress);
   const normalizedAttemptEmail = normalizeEmail(attemptEmail);
 
+  // Stellar addresses (G…) live in stellarWalletAddress; EVM addresses (0x…) in walletAddress.
+  const isStellar = normalizedWallet.startsWith("G");
+  const where = isStellar
+    ? { stellarWalletAddress: normalizedWallet }
+    : { walletAddress: normalizedWallet };
+
   const walletOwner = await db.user.findUnique({
-    where: { walletAddress: normalizedWallet },
+    where,
     select: { id: true, email: true },
   });
 
@@ -64,10 +77,21 @@ export async function findEmailWalletConflict(
 
   const emailOwner = await db.user.findUnique({
     where: { email: normalizedEmail },
-    select: { id: true, walletAddress: true },
+    select: { id: true, walletAddress: true, stellarWalletAddress: true },
   });
 
-  if (!emailOwner || !emailOwner.walletAddress) {
+  if (!emailOwner) {
+    return { conflict: false };
+  }
+
+  // The email owner already has a wallet linked. Check if the attempted
+  // wallet matches ANY of the owner's wallets.
+  const ownerWallets = [
+    emailOwner.walletAddress,
+    emailOwner.stellarWalletAddress,
+  ].filter(Boolean) as string[];
+
+  if (ownerWallets.length === 0) {
     return { conflict: false };
   }
 
@@ -76,15 +100,18 @@ export async function findEmailWalletConflict(
   }
 
   const normalizedAttemptWallet = normalizeWalletAddress(attemptWalletAddress);
-  const ownerWallet = normalizeWalletAddress(emailOwner.walletAddress);
+  const isSameWallet = ownerWallets.some(
+    (w) => normalizeWalletAddress(w) === normalizedAttemptWallet,
+  );
 
-  if (ownerWallet === normalizedAttemptWallet) {
+  if (isSameWallet) {
     return { conflict: false };
   }
 
+  // Report the first linked wallet for error messaging
   return {
     conflict: true,
-    ownerWallet: emailOwner.walletAddress,
+    ownerWallet: ownerWallets[0],
   };
 }
 

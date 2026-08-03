@@ -476,7 +476,7 @@ export function Header({ activeSection, onMobileMenuToggle }: HeaderProps) {
                   type="button"
                   onClick={() => {
                     setShowEnvironmentMenu(false);
-                    router.push("/onboarding/environment");
+                    router.push("/environments/new");
                   }}
                   className="flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm text-muted-foreground transition-colors hover:bg-secondary/50 hover:text-foreground"
                 >

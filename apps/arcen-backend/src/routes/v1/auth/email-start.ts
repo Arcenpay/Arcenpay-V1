@@ -12,9 +12,14 @@ import {
   normalizeEmail,
 } from "../../../lib/auth/auth-flow.js";
 
+// Accepts both EVM (0x + 40 hex) and Stellar (G + 55 base32, C + 55, or 64-hex)
+// wallet addresses. Lowercasing is applied later only for EVM addresses.
+const WALLET_ADDRESS_REGEX =
+  /^(0x[a-fA-F0-9]{40}|G[A-Z2-7]{55}|C[A-Z0-9]{55}|[A-Fa-f0-9]{64})$/;
+
 const Schema = z.object({
   email: z.string().email(),
-  walletAddress: z.string().regex(/^0x[0-9a-fA-F]{40}$/).optional(),
+  walletAddress: z.string().regex(WALLET_ADDRESS_REGEX).optional(),
   inviteToken: z.string().min(1).optional(),
 });
 

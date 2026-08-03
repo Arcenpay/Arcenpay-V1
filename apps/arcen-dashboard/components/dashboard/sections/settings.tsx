@@ -930,7 +930,7 @@ export function SettingsSection() {
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() => window.location.assign("/onboarding/environment")}
+                        onClick={() => window.location.assign("/environments/new")}
                       >
                         <Plus className="w-3.5 h-3.5 mr-2" />
                         Create

@@ -19,7 +19,7 @@ export default async function DashboardLayout({
   const session = await getSession();
   if (!session) redirect("/login");
 
-  if (!session.walletAddress) {
+  if (!session.walletAddress && !session.stellarWalletAddress) {
     redirect("/onboarding/chain");
   }
 

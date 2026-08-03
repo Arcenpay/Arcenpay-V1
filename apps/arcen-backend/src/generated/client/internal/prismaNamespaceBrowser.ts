@@ -137,6 +137,7 @@ export const UserScalarFieldEnum = {
   email: 'email',
   emailVerified: 'emailVerified',
   walletAddress: 'walletAddress',
+  stellarWalletAddress: 'stellarWalletAddress',
   currentTeamId: 'currentTeamId'
 } as const
 

@@ -65,23 +65,24 @@ export function Web3Icon({
   // ── Token icon ──────────────────────────────────────────────────────
   if (token) {
     return (
-      <TokenIcon
-        symbol={token.toUpperCase()}
-        variant="branded"
-        size={iconSize}
-        className={cn("shrink-0", className)}
-        fallback={
-          <div
-            className={cn(
-              "shrink-0 rounded-full bg-accent/10 flex items-center justify-center",
-              size === "sm" ? "w-4 h-4" : size === "lg" ? "w-6 h-6" : "w-5 h-5",
-              className,
-            )}
-          >
-            <Coins className="w-3 h-3 text-accent" />
-          </div>
-        }
-      />
+      <span
+        className={cn(
+          "shrink-0 inline-flex items-center justify-center rounded-full bg-white dark:bg-white p-px",
+          className,
+        )}
+      >
+        <TokenIcon
+          symbol={token.toUpperCase()}
+          variant="branded"
+          size={iconSize}
+          className="shrink-0"
+          fallback={
+            <div className="shrink-0 rounded-full bg-accent/10 flex items-center justify-center w-full h-full">
+              <Coins className="w-3 h-3 text-accent" />
+            </div>
+          }
+        />
+      </span>
     );
   }
 
@@ -94,23 +95,24 @@ export function Web3Icon({
 
   if (resolvedName) {
     return (
-      <NetworkIcon
-        name={resolvedName}
-        variant="branded"
-        size={iconSize}
-        className={cn("shrink-0", className)}
-        fallback={
-          <div
-            className={cn(
-              "shrink-0 rounded-full bg-accent/10 flex items-center justify-center",
-              size === "sm" ? "w-4 h-4" : size === "lg" ? "w-6 h-6" : "w-5 h-5",
-              className,
-            )}
-          >
-            <Network className="w-3 h-3 text-accent" />
-          </div>
-        }
-      />
+      <span
+        className={cn(
+          "shrink-0 inline-flex items-center justify-center rounded-full bg-white dark:bg-white p-px",
+          className,
+        )}
+      >
+        <NetworkIcon
+          name={resolvedName}
+          variant="branded"
+          size={iconSize}
+          className="shrink-0"
+          fallback={
+            <div className="shrink-0 rounded-full bg-accent/10 flex items-center justify-center w-full h-full">
+              <Network className="w-3 h-3 text-accent" />
+            </div>
+          }
+        />
+      </span>
     );
   }
 

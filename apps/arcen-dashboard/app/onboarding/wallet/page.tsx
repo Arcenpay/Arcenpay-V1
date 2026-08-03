@@ -230,7 +230,7 @@ function StellarWalletConnect({ onLinked }: { onLinked: (address: string) => voi
       const nonceRes = await fetch("/api/auth/nonce");
       if (!nonceRes.ok) throw new Error("Failed to get nonce");
       const { nonce, issuedAt } = await nonceRes.json();
-      const message = `ArcenPay wants you to sign in with your Stellar account.\n\nAddress: ${wallet.address}\nNonce: ${nonce}\nIssued At: ${issuedAt}`;
+      const message = `ArcenPay Stellar Sign-In\n\nAddress: ${wallet.address}\nNonce: ${nonce}\nIssued At: ${issuedAt}\nDomain: ${window.location.host}`;
       const { signedMessage } = await wallet.signMessage(message);
 
       const res = await fetch("/api/auth/link-wallet", {

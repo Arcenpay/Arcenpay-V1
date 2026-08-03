@@ -1164,6 +1164,7 @@ export async function activateTeamPlatformTier(input: {
     await db.team.update({
       where: { id: teamId },
       data: {
+        platformTier: targetTier,
         tierSubscriptionId: subscriptionState.id,
         tierExpiresAt: periodEnd,
       },
