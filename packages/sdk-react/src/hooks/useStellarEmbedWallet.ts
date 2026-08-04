@@ -54,20 +54,31 @@ export function useStellarEmbedWallet(_network: "TESTNET" | "PUBLIC" = "TESTNET"
     }
   }, []);
 
-  // Detect if Freighter is installed
+  // Detect if Freighter is installed and get the real current address
   useEffect(() => {
     mountedRef.current = true;
 
     async function checkFreighter() {
       try {
-        const { isConnected } = await import("@stellar/freighter-api");
-        const ok = await isConnected();
+        const freighter = await import("@stellar/freighter-api");
+        const ok = await freighter.isConnected();
         if (mountedRef.current) {
           setState((s) => ({ ...s, ready: true }));
           if (ok) {
-            const stored = getPersistedAddress();
-            if (stored) {
-              setState((s) => ({ ...s, address: stored, isConnected: true }));
+            // Always ask Freighter for the live address (handles wallet switches)
+            const live = await freighter.getAddress();
+            if (live.address) {
+              setPersistedAddress(live.address);
+              setState((s) => ({
+                ...s,
+                address: live.address,
+                isConnected: true,
+              }));
+            } else {
+              const stored = getPersistedAddress();
+              if (stored) {
+                setState((s) => ({ ...s, address: stored, isConnected: true }));
+              }
             }
           }
         }
@@ -111,15 +122,15 @@ export function useStellarEmbedWallet(_network: "TESTNET" | "PUBLIC" = "TESTNET"
 
   const signTransaction = useCallback(async (
     xdr: string,
-    opts?: { networkPassphrase?: string; address?: string; path?: string }
+    opts?: { networkPassphrase?: string; address?: string }
   ) => {
     const freighter = await import("@stellar/freighter-api");
-    const signedTxXdr = await freighter.signTransaction(xdr, {
+    const result = await freighter.signTransaction(xdr, {
       networkPassphrase: opts?.networkPassphrase,
-      accountToSign: opts?.address,
+      address: opts?.address,
     });
-    if (!signedTxXdr) throw new Error("Signing failed or was cancelled");
-    return { signedTxXdr, signerAddress: opts?.address };
+    if (!result.signedTxXdr) throw new Error("Signing failed or was cancelled");
+    return { signedTxXdr: result.signedTxXdr, signerAddress: result.signerAddress };
   }, []);
 
   const disconnect = useCallback(async () => {

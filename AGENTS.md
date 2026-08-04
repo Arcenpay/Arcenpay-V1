@@ -68,6 +68,7 @@ arcenpay-v1/
 │   │   │                      #   webhooks, email, usage, proof-orchestrator, aggregator
 │   │   └── tests/             # Node built-in test runner (node --import tsx --test)
 │   ├── arcn-dashboard/        # Next.js 16 App Router (app/ directory)
+│   ├── demo-dapp/             # Vite React demo app — Stellar wallet + feature gating
 │   └── arcnpay-docs/          # Mintlify documentation
 ├── packages/
 │   ├── contracts/             # Solidity + Hardhat + Foundry (25 contracts)
@@ -84,7 +85,7 @@ arcenpay-v1/
 ```
 
 **Port map (local):** Dashboard `:3000`, Backend `:3300`, Facilitator `:3402`,
-Docs `:3003`, PostgreSQL `:5433`.
+Demo `:5173`, Docs `:3003`, PostgreSQL `:5433`.
 
 ## Billing Architecture — The Core Domain
 
@@ -314,7 +315,7 @@ npm run build               # full turbo build (prisma generate + tsc for all)
 npm run dev:backend      # Hono API :3300
 npm run dev:dashboard    # Next.js :3000
 npm run dev:facilitator  # Express :3402
-npm run dev:demo         # Demo app :3001
+npm run dev:demo         # Vite demo :5173
 npm run dev:docs         # Mintlify :3003
 ```
 

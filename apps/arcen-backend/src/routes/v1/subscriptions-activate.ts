@@ -30,11 +30,15 @@ import { z } from "zod";
 import {
   ERC7579AutopayModuleABI,
   getChain,
+  getChainFamily,
   getContractAddresses,
+  getStellarSorobanRpcUrl,
+  getStellarNetworkPassphrase,
   PlanFactoryABI,
   SubscriptionRegistryABI,
   YEARLY_INTERVAL,
 } from "@arcenpay/internal-core";
+import { contract as stellarContract } from "@stellar/stellar-sdk";
 import { Prisma } from "../../generated/client/client.js";
 import { db } from "../../db.js";
 import { createResilientPublicClient, getRpcUrl } from "../../config.js";
@@ -61,14 +65,19 @@ import {
 import { upsertSubscriptionLedgerState } from "../../lib/billing/billing-ledger.js";
 import { corsHeaders } from "../../middleware/cors.js";
 
-const addressSchema = z
+const evmAddressSchema = z
   .string()
   .refine((value) => isAddress(value), "Must be a valid EVM address");
+
+const walletAddressSchema = z
+  .string()
+  .min(1)
+  .max(128);
 
 const companySchema = z
   .object({
     id: z.string().trim().min(1).optional(),
-    wallet: addressSchema.optional(),
+    wallet: walletAddressSchema.optional(),
     email: z.string().email().optional(),
     name: z.string().trim().min(1).optional(),
     traits: z.record(z.string(), z.unknown()).optional(),
@@ -80,15 +89,15 @@ const companySchema = z
 
 const bodySchema = z.object({
   planId: z.union([z.string().trim().min(1), z.number().int().positive()]),
-  paymentAccount: addressSchema,
+  paymentAccount: walletAddressSchema,
   subscriberEmail: z.string().email().optional(),
   activationTxHash: z
     .string()
-    .regex(/^0x[0-9a-fA-F]{64}$/)
+    .regex(/^(0x[0-9a-fA-F]{64}|[0-9a-fA-F]{64})$/)
     .optional(),
   txHash: z
     .string()
-    .regex(/^0x[0-9a-fA-F]{64}$/)
+    .regex(/^(0x[0-9a-fA-F]{64}|[0-9a-fA-F]{64})$/)
     .optional(),
   company: companySchema,
 });
@@ -259,8 +268,8 @@ type AutopayActivationSnapshot = {
 
 async function readAutopayActivationSnapshot(params: {
   publicClient: any;
-  autopayAddress: `0x${string}`;
-  paymentAccount: `0x${string}`;
+  autopayAddress: string;
+  paymentAccount: string;
 }): Promise<AutopayActivationSnapshot> {
   const isInitialized = (await params.publicClient.readContract({
     address: params.autopayAddress,
@@ -291,8 +300,8 @@ async function readAutopayActivationSnapshot(params: {
 
 async function waitForAutopayActivationSnapshot(params: {
   publicClient: any;
-  autopayAddress: `0x${string}`;
-  paymentAccount: `0x${string}`;
+  autopayAddress: string;
+  paymentAccount: string;
   expectedPlanId: bigint;
   expectedMerchant: string;
 }): Promise<AutopayActivationSnapshot> {
@@ -423,6 +432,148 @@ function normalizeActivationError(message: string): {
   };
 }
 
+// ── Stellar transaction verification ─────────────────────────────────────────
+
+async function verifyStellarTransaction(params: {
+  chainId: number;
+  txHash: string;
+}): Promise<{ ok: boolean; status?: string; error?: string }> {
+  try {
+    const rpcUrl = getStellarSorobanRpcUrl(params.chainId);
+    const cleanHash = params.txHash.startsWith("0x")
+      ? params.txHash.slice(2)
+      : params.txHash;
+
+    const response = await fetch(rpcUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        id: 1,
+        method: "getTransaction",
+        params: { hash: cleanHash },
+      }),
+    });
+
+    const json = (await response.json()) as {
+      result?: { status?: string; txHash?: string };
+      error?: { message?: string };
+    };
+
+    if (json.error?.message) {
+      return { ok: false, error: json.error.message };
+    }
+
+    const status = json.result?.status ?? "UNKNOWN";
+    if (status === "SUCCESS") {
+      return { ok: true, status };
+    }
+    if (status === "NOT_FOUND") {
+      return { ok: false, status, error: "Transaction not found on-chain yet." };
+    }
+    return { ok: false, status, error: `Transaction status: ${status}` };
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return { ok: false, error: `Stellar RPC error: ${msg}` };
+  }
+}
+
+async function checkStellarAutopayInitialized(
+  chainId: number,
+  autopayContractId: string,
+  account: string,
+): Promise<boolean> {
+  try {
+    const rpcUrl = getStellarSorobanRpcUrl(chainId);
+    const networkPassphrase = getStellarNetworkPassphrase(chainId);
+    const client = (await stellarContract.Client.from({
+      contractId: autopayContractId,
+      networkPassphrase,
+      rpcUrl,
+    })) as any;
+    const { result } = await client.is_initialized({ account });
+    return Boolean(result);
+  } catch {
+    return false;
+  }
+}
+
+async function resolveStellarSacContractId(
+  chainId: number,
+  assetIssuer: string,
+): Promise<string | null> {
+  try {
+    const networkPassphrase = getStellarNetworkPassphrase(chainId);
+    const { Asset } = await import("@stellar/stellar-sdk");
+    // Known issuer → asset code mappings (Circle USDC on testnet + mainnet)
+    const knownAssetCodes: Record<string, string> = {
+      "GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5": "USDC",
+      "GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5REQK4DVZWA": "USDC",
+    };
+    let assetCode: string | undefined = knownAssetCodes[assetIssuer];
+    if (!assetCode) {
+      // Fallback: query Horizon for assets issued by this account
+      const horizonUrl =
+        networkPassphrase.includes("Test")
+          ? "https://horizon-testnet.stellar.org"
+          : "https://horizon.stellar.org";
+      const res = await fetch(
+        `${horizonUrl}/assets?asset_issuer=${assetIssuer}&limit=1`,
+        { signal: AbortSignal.timeout(5_000) },
+      );
+      if (res.ok) {
+        const data = (await res.json()) as {
+          _embedded?: { records?: Array<{ asset_code?: string }> };
+        };
+        assetCode = data._embedded?.records?.[0]?.asset_code ?? undefined;
+      }
+    }
+    if (!assetCode) return null;
+    const asset = new Asset(assetCode, assetIssuer);
+    return (asset as any).contractId(networkPassphrase);
+  } catch {
+    return null;
+  }
+}
+
+async function checkStellarSacBalance(
+  chainId: number,
+  assetIssuer: string,
+  account: string,
+): Promise<{ balanceMicros: bigint; hasTrustline: boolean }> {
+  try {
+    const networkPassphrase = getStellarNetworkPassphrase(chainId);
+    const horizonUrl =
+      networkPassphrase.includes("Test")
+        ? "https://horizon-testnet.stellar.org"
+        : "https://horizon.stellar.org";
+    const res = await fetch(`${horizonUrl}/accounts/${account}`, {
+      signal: AbortSignal.timeout(8_000),
+    });
+    if (!res.ok) return { balanceMicros: 0n, hasTrustline: false };
+    const data = (await res.json()) as {
+      balances?: Array<{
+        balance: string;
+        asset_issuer?: string;
+        asset_code?: string;
+      }>;
+    };
+    const match = data.balances?.find(
+      (b) => b.asset_issuer === assetIssuer,
+    );
+    if (!match) return { balanceMicros: 0n, hasTrustline: false };
+    // Horizon balance strings have 7 decimal places for non-native assets;
+    // convert to micros (6 decimals) by parsing and rounding.
+    const amount = parseFloat(match.balance);
+    return {
+      balanceMicros: BigInt(Math.round(amount * 1_000_000)),
+      hasTrustline: true,
+    };
+  } catch {
+    return { balanceMicros: 0n, hasTrustline: false };
+  }
+}
+
 async function assertReceiptFinalized(params: {
   publicClient: any;
   receipt: { blockNumber?: bigint | null };
@@ -465,7 +616,10 @@ async function upsertCompanyForActivation(
       const updates: Record<string, unknown> = {};
       if (keys.name?.trim()) updates.name = keys.name.trim();
       if (keys.email?.trim()) updates.email = keys.email.trim().toLowerCase();
-      if (keys.wallet?.trim()) updates.walletAddress = keys.wallet.trim().toLowerCase();
+      if (keys.wallet?.trim()) {
+        const w = keys.wallet.trim();
+        updates.walletAddress = w.startsWith("G") && w.length === 56 ? w : w.toLowerCase();
+      }
       if (Object.keys(updates).length > 0) {
         try {
           await db.arcenCompany.update({ where: { id: directMatch.id }, data: updates });
@@ -491,7 +645,8 @@ async function upsertCompanyForActivation(
     if (keys.name?.trim()) updates.name = keys.name.trim();
     if (keys.email?.trim()) updates.email = keys.email.trim();
     if (keys.wallet?.trim()) {
-      const normalizedWallet = keys.wallet.trim().toLowerCase();
+      const w = keys.wallet.trim();
+      const normalizedWallet = w.startsWith("G") && w.length === 56 ? w : w.toLowerCase();
       updates.walletAddress = normalizedWallet;
     }
     if (Object.keys(updates).length > 0) {
@@ -506,7 +661,8 @@ async function upsertCompanyForActivation(
           "code" in err &&
           (err as { code: string }).code === "P2002";
         if (isUniqueConstraintError && keys.wallet?.trim()) {
-          const normalizedWallet = keys.wallet.trim().toLowerCase();
+          const w = keys.wallet.trim();
+          const normalizedWallet = w.startsWith("G") && w.length === 56 ? w : w.toLowerCase();
           const existingByWallet = await db.arcenCompany.findFirst({
             where: {
               teamId,
@@ -539,7 +695,11 @@ async function upsertCompanyForActivation(
       environmentId,
       name: keys.name ?? keys.email ?? keys.id ?? "Unknown",
       email: keys.email ?? null,
-      walletAddress: keys.wallet?.toLowerCase() ?? null,
+      walletAddress: keys.wallet
+        ? (keys.wallet.trim().startsWith("G") && keys.wallet.trim().length === 56
+          ? keys.wallet.trim()
+          : keys.wallet.trim().toLowerCase())
+        : null,
       externalId: keys.id ?? null,
       traits: (keys.traits ?? {}) as unknown as Prisma.InputJsonValue,
     },
@@ -552,7 +712,7 @@ async function upsertCompanyForActivation(
 async function readActiveWalletSubscriptionTokenId(params: {
   publicClient: any;
   subscriptionRegistryAddress: `0x${string}`;
-  wallet: `0x${string}`;
+  wallet: string;
 }): Promise<bigint> {
   const hasActiveSubscription = (await params.publicClient.readContract({
     address: params.subscriptionRegistryAddress,
@@ -667,8 +827,12 @@ export async function POST(c: Context) {
   }
 
   const onChainPlanId = BigInt(parsed.data.planId);
-  const paymentAccount =
-    parsed.data.paymentAccount.toLowerCase() as `0x${string}`;
+  const rawPaymentAccount = parsed.data.paymentAccount.trim();
+  const isStellarPayment =
+    rawPaymentAccount.startsWith("G") && rawPaymentAccount.length === 56;
+  const paymentAccount = isStellarPayment
+    ? rawPaymentAccount
+    : (rawPaymentAccount.toLowerCase() as `0x${string}`);
   const activationCompanyInput = {
     ...parsed.data.company,
     ...(sessionDefaults && {
@@ -698,6 +862,8 @@ export async function POST(c: Context) {
       select: {
         id: true,
         name: true,
+        price: true,
+        billingInterval: true,
         acceptedToken: true,
         chainId: true,
         environmentId: true,
@@ -722,9 +888,268 @@ export async function POST(c: Context) {
       paymentAccount,
     );
 
+    const previousCompany = await db.arcenCompany.findUnique({
+      where: { id: company.id },
+      select: { activePlanId: true },
+    });
+
     // Use the chain the plan was registered on. Fall back to DEFAULT_CHAIN_ID for
     // legacy plans that pre-date the chainId column (they'll have the default 84532).
     const chainId = catalogPlan.chainId ?? DEFAULT_CHAIN_ID;
+    const isStellar = getChainFamily(chainId) === "stellar";
+
+    // ── Stellar activation path ──────────────────────────────────────────────
+    if (isStellar) {
+      const contracts = getContractAddresses(chainId);
+      if (!contracts.autopayModule || !contracts.subscriptionRegistry || !contracts.planFactory) {
+        return c.json(
+          { error: `Stellar contracts are not configured for chain ${chainId}.` },
+          503,
+          corsHeaders(origin),
+        );
+      }
+
+      const priceMicros = Math.round(
+        Number(catalogPlan.price ?? "0") * 1_000_000,
+      );
+      const stellarBillingPeriod: "monthly" | "annual" =
+        (catalogPlan as any).billingInterval >= YEARLY_INTERVAL
+          ? "annual"
+          : "monthly";
+
+      const submittedStellarTx = (
+        parsed.data.activationTxHash ?? parsed.data.txHash
+      )?.trim();
+
+      const autopayInitialized = await checkStellarAutopayInitialized(
+        chainId,
+        contracts.autopayModule,
+        paymentAccount,
+      );
+
+      // Resolve the SAC contract ID from the asset issuer (catalogPlan.acceptedToken).
+      // The autopay contract needs the C… contract id, not the G… issuer.
+      const sacContractId = catalogPlan.acceptedToken
+        ? await resolveStellarSacContractId(chainId, catalogPlan.acceptedToken)
+        : null;
+
+      // Step 1: Configure autopay if not initialized
+      if (!autopayInitialized) {
+        if (!submittedStellarTx) {
+          return c.json(
+            {
+              data: {
+                activationRequired: true,
+                paymentAccount,
+                chargeAmountAtomic: priceMicros.toString(),
+                chargeAmountDisplay: `${catalogPlan.price ?? "0"} ${catalogPlan.acceptedToken ?? "XLM"}`,
+                preparedTransaction: {
+                  contractId: contracts.autopayModule,
+                  method: "configure",
+                  args: {
+                    account: paymentAccount,
+                    config: {
+                      merchant: contracts.planFactory,
+                      max_amount: priceMicros.toString(),
+                      token: sacContractId ?? catalogPlan.acceptedToken ?? "",
+                      interval: Number(catalogPlan.billingInterval ?? 2592000),
+                      start_time: 0,
+                      plan_id: onChainPlanId.toString(),
+                      max_total_amount: "0",
+                    },
+                  },
+                },
+                verification: {
+                  chainId,
+                  acceptedToken: catalogPlan.acceptedToken ?? "",
+                  merchantAddress: contracts.planFactory,
+                  onChainPlanId: onChainPlanId.toString(),
+                },
+              },
+            },
+            202,
+            corsHeaders(origin),
+          );
+        }
+
+        // A txHash was submitted but autopay is still not initialized.
+        // Verify the tx, then return an error so the user can retry.
+        const verifyResult = await verifyStellarTransaction({
+          chainId,
+          txHash: submittedStellarTx,
+        });
+        if (!verifyResult.ok) {
+          return c.json(
+            { error: verifyResult.error ?? "Stellar transaction verification failed." },
+            425,
+            corsHeaders(origin),
+          );
+        }
+        return c.json(
+          { error: "Autopay configuration is still pending. Please retry in a few moments." },
+          409,
+          corsHeaders(origin),
+        );
+      }
+
+      // Step 2: Autopay is initialized → check SAC balance / trustline, then return execute
+      if (!submittedStellarTx) {
+        const sacCheck = catalogPlan.acceptedToken
+          ? await checkStellarSacBalance(chainId, catalogPlan.acceptedToken, paymentAccount)
+          : { balanceMicros: 0n, hasTrustline: false };
+        if (!sacCheck.hasTrustline) {
+          return c.json(
+            {
+              error: `No trustline found for ${catalogPlan.acceptedToken ?? "the payment token"}. Please add a trustline for this asset in your Stellar wallet before activating.`,
+            },
+            402,
+            corsHeaders(origin),
+          );
+        }
+        if (sacCheck.balanceMicros < BigInt(priceMicros)) {
+          return c.json(
+            {
+              error: `Insufficient USDC balance. Required: ${priceMicros} micros (~${catalogPlan.price ?? "0"} USDC), Available: ${sacCheck.balanceMicros.toString()} micros. Please fund your Stellar wallet with testnet USDC (issuer: ${catalogPlan.acceptedToken ?? ""}) and try again.`,
+            },
+            402,
+            corsHeaders(origin),
+          );
+        }
+
+        return c.json(
+          {
+            data: {
+              activationRequired: true,
+              paymentAccount,
+              chargeAmountAtomic: priceMicros.toString(),
+              chargeAmountDisplay: `${catalogPlan.price ?? "0"} ${catalogPlan.acceptedToken ?? "XLM"}`,
+              preparedTransaction: {
+                contractId: contracts.autopayModule,
+                method: "execute",
+                args: {
+                  caller: paymentAccount,
+                  account: paymentAccount,
+                  amount: priceMicros.toString(),
+                },
+              },
+              verification: {
+                chainId,
+                acceptedToken: catalogPlan.acceptedToken ?? "",
+                merchantAddress: contracts.planFactory,
+                onChainPlanId: onChainPlanId.toString(),
+              },
+            },
+          },
+          202,
+          corsHeaders(origin),
+        );
+      }
+
+      // Step 3: txHash submitted and autopay is configured → verify and finalize inline
+      const verifyResult = await verifyStellarTransaction({
+        chainId,
+        txHash: submittedStellarTx,
+      });
+
+      if (!verifyResult.ok) {
+        return c.json(
+          { error: verifyResult.error ?? "Stellar transaction verification failed." },
+          425,
+          corsHeaders(origin),
+        );
+      }
+
+      const subscriberEmail = await resolveBillingRecipientEmail({
+        teamId,
+        environmentId: catalogPlan.environmentId ?? null,
+        explicitEmail:
+          parsed.data.subscriberEmail ??
+          sessionDefaults?.userEmail ??
+          null,
+        accessTokenUserId: embedTokenContext?.userId ?? null,
+        accessTokenCompanyId: embedTokenContext?.companyId ?? null,
+        companyId: company.id,
+        walletAddress: paymentAccount,
+      });
+
+      // Build finalization payload inline (same pattern as EVM path)
+      const stellarFinalizationPayload = {
+        companyId: company.id,
+        customerUserId: embedTokenContext?.userId ?? sessionDefaults?.userId ?? null,
+        environmentId: catalogPlan.environmentId ?? null,
+        walletAddress: paymentAccount,
+        catalogPlanId: catalogPlan.id,
+        catalogPlanName: catalogPlan.name,
+        billingPeriod: stellarBillingPeriod,
+        customerName:
+          typeof activationCompanyInput.name === "string" &&
+          activationCompanyInput.name.trim()
+            ? activationCompanyInput.name.trim()
+            : null,
+        onChainPlanId: onChainPlanId.toString(),
+        onChainTokenId: "0",
+        expiration: String(Math.floor(Date.now() / 1000) + Number(catalogPlan.billingInterval ?? 2592000)),
+        txHash: submittedStellarTx,
+        amount: Number(priceMicros) / 1e6,
+        currency: "USDC",
+        merchantAddress: contracts.planFactory,
+        acceptedToken: catalogPlan.acceptedToken ?? null,
+        subscriberEmail,
+        occurredAt: new Date().toISOString(),
+        previousPlanId: previousCompany?.activePlanId ?? null,
+      };
+
+      let recoveryTaskId: string | null = null;
+      let recoveryPending = false;
+      let invoiceId: string | null = null;
+      let paymentId: string | null = null;
+
+      try {
+        const finalization = await finalizeSubscriptionActivation({
+          teamId,
+          payload: stellarFinalizationPayload,
+          source: "subscription.activate",
+        });
+        invoiceId = finalization.invoiceId;
+        paymentId = finalization.paymentId;
+      } catch (finalizationError) {
+        console.error(
+          "[subscriptions/activate] Stellar immediate billing finalization failed; queuing recovery task.",
+          finalizationError,
+        );
+
+        const recoveryTask = await enqueueSubscriptionActivationRecovery({
+          teamId,
+          ...stellarFinalizationPayload,
+          occurredAt: new Date(stellarFinalizationPayload.occurredAt),
+        });
+        recoveryTaskId = recoveryTask.id;
+
+        const recoveryResult = await processBillingRecoveryTask({
+          taskId: recoveryTask.id,
+        });
+        recoveryPending = !recoveryResult.ok;
+      }
+
+      return c.json(
+        {
+          data: {
+            txHash: submittedStellarTx,
+            companyId: company.id,
+            planId: catalogPlan.id,
+            paymentAccount,
+            invoiceId,
+            paymentId,
+            recoveryTaskId,
+            recoveryPending,
+          },
+        },
+        recoveryPending ? 202 : 200,
+        corsHeaders(origin),
+      );
+    }
+
+    // ── EVM activation path (existing) ─────────────────────────────────────
     const chain = getChain(chainId);
     const rpcUrl = getRpcUrl(chainId);
     const contracts = getContractAddresses(chainId);
@@ -959,7 +1384,7 @@ export async function POST(c: Context) {
               ];
               activationTxMatches =
                 decoded.functionName === "execute" &&
-                decodedAccount.toLowerCase() === paymentAccount &&
+                decodedAccount.toLowerCase() === paymentAccount.toLowerCase() &&
                 decodedAmount === chargeAmount;
             } catch {
               activationTxMatches = false;
@@ -1094,7 +1519,7 @@ export async function POST(c: Context) {
               address: acceptedTokenAddress,
               abi: erc20ReadAbi,
               functionName: "balanceOf",
-              args: [paymentAccount],
+              args: [paymentAccount as `0x${string}`],
             })
             .catch(() => 0n),
           publicClient
@@ -1102,7 +1527,7 @@ export async function POST(c: Context) {
               address: acceptedTokenAddress,
               abi: erc20ReadAbi,
               functionName: "allowance",
-              args: [paymentAccount, autopayAddress],
+              args: [paymentAccount as `0x${string}`, autopayAddress as `0x${string}`],
             })
             .catch(() => 0n),
           publicClient
@@ -1144,7 +1569,7 @@ export async function POST(c: Context) {
             address: acceptedTokenAddress,
             abi: erc20ReadAbi,
             functionName: "allowance",
-            args: [paymentAccount, autopayAddress],
+              args: [paymentAccount as `0x${string}`, autopayAddress as `0x${string}`],
           })) as bigint;
           if (recheck >= chargeAmount) {
             tokenAllowance = recheck;
@@ -1231,16 +1656,11 @@ export async function POST(c: Context) {
       );
     }
 
-    const previousCompany = await db.arcenCompany.findUnique({
-      where: { id: company.id },
-      select: { activePlanId: true },
-    });
-
     if (!submittedActivationTxHash) {
       const activationCalldata = encodeFunctionData({
         abi: ERC7579AutopayModuleABI,
         functionName: "execute",
-        args: [paymentAccount, chargeAmount],
+        args: [paymentAccount as `0x${string}`, chargeAmount],
       });
 
       return c.json(
@@ -1352,7 +1772,7 @@ export async function POST(c: Context) {
       return (
         typeof args?.account === "string" &&
         typeof args?.merchant === "string" &&
-        args.account.toLowerCase() === paymentAccount &&
+        args.account.toLowerCase() === paymentAccount.toLowerCase() &&
         args.merchant.toLowerCase() === merchantAddress
       );
     });
@@ -1417,7 +1837,7 @@ export async function POST(c: Context) {
         | undefined;
       return (
         typeof args?.subscriber === "string" &&
-        args.subscriber.toLowerCase() === paymentAccount &&
+        args.subscriber.toLowerCase() === paymentAccount.toLowerCase() &&
         (tokenId <= 0n || args.tokenId === tokenId)
       );
     });

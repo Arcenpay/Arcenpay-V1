@@ -19,6 +19,7 @@
     "dev:docs": "turbo run dev --ui=tui --filter=@arcenpay/docs...",
     "dev:facilitator": "turbo run dev --ui=tui --filter=@arcenpay/facilitator...",
     "dev:backend": "turbo run dev --ui=tui --filter=@arcenpay/backend...",
+    "dev:demo": "turbo run dev --ui=tui --filter=demo-dapp...",
     "build:backend": "turbo run build --filter=@arcenpay/backend...",
     "test": "turbo run test",
     "test:sdk": "turbo run test --filter=@arcenpay/react --filter=@arcenpay/node",

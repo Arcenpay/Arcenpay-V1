@@ -14,7 +14,7 @@ import { db } from "../../db.js";
 import { aggregateUsage } from "../platform/event-aggregator.js";
 import { getCachedFlag, setCachedFlag } from "./flag-cache.js";
 import { createPublicClient, http } from "viem";
-import { getChain, getContractAddresses } from "@arcenpay/internal-core";
+import { getChain, getContractAddresses, getChainFamily } from "@arcenpay/internal-core";
 import { getRpcUrl } from "../../config.js";
 import { DEFAULT_CHAIN_ID } from "../platform/default-chain.js";
 import { normalizeCatalogBillingPeriod } from "../catalog/catalog-entitlements.js";
@@ -96,6 +96,9 @@ async function resolveOnChainPlan(
       // Non-fatal — fall back to DEFAULT_CHAIN_ID
     }
   }
+
+  // Skip on-chain reads for non-EVM chains (Stellar uses a different RPC stack)
+  if (getChainFamily(chainId) !== "evm") return null;
 
   const client = getViemClient(chainId);
   if (!client) return null;
@@ -194,7 +197,11 @@ export async function resolveCompany(
   const where: Record<string, unknown>[] = [];
   if (keys.internalId) where.push({ id: keys.internalId });
   if (keys.id) where.push({ externalId: keys.id });
-  if (keys.wallet) where.push({ walletAddress: keys.wallet.toLowerCase() });
+  if (keys.wallet) {
+    const normalizedWallet = keys.wallet.trim();
+    const isStellar = normalizedWallet.startsWith("G") && normalizedWallet.length === 56;
+    where.push({ walletAddress: isStellar ? normalizedWallet : normalizedWallet.toLowerCase() });
+  }
   if (keys.email) {
     where.push({
       email: { equals: keys.email.trim(), mode: "insensitive" },
@@ -266,10 +273,12 @@ export async function resolveCompany(
 
   // On-chain fallback: if activePlanId is null but we have a wallet, try to resolve from chain
   if (!activePlanId && keys.wallet && !company.subscriptionState) {
+    const normalizedWallet = keys.wallet.trim();
+    const isStellar = normalizedWallet.startsWith("G") && normalizedWallet.length === 56;
     const onChainPlanId = await resolveOnChainPlan(
       teamId,
       company.id,
-      keys.wallet.toLowerCase(),
+      isStellar ? normalizedWallet : normalizedWallet.toLowerCase(),
       keys.environmentId,
     );
     if (onChainPlanId) activePlanId = onChainPlanId;

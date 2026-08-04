@@ -9,6 +9,8 @@ export function normalizeWallet(value?: string | null): string | null {
   if (typeof value !== "string") return null;
   const trimmed = value.trim();
   if (!trimmed) return null;
+  // Stellar addresses are case-sensitive (base32); preserve mixed-case.
+  if (trimmed.startsWith("G") && trimmed.length === 56) return trimmed;
   return trimmed.toLowerCase();
 }
 

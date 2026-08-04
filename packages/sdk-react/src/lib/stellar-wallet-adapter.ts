@@ -36,10 +36,11 @@ export class StellarWalletAdapter implements WalletAdapter {
     this.detectInstallation();
   }
 
-  private async detectInstallation() {
+  private   async detectInstallation() {
     try {
       const api = await getFreighterApi();
-      this.isInstalled = await api.isConnected();
+      const result = await api.isConnected();
+      this.isInstalled = typeof result === "boolean" ? result : Boolean(result.isConnected);
     } catch {
       this.isInstalled = false;
     }
@@ -47,19 +48,14 @@ export class StellarWalletAdapter implements WalletAdapter {
 
   async connect(): Promise<void> {
     const api = await getFreighterApi();
-    const { address } = await api.requestAccess();
+    const result = await api.requestAccess();
+    const address = typeof result === "string" ? result : result.address;
     if (!address) throw new Error("Freighter connection cancelled");
     this.address = address;
     this.isConnected = true;
   }
 
   async disconnect(): Promise<void> {
-    try {
-      const api = await getFreighterApi();
-      await api.disconnect();
-    } catch {
-      // ignore
-    }
     this.address = null;
     this.isConnected = false;
   }
@@ -74,11 +70,11 @@ export class StellarWalletAdapter implements WalletAdapter {
       publicKey: this.address,
       signTransaction: async (xdrStr) => {
         const api = await getFreighterApi();
-        const signed = await api.signTransaction(xdrStr, {
+        const result = await api.signTransaction(xdrStr, {
           networkPassphrase: params.networkPassphrase,
-          accountToSign: this.address!,
+          address: this.address!,
         });
-        return { signedTxXdr: signed };
+        return { signedTxXdr: result.signedTxXdr };
       },
     })) as any;
 

@@ -62,6 +62,12 @@ function toNormalizedEmail(value: string | undefined): string | null {
   return trimmed ? trimmed.toLowerCase() : null;
 }
 
+function toNormalizedWallet(value: string | undefined): string | null {
+  const trimmed = toNullableTrimmed(value);
+  if (!trimmed) return null;
+  return trimmed.startsWith("G") && trimmed.length === 56 ? trimmed : trimmed.toLowerCase();
+}
+
 function isPrismaUniqueError(error: unknown): boolean {
   return (
     typeof error === "object" &&
@@ -87,7 +93,7 @@ async function upsertCompanyForToken(
     const updates: Record<string, unknown> = {};
     const nextName = toNullableTrimmed(keys.name);
     const nextEmail = toNormalizedEmail(keys.email);
-    const nextWallet = toNullableTrimmed(keys.wallet)?.toLowerCase() ?? null;
+    const nextWallet = toNormalizedWallet(keys.wallet);
 
     if (nextName) updates.name = nextName;
     if (nextEmail) updates.email = nextEmail;
@@ -124,7 +130,7 @@ async function upsertCompanyForToken(
 
   const externalId = toNullableTrimmed(keys.id);
   const email = toNormalizedEmail(keys.email);
-  const wallet = toNullableTrimmed(keys.wallet)?.toLowerCase() ?? null;
+  const wallet = toNormalizedWallet(keys.wallet);
   const fallbackName =
     toNullableTrimmed(keys.name) ?? email ?? externalId ?? wallet ?? "Unknown";
 
@@ -185,7 +191,7 @@ async function upsertUserForToken(
     const updates: Record<string, unknown> = {};
     const nextName = toNullableTrimmed(keys.name);
     const nextEmail = toNormalizedEmail(keys.email);
-    const nextWallet = toNullableTrimmed(keys.wallet)?.toLowerCase() ?? null;
+    const nextWallet = toNormalizedWallet(keys.wallet);
     const nextClerkUserId =
       toNullableTrimmed(
         (keys as Record<string, unknown>).clerk_user_id as string | undefined,
@@ -226,7 +232,7 @@ async function upsertUserForToken(
 
   const externalId = toNullableTrimmed(keys.id);
   const email = toNormalizedEmail(keys.email);
-  const wallet = toNullableTrimmed(keys.wallet)?.toLowerCase() ?? null;
+  const wallet = toNormalizedWallet(keys.wallet);
   const clerkUserId =
     toNullableTrimmed(
       (keys as Record<string, unknown>).clerk_user_id as string | undefined,

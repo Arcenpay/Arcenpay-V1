@@ -165,7 +165,7 @@ export async function createCompany(c: Context) {
     }
   }
 
-  if (body.wallet !== undefined && !/^0x[0-9a-fA-F]{40}$/.test(body.wallet)) {
+  if (body.wallet !== undefined && (typeof body.wallet !== "string" || body.wallet.trim().length === 0 || body.wallet.length > 128)) {
     return apiError(c, "Invalid wallet address format", { status: 400, code: "INVALID_INPUT" });
   }
 
