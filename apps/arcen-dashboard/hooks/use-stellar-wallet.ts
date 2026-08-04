@@ -15,18 +15,51 @@ export interface StellarWalletState {
   error: string | null;
 }
 
+const STORAGE_KEY = "arcenpay:stellar-wallet";
+
 let kitReady = false;
+
+function getPersistedAddress(): string | null {
+  if (typeof window === "undefined") return null;
+  try {
+    return localStorage.getItem(STORAGE_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function setPersistedAddress(address: string | null) {
+  if (typeof window === "undefined") return;
+  try {
+    if (address) localStorage.setItem(STORAGE_KEY, address);
+    else localStorage.removeItem(STORAGE_KEY);
+  } catch {
+    // ignore
+  }
+}
 
 export function useStellarWallet() {
   const [state, setState] = useState<StellarWalletState>({
-    address: null,
-    isConnected: false,
+    address: getPersistedAddress(),
+    isConnected: Boolean(getPersistedAddress()),
     isLoading: false,
     ready: kitReady,
     error: null,
   });
 
   const mountedRef = useRef(true);
+
+  // Rehydrate from localStorage after client mount (SSR initializes with null)
+  useEffect(() => {
+    const stored = getPersistedAddress();
+    if (stored) {
+      setState((s) => ({
+        ...s,
+        address: stored,
+        isConnected: true,
+      }));
+    }
+  }, []);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -74,6 +107,7 @@ export function useStellarWallet() {
       const result = await StellarWalletsKit.authModal();
       if (mountedRef.current) {
         if (result.address) {
+          setPersistedAddress(result.address);
           setState((s) => ({
             ...s,
             address: result.address,
@@ -101,10 +135,20 @@ export function useStellarWallet() {
     return { signedMessage: result.signedMessage ?? "", signerAddress: state.address ?? "" };
   }, [state.address]);
 
+  const signTransaction = useCallback(async (
+    xdr: string,
+    opts?: { networkPassphrase?: string; address?: string; path?: string }
+  ): Promise<{ signedTxXdr: string; signerAddress?: string }> => {
+    const result = await StellarWalletsKit.signTransaction(xdr, opts);
+    if (!result.signedTxXdr) throw new Error("Transaction signing failed or was cancelled");
+    return { signedTxXdr: result.signedTxXdr, signerAddress: result.signerAddress };
+  }, []);
+
   const disconnect = useCallback(async () => {
     try { await StellarWalletsKit.disconnect(); } catch { /* ignore */ }
+    setPersistedAddress(null);
     if (mountedRef.current) setState((s) => ({ ...s, address: null, isConnected: false }));
   }, []);
 
-  return { ...state, connect, signMessage, disconnect, chainId: 9000001 };
+  return { ...state, connect, signMessage, signTransaction, disconnect, chainId: 9000001 };
 }

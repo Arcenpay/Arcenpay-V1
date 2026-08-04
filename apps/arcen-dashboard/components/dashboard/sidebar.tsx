@@ -41,6 +41,8 @@ import { useDashboardSession } from "@/hooks/use-dashboard-session";
 import { DASHBOARD_DOCS_URL } from "@/lib/docs-url";
 import { getChainLabel, resolveEnvironmentChainId } from "@/lib/default-chain";
 import { useEnvironment } from "@/contexts/environment-context";
+import { isStellarChainId } from "@arcenpay/internal-core";
+import { useStellarWallet } from "@/hooks/use-stellar-wallet";
 import { useTheme } from "next-themes";
 import { useRouter } from "next/navigation";
 
@@ -142,12 +144,25 @@ export function Sidebar({
   onMobileOpenChange,
 }: SidebarProps) {
   const router = useRouter();
-  const { address, isConnected } = useAccount();
+  const { address, isConnected: isEvmConnected } = useAccount();
   const { envMode, activeEnvironment } = useEnvironment();
   const { data: sessionData, refresh: refreshSessionData } =
     useDashboardSession();
   const [mounted, setMounted] = useState(false);
   const { theme, setTheme } = useTheme();
+  const stellar = useStellarWallet();
+
+  const isStellarEnv = activeEnvironment?.chainId
+    ? isStellarChainId(activeEnvironment.chainId)
+    : false;
+
+  const displayAddress = isStellarEnv
+    ? (stellar.address ?? sessionData?.user?.stellarWalletAddress ?? null)
+    : (address ?? sessionData?.user?.walletAddress ?? null);
+
+  const isConnected = isStellarEnv
+    ? stellar.isConnected
+    : isEvmConnected;
 
   // Accordion: only one group open at a time, default all closed
   const [expandedGroup, setExpandedGroup] = useState<string | null>(null);
@@ -243,8 +258,8 @@ export function Sidebar({
     }
   };
 
-  const shortAddress = address
-    ? `${address.slice(0, 6)}...${address.slice(-4)}`
+  const shortAddress = displayAddress
+    ? `${displayAddress.slice(0, 6)}...${displayAddress.slice(-4)}`
     : null;
 
   return (

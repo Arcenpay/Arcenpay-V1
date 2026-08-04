@@ -4,6 +4,8 @@ import { useState, useEffect } from "react";
 import { useAccount } from "wagmi";
 import { useEnvironment } from "@/contexts/environment-context";
 import { useDashboardSession } from "@/hooks/use-dashboard-session";
+import { useStellarWallet } from "@/hooks/use-stellar-wallet";
+import { isStellarChainId } from "@arcenpay/internal-core";
 import {
   AlertTriangle,
   DollarSign,
@@ -80,13 +82,51 @@ function microToDollars(raw: string): number {
   return Number(raw) / 1_000_000;
 }
 
+function generateZeroData(range: TimeRange): { label: string; revenue: number }[] {
+  const now = new Date();
+  const points: { label: string; revenue: number }[] = [];
+  if (range === "today") {
+    for (let h = 0; h < 24; h += 4) {
+      points.push({ label: `${h}:00`, revenue: 0 });
+    }
+  } else if (range === "30d") {
+    for (let i = 29; i >= 0; i -= 2) {
+      const d = new Date(now);
+      d.setDate(d.getDate() - i);
+      points.push({
+        label: d.toLocaleDateString(undefined, { month: "short", day: "numeric" }),
+        revenue: 0,
+      });
+    }
+  } else if (range === "3m" || range === "12m" || range === "all") {
+    const months = range === "3m" ? 3 : range === "12m" ? 12 : 24;
+    for (let i = months - 1; i >= 0; i--) {
+      const d = new Date(now);
+      d.setMonth(d.getMonth() - i);
+      points.push({
+        label: d.toLocaleDateString(undefined, { month: "short", year: "2-digit" }),
+        revenue: 0,
+      });
+    }
+  }
+  return points;
+}
+
 /* ═══════════════════════════════════════════════════════
    Overview — ArcenPay SaaS Provider Dashboard
    ═══════════════════════════════════════════════════════ */
 export function OverviewSection() {
-  const { isConnected } = useAccount();
+  const { isConnected: isEvmConnected } = useAccount();
   const { envMode, activeEnvironment, isLoading: envLoading } = useEnvironment();
   const { data: sessionData } = useDashboardSession();
+  const stellar = useStellarWallet();
+
+  const isStellarEnv = activeEnvironment?.chainId
+    ? isStellarChainId(activeEnvironment.chainId)
+    : false;
+  const isWalletConnected = isStellarEnv
+    ? stellar.isConnected
+    : isEvmConnected;
   const [mounted, setMounted] = useState(false);
 
   const [overview, setOverview] = useState<OverviewPayload | null>(null);
@@ -247,11 +287,13 @@ export function OverviewSection() {
   return (
     <div className="space-y-6 pb-12">
       {/* ── Wallet banner ────────────────────────────── */}
-      {mounted && !isConnected && (
+      {mounted && !isWalletConnected && (
         <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-secondary border border-border">
           <AlertTriangle className="w-4 h-4 text-warning shrink-0" />
           <p className="text-sm text-muted-foreground">
-            Wallet disconnected — showing data for {getChainLabel(effectiveChainId)}.
+            {isStellarEnv
+              ? "Stellar wallet disconnected — showing data for Stellar Testnet."
+              : `Wallet disconnected — showing data for ${getChainLabel(effectiveChainId)}.`}
           </p>
         </div>
       )}
@@ -425,19 +467,9 @@ export function OverviewSection() {
         <div className="h-[280px] text-muted-foreground">
           {loadingRevenue ? (
             <div className="h-full bg-surface/50 rounded-lg animate-pulse" />
-          ) : chartData.length === 0 || totalRevenue === 0 ? (
-            <div className="h-full flex flex-col items-center justify-center text-center">
-              <div className="w-14 h-14 rounded-xl bg-surface/50 border border-border flex items-center justify-center mb-4">
-                <DollarSign className="w-7 h-7 text-muted-foreground" />
-              </div>
-              <p className="text-sm font-medium text-foreground mb-1">No revenue yet</p>
-              <p className="text-xs text-muted-foreground max-w-[300px]">
-                Revenue will appear once paid invoices are recorded for this workspace.
-              </p>
-            </div>
           ) : (
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+              <AreaChart data={chartData.length > 0 ? chartData : generateZeroData(revenueRange)} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                 <defs>
                   <linearGradient id="revenueGradient" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#4a7bff" stopOpacity={0.25} />
@@ -510,7 +542,7 @@ function CleanMetricCard({
   title: string;
   subtitle: string;
   value: string;
-  icon: React.ComponentType<{ className?: string }>;
+  icon: React.ComponentType<{ className?: string; strokeWidth?: number }>;
   trend?: string;
   loading: boolean;
 }) {

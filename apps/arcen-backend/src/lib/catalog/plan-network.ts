@@ -1,4 +1,8 @@
 import {
+  isValidAddressForChain,
+  isEvmChain,
+} from "@arcenpay/internal-core";
+import {
   ARC_TESTNET_CHAIN_ID,
   getChainIdsForEnvironment,
   isSupportedDashboardChainId,
@@ -8,22 +12,23 @@ import {
 import { getUsdcAddress } from "../platform/contracts.js";
 
 const LEGACY_ARC_TESTNET_USDC = "0x3600000000000000000000000000000000000000";
-const EVM_ADDRESS_REGEX = /^0x[a-fA-F0-9]{40}$/;
 
 export interface ResolvedPlanNetwork {
   chainId: SupportedDashboardChainId;
-  acceptedToken: `0x${string}`;
+  acceptedToken: string;
 }
 
-function normalizeAddress(value: string | undefined | null): `0x${string}` | null {
-  if (!value) return null;
-  const trimmed = value.trim();
-  if (!EVM_ADDRESS_REGEX.test(trimmed)) return null;
-  return trimmed as `0x${string}`;
+function sameAddress(a: string, b: string, chainId: number): boolean {
+  if (isEvmChain(chainId)) {
+    return a.toLowerCase() === b.toLowerCase();
+  }
+  // Stellar (and future non-EVM families): case-sensitive comparison
+  return a === b;
 }
 
-function sameAddress(a: string, b: string): boolean {
-  return a.toLowerCase() === b.toLowerCase();
+/** Safe wrapper around getUsdcAddress that never throws. */
+function safeGetUsdcAddress(chainId: number): string | null {
+  return getUsdcAddress(chainId) ?? null;
 }
 
 function getAllowedChainIds(environmentMode: EnvironmentMode): SupportedDashboardChainId[] {
@@ -40,7 +45,7 @@ export function resolvePlanNetwork(input: {
   const allowedChainIds = getAllowedChainIds(input.environmentMode);
   if (allowedChainIds.length === 0) return null;
 
-  const normalizedToken = normalizeAddress(input.acceptedToken);
+  const rawToken = input.acceptedToken?.trim() ?? null;
   const requestedChainId =
     input.requestedChainId != null &&
     isSupportedDashboardChainId(input.requestedChainId) &&
@@ -48,33 +53,45 @@ export function resolvePlanNetwork(input: {
       ? input.requestedChainId
       : null;
 
+  // Legacy Arc Testnet USDC migration — only applies to EVM Arc Testnet
   if (
-    normalizedToken &&
-    sameAddress(normalizedToken, LEGACY_ARC_TESTNET_USDC) &&
+    rawToken &&
+    isEvmChain(ARC_TESTNET_CHAIN_ID) &&
+    sameAddress(rawToken, LEGACY_ARC_TESTNET_USDC, ARC_TESTNET_CHAIN_ID) &&
     allowedChainIds.includes(ARC_TESTNET_CHAIN_ID)
   ) {
-    return {
-      chainId: ARC_TESTNET_CHAIN_ID,
-      acceptedToken: getUsdcAddress(ARC_TESTNET_CHAIN_ID),
-    };
-  }
-
-  if (requestedChainId != null) {
-    const acceptedToken = getUsdcAddress(requestedChainId);
-    if (!normalizedToken || sameAddress(normalizedToken, acceptedToken)) {
-      return { chainId: requestedChainId, acceptedToken };
+    const token = safeGetUsdcAddress(ARC_TESTNET_CHAIN_ID);
+    if (token) {
+      return { chainId: ARC_TESTNET_CHAIN_ID, acceptedToken: token };
     }
   }
 
-  if (normalizedToken) {
-    const matches = allowedChainIds.filter((chainId) =>
-      sameAddress(normalizedToken, getUsdcAddress(chainId)),
-    );
+  // If a chain is explicitly requested, validate the token matches that chain
+  if (requestedChainId != null) {
+    const canonicalToken = safeGetUsdcAddress(requestedChainId);
+    if (canonicalToken) {
+      if (!rawToken || sameAddress(rawToken, canonicalToken, requestedChainId)) {
+        return { chainId: requestedChainId, acceptedToken: canonicalToken };
+      }
+    }
+    // If the token doesn't match the canonical USDC for the chain, but is
+    // a valid address on that chain, accept it as a custom token override.
+    if (rawToken && isValidAddressForChain(rawToken, requestedChainId)) {
+      return { chainId: requestedChainId, acceptedToken: rawToken };
+    }
+  }
+
+  // No chain requested — try to resolve chain from token address alone
+  if (rawToken) {
+    const matches = allowedChainIds.filter((chainId) => {
+      const token = safeGetUsdcAddress(chainId);
+      return token && sameAddress(rawToken, token, chainId);
+    });
     if (matches.length === 1) {
-      return {
-        chainId: matches[0],
-        acceptedToken: getUsdcAddress(matches[0]),
-      };
+      const token = safeGetUsdcAddress(matches[0]);
+      if (token) {
+        return { chainId: matches[0], acceptedToken: token };
+      }
     }
   }
 

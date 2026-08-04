@@ -46,6 +46,7 @@ export type { EntitlementErrorCode } from "./hooks/useEntitlement";
 export { useConsumeEntitlement } from "./hooks/useConsumeEntitlement";
 export { useTrack } from "./hooks/useTrack";
 export type { TrackEventInput } from "./hooks/useTrack";
+export { useStellarEmbedWallet } from "./hooks/useStellarEmbedWallet";
 
 export { createPaymentLinkCheckoutUrl } from "./lib/api";
 

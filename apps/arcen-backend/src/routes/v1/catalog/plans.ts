@@ -17,6 +17,7 @@ import {
   PlanFactoryABI,
   YEARLY_INTERVAL,
   getContractAddresses,
+  isEvmChain,
 } from "@arcenpay/internal-core";
 
 const listSchema = z.object({
@@ -150,6 +151,9 @@ export async function listPlans(c: Context) {
       if (plan.onChainPlanId) {
         if (parseFloat(plan.price.toString()) === 0) return plan;
 
+        // EVM-only: skip contract reads for non-EVM chains (Stellar, etc.)
+        if (!isEvmChain(activeEnvironment.chainId)) return plan;
+
         try {
           const publicClient = createResilientPublicClient(activeEnvironment.chainId);
           const contracts = getContractAddresses(activeEnvironment.chainId);
@@ -185,34 +189,38 @@ export async function listPlans(c: Context) {
         }
       }
 
-      const resolved = resolvePlanNetwork({
-        environmentMode: activeEnvironment.mode,
-        acceptedToken: plan.acceptedToken,
-        requestedChainId: activeEnvironment.chainId,
-      });
-      if (!resolved) return plan;
+      try {
+        const resolved = resolvePlanNetwork({
+          environmentMode: activeEnvironment.mode,
+          acceptedToken: plan.acceptedToken,
+          requestedChainId: activeEnvironment.chainId,
+        });
+        if (!resolved) return plan;
 
-      const chainChanged = plan.chainId !== resolved.chainId;
-      const tokenChanged =
-        normalizeComparableAddress(plan.acceptedToken) !==
-        normalizeComparableAddress(resolved.acceptedToken);
+        const chainChanged = plan.chainId !== resolved.chainId;
+        const tokenChanged =
+          normalizeComparableAddress(plan.acceptedToken) !==
+          normalizeComparableAddress(resolved.acceptedToken);
 
-      if (!chainChanged && !tokenChanged) return plan;
+        if (!chainChanged && !tokenChanged) return plan;
 
-      const repaired = await db.catalogPlan.update({
-        where: { id: plan.id },
-        data: {
-          chainId: activeEnvironment.chainId,
-          chainFamily: resolveChainFamilyForPrisma(activeEnvironment.chainId),
-          acceptedToken: resolved.acceptedToken,
-          chainSyncStatus:
-            parseFloat(plan.price.toString()) === 0 ? "NOT_APPLICABLE" : "PENDING",
-          chainSyncError: null,
-          chainSyncedAt: null,
-        },
-      });
+        const repaired = await db.catalogPlan.update({
+          where: { id: plan.id },
+          data: {
+            chainId: activeEnvironment.chainId,
+            chainFamily: resolveChainFamilyForPrisma(activeEnvironment.chainId),
+            acceptedToken: resolved.acceptedToken,
+            chainSyncStatus:
+              parseFloat(plan.price.toString()) === 0 ? "NOT_APPLICABLE" : "PENDING",
+            chainSyncError: null,
+            chainSyncedAt: null,
+          },
+        });
 
-      return repaired;
+        return repaired;
+      } catch {
+        return plan;
+      }
     }),
   );
 
@@ -412,7 +420,7 @@ export async function updatePlan(c: Context) {
         })
       : {
           chainId: activeEnvironment.chainId,
-          acceptedToken: existing.acceptedToken as `0x${string}`,
+          acceptedToken: existing.acceptedToken,
         };
 
   if (!resolvedNetwork) {

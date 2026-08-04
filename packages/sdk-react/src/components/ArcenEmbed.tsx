@@ -74,7 +74,8 @@ import {
 } from "viem";
 import { resolveDashboardBaseUrl } from "../lib/api";
 import { useArcenPay } from "../providers/ArcenPayProvider";
-import { sanitizeSvg } from "@arcenpay/internal-core";
+import { sanitizeSvg, isEvmChain, getStellarNetworkPassphrase } from "@arcenpay/internal-core";
+import { useStellarEmbedWallet } from "../hooks/useStellarEmbedWallet";
 
 export interface ArcenEmbedProps {
   /** Short-lived access token. When omitted, auto-reads from NEXT_PUBLIC_ARCENPAY_ACCESS_TOKEN env var. */
@@ -2087,6 +2088,32 @@ function useSafeWalletClient(): { walletClient: WalletClient | null } {
   } catch {
     return { walletClient: null };
   }
+}
+
+function useSafeStellarAccount(chainId: number | null): {
+  address: string | null;
+  isConnected: boolean;
+  connect: () => Promise<void>;
+  signTransaction: (xdr: string, opts?: { networkPassphrase?: string }) => Promise<{ signedTxXdr: string }>;
+} {
+  const isStellar = chainId !== null && !isEvmChain(chainId);
+  const stellar = useStellarEmbedWallet(isStellar ? "TESTNET" : "TESTNET");
+
+  if (!isStellar) {
+    return {
+      address: null,
+      isConnected: false,
+      connect: async () => {},
+      signTransaction: async () => ({ signedTxXdr: "" }),
+    };
+  }
+
+  return {
+    address: stellar.address,
+    isConnected: stellar.isConnected,
+    connect: stellar.connect,
+    signTransaction: stellar.signTransaction,
+  };
 }
 
 function useRuntimeChainId(): number {
@@ -6791,19 +6818,32 @@ function PaymentContent({
       : price;
 
   const isNarrowPayment = containerWidth < 700;
-  const finalAddress = address || localAddress;
-  const finalConnected = isConnected || !!localAddress;
+
+  // ── Family-aware wallet resolution ────────────────────────────────────────
+  const isStellarChain = runtimeChainId !== 0 && !isEvmChain(runtimeChainId);
+  const stellarWallet = useSafeStellarAccount(runtimeChainId);
+
+  const finalAddress = isStellarChain
+    ? (stellarWallet.address ?? undefined)
+    : (address || localAddress);
+  const finalConnected = isStellarChain
+    ? stellarWallet.isConnected
+    : (isConnected || !!localAddress);
+
   const resolvedWalletClient =
-    wagmiWalletClient ??
-    (chainId
-      ? createBrowserWalletClient({
-          chainId,
-          account: finalAddress,
-          provider: localProvider,
-        })
-      : null);
-  const resolvedWalletAddress =
-    resolvedWalletClient?.account?.address ?? finalAddress ?? null;
+    isStellarChain
+      ? null
+      : (wagmiWalletClient ??
+         (chainId
+           ? createBrowserWalletClient({
+               chainId,
+               account: finalAddress,
+               provider: localProvider,
+             })
+           : null));
+  const resolvedWalletAddress = isStellarChain
+    ? (stellarWallet.address ?? null)
+    : (resolvedWalletClient?.account?.address ?? finalAddress ?? null);
   const requiresSmartAccountPlanChangeExecution = Boolean(
     isOnChainPlanChange &&
     smartAccountAddress &&
@@ -6825,15 +6865,19 @@ function PaymentContent({
     chainId,
   });
 
-  async function connectWindowEthereum(walletKind?: WalletKind) {
+  async function connectWallet(walletKind?: WalletKind) {
     setTxError("");
     setTxStatus("idle");
     setConnecting(true);
     try {
-      const result = await requestWindowEthereumAccounts(walletKind);
-      setPreferredWindowEthereum(result.provider);
-      setLocalProvider(result.provider);
-      setLocalAddress(result.accounts[0] ?? null);
+      if (isStellarChain) {
+        await stellarWallet.connect();
+      } else {
+        const result = await requestWindowEthereumAccounts(walletKind);
+        setPreferredWindowEthereum(result.provider);
+        setLocalProvider(result.provider);
+        setLocalAddress(result.accounts[0] ?? null);
+      }
     } catch (error) {
       setTxStatus("error");
       setTxError(getWalletConnectionErrorMessage(error));

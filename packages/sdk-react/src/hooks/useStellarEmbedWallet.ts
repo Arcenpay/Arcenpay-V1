@@ -1,0 +1,131 @@
+"use client";
+
+import { useCallback, useEffect, useRef, useState } from "react";
+
+export interface StellarEmbedWalletState {
+  address: string | null;
+  isConnected: boolean;
+  isLoading: boolean;
+  ready: boolean;
+  error: string | null;
+}
+
+const STORAGE_KEY = "arcenpay:embed:stellar-wallet";
+
+function getPersistedAddress(): string | null {
+  if (typeof window === "undefined") return null;
+  try {
+    return localStorage.getItem(STORAGE_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function setPersistedAddress(address: string | null) {
+  if (typeof window === "undefined") return;
+  try {
+    if (address) localStorage.setItem(STORAGE_KEY, address);
+    else localStorage.removeItem(STORAGE_KEY);
+  } catch {
+    // ignore
+  }
+}
+
+/**
+ * Lightweight Freighter-only Stellar wallet hook for ArcenEmbed.
+ * Uses @stellar/freighter-api (no heavy wallet-kit dependency).
+ */
+export function useStellarEmbedWallet(_network: "TESTNET" | "PUBLIC" = "TESTNET") {
+  const [state, setState] = useState<StellarEmbedWalletState>({
+    address: getPersistedAddress(),
+    isConnected: Boolean(getPersistedAddress()),
+    isLoading: false,
+    ready: false,
+    error: null,
+  });
+
+  const mountedRef = useRef(true);
+
+  // Rehydrate from localStorage after client mount
+  useEffect(() => {
+    const stored = getPersistedAddress();
+    if (stored) {
+      setState((s) => ({ ...s, address: stored, isConnected: true }));
+    }
+  }, []);
+
+  // Detect if Freighter is installed
+  useEffect(() => {
+    mountedRef.current = true;
+
+    async function checkFreighter() {
+      try {
+        const { isConnected } = await import("@stellar/freighter-api");
+        const ok = await isConnected();
+        if (mountedRef.current) {
+          setState((s) => ({ ...s, ready: true }));
+          if (ok) {
+            const stored = getPersistedAddress();
+            if (stored) {
+              setState((s) => ({ ...s, address: stored, isConnected: true }));
+            }
+          }
+        }
+      } catch {
+        if (mountedRef.current) setState((s) => ({ ...s, ready: true }));
+      }
+    }
+
+    checkFreighter();
+    return () => { mountedRef.current = false; };
+  }, []);
+
+  const connect = useCallback(async () => {
+    try {
+      setState((s) => ({ ...s, isLoading: true, error: null }));
+      const freighter = await import("@stellar/freighter-api");
+
+      // Request address from Freighter
+      const { address } = await freighter.requestAccess();
+      if (!address) throw new Error("No address returned from Freighter");
+
+      if (mountedRef.current) {
+        setPersistedAddress(address);
+        setState((s) => ({
+          ...s,
+          address,
+          isConnected: true,
+          isLoading: false,
+        }));
+      }
+    } catch (err) {
+      if (!mountedRef.current) return;
+      const msg = err instanceof Error ? err.message : "";
+      if (msg.includes("denied") || msg.includes("rejected") || msg.includes("cancelled")) {
+        setState((s) => ({ ...s, isLoading: false }));
+      } else {
+        setState((s) => ({ ...s, isLoading: false, error: msg || "Connection failed" }));
+      }
+    }
+  }, []);
+
+  const signTransaction = useCallback(async (
+    xdr: string,
+    opts?: { networkPassphrase?: string; address?: string; path?: string }
+  ) => {
+    const freighter = await import("@stellar/freighter-api");
+    const signedTxXdr = await freighter.signTransaction(xdr, {
+      networkPassphrase: opts?.networkPassphrase,
+      accountToSign: opts?.address,
+    });
+    if (!signedTxXdr) throw new Error("Signing failed or was cancelled");
+    return { signedTxXdr, signerAddress: opts?.address };
+  }, []);
+
+  const disconnect = useCallback(async () => {
+    setPersistedAddress(null);
+    if (mountedRef.current) setState((s) => ({ ...s, address: null, isConnected: false }));
+  }, []);
+
+  return { ...state, connect, signTransaction, disconnect };
+}

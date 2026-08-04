@@ -64,6 +64,7 @@ import { getUsdcAddress, useContractAddresses } from "@/lib/contracts";
 import { getBlockExplorerUrl } from "@/lib/format";
 import { CANONICAL_WEBHOOK_EVENTS } from "@/lib/webhook-events";
 import { useDashboardSession } from "@/hooks/use-dashboard-session";
+import { useStellarWallet } from "@/hooks/use-stellar-wallet";
 import {
   DEFAULT_CHAIN_ID,
   getChainLabel,
@@ -74,6 +75,7 @@ import {
   useDashboardWallet,
 } from "@/hooks/use-dashboard-wallet";
 import { useEnvironment } from "@/contexts/environment-context";
+import { isStellarChainId } from "@arcenpay/internal-core";
 
 const NOTIFICATION_DEFAULTS = CANONICAL_WEBHOOK_EVENTS.map((event) => ({
   ...event,
@@ -124,8 +126,15 @@ export function SettingsSection() {
   } = useEnvironment();
   const { isConnected, address: connectedAddress } = useAccount();
   const { data: sessionData } = useDashboardSession();
+  const stellar = useStellarWallet();
   const chainId = useChainId();
-  const linkedWallet = sessionData?.user.walletAddress ?? undefined;
+  const configuredChainId = activeEnvironment?.chainId ?? resolveEnvironmentChainId(envMode);
+  const isStellarEnv = isStellarChainId(configuredChainId);
+
+  const linkedWallet = isStellarEnv
+    ? (sessionData?.user.stellarWalletAddress ?? undefined)
+    : (sessionData?.user.walletAddress ?? undefined);
+
   const {
     connectedWalletLabel,
     disconnectWallet,
@@ -141,8 +150,15 @@ export function SettingsSection() {
     reconnectWallet,
     switchToRequiredNetwork,
     currentNetworkLabel,
-  } = useDashboardWallet(linkedWallet);
-  const configuredChainId = activeEnvironment?.chainId ?? resolveEnvironmentChainId(envMode);
+  } = useDashboardWallet(isStellarEnv ? undefined : linkedWallet);
+
+  const displayLinkedWallet = linkedWallet ?? "No wallet linked yet";
+  const displayConnectedWallet = isStellarEnv
+    ? (stellar.address ? `${stellar.address.slice(0, 6)}…${stellar.address.slice(-4)}` : "Not connected")
+    : (connectedWalletLabel ?? "Not connected");
+  const displayNetworkLabel = isStellarEnv
+    ? getChainLabel(configuredChainId)
+    : (currentNetworkLabel ?? "Not connected");
   const contractAddresses = useContractAddresses(configuredChainId);
   const configuredChainLabel = getChainLabel(configuredChainId);
   const isOnConfiguredNetwork = hasConnectedWallet && chainId === configuredChainId;
@@ -755,17 +771,17 @@ export function SettingsSection() {
               <div className="rounded-xl border border-border bg-secondary/40 p-4">
                 <p className="text-xs text-muted-foreground mb-1">Linked workspace wallet</p>
                 <p className="font-mono text-sm text-foreground break-all">
-                  {linkedWallet ?? "No wallet linked yet"}
+                  {displayLinkedWallet}
                 </p>
               </div>
 
               <div className="rounded-xl border border-border bg-secondary/40 p-4">
                 <p className="text-xs text-muted-foreground mb-1">Connected wallet</p>
                 <p className="font-mono text-sm text-foreground">
-                  {connectedWalletLabel ?? "Not connected"}
+                  {displayConnectedWallet}
                 </p>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  Network: {currentNetworkLabel ?? "Not connected"}
+                  Network: {displayNetworkLabel}
                 </p>
               </div>
 
@@ -776,88 +792,111 @@ export function SettingsSection() {
                 </p>
               </div>
 
-              {linkedWallet && isLinkedWalletConnected ? (
+              {!isStellarEnv && linkedWallet && isLinkedWalletConnected ? (
                 <div className="flex items-start gap-2 rounded-lg border border-border bg-secondary p-3 text-sm text-foreground">
                   <Check className="w-4 h-4 shrink-0 mt-0.5" />
                   Connected wallet matches the workspace wallet.
                 </div>
               ) : null}
 
-              {linkedWallet && isWrongWalletConnected ? (
+              {!isStellarEnv && linkedWallet && isWrongWalletConnected ? (
                 <div className="flex items-start gap-2 rounded-lg border border-border bg-secondary p-3 text-sm text-warning">
                   <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
                   Connected wallet does not match {linkedWalletLabel}. Reconnect with the linked wallet before signing transactions.
                 </div>
               ) : null}
 
-              {hasConnectedWallet && !isOnConfiguredNetwork ? (
+              {!isStellarEnv && hasConnectedWallet && !isOnConfiguredNetwork ? (
                 <div className="flex items-start gap-2 rounded-lg border border-border bg-secondary p-3 text-sm text-warning">
                   <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
                   This wallet is on an unsupported network. Switch to {configuredChainLabel} to match the current workspace environment.
                 </div>
               ) : null}
 
+              {isStellarEnv && stellar.isConnected ? (
+                <div className="flex items-start gap-2 rounded-lg border border-border bg-secondary p-3 text-sm text-foreground">
+                  <Check className="w-4 h-4 shrink-0 mt-0.5" />
+                  Stellar wallet connected on {configuredChainLabel}.
+                </div>
+              ) : null}
+
               <div className="grid gap-2 md:grid-cols-2">
-                {!hasConnectedWallet ? (
-                  <Button onClick={() => void openConnectModal()}>
-                    <Wallet className="w-4 h-4 mr-2" />
-                    Connect wallet
-                  </Button>
-                ) : null}
-
-                {hasConnectedWallet ? (
-                  <Button variant="outline" onClick={() => void openAccountModal()}>
-                    <Settings2 className="w-4 h-4 mr-2" />
-                    Open wallet modal
-                  </Button>
-                ) : null}
-
-                {isWrongWalletConnected ? (
-                  <Button variant="outline" onClick={() => void reconnectWallet()}>
-                    <RefreshCw className="w-4 h-4 mr-2" />
-                    Reconnect correct wallet
-                  </Button>
-                ) : null}
-
-                {hasConnectedWallet && !isOnConfiguredNetwork ? (
-                  <Button
-                    variant="outline"
-                    onClick={() => void switchToRequiredNetwork(configuredChainId)}
-                    disabled={isSwitchingChain}
-                  >
-                    {isSwitchingChain ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Switching network...
-                      </>
-                    ) : (
-                      <>
-                        <Globe className="w-4 h-4 mr-2" />
-                        Switch to {configuredChainLabel}
-                      </>
-                    )}
-                  </Button>
-                ) : null}
-
-                {hasConnectedWallet ? (
-                  <Button
-                    variant="ghost"
-                    onClick={() => void disconnectWallet()}
-                    disabled={isDisconnecting}
-                  >
-                    {isDisconnecting ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Disconnecting...
-                      </>
-                    ) : (
-                      <>
+                {isStellarEnv ? (
+                  !stellar.isConnected ? (
+                    <Button onClick={() => void stellar.connect()}>
+                      <Wallet className="w-4 h-4 mr-2" />
+                      Connect Stellar wallet
+                    </Button>
+                  ) : (
+                    <Button variant="ghost" onClick={() => void stellar.disconnect()}>
+                      <Wallet className="w-4 h-4 mr-2" />
+                      Disconnect Stellar wallet
+                    </Button>
+                  )
+                ) : (
+                  <>
+                    {!hasConnectedWallet ? (
+                      <Button onClick={() => void openConnectModal()}>
                         <Wallet className="w-4 h-4 mr-2" />
-                        Disconnect wallet
-                      </>
-                    )}
-                  </Button>
-                ) : null}
+                        Connect wallet
+                      </Button>
+                    ) : null}
+
+                    {hasConnectedWallet ? (
+                      <Button variant="outline" onClick={() => void openAccountModal()}>
+                        <Settings2 className="w-4 h-4 mr-2" />
+                        Open wallet modal
+                      </Button>
+                    ) : null}
+
+                    {isWrongWalletConnected ? (
+                      <Button variant="outline" onClick={() => void reconnectWallet()}>
+                        <RefreshCw className="w-4 h-4 mr-2" />
+                        Reconnect correct wallet
+                      </Button>
+                    ) : null}
+
+                    {hasConnectedWallet && !isOnConfiguredNetwork ? (
+                      <Button
+                        variant="outline"
+                        onClick={() => void switchToRequiredNetwork(configuredChainId)}
+                        disabled={isSwitchingChain}
+                      >
+                        {isSwitchingChain ? (
+                          <>
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            Switching network...
+                          </>
+                        ) : (
+                          <>
+                            <Globe className="w-4 h-4 mr-2" />
+                            Switch to {configuredChainLabel}
+                          </>
+                        )}
+                      </Button>
+                    ) : null}
+
+                    {hasConnectedWallet ? (
+                      <Button
+                        variant="ghost"
+                        onClick={() => void disconnectWallet()}
+                        disabled={isDisconnecting}
+                      >
+                        {isDisconnecting ? (
+                          <>
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            Disconnecting...
+                          </>
+                        ) : (
+                          <>
+                            <Wallet className="w-4 h-4 mr-2" />
+                            Disconnect wallet
+                          </>
+                        )}
+                      </Button>
+                    ) : null}
+                  </>
+                )}
 
                 {!linkedWallet ? (
                   <Button

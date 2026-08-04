@@ -7,6 +7,7 @@ export type TeamContext = {
   teamRole: TeamRole;
   userId: string; // DB User.id (not clerkUserId)
   walletAddress?: string;
+  stellarWalletAddress?: string;
 };
 
 /** Resolves the current team and role from a dashboard session. */
@@ -15,7 +16,7 @@ export async function resolveTeamContext(
 ): Promise<TeamContext | null> {
   const user = await db.user.findUnique({
     where: { id: session.userId },
-    select: { id: true, walletAddress: true, currentTeamId: true },
+    select: { id: true, walletAddress: true, stellarWalletAddress: true, currentTeamId: true },
   });
   if (!user) return null;
 
@@ -35,5 +36,6 @@ export async function resolveTeamContext(
     teamRole: membership.role as TeamRole,
     userId: user.id,
     walletAddress: user.walletAddress ?? undefined,
+    stellarWalletAddress: user.stellarWalletAddress ?? undefined,
   };
 }

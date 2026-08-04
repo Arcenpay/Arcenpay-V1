@@ -1,9 +1,16 @@
 import type { Context } from "hono";
-import { isAddress } from "viem";
 import { db } from "../../../db.js";
 import { requirePermission, isErrorResponse } from "../../../lib/auth/api-auth.js";
 import { requireResolvedActiveEnvironment } from "../../../lib/environments/workspace-environments.js";
-import { getContractAddresses, PlanFactoryABI } from "@arcenpay/internal-core";
+import {
+  getContractAddresses,
+  PlanFactoryABI,
+  isEvmChain,
+  isValidAddressForChain,
+  getStellarNetworkPassphrase,
+  getStellarSorobanRpcUrl,
+} from "@arcenpay/internal-core";
+import { contract as stellarContract } from "@stellar/stellar-sdk";
 import { createResilientPublicClient } from "../../../config.js";
 import { resolvePlanNetwork } from "../../../lib/catalog/plan-network.js";
 
@@ -47,9 +54,11 @@ export async function getPlanSignNonce(c: Context) {
   }
 
   const chainId = resolvedNetwork.chainId;
-  const providerAddress = auth.team.walletAddress;
+  const providerAddress = isEvmChain(chainId)
+    ? auth.team.walletAddress
+    : auth.team.stellarWalletAddress;
 
-  if (!providerAddress || !isAddress(providerAddress)) {
+  if (!providerAddress || !isValidAddressForChain(providerAddress, chainId)) {
     return c.json(
       { error: "No valid provider wallet linked to this account." },
       400 as any,
@@ -57,7 +66,7 @@ export async function getPlanSignNonce(c: Context) {
   }
 
   const userAddress = c.req.query("userAddress");
-  if (userAddress && isAddress(userAddress) && userAddress.toLowerCase() !== providerAddress.toLowerCase()) {
+  if (userAddress && isValidAddressForChain(userAddress, chainId) && userAddress.toLowerCase() !== providerAddress.toLowerCase()) {
     return c.json(
       {
         error: `Connected wallet (${userAddress}) does not match team provider wallet (${providerAddress}). Switch your wallet to sign.`,
@@ -67,7 +76,7 @@ export async function getPlanSignNonce(c: Context) {
   }
 
   const contracts = getContractAddresses(chainId);
-  const planFactoryAddress = contracts.planFactory as `0x${string}`;
+  const planFactoryAddress = contracts.planFactory;
 
   if (
     !planFactoryAddress ||
@@ -76,11 +85,60 @@ export async function getPlanSignNonce(c: Context) {
     return c.json({ error: "PlanFactory not deployed on this chain" }, 503 as any);
   }
 
+  if (!isEvmChain(chainId)) {
+    // Stellar: pre-flight check via is_approved_token view function
+    const networkPassphrase = getStellarNetworkPassphrase(chainId);
+    const sorobanRpcUrl = getStellarSorobanRpcUrl(chainId);
+    try {
+      const client = (await stellarContract.Client.from({
+        contractId: planFactoryAddress,
+        networkPassphrase,
+        rpcUrl: sorobanRpcUrl,
+        publicKey: providerAddress,
+      })) as any;
+
+      const { result: isApproved } = await client.is_approved_token({
+        token: plan.acceptedToken,
+      });
+
+      if (!isApproved) {
+        return c.json(
+          {
+            error:
+              `The accepted token (${plan.acceptedToken}) is not approved in the PlanFactory contract. ` +
+              `Call approve_token on the PlanFactory (admin required) to whitelist this token before registering plans.`,
+            needsTokenApproval: true,
+            planFactoryAddress,
+            tokenAddress: plan.acceptedToken,
+          },
+          400 as any,
+        );
+      }
+    } catch {
+      // Non-blocking: if the read fails, let the real transaction surface the error
+    }
+
+    // Stellar: no EIP-712 nonce; return contract metadata so the frontend
+    // can build a Soroban transaction directly.
+    let signatureMode: "create" | "update" = plan.onChainPlanId ? "update" : "create";
+
+    return c.json({
+      chainId,
+      planFactoryAddress,
+      providerAddress,
+      userAddress: providerAddress,
+      signingRequired: true,
+      signatureMode,
+      networkPassphrase,
+      sorobanRpcUrl,
+    });
+  }
+
   const publicClient = createResilientPublicClient(chainId);
 
   try {
     const nonce = await publicClient.readContract({
-      address: planFactoryAddress,
+      address: planFactoryAddress as `0x${string}`,
       abi: NONCES_ABI,
       functionName: "nonces",
       args: [providerAddress as `0x${string}`],
@@ -92,7 +150,7 @@ export async function getPlanSignNonce(c: Context) {
 
     if (plan.onChainPlanId) {
       const onChainPlan = (await publicClient.readContract({
-        address: planFactoryAddress,
+        address: planFactoryAddress as `0x${string}`,
         abi: PlanFactoryABI,
         functionName: "getPlan",
         args: [BigInt(plan.onChainPlanId)],
@@ -101,15 +159,17 @@ export async function getPlanSignNonce(c: Context) {
         name: string;
         tier: string;
         billingInterval: number;
-        acceptedToken: `0x${string}`;
+        acceptedToken: string;
       };
+
+      const isTokenMismatch =
+        onChainPlan.acceptedToken.toLowerCase() !== plan.acceptedToken.toLowerCase();
 
       const immutableMismatch =
         onChainPlan.name !== plan.name ||
         onChainPlan.tier !== plan.tier ||
         Number(onChainPlan.billingInterval) !== plan.billingInterval ||
-        onChainPlan.acceptedToken.toLowerCase() !==
-          plan.acceptedToken.toLowerCase();
+        isTokenMismatch;
 
       if (immutableMismatch) {
         const activeSubscriberCount = await db.subscriptionState.count({
