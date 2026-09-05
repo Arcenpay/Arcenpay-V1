@@ -938,6 +938,10 @@ function formatChainLabel(chainId?: number | null): string | null {
   if (chainId === 84532) return "Base Sepolia";
   if (chainId === 8453) return "Base";
   if (chainId === 5042002) return "Arc Testnet";
+  // Stellar synthetic chain ids (9_000_000+)
+  if (chainId === 9_000_000) return "Stellar";
+  if (chainId === 9_000_001) return "Stellar Testnet";
+  if (chainId === 9_000_002) return "Stellar Futurenet";
   return `Chain ${chainId}`;
 }
 
@@ -2433,7 +2437,12 @@ function useSafeStellarAccount(chainId: number | null): {
   signTransaction: (xdr: string, opts?: { networkPassphrase?: string }) => Promise<{ signedTxXdr: string }>;
 } {
   const isStellar = chainId !== null && !isEvmChain(chainId);
-  const stellar = useStellarEmbedWallet(isStellar ? "TESTNET" : "TESTNET");
+  // Stellar mainnet is synthetic chainId 9_000_000; everything else in the
+  // Stellar range is testnet. Signing must use the matching network or the
+  // wallet passphrase check fails on-chain.
+  const stellarNetwork: "PUBLIC" | "TESTNET" =
+    isStellar && chainId === 9_000_000 ? "PUBLIC" : "TESTNET";
+  const stellar = useStellarEmbedWallet(isStellar ? stellarNetwork : "TESTNET");
 
   if (!isStellar) {
     return {
@@ -7925,6 +7934,17 @@ function PaymentContent({
       return;
     }
 
+    if (isStellarChain) {
+      // Stellar plan changes require a Soroban autopay-account plan_change
+      // flow that is not yet wired into this embed. Fail clearly instead of
+      // surfacing a confusing EVM-only viem error.
+      setTxStatus("error");
+      setTxError(
+        "On-chain plan changes are not yet supported on Stellar from this embed. Please contact support to change plans.",
+      );
+      return;
+    }
+
     if (!chainId || !smartAccountAddress || !selectedOnChainPlanId) {
       setTxStatus("error");
       setTxError("Missing subscription metadata for this plan change.");
@@ -9352,6 +9372,17 @@ function UnsubscribeContent({
 
     if (!requiresOnChainCancellation) {
       onConfirm({ intent: "scheduled" });
+      return;
+    }
+
+    if (isStellarChain) {
+      // Stellar on-chain cancellation requires a Soroban revoke flow that is
+      // not yet wired. A scheduled (period-end) cancellation is still
+      // available; fail clearly for immediate on-chain cancels.
+      setTxStatus("error");
+      setTxError(
+        "Immediate on-chain cancellation is not yet supported on Stellar from this embed. You can schedule cancellation at the end of your billing period.",
+      );
       return;
     }
 

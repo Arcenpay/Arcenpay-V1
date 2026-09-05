@@ -63,6 +63,7 @@ import {
   processBillingRecoveryTask,
 } from "../../lib/billing/billing-recovery.js";
 import { upsertSubscriptionLedgerState } from "../../lib/billing/billing-ledger.js";
+import { resolveSacContractId } from "../../lib/payments/stellar-payment-verification.js";
 import { corsHeaders } from "../../middleware/cors.js";
 
 const evmAddressSchema = z
@@ -498,44 +499,6 @@ async function checkStellarAutopayInitialized(
   }
 }
 
-async function resolveStellarSacContractId(
-  chainId: number,
-  assetIssuer: string,
-): Promise<string | null> {
-  try {
-    const networkPassphrase = getStellarNetworkPassphrase(chainId);
-    const { Asset } = await import("@stellar/stellar-sdk");
-    // Known issuer → asset code mappings (Circle USDC on testnet + mainnet)
-    const knownAssetCodes: Record<string, string> = {
-      "GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5": "USDC",
-      "GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5REQK4DVZWA": "USDC",
-    };
-    let assetCode: string | undefined = knownAssetCodes[assetIssuer];
-    if (!assetCode) {
-      // Fallback: query Horizon for assets issued by this account
-      const horizonUrl =
-        networkPassphrase.includes("Test")
-          ? "https://horizon-testnet.stellar.org"
-          : "https://horizon.stellar.org";
-      const res = await fetch(
-        `${horizonUrl}/assets?asset_issuer=${assetIssuer}&limit=1`,
-        { signal: AbortSignal.timeout(5_000) },
-      );
-      if (res.ok) {
-        const data = (await res.json()) as {
-          _embedded?: { records?: Array<{ asset_code?: string }> };
-        };
-        assetCode = data._embedded?.records?.[0]?.asset_code ?? undefined;
-      }
-    }
-    if (!assetCode) return null;
-    const asset = new Asset(assetCode, assetIssuer);
-    return (asset as any).contractId(networkPassphrase);
-  } catch {
-    return null;
-  }
-}
-
 async function checkStellarSacBalance(
   chainId: number,
   assetIssuer: string,
@@ -930,7 +893,7 @@ export async function POST(c: Context) {
       // Resolve the SAC contract ID from the asset issuer (catalogPlan.acceptedToken).
       // The autopay contract needs the C… contract id, not the G… issuer.
       const sacContractId = catalogPlan.acceptedToken
-        ? await resolveStellarSacContractId(chainId, catalogPlan.acceptedToken)
+        ? await resolveSacContractId(chainId, catalogPlan.acceptedToken)
         : null;
 
       // Step 1: Configure autopay if not initialized
@@ -1097,6 +1060,7 @@ export async function POST(c: Context) {
         subscriberEmail,
         occurredAt: new Date().toISOString(),
         previousPlanId: previousCompany?.activePlanId ?? null,
+        chainId,
       };
 
       let recoveryTaskId: string | null = null;
@@ -1431,6 +1395,7 @@ export async function POST(c: Context) {
               subscriberEmail,
               occurredAt: occurredAt.toISOString(),
               previousPlanId: company.activePlanId ?? null,
+              chainId,
             };
 
             try {
@@ -1929,6 +1894,7 @@ export async function POST(c: Context) {
       subscriberEmail,
       occurredAt: occurredAt.toISOString(),
       previousPlanId: previousCompany?.activePlanId ?? null,
+      chainId,
     };
 
     let recoveryTaskId: string | null = null;

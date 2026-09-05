@@ -59,6 +59,7 @@ import {
 } from "@/lib/payment-link-checkout";
 import { toast } from "sonner";
 import { useEnvironment } from "@/contexts/environment-context";
+import { isStellarChainId } from "@arcenpay/internal-core";
 
 type CompanyOption = {
   id: string;
@@ -221,6 +222,11 @@ export function PaymentsSection() {
   const environmentKey = activeEnvironment?.id ?? envMode;
   const runtimeUsdc = getUsdcAddress(configuredChainId);
   const runtimeChainLabel = getChainLabel(configuredChainId);
+  // Recipient wallet shape depends on the active environment's chain family:
+  // Stellar environments take G… base32 accounts, EVM take 0x hex addresses.
+  const recipientPlaceholder = isStellarChainId(configuredChainId)
+    ? "G... (Stellar account)"
+    : "0x...";
   const [paymentLinks, setPaymentLinks] = useState<PaymentLinkRow[]>([]);
   const [checkoutSessions, setCheckoutSessions] = useState<CheckoutSessionRow[]>([]);
   const [companies, setCompanies] = useState<CompanyOption[]>([]);
@@ -669,7 +675,7 @@ export function PaymentsSection() {
                         recipientWallet: e.target.value,
                       }))
                     }
-                    placeholder="0x..."
+                    placeholder={recipientPlaceholder}
                     className="pl-10 font-mono text-xs"
                   />
                 </div>

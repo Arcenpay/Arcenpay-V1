@@ -402,6 +402,28 @@ export function isValidTxHashForChain(value: unknown, chainId: number): boolean 
   return isValidTxHash(value, family);
 }
 
+/**
+ * Normalizes a wallet address for a chain family without corrupting it.
+ *
+ * EVM addresses are case-insensitive hex — lowercased for canonical storage.
+ * Stellar addresses are base32 (case-sensitive) — returned UNTOUCHED, since
+ * lowercasing a G…/C… address corrupts it.
+ *
+ * Returns null for non-strings / empty values, mirroring `normalizeWallet`
+ * in the backend billing utils.
+ */
+export function normalizeWalletForChain(
+  value: unknown,
+  chainId: number,
+): string | null {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  const family = getChainFamily(chainId);
+  if (family === "stellar") return trimmed;
+  return trimmed.toLowerCase();
+}
+
 // ─── Placeholder sentinel ────────────────────────────────────────────────────
 
 /**

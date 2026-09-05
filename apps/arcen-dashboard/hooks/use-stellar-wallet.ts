@@ -18,6 +18,9 @@ export interface StellarWalletState {
 const STORAGE_KEY = "arcenpay:stellar-wallet";
 
 let kitReady = false;
+// Tracks which chain the module-level kit was initialized for so the kit can
+// be re-initialized when the active Stellar network changes (testnet ↔ mainnet).
+let kitChainId: number | null = null;
 
 function getPersistedAddress(): string | null {
   if (typeof window === "undefined") return null;
@@ -38,7 +41,17 @@ function setPersistedAddress(address: string | null) {
   }
 }
 
-export function useStellarWallet() {
+/**
+ * Maps an ArcenPay Stellar synthetic chainId to the wallet-kit network enum.
+ * Mainnet → PUBLIC, testnet → TESTNET (Futurenet excluded by product scope).
+ */
+export function stellarNetworkForChainId(
+  chainId: number,
+): Networks.PUBLIC | Networks.TESTNET {
+  return chainId === 9_000_000 ? Networks.PUBLIC : Networks.TESTNET;
+}
+
+export function useStellarWallet(chainId: number = 9_000_001) {
   const [state, setState] = useState<StellarWalletState>({
     address: getPersistedAddress(),
     isConnected: Boolean(getPersistedAddress()),
@@ -48,6 +61,9 @@ export function useStellarWallet() {
   });
 
   const mountedRef = useRef(true);
+  const chainIdRef = useRef(chainId);
+  chainIdRef.current = chainId;
+  const network = stellarNetworkForChainId(chainId);
 
   // Rehydrate from localStorage after client mount (SSR initializes with null)
   useEffect(() => {
@@ -64,42 +80,48 @@ export function useStellarWallet() {
   useEffect(() => {
     mountedRef.current = true;
 
-    if (kitReady) {
-      setState((s) => ({ ...s, ready: true }));
-      return;
-    }
-
-    try {
-      StellarWalletsKit.init({
-        modules: [
-          new FreighterModule(),
-          new xBullModule(),
-          new AlbedoModule(),
-          new LobstrModule(),
-        ],
-        network: Networks.TESTNET,
-        authModal: {
-          showInstallLabel: true,
-          hideUnsupportedWallets: false,
-        },
-      });
-
-      StellarWalletsKit.refreshSupportedWallets()
-        .then(() => {
-          kitReady = true;
-          if (mountedRef.current) setState((s) => ({ ...s, ready: true }));
-        })
-        .catch(() => {
-          kitReady = true;
-          if (mountedRef.current) setState((s) => ({ ...s, ready: true }));
+    const initKit = () => {
+      try {
+        StellarWalletsKit.init({
+          modules: [
+            new FreighterModule(),
+            new xBullModule(),
+            new AlbedoModule(),
+            new LobstrModule(),
+          ],
+          network: stellarNetworkForChainId(chainId),
+          authModal: {
+            showInstallLabel: true,
+            hideUnsupportedWallets: false,
+          },
         });
-    } catch {
-      kitReady = true;
+
+        kitReady = true;
+        kitChainId = chainId;
+        StellarWalletsKit.refreshSupportedWallets()
+          .then(() => {
+            if (mountedRef.current) setState((s) => ({ ...s, ready: true }));
+          })
+          .catch(() => {
+            if (mountedRef.current) setState((s) => ({ ...s, ready: true }));
+          });
+      } catch {
+        kitReady = true;
+        if (mountedRef.current) setState((s) => ({ ...s, ready: true }));
+      }
+    };
+
+    // The kit is a module-level singleton: if it was initialized for a
+    // different Stellar network (e.g. an environment switch), re-initialize it
+    // so wallet signing uses the correct network passphrase.
+    if (!kitReady || kitChainId !== chainId) {
+      initKit();
+    } else {
       setState((s) => ({ ...s, ready: true }));
     }
 
     return () => { mountedRef.current = false; };
-  }, []);
+  }, [chainId]);
 
   const connect = useCallback(async () => {
     try {
@@ -130,7 +152,9 @@ export function useStellarWallet() {
   }, []);
 
   const signMessage = useCallback(async (message: string): Promise<{ signedMessage: string; signerAddress: string }> => {
-    const result = await StellarWalletsKit.signMessage(message);
+    const result = await StellarWalletsKit.signMessage(message, {
+      networkPassphrase: stellarNetworkForChainId(chainIdRef.current),
+    });
     if (!result.signedMessage) throw new Error("Signing failed or was cancelled");
     return { signedMessage: result.signedMessage ?? "", signerAddress: state.address ?? "" };
   }, [state.address]);
@@ -139,7 +163,13 @@ export function useStellarWallet() {
     xdr: string,
     opts?: { networkPassphrase?: string; address?: string; path?: string }
   ): Promise<{ signedTxXdr: string; signerAddress?: string }> => {
-    const result = await StellarWalletsKit.signTransaction(xdr, opts);
+    const result = await StellarWalletsKit.signTransaction(xdr, {
+      ...opts,
+      // Always sign with the network passphrase matching the active chain, so
+      // a mainnet environment cannot produce testnet-passphrase signatures.
+      networkPassphrase:
+        opts?.networkPassphrase ?? stellarNetworkForChainId(chainIdRef.current),
+    });
     if (!result.signedTxXdr) throw new Error("Transaction signing failed or was cancelled");
     return { signedTxXdr: result.signedTxXdr, signerAddress: result.signerAddress };
   }, []);
@@ -150,5 +180,5 @@ export function useStellarWallet() {
     if (mountedRef.current) setState((s) => ({ ...s, address: null, isConnected: false }));
   }, []);
 
-  return { ...state, connect, signMessage, signTransaction, disconnect, chainId: 9000001 };
+  return { ...state, connect, signMessage, signTransaction, disconnect, chainId };
 }

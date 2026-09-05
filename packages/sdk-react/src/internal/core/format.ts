@@ -68,3 +68,56 @@ export function formatInvoiceTotal(
 ): string {
   return formatCurrency(invoice.total, invoice.currency);
 }
+
+/**
+ * Normalizes an x402 payment amount to the decimal USDC string used in
+ * Stellar x402 signing/verification.
+ *
+ * - A decimal string ("0.01") is kept verbatim.
+ * - An atomic-unit integer string ("10000") is converted to decimal ("0.01").
+ * - bigint/number inputs are treated as atomic units and converted.
+ *
+ * 1 USDC = 1_000_000 micros (6 decimals). Both the @arcenpay/agent signer and
+ * the @arcenpay/node verifier MUST use this same function so the signed
+ * message text matches exactly.
+ */
+export function normalizeX402AmountToDecimal(
+  value: unknown,
+  fallbackAtomic?: bigint,
+): string {
+  if (typeof value === "string" && value.trim()) {
+    const trimmed = value.trim();
+    // A decimal-form string contains a "." (e.g. "0.01", "1.5") → keep verbatim.
+    // The x402 middleware advertises maxAmountRequired in ATOMIC units as a
+    // bare integer string ("10000"), so a pure-integer string is treated as
+    // atomic and converted to its decimal form ("0.01"). Both the agent
+    // signer and node verifier MUST apply this same rule so the signed
+    // message text matches.
+    if (/^\d+\.\d+$/.test(trimmed)) return trimmed;
+    try {
+      return atomicToDecimal(BigInt(trimmed));
+    } catch {
+      return fallbackAtomic !== undefined
+        ? atomicToDecimal(fallbackAtomic)
+        : "0";
+    }
+  }
+  if (typeof value === "bigint") return atomicToDecimal(value);
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return atomicToDecimal(BigInt(Math.trunc(value)));
+  }
+  return fallbackAtomic !== undefined
+    ? atomicToDecimal(fallbackAtomic)
+    : "0";
+}
+
+function atomicToDecimal(atomic: bigint): string {
+  const whole = atomic / 1_000_000n;
+  const fracRaw = (atomic % 1_000_000n).toString().padStart(6, "0");
+  if (fracRaw === "000000") return whole.toString();
+  // Strip trailing fractional zeros for a canonical decimal string:
+  // 10000 micros → "0.01" (not "0.010000").
+  const frac = fracRaw.replace(/0+$/, "");
+  return `${whole}.${frac}`;
+}
+

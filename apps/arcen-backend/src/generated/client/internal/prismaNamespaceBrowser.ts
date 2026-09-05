@@ -707,6 +707,7 @@ export const PaymentScalarFieldEnum = {
   currency: 'currency',
   amount: 'amount',
   chainFamily: 'chainFamily',
+  chainId: 'chainId',
   payerWallet: 'payerWallet',
   recipientWallet: 'recipientWallet',
   acceptedToken: 'acceptedToken',

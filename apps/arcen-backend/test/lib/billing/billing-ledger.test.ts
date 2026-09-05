@@ -90,4 +90,55 @@ describe("billing ledger", () => {
       data: { activePlanId: "plan-pro" },
     });
   });
+
+  it("threads a Stellar chainId into the ledger upsert as chainFamily STELLAR", async () => {
+    // Reset each mock fully before arming, so stale once-queues from the prior
+    // test cannot shadow the new return values.
+    mockDb.arcenCompany.findFirst.mockReset();
+    mockDb.subscriptionState.findUnique.mockReset();
+    mockDb.subscriptionState.upsert.mockReset();
+
+    mockDb.arcenCompany.findFirst.mockResolvedValue({
+      id: "company-1",
+      teamId: "team-1",
+      environmentId: "env-1",
+      walletAddress: "GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5",
+      activePlanId: "plan-free",
+    });
+    mockDb.subscriptionState.findUnique.mockResolvedValue(null);
+    mockDb.subscriptionState.upsert.mockResolvedValue({
+      id: "subscription-1",
+    });
+    mockDb.payment.findUnique.mockResolvedValue(null);
+    mockDb.payment.create.mockResolvedValue({ id: "payment-1" });
+    mockDb.payment.update.mockResolvedValue({ id: "payment-1" });
+
+    await upsertSubscriptionLedgerState({
+      teamId: "team-1",
+      companyId: "company-1",
+      walletAddress:
+        "GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5",
+      chainId: 9_000_001,
+      status: "ACTIVE",
+      catalogPlanId: "plan-pro",
+    });
+
+    expect(mockDb.subscriptionState.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { companyId: "company-1" },
+        update: expect.objectContaining({
+          chainId: 9_000_001,
+          chainFamily: "STELLAR",
+          // Stellar wallet preserved with original case (base32 is
+          // case-sensitive — never lowercased).
+          walletAddress:
+            "GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5",
+        }),
+        create: expect.objectContaining({
+          chainId: 9_000_001,
+          chainFamily: "STELLAR",
+        }),
+      }),
+    );
+  });
 });

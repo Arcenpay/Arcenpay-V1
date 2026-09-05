@@ -50,8 +50,9 @@ export function useUnifiedDashboardWallet(
   // EVM wallet state (always active in background — wagmi is global)
   const evm = useDashboardWallet(evmStoredWallet);
 
-  // Stellar wallet state
-  const stellar = useStellarWallet();
+  // Stellar wallet state — pass the configured chain so the wallet kit signs
+  // with the matching network passphrase (testnet vs mainnet).
+  const stellar = useStellarWallet(configuredChainId);
 
   return useMemo(() => {
     if (isStellar) {

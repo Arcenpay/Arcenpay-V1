@@ -3374,7 +3374,7 @@ function PlansTable({
 }) {
   const { activeEnvironment } = useEnvironment();
   const { address, isConnected } = useAccount();
-  const stellar = useStellarWallet();
+  const stellar = useStellarWallet(activeEnvironment?.chainId ?? 9_000_001);
   const chainId = useChainId();
   const publicClient = usePublicClient({ chainId: chainId || DEFAULT_CHAIN_ID });
   const { signTypedDataAsync } = useSignTypedData();

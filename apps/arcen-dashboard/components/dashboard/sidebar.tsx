@@ -150,10 +150,12 @@ export function Sidebar({
     useDashboardSession();
   const [mounted, setMounted] = useState(false);
   const { theme, setTheme } = useTheme();
-  const stellar = useStellarWallet();
+  const sidebarChainId =
+    activeEnvironment?.chainId ?? resolveEnvironmentChainId(envMode);
+  const stellar = useStellarWallet(sidebarChainId);
 
-  const isStellarEnv = activeEnvironment?.chainId
-    ? isStellarChainId(activeEnvironment.chainId)
+  const isStellarEnv = sidebarChainId
+    ? isStellarChainId(sidebarChainId)
     : false;
 
   const displayAddress = isStellarEnv

@@ -34,8 +34,15 @@ function setPersistedAddress(address: string | null) {
 /**
  * Lightweight Freighter-only Stellar wallet hook for ArcenEmbed.
  * Uses @stellar/freighter-api (no heavy wallet-kit dependency).
+ *
+ * @param network The Stellar network the embed is operating on. Derived from
+ *   the plan/runtime chainId by the caller (mainnet → PUBLIC, testnet →
+ *   TESTNET). Threaded into every signTransaction call so a mainnet plan is
+ *   never signed with a testnet passphrase.
  */
-export function useStellarEmbedWallet(_network: "TESTNET" | "PUBLIC" = "TESTNET") {
+export function useStellarEmbedWallet(
+  network: "PUBLIC" | "TESTNET" = "TESTNET",
+) {
   const [state, setState] = useState<StellarEmbedWalletState>({
     address: getPersistedAddress(),
     isConnected: Boolean(getPersistedAddress()),
@@ -45,6 +52,13 @@ export function useStellarEmbedWallet(_network: "TESTNET" | "PUBLIC" = "TESTNET"
   });
 
   const mountedRef = useRef(true);
+  const networkRef = useRef(network);
+  networkRef.current = network;
+  // Stellar network passphrases (mirrors @arcenpay/internal-core chain-family).
+  const passphraseForNetwork: Record<"PUBLIC" | "TESTNET", string> = {
+    PUBLIC: "Public Global Stellar Network ; September 2015",
+    TESTNET: "Test SDF Network ; September 2015",
+  };
 
   // Rehydrate from localStorage after client mount
   useEffect(() => {
@@ -126,7 +140,11 @@ export function useStellarEmbedWallet(_network: "TESTNET" | "PUBLIC" = "TESTNET"
   ) => {
     const freighter = await import("@stellar/freighter-api");
     const result = await freighter.signTransaction(xdr, {
-      networkPassphrase: opts?.networkPassphrase,
+      // Prefer the caller-provided passphrase; fall back to the network this
+      // hook was initialized with so the active chain always signs correctly.
+      networkPassphrase:
+        opts?.networkPassphrase ??
+        passphraseForNetwork[networkRef.current],
       address: opts?.address,
     });
     if (!result.signedTxXdr) throw new Error("Signing failed or was cancelled");

@@ -119,6 +119,7 @@ export {
   isValidTxHash,
   isValidAddressForChain,
   isValidTxHashForChain,
+  normalizeWalletForChain,
   unsetAddressForFamily,
   isUnsetAddress,
   isUnsetAddressForChain,
@@ -207,6 +208,7 @@ export {
   formatCurrency,
   formatUsdc,
   formatInvoiceTotal,
+  normalizeX402AmountToDecimal,
 } from "./format";
 
 // SVG sanitization

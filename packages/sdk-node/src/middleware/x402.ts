@@ -20,6 +20,7 @@ import {
   isValidAddressForChain,
   getStellarSorobanRpcUrl,
   getStellarNetworkPassphrase,
+  normalizeX402AmountToDecimal,
 } from "../sdk";
 import {
   createPublicClient,
@@ -151,28 +152,12 @@ function normalizeAmount(value: unknown, fallback: bigint): bigint {
 }
 
 /**
- * Normalizes a payment amount to the decimal string the Stellar agent signs
- * (the agent signs `option.maxAmountRequired` verbatim, e.g. "0.01").
+ * Normalizes a payment amount to the decimal string used in Stellar x402
+ * signing/verification. Delegates to the shared internal-core helper so the
+ * @arcenpay/agent signer and this verifier always agree.
  */
 function normalizeAmountAsDecimal(value: unknown, fallbackAtomic: bigint): string {
-  if (typeof value === "string" && value.trim()) {
-    const trimmed = value.trim();
-    // Decimal string like "0.01" → keep verbatim.
-    if (/^\d+(\.\d+)?$/.test(trimmed)) return trimmed;
-    // Atomic-unit string like "10000" → convert to decimal.
-    try {
-      const atomic = BigInt(trimmed);
-      const whole = atomic / 1_000_000n;
-      const frac = (atomic % 1_000_000n).toString().padStart(6, "0");
-      return frac === "000000" ? whole.toString() : `${whole}.${frac}`;
-    } catch {
-      return fallbackAtomic.toString();
-    }
-  }
-  if (typeof value === "number" && Number.isFinite(value)) {
-    return value.toString();
-  }
-  return fallbackAtomic.toString();
+  return normalizeX402AmountToDecimal(value, fallbackAtomic);
 }
 
 function normalizeNonce(value: unknown): bigint {

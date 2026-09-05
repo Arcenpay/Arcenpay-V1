@@ -119,10 +119,12 @@ export function OverviewSection() {
   const { isConnected: isEvmConnected } = useAccount();
   const { envMode, activeEnvironment, isLoading: envLoading } = useEnvironment();
   const { data: sessionData } = useDashboardSession();
-  const stellar = useStellarWallet();
+  const overviewChainId =
+    activeEnvironment?.chainId ?? resolveEnvironmentChainId(envMode);
+  const stellar = useStellarWallet(overviewChainId);
 
-  const isStellarEnv = activeEnvironment?.chainId
-    ? isStellarChainId(activeEnvironment.chainId)
+  const isStellarEnv = overviewChainId
+    ? isStellarChainId(overviewChainId)
     : false;
   const isWalletConnected = isStellarEnv
     ? stellar.isConnected

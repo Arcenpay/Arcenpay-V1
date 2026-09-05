@@ -5,7 +5,12 @@ import { toPrismaJson } from "../../../utils/prisma-json.js";
 import { resolvePublishedFreePlan } from "../../../lib/catalog/catalog-billing.js";
 import { upsertSubscriptionLedgerState } from "../../../lib/billing/billing-ledger.js";
 import { getLatestSubscriptionChangeRequest } from "../../../lib/billing/subscription-change-requests.js";
-import { YEARLY_INTERVAL } from "@arcenpay/internal-core";
+import {
+  YEARLY_INTERVAL,
+  isValidAddressForChain,
+  normalizeWalletForChain,
+} from "@arcenpay/internal-core";
+import { normalizeTxHashForFamily } from "../../../lib/payments/onchain-payment-verification.js";
 
 function asRecord(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== "object" || Array.isArray(value)) return {};
@@ -35,15 +40,18 @@ function deriveBillingPeriodFromInterval(
 
 const bodySchema = z.object({
   teamId: z.string().min(1),
-  wallet: z.string().regex(/^0x[0-9a-fA-F]{40}$/i),
+  // Wallet must be a valid address for the given chain family — EVM 0x… hex
+  // (lowercased canonically) or Stellar G…/C… base32 (case preserved).
+  wallet: z.string().min(1),
   onChainPlanId: z.string().nullable(),
   event: z.enum(["minted", "renewed", "plan_changed", "cancelled"]),
   occurredAt: z.coerce.date().optional(),
-  sourceTxHash: z
-    .string()
-    .regex(/^0x[0-9a-fA-F]{64}$/i)
-    .optional(),
+  sourceTxHash: z.string().optional(),
   sourceTokenId: z.string().optional(),
+  // Which chain this sync is for. EVM ids (84532 etc.) resolve to chainFamily
+  // EVM; Stellar synthetic ids (9_000_000+) resolve to STELLAR. When omitted,
+  // the existing rows' chainId is preserved (see resolveSyncChainId).
+  chainId: z.number().int().optional(),
 }).superRefine((value, ctx) => {
   if (value.event !== "cancelled" && !value.onChainPlanId) {
     ctx.addIssue({
@@ -51,6 +59,15 @@ const bodySchema = z.object({
       path: ["onChainPlanId"],
       message: "onChainPlanId is required for minted, renewed, and plan_changed events.",
     });
+  }
+  if (value.wallet && value.chainId !== undefined) {
+    if (!isValidAddressForChain(value.wallet, value.chainId)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["wallet"],
+        message: `wallet is not a valid address for chainId ${value.chainId}.`,
+      });
+    }
   }
 });
 
@@ -72,16 +89,39 @@ export async function syncSubscription(c: Context) {
     occurredAt,
     sourceTxHash,
     sourceTokenId,
+    chainId,
   } = parsed.data;
 
-  const normalizedWallet = wallet.toLowerCase();
+  // Normalize the wallet family-aware. When chainId is present, Stellar
+  // G…/C… addresses are preserved exactly (base32 is case-sensitive) while
+  // EVM addresses are lowercased canonically. Without chainId we fall back to
+  // EVM lowercasing to match legacy sync behavior.
+  const syncChainId = chainId;
+  const normalizedWallet =
+    normalizeWalletForChain(wallet, syncChainId ?? 84532) ?? wallet;
+  // Normalize a Stellar/odd-prefixed tx hash to the family's canonical form.
+  const normalizedTxHash =
+    sourceTxHash && syncChainId !== undefined
+      ? (normalizeTxHashForFamily(sourceTxHash, syncChainId) ?? sourceTxHash)
+      : sourceTxHash;
 
   const resolvedPlan =
     event === "cancelled"
       ? null
       : await db.catalogPlan.findFirst({
-          where: { onChainPlanId, teamId },
-          select: { id: true, billingInterval: true, environmentId: true },
+          where: {
+            onChainPlanId,
+            teamId,
+            // Scope to the sync chain when provided so the same on-chain plan
+            // id on two families cannot cross-match.
+            ...(syncChainId !== undefined ? { chainId: syncChainId } : {}),
+          },
+          select: {
+            id: true,
+            billingInterval: true,
+            environmentId: true,
+            chainId: true,
+          },
         });
 
   if (event !== "cancelled" && !resolvedPlan) {
@@ -105,6 +145,7 @@ export async function syncSubscription(c: Context) {
         id: true,
         walletAddress: true,
         onChainTokenId: true,
+        chainId: true,
       },
     },
   } as const;
@@ -150,6 +191,14 @@ export async function syncSubscription(c: Context) {
   if (!company) {
     return c.json({ error: "Company not found for wallet" }, 404 as any);
   }
+
+  // Resolve the authoritative chainId for ledger writes: request chainId →
+  // plan chainId → existing subscription state chainId.
+  const effectiveChainId =
+    syncChainId ??
+    resolvedPlan?.chainId ??
+    company.subscriptionState?.chainId ??
+    undefined;
 
   const traits = asRecord(company.traits);
   const syncMeta = asRecord(traits.subscriptionSyncMeta);
@@ -249,16 +298,17 @@ export async function syncSubscription(c: Context) {
       await upsertSubscriptionLedgerState({
         teamId: company.teamId,
         companyId: company.id,
-        walletAddress: wallet,
+        walletAddress: normalizedWallet,
         status: "CANCELLED",
         catalogPlanId: resolvedPlanId,
         onChainPlanId: null,
         onChainTokenId: sourceTokenId ?? null,
+        ...(effectiveChainId !== undefined ? { chainId: effectiveChainId } : {}),
         cancelAtPeriodEnd: false,
         cancelledAt: occurredAt ?? new Date(),
         lastEvent: "subscription.cancelled",
         lastEventAt: occurredAt ?? new Date(),
-        lastSourceTxHash: sourceTxHash ?? null,
+        lastSourceTxHash: normalizedTxHash ?? null,
         metadata: {
           source: "sync-subscription",
         },
@@ -325,11 +375,15 @@ export async function syncSubscription(c: Context) {
     await upsertSubscriptionLedgerState({
       teamId: company.teamId,
       companyId: company.id,
-      walletAddress: wallet,
+      walletAddress: normalizedWallet,
       status: "ACTIVE",
       catalogPlanId: plan.id,
       onChainPlanId,
       onChainTokenId: sourceTokenId ?? null,
+      // The plan owns the authoritative chain; fall back to the sync request's
+      // chainId or the existing subscription state when the plan predates
+      // chain scoping.
+      chainId: effectiveChainId,
       ...(nextPeriodStart ? { currentPeriodStart: nextPeriodStart } : {}),
       ...(nextPeriodEnd ? { currentPeriodEnd: nextPeriodEnd } : {}),
       cancelAtPeriodEnd: isPeriodBoundaryEvent ? false : undefined,
@@ -343,7 +397,7 @@ export async function syncSubscription(c: Context) {
             ? "subscription.renewed"
             : "subscription.plan_changed",
       lastEventAt: eventOccurredAt,
-      lastSourceTxHash: sourceTxHash ?? null,
+      lastSourceTxHash: normalizedTxHash ?? null,
       metadata: {
         source: "sync-subscription",
       },

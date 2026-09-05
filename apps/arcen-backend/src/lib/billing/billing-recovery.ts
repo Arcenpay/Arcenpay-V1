@@ -14,6 +14,7 @@ import { syncCustomerUserIdentity } from "./customer-identity.js";
 import { upsertScopedSubscriberEmail } from "./subscriber-emails.js";
 import { grantPlanCreditsForCompany } from "./usage-credits.js";
 import { asRecord, normalizeWallet } from "./utils.js";
+import { normalizeWalletForChain } from "@arcenpay/internal-core";
 
 const BILLING_RECOVERY_RETRY_DELAYS_MS = [
   5 * 60 * 1000,
@@ -79,6 +80,8 @@ interface SubscriptionActivationRecoveryPayload {
   subscriberEmail?: string | null;
   occurredAt?: string | null;
   previousPlanId?: string | null;
+  /** Chain this activation happened on — threads chainFamily to ledger rows. */
+  chainId?: number | null;
 }
 
 interface SubscriptionLifecycleRecoveryPayload {
@@ -361,6 +364,12 @@ function parseSubscriptionActivationPayload(
       typeof record.occurredAt === "string" ? record.occurredAt : null,
     previousPlanId:
       typeof record.previousPlanId === "string" ? record.previousPlanId : null,
+    chainId:
+      typeof record.chainId === "number"
+        ? record.chainId
+        : typeof record.chainId === "string" && record.chainId.trim() !== ""
+          ? Number(record.chainId)
+          : null,
   };
 }
 
@@ -444,6 +453,9 @@ export async function enqueueSubscriptionActivationRecovery(input: {
   subscriberEmail?: string | null;
   occurredAt?: Date | null;
   previousPlanId?: string | null;
+  /** Chain this activation happened on. Optional — defaults to the plan's
+   *  chain when the ledger finalizes. */
+  chainId?: number | null;
 }) {
   const idempotencyKey = `subscription.activate:${input.txHash}`;
   const existing = await db.billingRecoveryTask.findUnique({
@@ -480,6 +492,7 @@ export async function enqueueSubscriptionActivationRecovery(input: {
         subscriberEmail: input.subscriberEmail?.trim() || null,
         occurredAt: (input.occurredAt ?? new Date()).toISOString(),
         previousPlanId: input.previousPlanId ?? null,
+        chainId: input.chainId ?? null,
       }),
     },
   });
@@ -710,6 +723,10 @@ export async function finalizeSubscriptionActivation(
   const occurredAt = parseDate(input.payload.occurredAt) ?? new Date();
   const currentPeriodEnd = parseDate(input.payload.expiration);
   const source = input.source?.trim() || "billing-recovery";
+  // Chain context for family-aware wallet normalization. When the recovery
+  // payload doesn't carry a chainId (legacy EVM activations) default to the
+  // ledger's canonical EVM chain so lowercasing behavior is unchanged.
+  const walletChainId = input.payload.chainId ?? 84532;
 
   if (input.payload.subscriberEmail) {
     await upsertScopedSubscriberEmail({
@@ -731,6 +748,9 @@ export async function finalizeSubscriptionActivation(
     catalogPlanId: input.payload.catalogPlanId,
     onChainPlanId: input.payload.onChainPlanId,
     onChainTokenId: input.payload.onChainTokenId,
+    ...(input.payload.chainId != null
+      ? { chainId: input.payload.chainId }
+      : {}),
     currentPeriodStart: occurredAt,
     currentPeriodEnd,
     cancelAtPeriodEnd: false,
@@ -768,9 +788,14 @@ export async function finalizeSubscriptionActivation(
     activePlanId: input.payload.catalogPlanId,
     traits: toPrismaJson(nextTraits),
     ...(input.payload.walletAddress &&
-    company?.walletAddress?.toLowerCase() !==
-      input.payload.walletAddress.toLowerCase()
-      ? { walletAddress: input.payload.walletAddress.toLowerCase() }
+    company?.walletAddress &&
+    normalizeWalletForChain(input.payload.walletAddress, walletChainId) !==
+      normalizeWalletForChain(company.walletAddress, walletChainId)
+      ? {
+          walletAddress:
+            normalizeWalletForChain(input.payload.walletAddress, walletChainId) ??
+            input.payload.walletAddress,
+        }
       : {}),
     ...(input.payload.subscriberEmail &&
     company?.email?.trim().toLowerCase() !==

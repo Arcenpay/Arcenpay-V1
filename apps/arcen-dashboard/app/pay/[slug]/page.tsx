@@ -261,10 +261,6 @@ function CheckoutContent() {
     error: sendError,
   } = useWriteContract();
 
-  // Stellar wallet (StellarWalletsKit: Freighter/xBull/Albedo/Lobstr).
-  // Only active when the checkout session is on a Stellar chain.
-  const stellar = useStellarWallet();
-
   const [session, setSession] = useState<PublicCheckoutSession | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -276,6 +272,16 @@ function CheckoutContent() {
   const [sentTxHash, setSentTxHash] = useState<string | null>(null);
   const [verifying, setVerifying] = useState(false);
   const [verificationFailed, setVerificationFailed] = useState(false);
+
+  // Stellar wallet (StellarWalletsKit: Freighter/xBull/Albedo/Lobstr).
+  // Only active when the checkout session is on a Stellar chain. The chainId
+  // arrives with the session; the hook re-initializes its network when it
+  // changes so mainnet checkouts sign with the PUBLIC passphrase.
+  const stellar = useStellarWallet(
+    isStellarChainId(session?.chainId ?? 0)
+      ? (session?.chainId as number)
+      : 9_000_001,
+  );
 
   const countdown = useExpiryCountdown(session?.expiresAt);
   const normalizedCustomerEmail = normalizeCustomerEmail(customerEmail);
@@ -373,7 +379,9 @@ function CheckoutContent() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         customerEmail: normalizedCustomerEmail,
-        customerWallet: address ?? customerWallet ?? undefined,
+        customerWallet: isStellar
+          ? (stellar.address ?? customerWallet ?? undefined)
+          : (address ?? customerWallet ?? undefined),
         customerName: normalizedCustomerName || undefined,
       }),
     });
@@ -389,6 +397,8 @@ function CheckoutContent() {
     return payload.checkoutSession;
   }, [
     address,
+    stellar.address,
+    isStellar,
     customerWallet,
     normalizedCustomerEmail,
     normalizedCustomerName,
@@ -508,6 +518,11 @@ function CheckoutContent() {
 
   async function handleStellarPay() {
     if (!session || !stellar.address) return;
+    // Validate the recipient before building/popup signing — fail fast with a
+    // clear message instead of a Horizon error after the wallet popup.
+    if (!STELLAR_ACCOUNT_REGEX.test(session.recipientWallet)) {
+      throw new Error("This checkout has an invalid Stellar recipient wallet.");
+    }
     const { Asset, Horizon, TransactionBuilder, Operation, BASE_FEE } =
       await import("@stellar/stellar-sdk");
 

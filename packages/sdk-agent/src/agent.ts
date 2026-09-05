@@ -18,7 +18,7 @@ import {
 } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 import { sepolia, baseSepolia, base } from 'viem/chains';
-import { arcTestnet, X402_VERSION, X402_SCHEME, SessionVaultABI, getContractAddresses, getTokenAddress, isStellarChainId, getStellarNetworkPassphrase, getStellarSorobanRpcUrl } from './internal/core';
+import { arcTestnet, X402_VERSION, X402_SCHEME, SessionVaultABI, getContractAddresses, getTokenAddress, isStellarChainId, getChainDescriptor, getStellarNetworkPassphrase, getStellarSorobanRpcUrl, normalizeX402AmountToDecimal } from './internal/core';
 import type { X402Response, X402PaymentHeader, AutoTopUpConfig, AutoTopUpMode, DispatchConfig, DispatchProvider, DispatchProviderType, TopUpRequest, PersistentAgentState, PersistentStore } from './internal/core';
 
 // ─── Re-exported types ───────────────────────────────────────────
@@ -230,6 +230,7 @@ export class ArcenAgent {
         config.sorobanRpcUrl ?? getStellarSorobanRpcUrl(config.chainId);
       this.stellarHorizonUrl =
         config.horizonUrl ??
+        getChainDescriptor(config.chainId)?.rpcUrl ??
         (this.stellarPassphrase.includes('Test')
           ? 'https://horizon-testnet.stellar.org'
           : 'https://horizon.stellar.org');
@@ -275,6 +276,23 @@ export class ArcenAgent {
   private async getStellarHorizonServer() {
     const { Horizon } = await import('@stellar/stellar-sdk');
     return new Horizon.Server(this.stellarHorizonUrl);
+  }
+
+  /**
+   * Resolves the Stellar SAC contract id (C…) for a USDC asset issuer (G…).
+   *
+   * The SessionVault Soroban contract calls `sac_transfer` on the `token`
+   * Address it is given, which instantiates a token client on that address —
+   * so `fund_session`/`top_up` require the C… SAC contract id, NOT the G…
+   * issuer. Classic assets (USDC) get their SAC contract id from
+   * `Asset.contractId(networkPassphrase)`.
+   */
+  private async resolveStellarSacContractId(assetIssuer: string): Promise<string> {
+    const { Asset } = await import('@stellar/stellar-sdk');
+    const asset = new Asset('USDC', assetIssuer);
+    return (asset as unknown as { contractId(passphrase: string): string }).contractId(
+      this.stellarPassphrase,
+    );
   }
 
   /**
@@ -402,12 +420,14 @@ export class ArcenAgent {
     if (this.isStellar) {
       // Step 1: SAC transfer USDC to the vault (agent signs with its keypair).
       await this.sendStellarSacTransfer(vaultAddress, amount);
-      // Step 2: Invoke fund_session on the Soroban vault.
+      // Step 2: Invoke fund_session on the Soroban vault. The vault's
+      // `sac_transfer` requires the C… SAC contract id, not the G… issuer.
+      const tokenContractId = await this.resolveStellarSacContractId(usdcAddress);
       const client = await this.getStellarClient();
       const result = await client.fund_session({
         agent: this.stellarAddress,
         amount: amountAtomic,
-        token: usdcAddress,
+        token: tokenContractId,
       });
       const sessionId = String(result?.result ?? '');
       if (!sessionId) {
@@ -746,7 +766,7 @@ export class ArcenAgent {
 
       const topUpRequest: TopUpRequest = {
         id: requestId,
-        agentAddress: this.account.address,
+        agentAddress: this.address,
         amount,
         reason,
         status: 'pending',
@@ -1063,9 +1083,13 @@ export class ArcenAgent {
 
     if (this.isStellar) {
       const from = this.stellarAddress!;
+      // The verifier (sdk-node middleware) rebuilds the signed message with
+      // the amount normalized to a decimal string. Sign the SAME string so
+      // atomic-unit 402 options ("10000") don't produce a signature mismatch.
+      const amountDecimal = normalizeX402AmountToDecimal(option.maxAmountRequired);
       const message = {
         from,
-        amount: option.maxAmountRequired,
+        amount: amountDecimal,
         resource: option.resource,
         sessionId: this.sessionId ?? '',
         nonce: this.nonce.toString(),
@@ -1079,7 +1103,7 @@ export class ArcenAgent {
         network: option.network,
         payload: JSON.stringify({
           from,
-          amount: option.maxAmountRequired,
+          amount: amountDecimal,
           payTo: option.payTo,
           resource: option.resource,
           sessionId: this.sessionId,

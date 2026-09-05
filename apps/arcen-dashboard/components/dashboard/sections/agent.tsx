@@ -649,7 +649,7 @@ function PermissionsTab() {
   const configuredChainId =
     activeEnvironment?.chainId ?? resolveEnvironmentChainId(envMode);
   const isStellar = isStellarChainId(configuredChainId);
-  const stellar = useStellarWallet();
+  const stellar = useStellarWallet(configuredChainId);
 
   const [permissions, setPermissions] = useState<PermissionConfig>({
     autoTopUp: { mode: "off", dailyLimit: "5.00", perTxnLimit: "1.00", threshold: "0.50" },
@@ -680,7 +680,10 @@ function PermissionsTab() {
 
   const { data: approveReceipt } = useWaitForTransactionReceipt({
     hash: approveTxHash as `0x${string}` | undefined,
-    query: { enabled: !!approveTxHash },
+    // Stellar hashes are 64-hex without an 0x prefix — wagmi's receipt watcher
+    // only understands EVM hashes, so disable it on Stellar (the Stellar path
+    // toasts its own success).
+    query: { enabled: !!approveTxHash && !isStellar },
   });
 
   useEffect(() => {
@@ -759,11 +762,11 @@ function PermissionsTab() {
     }
   };
 
-  const handleGenerateWallet = () => {
+  const handleGenerateWallet = async () => {
     if (isStellar) {
       // Stellar: ed25519 keypair. Public key is the G… address; the secret
       // (S…) is what ArcenAgent uses as `privateKey`.
-      const { Keypair } = require("@stellar/stellar-sdk") as typeof import("@stellar/stellar-sdk");
+      const { Keypair } = await import("@stellar/stellar-sdk");
       const kp = Keypair.random();
       setGeneratedKey(kp.secret());
       setGeneratedAddress(kp.publicKey());
@@ -1508,6 +1511,14 @@ type AgentTab = "quickstart" | "api-keys" | "sessions" | "permissions" | "dispat
 export function AgentSection() {
   const [tab, setTab] = useState<AgentTab>("quickstart");
   const { address, isConnected } = useAccount();
+  const { envMode, activeEnvironment } = useEnvironment();
+  const agentSectionChainId =
+    activeEnvironment?.chainId ?? resolveEnvironmentChainId(envMode);
+  const isStellar = isStellarChainId(agentSectionChainId);
+  const stellar = useStellarWallet(agentSectionChainId);
+  // Family-aware connection for the header badge: wagmi's isConnected is
+  // meaningless on a Stellar environment.
+  const walletConnected = isStellar ? stellar.isConnected : isConnected;
 
   const tabs: { id: AgentTab; label: string; icon: LucideIcon }[] = [
     { id: "quickstart", label: "Quickstart", icon: Zap },
@@ -1531,7 +1542,7 @@ export function AgentSection() {
               <p className="text-xs text-muted-foreground">ArcenPay agent SDK, API keys, session management, auto-topup & dispatch</p>
             </div>
           </div>
-          {isConnected && (
+          {walletConnected && (
             <Badge variant="outline" className="text-xs gap-1 text-foreground border-border bg-secondary">
               <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
               Wallet connected

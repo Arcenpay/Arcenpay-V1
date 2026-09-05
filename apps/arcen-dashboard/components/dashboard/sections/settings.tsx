@@ -126,9 +126,9 @@ export function SettingsSection() {
   } = useEnvironment();
   const { isConnected, address: connectedAddress } = useAccount();
   const { data: sessionData } = useDashboardSession();
-  const stellar = useStellarWallet();
   const chainId = useChainId();
   const configuredChainId = activeEnvironment?.chainId ?? resolveEnvironmentChainId(envMode);
+  const stellar = useStellarWallet(configuredChainId);
   const isStellarEnv = isStellarChainId(configuredChainId);
 
   const linkedWallet = isStellarEnv

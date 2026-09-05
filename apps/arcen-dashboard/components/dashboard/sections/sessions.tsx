@@ -146,7 +146,10 @@ export function SessionsSection() {
   const environmentKey = activeEnvironment?.id ?? envMode;
   const contractAddresses = useContractAddresses(configuredChainId);
   const isStellar = isStellarChainId(configuredChainId);
-  const stellar = useStellarWallet();
+  const stellar = useStellarWallet(configuredChainId);
+  // Family-aware connection: wagmi's isConnected is EVM-only and always false
+  // for Freighter users on a Stellar environment.
+  const walletConnected = isStellar ? stellar.isConnected : isConnected;
 
   const [mounted, setMounted] = useState(false);
   const [payload, setPayload] = useState<SessionsPayload | null>(null);
@@ -408,7 +411,7 @@ export function SessionsSection() {
 
   return (
     <div className="space-y-6">
-      {mounted && !isConnected && (
+      {mounted && !walletConnected && (
         <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-secondary border border-border animate-in fade-in slide-in-from-top-2 duration-300">
           <AlertTriangle className="w-4 h-4 text-warning shrink-0" />
           <p className="text-sm text-muted-foreground">
@@ -596,7 +599,7 @@ export function SessionsSection() {
                             size="sm"
                             className="h-7 text-xs"
                             onClick={() => void handleWithdraw(session.id)}
-                            disabled={!isConnected}
+                            disabled={!walletConnected}
                           >
                             <Minus className="w-3.5 h-3.5 mr-1" />
                             Withdraw

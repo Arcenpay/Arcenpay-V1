@@ -32,7 +32,11 @@ export class StellarWalletAdapter implements WalletAdapter {
 
   constructor(chainId: number, networkPassphrase?: string) {
     this.chainId = chainId;
-    this.networkPassphrase = networkPassphrase ?? Networks.TESTNET;
+    // Mainnet (9_000_000) uses the PUBLIC passphrase; all other Stellar ids
+    // default to TESTNET unless an explicit passphrase is supplied.
+    this.networkPassphrase =
+      networkPassphrase ??
+      (chainId === 9_000_000 ? Networks.PUBLIC : Networks.TESTNET);
     this.detectInstallation();
   }
 

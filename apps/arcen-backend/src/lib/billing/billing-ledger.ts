@@ -315,6 +315,7 @@ export async function recordSuccessfulPayment(
             amount: toSix(input.amount),
             currency: input.currency ?? "USDC",
             chainFamily: resolvedChainFamily,
+            chainId: resolvedChainId,
             teamId: input.teamId,
             environmentId: resolvedEnvironmentId,
             companyId: company?.id ?? null,
@@ -344,6 +345,7 @@ export async function recordSuccessfulPayment(
           amount: toSix(input.amount),
           currency: input.currency ?? "USDC",
           chainFamily: resolvedChainFamily,
+          chainId: resolvedChainId,
           payerWallet: normalizeWallet(input.payerWallet),
           recipientWallet: normalizeWallet(input.recipientWallet),
           acceptedToken: normalizeWallet(input.acceptedToken),
@@ -422,6 +424,7 @@ export async function recordFailedPayment(input: {
     | "CUSTOM_PAYMENT";
   amount?: number;
   currency?: string;
+  chainId?: number;
   txHash?: string | null;
   occurredAt?: Date | null;
   errorMessage: string;
@@ -443,6 +446,8 @@ export async function recordFailedPayment(input: {
 
   const occurredAt = input.occurredAt ?? new Date();
   const graceEndsAt = new Date(occurredAt.getTime() + 7 * 24 * 60 * 60 * 1000);
+  const resolvedFailedChain = input.chainId ?? 84532;
+  const resolvedFailedFamily = resolveChainFamilyForPrisma(resolvedFailedChain);
 
   const existing = await resolvePaymentRecord({
     idempotencyKey: input.idempotencyKey,
@@ -459,6 +464,8 @@ export async function recordFailedPayment(input: {
           subscriptionStateId: subscriptionState?.id ?? null,
           amount: toSix(input.amount ?? 0),
           currency: input.currency ?? "USDC",
+          chainFamily: resolvedFailedFamily,
+          chainId: resolvedFailedChain,
           txHash: input.txHash ?? existing.txHash,
           occurredAt,
           failedAt: occurredAt,
@@ -475,6 +482,8 @@ export async function recordFailedPayment(input: {
           status: "FAILED",
           amount: toSix(input.amount ?? 0),
           currency: input.currency ?? "USDC",
+          chainFamily: resolvedFailedFamily,
+          chainId: resolvedFailedChain,
           txHash: input.txHash ?? null,
           occurredAt,
           failedAt: occurredAt,

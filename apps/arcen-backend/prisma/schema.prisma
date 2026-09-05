@@ -1083,6 +1083,7 @@ model Payment {
   currency            String        @default("USDC")
   amount              Decimal       @db.Decimal(20, 6)
   chainFamily         ChainFamily   @default(EVM)
+  chainId             Int?
   payerWallet         String?
   recipientWallet     String?
   acceptedToken       String?
@@ -1107,6 +1108,7 @@ model Payment {
   creditLedgerEntries CreditLedgerEntry[]
 
   @@index([teamId, status, occurredAt])
+  @@index([teamId, chainId, status])
   @@index([teamId, environmentId])
   @@index([companyId, createdAt])
   @@index([invoiceId])

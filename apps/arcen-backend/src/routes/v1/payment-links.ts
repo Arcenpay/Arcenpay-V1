@@ -13,6 +13,7 @@ import { assertCanCreatePaymentLink } from "../../lib/catalog/tier-guard.js";
 import {
   getChainFamily,
   isValidAddressForChain,
+  normalizeWalletForChain,
 } from "@arcenpay/internal-core";
 import { normalizeWallet } from "../../lib/billing/utils.js";
 
@@ -193,10 +194,10 @@ export async function POST(c: Context) {
               ? [
                   {
                     walletAddress:
-                      invoice.customerWallet.startsWith("G") &&
-                      invoice.customerWallet.length === 56
-                        ? invoice.customerWallet
-                        : invoice.customerWallet.toLowerCase(),
+                      normalizeWalletForChain(
+                        invoice.customerWallet,
+                        resolvedChainId,
+                      ) ?? invoice.customerWallet,
                   },
                 ]
               : []),
