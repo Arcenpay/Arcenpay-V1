@@ -21,6 +21,12 @@ import {
 } from "@stellar/stellar-sdk";
 
 // ─── Configuration ───────────────────────────────────────────────────────────
+//
+// DEV-ONLY: the embedded admin secret is a PUBLIC Stellar TESTNET key used to
+// drive the shared testnet PlanFactory deployment. It has no value on any
+// other network — never point this script (or reuse its key) at mainnet.
+// Prefer env vars (STELLAR_ADMIN_SECRET, PLAN_FACTORY_CONTRACT_ID) in real
+// workflows.
 
 const ADMIN_SECRET_KEY = "SDF4YHZLS7UP5R456NVWCCMTNPQEDCF67QYXADFE2RJM66I2NKKY7B6I";
 const PLAN_FACTORY_CONTRACT_ID = "CAF4VS5OMM6DW5ZN5JFJH4U2RJD6DODZYBHNXMTS6RSUMPDO3T4C73S7";

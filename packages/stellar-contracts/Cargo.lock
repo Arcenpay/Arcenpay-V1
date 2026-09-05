@@ -43,6 +43,9 @@ name = "arcenpay-autopay-account"
 version = "0.1.0"
 dependencies = [
  "arcenpay-common",
+ "arcenpay-fee-collector",
+ "arcenpay-plan-factory",
+ "arcenpay-subscription-registry",
  "soroban-sdk",
 ]
 
@@ -98,6 +101,7 @@ name = "arcenpay-subscription-registry"
 version = "0.1.0"
 dependencies = [
  "arcenpay-common",
+ "arcenpay-plan-factory",
  "soroban-sdk",
 ]
 
