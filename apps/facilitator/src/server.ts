@@ -103,6 +103,7 @@ import { TablelandService } from "./services/tableland.js";
 import { LitProtocolService } from "./services/lit.js";
 import { ProofOrchestrator } from "./services/proof-orchestrator.js";
 import { BillingKeeper } from "./services/keeper.js";
+import { StellarRenewalDriver } from "./services/stellar-renewal-driver.js";
 import { AxelarTransport } from "./services/transport-axelar.js";
 import { CCIPTransport } from "./services/transport-ccip.js";
 import {
@@ -123,7 +124,24 @@ const RPC_URL =
   RUNTIME_CHAIN_PROFILE.rpcUrl ||
   "https://sepolia.base.org";
 const CONTRACTS = CHAIN_ENV.contracts;
-const chainClient = createResilientFacilitatorClient(RPC_URL, CHAIN_ID);
+// viem chain client — EVM chains only. On Stellar there is no viem client
+// (the StellarChainAdapter owns the Soroban RPC), so we install a stub that
+// throws a descriptive error if any EVM-only code path touches it. Stellar
+// code paths never call chainClient.
+const chainClient: ReturnType<typeof createResilientFacilitatorClient> =
+  getChainFamily(CHAIN_ID) === "evm"
+    ? createResilientFacilitatorClient(RPC_URL, CHAIN_ID)
+    : (new Proxy(
+        {},
+        {
+          get(_target, prop) {
+            throw new Error(
+              `[Facilitator] chainClient.${String(prop)} is EVM-only but the runtime chain ${CHAIN_ID} is Stellar. ` +
+                `Use the StellarChainAdapter / Soroban client instead.`,
+            );
+          },
+        },
+      ) as ReturnType<typeof createResilientFacilitatorClient>);
 const FACILITATOR_PROFILE = (
   process.env.FACILITATOR_PROFILE || "development"
 ).toLowerCase();
@@ -637,10 +655,17 @@ const proofOrchestrator = new ProofOrchestrator({
 });
 const usageService = proofOrchestrator.getUsageService();
 
-const settlementService = new SettlementService({
-  rpcUrl: RPC_URL,
-  chainId: CHAIN_ID,
-});
+// SettlementService (EVM SessionVault polling + proof submission watcher) —
+// EVM-only. On Stellar, settlement runs through the SettlementWriterService
+// (Soroban client) and the StellarChainAdapter; this viem-based watcher is
+// not constructed.
+const settlementService: SettlementService | null =
+  getChainFamily(CHAIN_ID) === "evm"
+    ? new SettlementService({
+        rpcUrl: RPC_URL,
+        chainId: CHAIN_ID,
+      })
+    : null;
 
 function normalizePrivateKey(value: string): `0x${string}` {
   const trimmed = value.trim();
@@ -1030,10 +1055,16 @@ const replayProtection = new X402ReplayProtection(
   Number(process.env.X402_REPLAY_WINDOW_MS || 10 * 60 * 1000),
 );
 
-const eventListener = new EventListenerService({
-  rpcUrl: RPC_URL,
-  chainId: CHAIN_ID,
-});
+// viem-based EVM event listener — only constructed for EVM chains. On Stellar
+// the StellarChainAdapter polls Soroban events instead and this is never
+// started (see startup IIFE).
+const eventListener: EventListenerService | null =
+  getChainFamily(CHAIN_ID) === "evm"
+    ? new EventListenerService({
+        rpcUrl: RPC_URL,
+        chainId: CHAIN_ID,
+      })
+    : null;
 
 // ── Chain Adapter Registry ────────────────────────────────────────────────
 //
@@ -1967,7 +1998,7 @@ function parseSessionTuple(raw: unknown): {
 // ============================================================
 
 // Watch all subscription events and forward to webhooks
-eventListener.on("*", async (event) => {
+eventListener?.on("*", async (event) => {
   console.log(`[Facilitator] Event: ${event.type} tokenId=${event.tokenId}`);
 
   // Forward to webhook if configured
@@ -1977,7 +2008,7 @@ eventListener.on("*", async (event) => {
 });
 
 // Specific handlers for each event type
-eventListener.on("minted", async (event) => {
+eventListener?.on("minted", async (event) => {
   console.log(
     `[Facilitator] 🎉 New subscriber: ${event.subscriber} (Plan ${event.planId})`,
   );
@@ -2085,7 +2116,7 @@ eventListener.on("minted", async (event) => {
   }
 });
 
-eventListener.on("renewed", async (event) => {
+eventListener?.on("renewed", async (event) => {
   console.log(
     `[Facilitator] 🔄 Renewed: tokenId=${event.tokenId} until ${event.expiration}`,
   );
@@ -2172,7 +2203,7 @@ eventListener.on("renewed", async (event) => {
   }
 });
 
-eventListener.on("billing_executed", async (event) => {
+eventListener?.on("billing_executed", async (event) => {
   const tokenId = event.tokenId.toString();
   const billingReason = Number(event.billingReason ?? 0n);
   const onChainPlanId = event.planId?.toString() ?? null;
@@ -2307,7 +2338,7 @@ eventListener.on("billing_executed", async (event) => {
   }
 });
 
-eventListener.on("plan_changed", async (event) => {
+eventListener?.on("plan_changed", async (event) => {
   console.log(
     `[Facilitator] 🔀 Plan changed: tokenId=${event.tokenId} ${event.previousPlanId ?? "?"} -> ${event.planId ?? "?"}`,
   );
@@ -2357,7 +2388,7 @@ eventListener.on("plan_changed", async (event) => {
   );
 });
 
-eventListener.on("cancelled", async (event) => {
+eventListener?.on("cancelled", async (event) => {
   console.log(`[Facilitator] ❌ Cancelled: tokenId=${event.tokenId}`);
   const tokenId = event.tokenId.toString();
   const existingRouteState = await subscriptionRouteStore.read(tokenId);
@@ -2872,8 +2903,8 @@ if (axelarTransport || ccipTransport) {
   }, 5000);
 }
 
-// Watch for settlement events
-settlementService.watchSettlements((settlement) => {
+// Watch for settlement events (EVM-only service — no-op on Stellar)
+settlementService?.watchSettlements((settlement) => {
   console.log(
     `[Facilitator] 💰 Settlement: ${settlement.sessionId} — ${settlement.settlementAmount} (${settlement.callCount} calls)`,
   );
@@ -3036,6 +3067,39 @@ if (
   } catch (err) {
     console.error("[Facilitator] BillingKeeper init failed:", err);
     billingKeeper = null;
+  }
+}
+
+// ── Stellar Renewal Driver ─────────────────────────────────────────────────
+// The Soroban autopay-account analog of the EVM BillingKeeper. Only relevant
+// when the facilitator runs a Stellar chain AND the operator explicitly enables
+// it AND configures subscriber keypairs. Soroban requires the SUBSCRIBER's
+// authorization on every charge, so the driver only auto-charges subscribers
+// whose S… secrets are configured (STELLAR_RENEWAL_KEYS="G…:S…,…"); other due
+// renewals are surfaced as log notices for the co-sign flow.
+let stellarRenewalDriver: StellarRenewalDriver | null = null;
+if (
+  chainFamily === "stellar" &&
+  process.env.STELLAR_RENEWAL_DRIVER_ENABLED === "true"
+) {
+  try {
+    stellarRenewalDriver = new StellarRenewalDriver({
+      chainId: CHAIN_ID,
+      intervalMs: Number(process.env.STELLAR_RENEWAL_DRIVER_INTERVAL_MS || 60_000),
+      subscriberKeys: process.env.STELLAR_RENEWAL_KEYS || "",
+    });
+    stellarRenewalDriver.onRenewal((result) => {
+      console.log(
+        `[Facilitator] Stellar renewal result: wallet=${result.wallet} ` +
+          `due=${result.due} charged=${result.charged} ${result.txHash ? `tx=${result.txHash}` : ""}` +
+          (result.error ? ` error=${result.error}` : ""),
+      );
+    });
+    stellarRenewalDriver.start();
+    console.log("[Facilitator] StellarRenewalDriver active");
+  } catch (err) {
+    console.error("[Facilitator] StellarRenewalDriver init failed:", err);
+    stellarRenewalDriver = null;
   }
 }
 
@@ -4076,6 +4140,11 @@ app.get("/api/session/:agentAddress/balance", async (req, res) => {
   if (!isValidAddress(req.params.agentAddress)) {
     return res.status(400).json({ error: "Invalid agent address." });
   }
+  if (!settlementService) {
+    return res
+      .status(400)
+      .json({ error: "SessionVault balances are not available on this chain." });
+  }
   try {
     const balance = await settlementService.getSessionBalance(
       req.params.agentAddress,
@@ -4093,6 +4162,11 @@ app.get("/api/session/:agentAddress", async (req, res) => {
   const { agentAddress } = req.params;
   if (!isValidAddress(agentAddress)) {
     return res.status(400).json({ error: "Invalid agent address." });
+  }
+  if (!settlementService) {
+    return res
+      .status(400)
+      .json({ error: "Session data is not available on this chain." });
   }
 
   const limitParam = Number(req.query.limit || 20);
@@ -4145,6 +4219,11 @@ app.get("/api/session/details/:sessionId", async (req, res) => {
     return res
       .status(400)
       .json({ error: "sessionId must be a bytes32 hex value." });
+  }
+  if (!settlementService) {
+    return res
+      .status(400)
+      .json({ error: "Session details are not available on this chain." });
   }
 
   try {
@@ -4895,7 +4974,7 @@ void (async () => {
           `[Facilitator] StellarChainAdapter started — watching Soroban events for chain ${CHAIN_ID}`,
         );
       } else {
-        await eventListener.start(12000);
+        await eventListener!.start(12000);
         eventListenerActive = true;
         console.log(
           "[Facilitator] EventListener started — watching on-chain events",
@@ -4930,14 +5009,15 @@ function stopEventListener() {
   if (chainFamily === "stellar") {
     primaryChainAdapter.stopEventListener();
   } else {
-    eventListener.stop();
+    eventListener?.stop();
   }
 }
 
 process.on("SIGTERM", () => {
   console.log("[Facilitator] Shutting down after SIGTERM...");
   stopEventListener();
-  settlementService.stop();
+  stellarRenewalDriver?.stop();
+  settlementService?.stop();
   proofOrchestrator.stop();
   billingKeeper?.stop();
   webhookService?.stop();
@@ -4951,7 +5031,8 @@ process.on("SIGTERM", () => {
 process.on("SIGINT", () => {
   console.log("[Facilitator] Shutting down after SIGINT...");
   stopEventListener();
-  settlementService.stop();
+  stellarRenewalDriver?.stop();
+  settlementService?.stop();
   proofOrchestrator.stop();
   billingKeeper?.stop();
   webhookService?.stop();

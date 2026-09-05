@@ -675,3 +675,6 @@ impl AutopayAccount {
         MigrationFinalized {}.publish(&env);
     }
 }
+
+#[cfg(test)]
+mod tests;

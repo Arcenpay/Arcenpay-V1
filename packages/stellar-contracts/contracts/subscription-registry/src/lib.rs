@@ -757,3 +757,6 @@ impl SubscriptionRegistry {
         )
     }
 }
+
+#[cfg(test)]
+mod tests;

@@ -15,3 +15,6 @@ arcenpay-common.workspace = true
 [dev-dependencies]
 soroban-sdk = { version = "27", features = ["testutils"] }
 arcenpay-common.workspace = true
+arcenpay-fee-collector = { path = "../fee-collector" }
+arcenpay-subscription-registry = { path = "../subscription-registry" }
+arcenpay-plan-factory = { path = "../plan-factory" }

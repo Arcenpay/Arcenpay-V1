@@ -6,7 +6,7 @@ rust-version.workspace = true
 license.workspace = true
 
 [lib]
-crate-type = ["cdylib"]
+crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 soroban-sdk.workspace = true
@@ -15,3 +15,4 @@ arcenpay-common.workspace = true
 [dev-dependencies]
 soroban-sdk = { version = "27", features = ["testutils"] }
 arcenpay-common.workspace = true
+arcenpay-plan-factory = { path = "../plan-factory" }
