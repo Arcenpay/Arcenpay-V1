@@ -5593,6 +5593,7 @@ export const PaymentScalarFieldEnum = {
   status: 'status',
   currency: 'currency',
   amount: 'amount',
+  chainFamily: 'chainFamily',
   payerWallet: 'payerWallet',
   recipientWallet: 'recipientWallet',
   acceptedToken: 'acceptedToken',
@@ -6163,7 +6164,9 @@ export const ArcenAgentConfigScalarFieldEnum = {
   teamId: 'teamId',
   autoTopUp: 'autoTopUp',
   dispatch: 'dispatch',
-  agentWalletAddress: 'agentWalletAddress'
+  agentWalletAddress: 'agentWalletAddress',
+  chainId: 'chainId',
+  chainFamily: 'chainFamily'
 } as const
 
 export type ArcenAgentConfigScalarFieldEnum = (typeof ArcenAgentConfigScalarFieldEnum)[keyof typeof ArcenAgentConfigScalarFieldEnum]

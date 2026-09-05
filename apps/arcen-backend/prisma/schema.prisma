@@ -1082,6 +1082,7 @@ model Payment {
   status              PaymentStatus @default(PENDING)
   currency            String        @default("USDC")
   amount              Decimal       @db.Decimal(20, 6)
+  chainFamily         ChainFamily   @default(EVM)
   payerWallet         String?
   recipientWallet     String?
   acceptedToken       String?
@@ -1888,6 +1889,8 @@ model ArcenAgentConfig {
   autoTopUp          Json    @default("{\"mode\":\"off\",\"dailyLimit\":\"5.00\",\"perTxnLimit\":\"1.00\",\"threshold\":\"0.50\"}")
   dispatch           Json    @default("{\"enabled\":false,\"providers\":[],\"cooldownSeconds\":120,\"maxRetries\":3}")
   agentWalletAddress String?
+  chainId            Int?
+  chainFamily        ChainFamily @default(EVM)
 
   team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
 

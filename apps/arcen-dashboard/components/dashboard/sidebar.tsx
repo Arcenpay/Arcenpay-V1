@@ -111,9 +111,9 @@ const navGroups: NavGroup[] = [
     ],
   },
   {
-    label: "Agent",
+    label: "Arcen Agent",
     icon: Bot,
-    items: [{ id: "agent", label: "Agent" }],
+    items: [{ id: "agent", label: "Arcen Agent" }],
   },
   {
     label: "Billing",

@@ -2,7 +2,7 @@
  * Wallet Adapter Factory — picks the right adapter for a given chainId.
  */
 
-import { isEvmChain, getStellarNetworkPassphrase } from "@arcenpay/internal-core";
+import { isEvmChain, getStellarNetworkPassphrase } from "../internal/core";
 import { EvmWalletAdapter } from "./evm-wallet-adapter";
 import { StellarWalletAdapter } from "./stellar-wallet-adapter";
 import type { WalletAdapter } from "./wallet-adapter";

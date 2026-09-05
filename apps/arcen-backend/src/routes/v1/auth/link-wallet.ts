@@ -60,10 +60,10 @@ export async function linkWallet(c: Context) {
 
     // ── Stellar path ──────────────────────────────────────────────────────
     if (isStellarChainId(chainId)) {
-      // Stellar signature: is a base64-encoded message signed by the wallet.
-      // For MVP we accept the signed message as-is and trust the wallet SDK
-      // (StellarWalletsKit/Freighter) performed proper ed25519 signing.
-      // Production should verify via Stellar SDK's Keypair.verify().
+      // Stellar signature: a base64-encoded ed25519 signature produced by
+      // StellarWalletsKit/Freighter's `signMessage` over the exact message
+      // text below. We reconstruct the expected message and verify the
+      // signature cryptographically (Keypair.verify).
       //
       // Reconstruct expected message from the same format the frontend builds:
       //   `ArcenPay Stellar Sign-In\n\nAddress: ${addr}\nNonce: ${n}\nIssued At: ${d}\nDomain: ${host}`
@@ -72,6 +72,20 @@ export async function linkWallet(c: Context) {
 
       if (message !== expectedMessage) {
         return c.json({ ok: false, error: "Message mismatch", code: "UNAUTHORIZED" }, 401 as any);
+      }
+
+      const { Keypair } = await import("@stellar/stellar-sdk");
+      let signatureValid = false;
+      try {
+        signatureValid = Keypair.fromPublicKey(normalizedAddress).verify(
+          Buffer.from(expectedMessage, "utf8"),
+          Buffer.from(signature, "base64"),
+        );
+      } catch {
+        signatureValid = false;
+      }
+      if (!signatureValid) {
+        return c.json({ ok: false, error: "Invalid signature", code: "UNAUTHORIZED" }, 401 as any);
       }
 
       const walletOwner = await db.user.findUnique({

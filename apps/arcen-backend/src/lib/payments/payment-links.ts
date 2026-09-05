@@ -3,6 +3,7 @@ import { db } from "../../db.js";
 import { toPrismaJson, toPrismaNullableJson } from "../../utils/prisma-json.js";
 import { DEFAULT_CHAIN_ID } from "../platform/default-chain.js";
 import { resolveChainFamilyForPrisma } from "../platform/chain-family.js";
+import { normalizeWallet } from "../billing/utils.js";
 
 function slugify(value: string): string {
   return value
@@ -11,11 +12,6 @@ function slugify(value: string): string {
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "")
     .slice(0, 48);
-}
-
-function normalizeWallet(value?: string | null): string | null {
-  const trimmed = value?.trim().toLowerCase();
-  return trimmed || null;
 }
 
 export async function createPaymentLink(input: {

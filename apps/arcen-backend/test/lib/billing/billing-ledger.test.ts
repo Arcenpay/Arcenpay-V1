@@ -8,6 +8,7 @@ vi.mock("../../../src/db.js", () => ({
     },
     subscriptionState: {
       findFirst: vi.fn(),
+      findUnique: vi.fn(),
       upsert: vi.fn(),
     },
     payment: {
@@ -36,6 +37,7 @@ describe("billing ledger", () => {
 
   it("resolves a company by on-chain token when wallet lookup is unavailable", async () => {
     mockDb.arcenCompany.findFirst.mockResolvedValueOnce(null);
+    mockDb.subscriptionState.findUnique.mockResolvedValueOnce(null);
     mockDb.subscriptionState.findFirst.mockResolvedValueOnce({
       company: {
         id: "company-1",

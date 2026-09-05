@@ -13,7 +13,7 @@ export async function POST(c: Context) {
 
   const id = c.req.param("id");
 
-  const decision = await invoiceResendProtect.protect(c, { invoiceId: id });
+  const decision = await invoiceResendProtect.protect(c, { invoiceId: id! });
   if (decision.isDenied()) {
     return c.json({ error: "This invoice has been resent too many times recently. Please wait before retrying." }, 429 as any);
   }

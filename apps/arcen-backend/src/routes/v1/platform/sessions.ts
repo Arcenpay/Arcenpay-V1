@@ -9,6 +9,7 @@ import {
   RUNTIME_CHAIN_ID,
   RUNTIME_CHAIN_PROFILE,
 } from "../../../lib/platform/runtime-chain.js";
+import { getChainFamily } from "@arcenpay/internal-core";
 
 const querySchema = z.object({
   chainId: z.coerce.number().int().positive().optional(),
@@ -98,6 +99,13 @@ async function readSessionsAndProofsFromSubgraph(
   proofs: ProofRow[];
   status: "ok" | "unavailable" | "not_configured";
 }> {
+  // Stellar has no TheGraph subgraph — sessions live on-chain (Soroban)
+  // and are read by the facilitator. Short-circuit instead of returning
+  // a misleading "unavailable".
+  if (getChainFamily(chainId) === "stellar") {
+    return { sessions: [], proofs: [], status: "not_configured" };
+  }
+
   const graphUrl = getGraphUrl(chainId);
   if (!graphUrl) {
     return { sessions: [], proofs: [], status: "not_configured" };

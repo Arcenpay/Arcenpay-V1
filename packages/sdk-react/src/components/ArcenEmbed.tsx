@@ -74,7 +74,7 @@ import {
 } from "viem";
 import { resolveDashboardBaseUrl } from "../lib/api";
 import { useArcenPay } from "../providers/ArcenPayProvider";
-import { sanitizeSvg, isEvmChain, getStellarNetworkPassphrase } from "@arcenpay/internal-core";
+import { sanitizeSvg, isEvmChain, getStellarNetworkPassphrase } from "../internal/core";
 import { useStellarEmbedWallet } from "../hooks/useStellarEmbedWallet";
 
 export interface ArcenEmbedProps {
@@ -7151,7 +7151,7 @@ function PaymentContent({
       throw new Error("Freighter wallet not connected.");
     }
 
-    const { getStellarNetworkPassphrase, getStellarSorobanRpcUrl } = await import("@arcenpay/internal-core");
+    const { getStellarNetworkPassphrase, getStellarSorobanRpcUrl } = await import("../internal/core");
     const stellarChainId = planChainId;
     const networkPassphrase = getStellarNetworkPassphrase(stellarChainId);
     const rpcUrl = getStellarSorobanRpcUrl(stellarChainId);

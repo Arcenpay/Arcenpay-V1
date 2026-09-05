@@ -9,7 +9,7 @@ import {
   custom,
   http,
 } from "viem";
-import { getChain } from "@arcenpay/internal-core";
+import { getChain } from "../internal/core";
 
 let wagmiModule: any = null;
 

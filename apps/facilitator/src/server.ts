@@ -2943,7 +2943,7 @@ app.use(
             amount,
             sessionId,
           }: {
-            signer: `0x${string}`;
+            signer: string;
             amount: bigint;
             sessionId: string;
           }) => {

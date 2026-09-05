@@ -12,7 +12,7 @@ const bodySchema = z.object({
 
 export async function createPaymentLinkSession(c: Context) {
   const slug = c.req.param("slug");
-  const paymentLink = await getPaymentLinkBySlug(slug);
+  const paymentLink = await getPaymentLinkBySlug(slug!);
   if (!paymentLink || paymentLink.status !== "ACTIVE") {
     return c.json({ error: "Payment link unavailable" }, 404 as any);
   }

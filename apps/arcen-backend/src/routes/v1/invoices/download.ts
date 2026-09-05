@@ -10,7 +10,7 @@ export async function GET(c: Context) {
   try {
     const { downloadUrl, objectKey } = await ensureInvoicePdfForTeam(
       auth.team.teamId,
-      id,
+      id!,
     );
     return c.json({ ok: true, downloadUrl, objectKey });
   } catch (err) {

@@ -7,7 +7,7 @@ export async function GET(c: Context) {
   if (isAnyAuthError(auth)) return c.json({ ok: false, error: auth.error }, auth.status as any as any);
 
   const id = c.req.param("id");
-  const checkoutSession = await getCheckoutSessionById(id, auth.teamId);
+  const checkoutSession = await getCheckoutSessionById(id!, auth.teamId);
   if (!checkoutSession) {
     return c.json({ error: "Checkout session not found" }, 404 as any);
   }

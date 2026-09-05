@@ -10,6 +10,11 @@ import { getUsdcAddress } from "../../lib/platform/contracts.js";
 import { requireResolvedActiveEnvironment } from "../../lib/environments/workspace-environments.js";
 import { deliverWebhook } from "../../lib/webhooks/deliver-webhook.js";
 import { assertCanCreatePaymentLink } from "../../lib/catalog/tier-guard.js";
+import {
+  getChainFamily,
+  isValidAddressForChain,
+} from "@arcenpay/internal-core";
+import { normalizeWallet } from "../../lib/billing/utils.js";
 
 const createSchema = z
   .object({
@@ -185,7 +190,15 @@ export async function POST(c: Context) {
           ...(resolvedEnvironmentId ? { environmentId: resolvedEnvironmentId } : {}),
           OR: [
             ...(invoice.customerWallet
-              ? [{ walletAddress: invoice.customerWallet.toLowerCase() }]
+              ? [
+                  {
+                    walletAddress:
+                      invoice.customerWallet.startsWith("G") &&
+                      invoice.customerWallet.length === 56
+                        ? invoice.customerWallet
+                        : invoice.customerWallet.toLowerCase(),
+                  },
+                ]
               : []),
             ...(invoice.customerEmail
               ? [{ email: { equals: invoice.customerEmail, mode: "insensitive" as const } }]
@@ -202,6 +215,20 @@ export async function POST(c: Context) {
     return c.json({ error: "Unable to resolve payment amount and token." }, 400 as any);
   }
 
+  const resolvedFamily = getChainFamily(resolvedChainId);
+  const normalizedRecipient =
+    normalizeWallet(parsed.data.recipientWallet) ||
+    parsed.data.recipientWallet;
+  if (
+    !resolvedFamily ||
+    !isValidAddressForChain(normalizedRecipient, resolvedChainId) ||
+    !isValidAddressForChain(acceptedToken, resolvedChainId)
+  ) {
+    return c.json({
+      error: `Recipient wallet or accepted token is not a valid address for ${resolvedChainId}.`,
+    }, 400 as any);
+  }
+
   const paymentLink = await createPaymentLink({
     teamId: auth.teamId,
     environmentId: resolvedEnvironmentId,
@@ -215,7 +242,7 @@ export async function POST(c: Context) {
     currency: "USDC",
     acceptedToken,
     chainId: resolvedChainId,
-    recipientWallet: parsed.data.recipientWallet,
+    recipientWallet: normalizedRecipient,
     successUrl: parsed.data.successUrl,
     cancelUrl: parsed.data.cancelUrl,
     expiresAt: parsed.data.expiresAt

@@ -1,7 +1,7 @@
 import type { Context } from "hono";
 import { readSignedInvoicePdf } from "../../../lib/billing/invoice-documents.js";
 
-export async function GET(c: Context) {
+export async function GET(c: Context): Promise<Response> {
   const id = c.req.param("id");
   const key = c.req.query("key") || "";
   const exp = c.req.query("exp") || "";
@@ -12,7 +12,7 @@ export async function GET(c: Context) {
   }
 
   const result = await readSignedInvoicePdf({
-    invoiceId: id,
+    invoiceId: id!,
     objectKey: key,
     expRaw: exp,
     signature: sig,

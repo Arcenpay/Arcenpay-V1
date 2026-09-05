@@ -7,6 +7,6 @@ export async function getAddOnGrants(c: Context) {
   if (isErrorResponse(auth)) return c.json({ ok: false, error: auth.error }, auth.status as any as any);
 
   const id = c.req.param("id");
-  const grants = await listAddOnGrantCompanies(auth.team.teamId, id);
+  const grants = await listAddOnGrantCompanies(auth.team.teamId, id!);
   return c.json({ grants });
 }

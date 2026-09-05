@@ -16,6 +16,9 @@ import {
   SessionVaultABI,
   FeeCollectorABI,
   getContractAddresses,
+  getChainFamily,
+  getStellarNetworkPassphrase,
+  getStellarSorobanRpcUrl,
 } from "@arcenpay/internal-core";
 
 const CHAIN_MAP: Record<number, any> = {
@@ -37,26 +40,33 @@ type SessionState = {
 
 export interface SettlementWriterConfig {
   rpcUrl: string;
-  privateKey: `0x${string}`;
+  /** EVM hex private key, or Stellar S… secret on Stellar chains. */
+  privateKey: string;
   chainId?: number;
-  sessionVaultAddress?: `0x${string}`;
+  sessionVaultAddress?: string;
   feeCollectorAddress?: `0x${string}`;
-  providerAddress?: `0x${string}`;
+  providerAddress?: string;
   waitForReceipt?: boolean;
+  /** Stellar-only: Soroban RPC URL. Defaults from chain registry/env. */
+  sorobanRpcUrl?: string;
+  /** Stellar-only: network passphrase. Defaults from chain registry. */
+  networkPassphrase?: string;
+  /** Stellar-only: Horizon URL. Defaults from chain registry. */
+  horizonUrl?: string;
 }
 
 export interface SettleForSignerInput {
-  signer: `0x${string}`;
+  signer: string;
   amount: bigint;
   sessionIdHint: string;
-  providerAddress?: `0x${string}`;
+  providerAddress?: string;
 }
 
 export interface SettlementWriteResult {
-  transactionHash: `0x${string}`;
+  transactionHash: string;
   settledAmount: bigint;
-  sessionId: `0x${string}`;
-  providerAddress: `0x${string}`;
+  sessionId: string;
+  providerAddress: string;
 }
 
 function isBytes32(value: string): value is `0x${string}` {
@@ -116,29 +126,60 @@ function normalizeSession(raw: unknown): SessionState {
  */
 export class SettlementWriterService {
   private readonly chainId: number;
-  private readonly sessionVaultAddress: `0x${string}`;
+  private readonly sessionVaultAddress: string;
   private readonly feeCollectorAddress: `0x${string}`;
-  private readonly providerAddress: `0x${string}`;
-  private readonly signerAddress: `0x${string}`;
+  private readonly providerAddress: string;
+  private readonly signerAddress: string;
   private readonly waitForReceipt: boolean;
+  private readonly isStellar: boolean;
   private readonly publicClient: any;
   private readonly walletClient: any;
+  private stellarKeypair: any = null;
+  private stellarRpcUrl: string = "";
+  private stellarPassphrase: string = "";
 
   constructor(config: SettlementWriterConfig) {
     this.chainId = config.chainId ?? DEFAULT_CHAIN_ID;
+    this.isStellar = getChainFamily(this.chainId) === "stellar";
     const chain = CHAIN_MAP[this.chainId] || baseSepolia;
     const contracts = getContractAddresses(this.chainId);
 
-    this.sessionVaultAddress = (config.sessionVaultAddress ||
-      contracts.sessionVault) as `0x${string}`;
+    this.sessionVaultAddress =
+      config.sessionVaultAddress || contracts.sessionVault;
     this.feeCollectorAddress = (config.feeCollectorAddress ||
       contracts.feeCollector) as `0x${string}`;
-
-    const account = privateKeyToAccount(config.privateKey);
-    this.signerAddress = account.address;
-    this.providerAddress = (config.providerAddress ||
-      account.address) as `0x${string}`;
     this.waitForReceipt = config.waitForReceipt ?? true;
+
+    if (this.isStellar) {
+      // Stellar: keypair from S… secret; submit via Soroban client.
+      const { Keypair } = require("@stellar/stellar-sdk");
+      this.stellarKeypair = Keypair.fromSecret(config.privateKey);
+      this.signerAddress = this.stellarKeypair.publicKey();
+      this.providerAddress =
+        config.providerAddress || this.signerAddress;
+      this.stellarPassphrase =
+        config.networkPassphrase ??
+        getStellarNetworkPassphrase(this.chainId);
+      this.stellarRpcUrl =
+        config.sorobanRpcUrl ?? getStellarSorobanRpcUrl(this.chainId);
+      this.publicClient = null;
+      this.walletClient = null;
+
+      if (!this.sessionVaultAddress) {
+        throw new Error(
+          "Invalid SessionVault address for SettlementWriterService",
+        );
+      }
+      if (!this.providerAddress) {
+        throw new Error("Invalid provider address for SettlementWriterService");
+      }
+      return;
+    }
+
+    const account = privateKeyToAccount(config.privateKey as `0x${string}`);
+    this.signerAddress = account.address;
+    this.providerAddress =
+      (config.providerAddress || account.address) as `0x${string}`;
 
     if (!isAddress(this.sessionVaultAddress)) {
       throw new Error(
@@ -158,17 +199,45 @@ export class SettlementWriterService {
     }) as any;
   }
 
-  getSignerAddress(): `0x${string}` {
+  getSignerAddress(): string {
     return this.signerAddress;
   }
 
-  getSessionVaultAddress(): `0x${string}` {
+  getSessionVaultAddress(): string {
     return this.sessionVaultAddress;
   }
 
+  private async getStellarClient() {
+    const { contract: stellarContract } = await import("@stellar/stellar-sdk");
+    return (stellarContract as any).Client.from({
+      contractId: this.sessionVaultAddress,
+      networkPassphrase: this.stellarPassphrase,
+      rpcUrl: this.stellarRpcUrl,
+      publicKey: this.signerAddress,
+      signTransaction: async (xdr: string) => {
+        const tx = await (stellarContract as any).TransactionBuilder.fromXDR(
+          xdr,
+          this.stellarPassphrase,
+        );
+        tx.sign(this.stellarKeypair);
+        return { signedTxXdr: tx.toXDR() };
+      },
+    });
+  }
+
   async isSignerAuthorized(
-    address: `0x${string}` = this.signerAddress,
+    address: string = this.signerAddress,
   ): Promise<boolean> {
+    if (this.isStellar) {
+      // Stellar vault exposes `is_settler` — no authorizedSettlers mapping.
+      try {
+        const client = await this.getStellarClient();
+        const result = await client.is_settler({ address });
+        return Boolean(result?.result);
+      } catch {
+        return false;
+      }
+    }
     if (!isAddress(address)) {
       return false;
     }
@@ -225,6 +294,33 @@ export class SettlementWriterService {
   async settleForSigner(
     input: SettleForSignerInput,
   ): Promise<SettlementWriteResult> {
+    if (this.isStellar) {
+      if (!/^G[A-Z2-7]{55}$/.test(input.signer)) {
+        throw new Error("Invalid signer address for settlement");
+      }
+      if (input.amount <= 0n) {
+        throw new Error("Settlement amount must be greater than zero");
+      }
+      const providerAddress = input.providerAddress || this.providerAddress;
+      const client = await this.getStellarClient();
+      const result = await client.settle({
+        settler: this.signerAddress,
+        session_id: input.sessionIdHint,
+        amount: input.amount,
+        provider: providerAddress,
+      });
+      const txHash = String(result?.txHash ?? "");
+      if (!txHash) {
+        throw new Error("Stellar settlement returned no transaction hash");
+      }
+      return {
+        transactionHash: txHash,
+        settledAmount: input.amount,
+        sessionId: input.sessionIdHint,
+        providerAddress,
+      };
+    }
+
     if (!isAddress(input.signer)) {
       throw new Error("Invalid signer address for settlement");
     }
@@ -234,7 +330,7 @@ export class SettlementWriterService {
 
     const resolvedSessionId = await this.resolveSessionId(
       input.sessionIdHint,
-      input.signer,
+      input.signer as `0x${string}`,
     );
     const session = await this.getSession(resolvedSessionId);
 

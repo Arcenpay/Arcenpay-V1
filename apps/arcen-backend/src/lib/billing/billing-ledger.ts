@@ -267,6 +267,7 @@ export async function recordSuccessfulPayment(
       | "CUSTOM_PAYMENT";
     amount: number;
     currency?: string;
+    chainId?: number;
     payerWallet?: string | null;
     recipientWallet?: string | null;
     acceptedToken?: string | null;
@@ -295,6 +296,8 @@ export async function recordSuccessfulPayment(
     input.environmentId !== undefined
       ? input.environmentId
       : (subscriptionState?.environmentId ?? company?.environmentId ?? null);
+  const resolvedChainId = input.chainId ?? 84532;
+  const resolvedChainFamily = resolveChainFamilyForPrisma(resolvedChainId);
 
   const existing = await resolvePaymentRecord(
     {
@@ -305,28 +308,29 @@ export async function recordSuccessfulPayment(
   );
 
   const payment = existing
-    ? await client.payment.update({
-        where: { id: existing.id },
-        data: {
-          status: "SUCCEEDED",
-          amount: toSix(input.amount),
-          currency: input.currency ?? "USDC",
-          teamId: input.teamId,
-          environmentId: resolvedEnvironmentId,
-          companyId: company?.id ?? null,
-          invoiceId: input.invoiceId ?? null,
-          subscriptionStateId: subscriptionState?.id ?? null,
-          payerWallet: normalizeWallet(input.payerWallet),
-          recipientWallet: normalizeWallet(input.recipientWallet),
-          acceptedToken: normalizeWallet(input.acceptedToken),
-          txHash: input.txHash ?? existing.txHash,
-          externalRef: input.externalRef ?? null,
-          occurredAt: input.occurredAt ?? null,
-          settledAt: input.settledAt ?? input.occurredAt ?? new Date(),
-          failedAt: null,
-          ...(input.metadata ? { metadata: toPrismaJson(input.metadata) } : {}),
-        },
-      })
+      ? await client.payment.update({
+          where: { id: existing.id },
+          data: {
+            status: "SUCCEEDED",
+            amount: toSix(input.amount),
+            currency: input.currency ?? "USDC",
+            chainFamily: resolvedChainFamily,
+            teamId: input.teamId,
+            environmentId: resolvedEnvironmentId,
+            companyId: company?.id ?? null,
+            invoiceId: input.invoiceId ?? null,
+            subscriptionStateId: subscriptionState?.id ?? null,
+            payerWallet: normalizeWallet(input.payerWallet),
+            recipientWallet: normalizeWallet(input.recipientWallet),
+            acceptedToken: normalizeWallet(input.acceptedToken),
+            txHash: input.txHash ?? existing.txHash,
+            externalRef: input.externalRef ?? null,
+            occurredAt: input.occurredAt ?? null,
+            settledAt: input.settledAt ?? input.occurredAt ?? new Date(),
+            failedAt: null,
+            ...(input.metadata ? { metadata: toPrismaJson(input.metadata) } : {}),
+          },
+        })
     : await client.payment.create({
         data: {
           idempotencyKey: input.idempotencyKey,
@@ -339,6 +343,7 @@ export async function recordSuccessfulPayment(
           status: "SUCCEEDED",
           amount: toSix(input.amount),
           currency: input.currency ?? "USDC",
+          chainFamily: resolvedChainFamily,
           payerWallet: normalizeWallet(input.payerWallet),
           recipientWallet: normalizeWallet(input.recipientWallet),
           acceptedToken: normalizeWallet(input.acceptedToken),

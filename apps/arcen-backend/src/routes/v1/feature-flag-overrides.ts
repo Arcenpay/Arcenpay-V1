@@ -22,7 +22,7 @@ export async function GET(c: Context) {
   if (isErrorResponse(auth)) return c.json({ ok: false, error: auth.error }, auth.status as any);
 
   const id = c.req.param("id");
-  const flag = await requireFlagForTeam(id, auth.team.teamId);
+  const flag = await requireFlagForTeam(id!, auth.team.teamId);
   if (!flag) {
     return c.json({ error: "Flag not found" }, 404 as any);
   }
@@ -53,7 +53,7 @@ export async function POST(c: Context) {
   if (isErrorResponse(auth)) return c.json({ ok: false, error: auth.error }, auth.status as any);
 
   const id = c.req.param("id");
-  const flag = await requireFlagForTeam(id, auth.team.teamId);
+  const flag = await requireFlagForTeam(id!, auth.team.teamId);
   if (!flag) {
     return c.json({ error: "Flag not found" }, 404 as any);
   }
@@ -112,7 +112,7 @@ export async function DELETE(c: Context) {
   if (isErrorResponse(auth)) return c.json({ ok: false, error: auth.error }, auth.status as any);
 
   const id = c.req.param("id");
-  const flag = await requireFlagForTeam(id, auth.team.teamId);
+  const flag = await requireFlagForTeam(id!, auth.team.teamId);
   if (!flag) {
     return c.json({ error: "Flag not found" }, 404 as any);
   }

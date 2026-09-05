@@ -276,6 +276,8 @@ export interface ContractAddresses {
 
 export interface ChainServiceEndpoints {
   rpcUrl: string;
+  /** Stellar-only: Soroban RPC URL for contract reads/simulation. */
+  sorobanRpcUrl?: string;
   subgraphUrl?: string;
   facilitatorUrl?: string;
 }

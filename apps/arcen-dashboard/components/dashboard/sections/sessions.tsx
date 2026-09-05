@@ -46,7 +46,7 @@ import {
   useContractAddresses,
   SessionVaultABI,
   YieldSessionVaultABI,
-  getEvmUsdcAddress,
+  getUsdcAddress,
 } from "@/lib/contracts";
 import {
   formatUsdc,
@@ -57,6 +57,19 @@ import {
 } from "@/lib/format";
 import { useEnvironment } from "@/contexts/environment-context";
 import { resolveEnvironmentChainId } from "@/lib/default-chain";
+import { useStellarWallet } from "@/hooks/use-stellar-wallet";
+import {
+  isStellarChainId,
+  getStellarNetworkPassphrase,
+  getStellarSorobanRpcUrl,
+} from "@arcenpay/internal-core";
+
+// Stellar network passphrase → Horizon URL (mirrors internal-core registry).
+function stellarHorizonUrl(passphrase: string): string {
+  return passphrase.includes("Test")
+    ? "https://horizon-testnet.stellar.org"
+    : "https://horizon.stellar.org";
+}
 
 interface SessionRow {
   id: string;
@@ -132,6 +145,8 @@ export function SessionsSection() {
   const configuredChainId = activeEnvironment?.chainId ?? resolveEnvironmentChainId(envMode);
   const environmentKey = activeEnvironment?.id ?? envMode;
   const contractAddresses = useContractAddresses(configuredChainId);
+  const isStellar = isStellarChainId(configuredChainId);
+  const stellar = useStellarWallet();
 
   const [mounted, setMounted] = useState(false);
   const [payload, setPayload] = useState<SessionsPayload | null>(null);
@@ -149,7 +164,7 @@ export function SessionsSection() {
   }, []);
 
   const effectiveChainId = configuredChainId;
-  const sessionFundingToken = getEvmUsdcAddress(configuredChainId);
+  const sessionFundingToken = getUsdcAddress(configuredChainId);
 
   const loadSessionsData = useCallback(async () => {
     if (!mounted || envLoading) return;
@@ -205,7 +220,7 @@ export function SessionsSection() {
   const { writeContractAsync: writeFundSession } = useWriteContract();
   const { data: depositReceipt } = useWaitForTransactionReceipt({
     hash: depositTxHash as `0x${string}` | undefined,
-    query: { enabled: !!depositTxHash },
+    query: { enabled: !!depositTxHash && !isStellar },
   });
 
   useEffect(() => {
@@ -222,14 +237,88 @@ export function SessionsSection() {
   const { writeContractAsync: writeWithdraw } = useWriteContract();
 
   const handleDeposit = async () => {
-    if (!depositAmount || !isConnected) return;
+    if (!depositAmount) return;
+
+    if (isStellar) {
+      if (!stellar.isConnected || !stellar.address) {
+        toast.error("Connect your Stellar wallet first.");
+        return;
+      }
+      try {
+        // Stellar: SAC transfer of USDC to the SessionVault Soroban contract,
+        // then invoke fund_session via the Soroban client.
+        const { Asset, Horizon, TransactionBuilder, Operation, BASE_FEE } =
+          await import("@stellar/stellar-sdk");
+        const { contract: stellarContract } = await import("@stellar/stellar-sdk");
+        const passphrase = getStellarNetworkPassphrase(configuredChainId);
+        const server = new Horizon.Server(stellarHorizonUrl(passphrase));
+        const vaultAddress = contractAddresses.sessionVault;
+        if (!vaultAddress || !sessionFundingToken) {
+          throw new Error("Session vault or USDC asset not configured for this chain.");
+        }
+        const asset = new Asset("USDC", sessionFundingToken);
+        const payer = await server.loadAccount(stellar.address);
+        const tx = new TransactionBuilder(payer, {
+          fee: BASE_FEE,
+          networkPassphrase: passphrase,
+        })
+          .addOperation(
+            Operation.payment({
+              destination: vaultAddress,
+              asset,
+              amount: depositAmount,
+            }),
+          )
+          .setTimeout(300)
+          .build();
+        const { signedTxXdr } = await stellar.signTransaction(tx.toXDR(), {
+          networkPassphrase: passphrase,
+          address: stellar.address,
+        });
+        const signedTx = TransactionBuilder.fromXDR(signedTxXdr, passphrase);
+        const submitted = await server.submitTransaction(signedTx);
+        setDepositTxHash(submitted.hash);
+        toast.info("Transfer submitted...");
+
+        // Invoke fund_session on the vault (authorized via SAC transfer).
+        const rpcUrl = getStellarSorobanRpcUrl(configuredChainId);
+        const client = (await stellarContract.Client.from({
+          contractId: vaultAddress,
+          networkPassphrase: passphrase,
+          rpcUrl,
+          publicKey: stellar.address,
+          signTransaction: async (xdr: string) => {
+            const result = await stellar.signTransaction(xdr, {
+              networkPassphrase: passphrase,
+              address: stellar.address!,
+            });
+            return { signedTxXdr: result.signedTxXdr };
+          },
+        })) as any;
+        const amountAtomic = BigInt(Math.round(parseFloat(depositAmount) * 1_000_000));
+        await client.fund_session({
+          agent: stellar.address,
+          amount: amountAtomic,
+          token: sessionFundingToken,
+        });
+        toast.success("Session funded successfully!");
+        setShowDepositDialog(false);
+        setDepositAmount("");
+        void loadSessionsData();
+      } catch (err: unknown) {
+        toast.error(err instanceof Error ? err.message : "Transfer failed");
+      }
+      return;
+    }
+
+    if (!isConnected) return;
     const amountRaw = BigInt(Math.round(parseFloat(depositAmount) * 1_000_000));
     try {
       const hash = await writeFundSession({
         address: contractAddresses.sessionVault as `0x${string}`,
         abi: SessionVaultABI,
         functionName: "fundSession",
-        args: [amountRaw, sessionFundingToken],
+        args: [amountRaw, sessionFundingToken as `0x${string}`],
       });
       setDepositTxHash(hash);
       toast.info("Transaction submitted...");
@@ -239,6 +328,41 @@ export function SessionsSection() {
   };
 
   const handleWithdraw = async (sessionId: string) => {
+    if (isStellar) {
+      if (!stellar.isConnected || !stellar.address) {
+        toast.error("Connect your Stellar wallet first.");
+        return;
+      }
+      try {
+        const { contract: stellarContract } = await import("@stellar/stellar-sdk");
+        const passphrase = getStellarNetworkPassphrase(configuredChainId);
+        const vaultAddress = contractAddresses.sessionVault;
+        if (!vaultAddress) {
+          throw new Error("Session vault not configured for this chain.");
+        }
+        const rpcUrl = getStellarSorobanRpcUrl(configuredChainId);
+        const client = (await stellarContract.Client.from({
+          contractId: vaultAddress,
+          networkPassphrase: passphrase,
+          rpcUrl,
+          publicKey: stellar.address,
+          signTransaction: async (xdr: string) => {
+            const result = await stellar.signTransaction(xdr, {
+              networkPassphrase: passphrase,
+              address: stellar.address!,
+            });
+            return { signedTxXdr: result.signedTxXdr };
+          },
+        })) as any;
+        await client.withdraw({ agent: stellar.address, session_id: sessionId });
+        toast.success("Withdrawal initiated");
+        void loadSessionsData();
+      } catch (err: unknown) {
+        toast.error(err instanceof Error ? err.message : "Withdrawal failed");
+      }
+      return;
+    }
+
     try {
       await writeWithdraw({
         address: contractAddresses.sessionVault as `0x${string}`,
@@ -253,10 +377,10 @@ export function SessionsSection() {
     }
   };
 
-  // ── Read: YieldSessionVault stats ────────────────────────
-  const yieldVaultAddress = contractAddresses.yieldSessionVault as
-    | `0x${string}`
-    | undefined;
+  // ── Read: YieldSessionVault stats (EVM-only) ─────────────
+  const yieldVaultAddress = isStellar
+    ? undefined
+    : (contractAddresses.yieldSessionVault as `0x${string}` | undefined);
 
   const { data: yieldTotalAssets } = useReadContract({
     address: yieldVaultAddress,
@@ -320,11 +444,17 @@ export function SessionsSection() {
           variant="outline"
           size="sm"
           className="flex items-center gap-2"
-          onClick={() => setShowDepositDialog(true)}
-          disabled={!isConnected}
+          onClick={() => {
+            if (isStellar && !stellar.isConnected) {
+              void stellar.connect();
+              return;
+            }
+            setShowDepositDialog(true);
+          }}
+          disabled={isStellar ? false : !isConnected}
         >
           <Plus className="w-4 h-4" />
-          Fund New Session
+          {isStellar && !stellar.isConnected ? "Connect wallet to fund" : "Fund New Session"}
         </Button>
       </div>
 

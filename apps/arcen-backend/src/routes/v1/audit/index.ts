@@ -26,7 +26,7 @@ function toCsvRow(cells: unknown[]): string {
   return cells.map(escapeCsvCell).join(",");
 }
 
-export async function getAuditLog(c: Context) {
+export async function getAuditLog(c: Context): Promise<Response> {
   const auth = await requirePermission(c, "audit:read");
   if (isErrorResponse(auth)) return c.json({ ok: false, error: auth.error }, auth.status as any as any);
 

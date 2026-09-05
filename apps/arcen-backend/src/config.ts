@@ -306,11 +306,30 @@ function collectRpcCandidates(chainId: number): string[] {
       return "";
     }
   })();
-  const chainRpcs =
-    ArcenPayCore.getChain(chainId)?.rpcUrls?.default?.http ?? [];
 
   const seen = new Set<string>();
   const candidates: string[] = [];
+
+  // Non-EVM families (Stellar…) have no viem Chain definition. Prefer the
+  // Soroban RPC URL (env override first), falling back to the registry's
+  // Horizon URL for reads.
+  if (ArcenPayCore.getChainFamily(chainId) !== "evm") {
+    for (const value of [
+      ...parseRpcList(rawSpecific ?? ""),
+      ...parseRpcList(rawGlobal ?? ""),
+      ...parseRpcList(rawManifest ?? ""),
+      ArcenPayCore.getStellarSorobanRpcUrl(chainId) || "",
+    ]) {
+      if (!value || seen.has(value)) continue;
+      seen.add(value);
+      candidates.push(value);
+    }
+    return candidates;
+  }
+
+  const chainRpcs =
+    ArcenPayCore.getChain(chainId)?.rpcUrls?.default?.http ?? [];
+
   for (const value of [
     ...parseRpcList(rawSpecific ?? ""),
     ...parseRpcList(rawGlobal ?? ""),
@@ -362,7 +381,17 @@ export function getRpcUrl(chainId: number): string {
       "https://sleek-sleek-resonance.arc-testnet.quiknode.pro/9447b76a1f0e822664b55dc6858f4ba4beebc153/",
     1: "https://cloudflare-eth.com",
   };
-  return publicRpcs[chainId] ?? "";
+  const fromPublic = publicRpcs[chainId];
+  if (fromPublic) return fromPublic;
+
+  // Stellar dev fallback: the Soroban RPC URL from the registry descriptor.
+  if (ArcenPayCore.getChainFamily(chainId) !== "evm") {
+    const sorobanUrl = ArcenPayCore.getStellarSorobanRpcUrl(chainId);
+    if (sorobanUrl) return sorobanUrl;
+    return ArcenPayCore.getChainDescriptor(chainId)?.rpcUrl ?? "";
+  }
+
+  return "";
 }
 
 /**

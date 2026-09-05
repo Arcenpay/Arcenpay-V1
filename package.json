@@ -16,7 +16,7 @@
     "dev:all": "turbo run dev --ui=tui",
     "dev:stream": "turbo run dev --ui=stream --log-order=stream --log-prefix=task",
     "dev:dashboard": "turbo run dev --ui=tui --filter=@arcenpay/dashboard...",
-    "dev:docs": "turbo run dev --ui=tui --filter=@arcenpay/docs...",
+    "dev:docs": "cd apps/arcenpay-docs && mint dev",
     "dev:facilitator": "turbo run dev --ui=tui --filter=@arcenpay/facilitator...",
     "dev:backend": "turbo run dev --ui=tui --filter=@arcenpay/backend...",
     "dev:demo": "turbo run dev --ui=tui --filter=demo-dapp...",
@@ -44,19 +44,22 @@
     "@types/node": "^22.19.19",
     "next": "^16.0.10",
     "prettier": "^3.4.0",
-    "turbo": "^2.4.0",
-    "typescript": "^5.7.0"
+    "turbo": "^2.10.12",
+    "typescript": "^5.9.3"
   },
   "engines": {
     "node": ">=20.0.0"
   },
-  "overrides": {
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0"
-  },
   "packageManager": "npm@10.2.4",
+  "overrides": {
+    "@coinbase/cdp-sdk": "1.44.1"
+  },
   "dependencies": {
     "@arcjet/next": "^1.4.0",
-    "@arcjet/node": "^1.4.0"
+    "@arcjet/node": "^1.4.0",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.4",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8"
   }
 }

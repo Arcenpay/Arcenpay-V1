@@ -68,6 +68,7 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
+    "@stellar/stellar-sdk": "^16.2.0",
     "viem": "^2.21.0"
   },
   "devDependencies": {

@@ -11,6 +11,14 @@ import type {
 } from "./types";
 import { getChain } from "./chains";
 import { getContractAddresses } from "./addresses";
+import {
+  getChainDescriptor,
+  getChainFamily,
+  getStellarNetworkPassphrase,
+  getStellarSorobanRpcUrl,
+  isUnsetAddressForChain,
+  getAllRegisteredChainIds,
+} from "./chain-family";
 
 export const ENVIRONMENT_MANIFEST_VERSION = "2026-03-09.1";
 export const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
@@ -60,6 +68,11 @@ const SERVICE_ENV_KEYS: Record<ServiceKey, (chainId: number) => string[]> = {
     "NEXT_PUBLIC_ARCENPAY_RPC_URL",
     "NEXT_PUBLIC_RPC_URL",
   ],
+  sorobanRpcUrl: (chainId) => [
+    `ARCENPAY_STELLAR_RPC_URL_${chainId}`,
+    `STELLAR_RPC_URL_${chainId}`,
+    "STELLAR_RPC_URL",
+  ],
   subgraphUrl: (chainId) => [
     `ARCENPAY_SUBGRAPH_URL_${chainId}`,
     `GRAPH_URL_${chainId}`,
@@ -108,6 +121,40 @@ export function isZeroAddress(value: string | undefined | null): boolean {
 }
 
 export function getChainEnvironment(chainId: number): ChainEnvironmentManifest {
+  const family = getChainFamily(chainId);
+  const descriptor = getChainDescriptor(chainId);
+
+  // Non-EVM families (Stellar…) have no viem Chain definition — build the
+  // manifest from the CHAIN_REGISTRY descriptor directly.
+  if (family !== "evm") {
+    if (!descriptor) {
+      throw new Error(
+        `[getChainEnvironment] No chain descriptor configured for chain ${chainId}`,
+      );
+    }
+    return {
+      chainId,
+      chainName: descriptor.name,
+      isTestnet: Boolean(descriptor.testnet),
+      contracts: getContractAddresses(chainId),
+      services: {
+        rpcUrl: resolveServiceUrl(
+          chainId,
+          "rpcUrl",
+          descriptor.rpcUrl ?? "",
+        ),
+        sorobanRpcUrl:
+          (process.env[`ARCENPAY_STELLAR_RPC_URL_${chainId}`] ??
+            process.env[`STELLAR_RPC_URL_${chainId}`] ??
+            getStellarSorobanRpcUrl(chainId)) ||
+          descriptor.sorobanRpcUrl ||
+          "",
+        subgraphUrl: resolveServiceUrl(chainId, "subgraphUrl"),
+        facilitatorUrl: resolveServiceUrl(chainId, "facilitatorUrl"),
+      },
+    };
+  }
+
   const chain = getChain(chainId);
   const defaults = DEFAULT_SERVICES[chainId] || {
     rpcUrl: chain.rpcUrls.default.http[0] || "",
@@ -120,6 +167,7 @@ export function getChainEnvironment(chainId: number): ChainEnvironmentManifest {
     contracts: getContractAddresses(chainId),
     services: {
       rpcUrl: resolveServiceUrl(chainId, "rpcUrl", defaults.rpcUrl),
+      sorobanRpcUrl: "",
       subgraphUrl: resolveServiceUrl(chainId, "subgraphUrl", defaults.subgraphUrl),
       facilitatorUrl: resolveServiceUrl(
         chainId,
@@ -131,7 +179,8 @@ export function getChainEnvironment(chainId: number): ChainEnvironmentManifest {
 }
 
 export function getEnvironmentManifest(chainIds?: number[]): EnvironmentManifest {
-  const selected = chainIds && chainIds.length > 0 ? chainIds : [11155111, 84532, 8453, 5042002];
+  const selected =
+    chainIds && chainIds.length > 0 ? chainIds : getAllRegisteredChainIds();
   const chains: Record<number, ChainEnvironmentManifest> = {};
   for (const chainId of selected) {
     chains[chainId] = getChainEnvironment(chainId);
@@ -170,8 +219,8 @@ export function validateChainEnvironment(
   const requiredServices = options.requiredServices || ["rpcUrl"];
 
   const contractErrors = requiredContracts
-    .filter((key) => isZeroAddress(env.contracts[key]))
-    .map((key) => `${String(key)} is zero-address`);
+    .filter((key) => isUnsetAddressForChain(env.contracts[key], chainId))
+    .map((key) => `${String(key)} is unset`);
   if (production && contractErrors.length > 0) {
     throw new Error(
       `[validateChainEnvironment] Chain ${chainId} invalid contracts: ${contractErrors.join(", ")}`,

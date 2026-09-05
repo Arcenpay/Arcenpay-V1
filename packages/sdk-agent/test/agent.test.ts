@@ -1,19 +1,19 @@
 // ============================================================
-//  MEAPAgent — Unit Tests
+//  ArcenAgent — Unit Tests
 //  Tests constructor, address generation, EIP-712 constants
 // ============================================================
 
 import { describe, it, expect, vi } from "vitest";
-import { MEAPAgent } from "../src/agent";
+import { ArcenAgent } from "../src/agent";
 
 // Use a deterministic test private key (DO NOT use in production)
 const TEST_PRIVATE_KEY =
     "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
 
-describe("MEAPAgent", () => {
+describe("ArcenAgent", () => {
     describe("constructor", () => {
         it("should initialize with valid config", () => {
-            const agent = new MEAPAgent({
+            const agent = new ArcenAgent({
                 privateKey: TEST_PRIVATE_KEY,
                 rpcUrl: "http://localhost:8545",
                 chainId: 11155111,
@@ -23,7 +23,7 @@ describe("MEAPAgent", () => {
         });
 
         it("should accept maxAutoApprove config", () => {
-            const agent = new MEAPAgent({
+            const agent = new ArcenAgent({
                 privateKey: TEST_PRIVATE_KEY,
                 rpcUrl: "http://localhost:8545",
                 chainId: 11155111,
@@ -34,7 +34,7 @@ describe("MEAPAgent", () => {
         });
 
         it("should work with different chain IDs", () => {
-            const agent = new MEAPAgent({
+            const agent = new ArcenAgent({
                 privateKey: TEST_PRIVATE_KEY,
                 rpcUrl: "https://sepolia.base.org",
                 chainId: 84532,
@@ -46,7 +46,7 @@ describe("MEAPAgent", () => {
 
     describe("address", () => {
         it("should return a valid Ethereum address", () => {
-            const agent = new MEAPAgent({
+            const agent = new ArcenAgent({
                 privateKey: TEST_PRIVATE_KEY,
                 rpcUrl: "http://localhost:8545",
                 chainId: 11155111,
@@ -58,13 +58,13 @@ describe("MEAPAgent", () => {
         });
 
         it("should be deterministic for the same private key", () => {
-            const agent1 = new MEAPAgent({
+            const agent1 = new ArcenAgent({
                 privateKey: TEST_PRIVATE_KEY,
                 rpcUrl: "http://localhost:8545",
                 chainId: 11155111,
             });
 
-            const agent2 = new MEAPAgent({
+            const agent2 = new ArcenAgent({
                 privateKey: TEST_PRIVATE_KEY,
                 rpcUrl: "http://localhost:8545",
                 chainId: 11155111,
@@ -74,7 +74,7 @@ describe("MEAPAgent", () => {
         });
 
         it("should produce the known address for Hardhat account #0", () => {
-            const agent = new MEAPAgent({
+            const agent = new ArcenAgent({
                 privateKey: TEST_PRIVATE_KEY,
                 rpcUrl: "http://localhost:8545",
                 chainId: 11155111,
@@ -89,7 +89,7 @@ describe("MEAPAgent", () => {
 
     describe("fetch", () => {
         it("should make a normal request when no x402 challenge is received", async () => {
-            const agent = new MEAPAgent({
+            const agent = new ArcenAgent({
                 privateKey: TEST_PRIVATE_KEY,
                 rpcUrl: "http://localhost:8545",
                 chainId: 11155111,
