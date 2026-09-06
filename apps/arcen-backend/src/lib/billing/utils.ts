@@ -9,9 +9,12 @@ export function normalizeWallet(value?: string | null): string | null {
   if (typeof value !== "string") return null;
   const trimmed = value.trim();
   if (!trimmed) return null;
-  // Stellar addresses are case-sensitive (base32); preserve mixed-case.
-  if (trimmed.startsWith("G") && trimmed.length === 56) return trimmed;
-  return trimmed.toLowerCase();
+  // EVM addresses (0x...) are hex and case-insensitive; normalize to lowercase.
+  if (trimmed.startsWith("0x") || trimmed.startsWith("0X")) {
+    return trimmed.toLowerCase();
+  }
+  // Non-EVM addresses (e.g. Stellar G... account or C... contract base32) are case-sensitive; preserve case.
+  return trimmed;
 }
 
 export function readString(value: unknown): string | null {

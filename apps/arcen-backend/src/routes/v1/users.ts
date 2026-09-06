@@ -9,6 +9,7 @@ import type { Context } from "hono";
 import { requireAnyAuth, isAnyAuthError } from "../../lib/auth/require-any-auth.js";
 import { db } from "../../db.js";
 import { Prisma } from "../../generated/client/client.js";
+import { normalizeWallet } from "../../lib/billing/utils.js";
 
 export async function GET(c: Context) {
   const ctx = await requireAnyAuth(c);
@@ -143,7 +144,7 @@ export async function POST(c: Context) {
     return c.json({ error: "Company not found" }, 404 as any);
   }
 
-  const walletAddress = body.wallet?.toLowerCase();
+  const walletAddress = normalizeWallet(body.wallet) ?? undefined;
   const email = body.email?.trim().toLowerCase();
 
   // Check for duplicates
