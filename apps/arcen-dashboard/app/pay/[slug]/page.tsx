@@ -27,6 +27,10 @@ import {
   Shield,
   Clock,
   RefreshCw,
+  Bot,
+  Code2,
+  Copy,
+  Check,
 } from "lucide-react";
 import { Web3Icon } from "@/components/web3-icon";
 import { DEFAULT_CHAIN_ID, getChainLabel } from "@/lib/default-chain";
@@ -95,6 +99,7 @@ type PublicCheckoutSession = {
     description?: string | null;
     slug: string;
     kind: string;
+    isAgentic?: boolean;
     metadata?: Record<string, unknown> | null;
     company?: {
       id: string;
@@ -231,6 +236,160 @@ function Skeleton() {
   );
 }
 
+function AgenticPaymentLinkPanel({
+  slug,
+  amount,
+  currency,
+  chainId,
+  origin,
+}: {
+  slug: string;
+  amount: string;
+  currency: string;
+  chainId: number;
+  origin: string;
+}) {
+  const [activeTab, setActiveTab] = useState<"sdk" | "curl" | "mcp">("sdk");
+  const [copied, setCopied] = useState(false);
+  const specUrl = `${origin}/api/v1/public/payment-links/${slug}/spec`;
+  const payUrl = `${origin}/pay/${slug}`;
+
+  const sdkCode = `import { ArcenAgent } from "@arcenpay/agent";
+
+const agent = new ArcenAgent({
+  privateKey: process.env.AGENT_PRIVATE_KEY!,
+  chainId: ${chainId},
+});
+
+// Autonomous payment: discovers requirements, enforces limits & transfers on-chain
+const receipt = await agent.payPaymentLink("${payUrl}");
+console.log("Payment settled:", receipt.txHash);`;
+
+  const curlCode = `# 1. Discover machine-readable specification
+curl -s -H "Accept: application/json" \\
+  "${specUrl}"
+
+# 2. Or create a checkout session directly
+curl -s -X POST "${origin}/api/v1/public/payment-links/${slug}/session" \\
+  -H "Content-Type: application/json" \\
+  -d '{"customerWallet": "0xYourWalletAddress", "isAgentic": true}'`;
+
+  const mcpCode = `{
+  "tool": "arcenpay_pay_payment_link",
+  "arguments": {
+    "urlOrSlug": "${payUrl}",
+    "maxPrice": "${amount}",
+    "customerName": "Autonomous AI Agent"
+  }
+}`;
+
+  const currentCode =
+    activeTab === "sdk" ? sdkCode : activeTab === "curl" ? curlCode : mcpCode;
+
+  const handleCopy = () => {
+    void navigator.clipboard.writeText(currentCode);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <div className="mt-8 overflow-hidden rounded-2xl border border-[#e2e4e9] bg-white shadow-[0_4px_24px_-8px_rgba(15,23,42,0.06)]">
+      <div className="border-b border-[#eceef2] bg-[#fafbfc] px-5 py-3.5 sm:px-6">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5">
+            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#111318] text-white shadow-sm">
+              <Bot className="h-4 w-4" />
+            </span>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-semibold text-[#12161d]">
+                  Agentic Payment Link
+                </span>
+                <span className="rounded-md border border-[#e2e4e9] bg-white px-1.5 py-0.2 text-[10px] font-medium text-[#5f6470]">
+                  Autonomous
+                </span>
+              </div>
+              <p className="text-[11px] text-[#7a7f89]">
+                Machine-readable specification &amp; autonomous agent execution
+              </p>
+            </div>
+          </div>
+          <a
+            href={specUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-[#d8dbe2] bg-white px-2.5 py-1 text-xs font-medium text-[#1f232b] transition hover:bg-[#f4f5f7] hover:border-[#c5c8d1]"
+          >
+            <Code2 className="h-3.5 w-3.5" />
+            <span>Open Spec JSON</span>
+          </a>
+        </div>
+      </div>
+
+      <div className="p-5 sm:p-6">
+        <div className="flex items-center justify-between border-b border-[#eceef2] pb-3">
+          <div className="flex items-center gap-1 rounded-lg bg-[#f0f1f4] p-0.5">
+            <button
+              type="button"
+              onClick={() => setActiveTab("sdk")}
+              className={`rounded-md px-2.5 py-1 text-xs font-medium transition ${
+                activeTab === "sdk"
+                  ? "bg-white text-[#111318] shadow-sm"
+                  : "text-[#6f7480] hover:text-[#111318]"
+              }`}
+            >
+              TypeScript SDK
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab("mcp")}
+              className={`rounded-md px-2.5 py-1 text-xs font-medium transition ${
+                activeTab === "mcp"
+                  ? "bg-white text-[#111318] shadow-sm"
+                  : "text-[#6f7480] hover:text-[#111318]"
+              }`}
+            >
+              MCP Tool Call
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab("curl")}
+              className={`rounded-md px-2.5 py-1 text-xs font-medium transition ${
+                activeTab === "curl"
+                  ? "bg-white text-[#111318] shadow-sm"
+                  : "text-[#6f7480] hover:text-[#111318]"
+              }`}
+            >
+              cURL
+            </button>
+          </div>
+          <button
+            type="button"
+            onClick={handleCopy}
+            className="inline-flex items-center gap-1.5 rounded-md border border-[#d8dbe2] bg-white px-2.5 py-1 text-xs font-medium text-[#1f232b] transition hover:bg-[#f4f5f7]"
+          >
+            {copied ? (
+              <>
+                <Check className="h-3.5 w-3.5 text-emerald-600" />
+                <span className="text-emerald-600">Copied</span>
+              </>
+            ) : (
+              <>
+                <Copy className="h-3.5 w-3.5 text-[#5f6470]" />
+                <span>Copy Code</span>
+              </>
+            )}
+          </button>
+        </div>
+
+        <div className="mt-3.5 overflow-x-auto rounded-xl border border-[#23272f] bg-[#0c0e12] p-4 text-xs font-mono text-[#e1e4ea] shadow-inner">
+          <pre className="whitespace-pre leading-relaxed">{currentCode}</pre>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function HostedPaymentPage() {
   return (
     <Suspense
@@ -345,6 +504,13 @@ function CheckoutContent() {
     accentColor.length === 7 ? `${accentColor}1a` : accentColor;
   const accentTextColor = getAccentTextColor(accentColor);
   const isStellar = Boolean(session && session.chainFamily === "STELLAR");
+  const isAgentic = Boolean(
+    session?.paymentLink &&
+      (session.paymentLink.isAgentic ||
+        (session.paymentLink.metadata &&
+          typeof session.paymentLink.metadata === "object" &&
+          (session.paymentLink.metadata as Record<string, unknown>).isAgentic)),
+  );
   const isCorrectNetwork =
     !session || isStellar || connectedChainId === session.chainId;
   const isSelfPayment = Boolean(session) &&
@@ -964,6 +1130,22 @@ function CheckoutContent() {
                   </p>
                 </div>
 
+                {isAgentic && (
+                  <div className="mt-4 flex items-center justify-between gap-3 rounded-xl border border-[#e3e5eb] bg-white px-4 py-2.5 shadow-[0_1px_3px_rgba(0,0,0,0.03)]">
+                    <div className="flex items-center gap-2.5">
+                      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-[#111318] text-white">
+                        <Bot className="h-3.5 w-3.5" />
+                      </span>
+                      <span className="text-xs text-[#2b313a]">
+                        <strong className="font-semibold text-[#12161d]">Agent-Ready Link:</strong> Machine-readable checkout supporting autonomous AI agents via x402 &amp; MCP.
+                      </span>
+                    </div>
+                    <span className="hidden sm:inline-flex rounded-md border border-[#e3e5eb] bg-[#f7f8fa] px-2 py-0.5 text-[10px] font-medium tracking-wide text-[#5f6470]">
+                      x402 / MCP
+                    </span>
+                  </div>
+                )}
+
                 <div className="mt-10">
                   <p className="text-xl font-semibold text-[#1f232b]">
                     Order Summary
@@ -1041,6 +1223,16 @@ function CheckoutContent() {
                     </div>
                   ) : null}
                 </div>
+
+                {isAgentic && (
+                  <AgenticPaymentLinkPanel
+                    slug={params.slug as string}
+                    amount={amountFormatted}
+                    currency={session.currency}
+                    chainId={session.chainId}
+                    origin={typeof window !== "undefined" ? window.location.origin : ""}
+                  />
+                )}
               </section>
 
               <section className="px-6 py-8 sm:px-10 lg:px-12 lg:py-10">

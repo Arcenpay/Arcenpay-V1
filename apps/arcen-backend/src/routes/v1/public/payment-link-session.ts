@@ -1,6 +1,9 @@
 import type { Context } from "hono";
 import { z } from "zod";
-import { getPaymentLinkBySlug } from "../../../lib/payments/payment-links.js";
+import {
+  getPaymentLinkBySlug,
+  toAgenticSpecification,
+} from "../../../lib/payments/payment-links.js";
 import { createCheckoutSession } from "../../../lib/payments/checkout-sessions.js";
 
 const bodySchema = z.object({
@@ -8,7 +11,23 @@ const bodySchema = z.object({
   customerWallet: z.string().trim().optional(),
   customerName: z.string().trim().optional(),
   companyId: z.string().trim().optional(),
+  isAgentic: z.boolean().optional(),
 });
+
+export async function getPublicPaymentLinkSpec(c: Context) {
+  const slug = c.req.param("slug");
+  const paymentLink = await getPaymentLinkBySlug(slug!);
+  if (!paymentLink || paymentLink.status !== "ACTIVE") {
+    return c.json({ error: "Payment link unavailable" }, 404 as any);
+  }
+  if (paymentLink.expiresAt && paymentLink.expiresAt.getTime() <= Date.now()) {
+    return c.json({ error: "Payment link expired" }, 410 as any);
+  }
+
+  const origin = new URL(c.req.url).origin;
+  const spec = toAgenticSpecification(paymentLink, origin);
+  return c.json({ spec, paymentLink: spec });
+}
 
 export async function createPaymentLinkSession(c: Context) {
   const slug = c.req.param("slug");
@@ -25,6 +44,15 @@ export async function createPaymentLinkSession(c: Context) {
   if (!parsed.success) {
     return c.json({ error: "Invalid request", details: parsed.error.flatten().fieldErrors }, 400 as any);
   }
+
+  const isAgentic =
+    parsed.data.isAgentic ||
+    Boolean(
+      paymentLink.metadata &&
+        typeof paymentLink.metadata === "object" &&
+        !Array.isArray(paymentLink.metadata) &&
+        (paymentLink.metadata as Record<string, unknown>).isAgentic,
+    );
 
   const checkoutSession = await createCheckoutSession({
     teamId: paymentLink.teamId,
@@ -55,7 +83,8 @@ export async function createPaymentLinkSession(c: Context) {
     cancelUrl: paymentLink.cancelUrl ?? undefined,
     expiresAt: paymentLink.expiresAt ?? undefined,
     metadata: {
-      source: "public_pay_page",
+      source: isAgentic ? "agentic_checkout" : "public_pay_page",
+      isAgentic,
       paymentLinkSlug: paymentLink.slug,
     },
   });

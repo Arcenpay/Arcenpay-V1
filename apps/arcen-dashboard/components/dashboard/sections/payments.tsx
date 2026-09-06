@@ -28,12 +28,15 @@ import {
   ShieldCheck,
   Globe,
   Paintbrush,
+  Bot,
+  Code2,
 } from "lucide-react";
 import { SkeletonCard, Skeleton, SkeletonTable } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import {
   Select,
   SelectContent,
@@ -80,6 +83,8 @@ type PaymentLinkRow = {
   acceptedToken: string;
   chainId: number;
   checkoutUrl: string;
+  isAgentic?: boolean;
+  agenticSpecUrl?: string;
   expiresAt?: string | null;
   createdAt: string;
   description?: string | null;
@@ -249,8 +254,10 @@ export function PaymentsSection() {
     buttonLabel: "",
     accentColor: "",
     logoUrl: "",
+    isAgentic: false,
   });
 
+  const [selectedAgenticLink, setSelectedAgenticLink] = useState<PaymentLinkRow | null>(null);
   const [editDialog, setEditDialog] = useState<PaymentLinkRow | null>(null);
   const [editForm, setEditForm] = useState({
     name: "",
@@ -394,15 +401,19 @@ export function PaymentsSection() {
           kind: "CUSTOM",
           name: form.name,
           description: form.description || undefined,
-          metadata: mergePaymentLinkCheckoutAppearance(undefined, {
-            title: form.checkoutTitle,
-            description: form.checkoutDescription,
-            brandName: form.brandName,
-            recipientName: form.recipientName,
-            buttonLabel: form.buttonLabel,
-            accentColor: form.accentColor,
-            logoUrl: form.logoUrl,
-          }),
+          metadata: {
+            ...mergePaymentLinkCheckoutAppearance(undefined, {
+              title: form.checkoutTitle,
+              description: form.checkoutDescription,
+              brandName: form.brandName,
+              recipientName: form.recipientName,
+              buttonLabel: form.buttonLabel,
+              accentColor: form.accentColor,
+              logoUrl: form.logoUrl,
+            }),
+            isAgentic: form.isAgentic,
+          },
+          isAgentic: form.isAgentic,
           amount: Number(form.amount),
           acceptedToken: runtimeUsdc,
           recipientWallet: form.recipientWallet,
@@ -433,6 +444,7 @@ export function PaymentsSection() {
         buttonLabel: "",
         accentColor: "",
         logoUrl: "",
+        isAgentic: false,
       });
       await load();
     } catch (error) {
@@ -682,6 +694,25 @@ export function PaymentsSection() {
                 <p className="text-xs text-muted-foreground">
                   This is the wallet that receives the USDC payment.
                 </p>
+              </div>
+
+              <div className="flex items-center justify-between rounded-xl border border-border bg-card/60 p-3.5 transition-colors hover:bg-card">
+                <div className="space-y-0.5">
+                  <div className="flex items-center gap-2 text-xs font-medium text-foreground">
+                    <Bot className="h-4 w-4 text-muted-foreground" />
+                    <span>Agentic Payment Link</span>
+                    <span className="rounded-full bg-secondary px-1.5 py-0.5 text-[10px] text-muted-foreground font-mono">
+                      Autonomous
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground">
+                    Enables machine-readable JSON specs and MCP tool execution for AI agents.
+                  </p>
+                </div>
+                <Switch
+                  checked={form.isAgentic}
+                  onCheckedChange={(checked) => setForm((c) => ({ ...c, isAgentic: checked }))}
+                />
               </div>
             </CollapsibleSection>
 
@@ -1008,6 +1039,20 @@ export function PaymentsSection() {
                               Custom checkout
                             </Badge>
                           ) : null}
+                          {Boolean(
+                            link.isAgentic ||
+                              (link.metadata &&
+                                typeof link.metadata === "object" &&
+                                (link.metadata as Record<string, unknown>).isAgentic),
+                          ) ? (
+                            <Badge
+                              variant="outline"
+                              className="border-border bg-secondary/50 text-foreground text-[10px] px-1.5 flex items-center gap-1 font-medium"
+                            >
+                              <Bot className="h-3 w-3 text-muted-foreground" />
+                              Agentic
+                            </Badge>
+                          ) : null}
                         </div>
                         <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
                           <span>
@@ -1035,6 +1080,22 @@ export function PaymentsSection() {
                         )}
                       </div>
                       <div className="flex shrink-0 items-center gap-1">
+                        {Boolean(
+                          link.isAgentic ||
+                            (link.metadata &&
+                              typeof link.metadata === "object" &&
+                              (link.metadata as Record<string, unknown>).isAgentic),
+                        ) && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-secondary/80"
+                            title="Agent Integration (MCP / SDK)"
+                            onClick={() => setSelectedAgenticLink(link)}
+                          >
+                            <Bot className="h-3.5 w-3.5" />
+                          </Button>
+                        )}
                         <CopyButton value={link.checkoutUrl} label="" />
                         <Button
                           variant="ghost"
@@ -1440,6 +1501,163 @@ export function PaymentsSection() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <AgentIntegrationModal
+        link={selectedAgenticLink}
+        onClose={() => setSelectedAgenticLink(null)}
+      />
     </div>
+  );
+}
+
+function AgentIntegrationModal({
+  link,
+  onClose,
+}: {
+  link: PaymentLinkRow | null;
+  onClose: () => void;
+}) {
+  const [activeTab, setActiveTab] = useState<"sdk" | "mcp" | "curl">("sdk");
+  const [copied, setCopied] = useState(false);
+
+  if (!link) return null;
+
+  const origin = typeof window !== "undefined" ? window.location.origin : "";
+  const specUrl = link.agenticSpecUrl || `${origin}/api/v1/public/payment-links/${link.slug}/spec`;
+  const payUrl = link.checkoutUrl || `${origin}/pay/${link.slug}`;
+
+  const sdkCode = `import { ArcenAgent } from "@arcenpay/agent";
+
+const agent = new ArcenAgent({
+  privateKey: process.env.AGENT_PRIVATE_KEY!,
+  chainId: ${link.chainId},
+});
+
+// Autonomous payment: discovers requirements, enforces limits & executes payment
+const receipt = await agent.payPaymentLink("${payUrl}");
+console.log("Payment settled:", receipt.txHash);`;
+
+  const mcpCode = `{
+  "tool": "arcenpay_pay_payment_link",
+  "arguments": {
+    "urlOrSlug": "${payUrl}",
+    "maxPrice": "${Number(link.amount).toFixed(2)}",
+    "customerName": "Autonomous AI Agent"
+  }
+}`;
+
+  const curlCode = `# Inspect machine-readable specification (JSON)
+curl -s -H "Accept: application/json" \\
+  "${specUrl}"
+
+# Create checkout session directly
+curl -s -X POST "${origin}/api/v1/public/payment-links/${link.slug}/session" \\
+  -H "Content-Type: application/json" \\
+  -d '{"customerWallet": "0xYourWalletAddress", "isAgentic": true}'`;
+
+  const currentCode =
+    activeTab === "sdk" ? sdkCode : activeTab === "mcp" ? mcpCode : curlCode;
+
+  const handleCopy = () => {
+    void navigator.clipboard.writeText(currentCode);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <Dialog open={!!link} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <div className="flex items-center gap-2.5">
+            <span className="flex h-7 w-7 items-center justify-center rounded-md bg-foreground text-background shadow-sm">
+              <Bot className="h-4 w-4" />
+            </span>
+            <div>
+              <DialogTitle className="text-base font-semibold">
+                Agent Integration — {link.name}
+              </DialogTitle>
+              <DialogDescription className="text-xs">
+                Allow AI agents to autonomously discover and pay for this link using x402 &amp; MCP.
+              </DialogDescription>
+            </div>
+          </div>
+        </DialogHeader>
+
+        <div className="space-y-3 pt-2">
+          <div className="flex items-center justify-between rounded-lg border border-border bg-secondary/30 p-3 text-xs">
+            <div className="min-w-0 flex-1 pr-2 truncate">
+              <span className="font-semibold text-foreground">Machine Spec URL: </span>
+              <span className="font-mono text-muted-foreground">{specUrl}</span>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 text-xs shrink-0"
+              onClick={() => void navigator.clipboard.writeText(specUrl)}
+            >
+              <Copy className="mr-1 h-3 w-3" />
+              Copy URL
+            </Button>
+          </div>
+
+          <div className="flex items-center justify-between border-b border-border pb-2">
+            <div className="flex items-center gap-1.5">
+              <Button
+                variant={activeTab === "sdk" ? "default" : "ghost"}
+                size="sm"
+                className="h-7 text-xs"
+                onClick={() => setActiveTab("sdk")}
+              >
+                TypeScript SDK
+              </Button>
+              <Button
+                variant={activeTab === "mcp" ? "default" : "ghost"}
+                size="sm"
+                className="h-7 text-xs"
+                onClick={() => setActiveTab("mcp")}
+              >
+                MCP Schema
+              </Button>
+              <Button
+                variant={activeTab === "curl" ? "default" : "ghost"}
+                size="sm"
+                className="h-7 text-xs"
+                onClick={() => setActiveTab("curl")}
+              >
+                cURL
+              </Button>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 text-xs"
+              onClick={handleCopy}
+            >
+              {copied ? (
+                <>
+                  <Check className="mr-1 h-3 w-3 text-emerald-500" />
+                  Copied
+                </>
+              ) : (
+                <>
+                  <Copy className="mr-1 h-3 w-3" />
+                  Copy Code
+                </>
+              )}
+            </Button>
+          </div>
+
+          <div className="overflow-x-auto rounded-xl border border-border/70 bg-zinc-950 p-4 text-xs font-mono text-zinc-100 shadow-inner">
+            <pre className="whitespace-pre leading-relaxed">{currentCode}</pre>
+          </div>
+        </div>
+
+        <DialogFooter className="pt-2">
+          <Button variant="outline" size="sm" onClick={onClose}>
+            Close
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

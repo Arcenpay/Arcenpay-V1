@@ -766,14 +766,18 @@ export interface AgentPaymentReceipt {
 }
 
 export interface CreateAgentPaymentLinkParams {
-  name: string;
+  name?: string;
+  title?: string;
   amount: number | string;
-  acceptedToken: string;
+  acceptedToken?: string;
   chainId?: number;
   recipientWallet?: string;
   currency?: string;
   description?: string;
   expiresAt?: Date | string;
+  expiresInMinutes?: number;
+  successUrl?: string;
+  cancelUrl?: string;
   metadata?: Record<string, unknown>;
   apiKey?: string;
 }
@@ -782,4 +786,5 @@ export interface PayPaymentLinkOptions {
   customerName?: string;
   customerEmail?: string;
   maxPrice?: string | bigint;
+  autoApprove?: boolean;
 }

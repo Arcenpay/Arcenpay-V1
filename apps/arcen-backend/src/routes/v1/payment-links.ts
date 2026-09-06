@@ -27,6 +27,8 @@ const createSchema = z
     invoiceId: z.string().trim().optional(),
     amount: z.coerce.number().positive().optional(),
     acceptedToken: z.string().trim().optional(),
+    chainId: z.coerce.number().int().positive().optional(),
+    isAgentic: z.boolean().optional(),
     recipientWallet: z.string().trim().min(1),
     successUrl: z.string().url().optional(),
     cancelUrl: z.string().url().optional(),
@@ -57,10 +59,18 @@ const createSchema = z
     }
   });
 
-function withCheckoutUrl<T extends { slug: string }>(paymentLink: T) {
+function withCheckoutUrl<T extends { slug: string; metadata?: any }>(paymentLink: T) {
+  const isAgentic = Boolean(
+    paymentLink.metadata &&
+      typeof paymentLink.metadata === "object" &&
+      !Array.isArray(paymentLink.metadata) &&
+      (paymentLink.metadata as Record<string, unknown>).isAgentic,
+  );
   return {
     ...paymentLink,
+    isAgentic,
     checkoutUrl: `${APP_URL}/pay/${paymentLink.slug}`,
+    agenticSpecUrl: `${APP_URL}/api/v1/public/payment-links/${paymentLink.slug}/spec`,
   };
 }
 
@@ -121,7 +131,7 @@ export async function POST(c: Context) {
   let acceptedToken = parsed.data.acceptedToken;
   let companyId = parsed.data.companyId ?? null;
   let resolvedEnvironmentId = activeEnvironment?.id ?? null;
-  let resolvedChainId = activeEnvironment?.chainId ?? RUNTIME_CHAIN_ID;
+  let resolvedChainId = parsed.data.chainId ?? activeEnvironment?.chainId ?? RUNTIME_CHAIN_ID;
 
   if (parsed.data.catalogAddOnId) {
     const addOn = await db.catalogAddOn.findFirst({
@@ -249,6 +259,7 @@ export async function POST(c: Context) {
     expiresAt: parsed.data.expiresAt
       ? new Date(parsed.data.expiresAt)
       : null,
+    isAgentic: parsed.data.isAgentic,
     metadata: {
       ...(parsed.data.metadata ?? {}),
       source: "dashboard",

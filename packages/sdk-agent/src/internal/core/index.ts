@@ -72,6 +72,10 @@ export type {
   EntitlementResult,
   ConsumeEntitlementResult,
   IdentifyResult,
+  AgenticPaymentLinkSpec,
+  AgentPaymentReceipt,
+  CreateAgentPaymentLinkParams,
+  PayPaymentLinkOptions,
 } from "./types";
 
 // Chain configs
