@@ -27,27 +27,19 @@ import { useDashboardSession } from "@/hooks/use-dashboard-session";
 import { OnboardingShell } from "@/components/onboarding/onboarding-shell";
 import type { ChainFamily } from "@arcenpay/internal-core";
 
-const selectedFamily: ChainFamily | null =
-  typeof window !== "undefined" ? getOnboardingChainFamily() : null;
-
 // Chain picker filtered to only the selected family — EVM users see
-// Base/Arc/Sepolia; Stellar users see Stellar Testnet/Mainnet/Futurenet.
-function buildChainOptions(mode: EnvironmentMode) {
+// Base/BOT/Arc/Sepolia; Stellar users see Stellar Testnet/Mainnet/Futurenet.
+function buildChainOptions(mode: EnvironmentMode, family: ChainFamily | null) {
   return getChainIdsForEnvironment(mode)
     .filter((chainId) => {
-      if (!selectedFamily) return true; // fallback: show all
-      return getChainFamily(chainId) === selectedFamily;
+      if (!family) return true; // fallback: show all
+      return getChainFamily(chainId) === family;
     })
     .map((chainId) => ({
       chainId,
       label: getChainLabel(chainId),
     }));
 }
-
-const CHAINS: Record<EnvironmentMode, Array<{ chainId: number; label: string }>> = {
-  DEVELOPMENT: buildChainOptions("DEVELOPMENT"),
-  PRODUCTION: buildChainOptions("PRODUCTION"),
-};
 
 function defaultChainIdForFamily(
   mode: EnvironmentMode,
@@ -60,11 +52,10 @@ function defaultChainIdForFamily(
 export default function EnvironmentOnboardingPage() {
   const router = useRouter();
   const { data, isLoading, refresh } = useDashboardSession();
+  const [selectedFamily, setSelectedFamily] = useState<ChainFamily | null>(null);
   const [name, setName] = useState("");
   const [mode, setMode] = useState<EnvironmentMode>("DEVELOPMENT");
-  const [chainId, setChainId] = useState<number>(
-    defaultChainIdForFamily("DEVELOPMENT", selectedFamily),
-  );
+  const [chainId, setChainId] = useState<number>(BASE_SEPOLIA_CHAIN_ID);
   const [productionEnabled, setProductionEnabled] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -72,7 +63,16 @@ export default function EnvironmentOnboardingPage() {
   const canManage =
     data?.currentTeam?.role === "OWNER" || data?.currentTeam?.role === "ADMIN";
 
-  const chainOptions = useMemo(() => CHAINS[mode], [mode]);
+  useEffect(() => {
+    const family = getOnboardingChainFamily();
+    setSelectedFamily(family);
+    setChainId(defaultChainIdForFamily(mode, family));
+  }, []);
+
+  const chainOptions = useMemo(
+    () => buildChainOptions(mode, selectedFamily),
+    [mode, selectedFamily],
+  );
   const existingEnvironments = data?.environments ?? [];
   const hasExistingEnvironments = existingEnvironments.length > 0;
 
@@ -80,7 +80,7 @@ export default function EnvironmentOnboardingPage() {
     setChainId(
       chainOptions[0]?.chainId ?? defaultChainIdForFamily(mode, selectedFamily),
     );
-  }, [chainOptions, mode]);
+  }, [chainOptions, mode, selectedFamily]);
 
   useEffect(() => {
     fetch("/api/environments", { cache: "no-store" })

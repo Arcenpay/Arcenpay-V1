@@ -202,6 +202,26 @@ export const CHAIN_REGISTRY: Record<number, ChainDescriptor> = {
     blockExplorerUrl: "https://testnet.arcscan.app",
     nativeCurrencySymbol: "USDC",
   },
+  677: {
+    chainId: 677,
+    name: "BOT Chain",
+    family: "evm",
+    testnet: false,
+    networkPassphrase: null,
+    rpcUrl: "https://rpc.botchain.ai",
+    blockExplorerUrl: "https://scan.botchain.ai",
+    nativeCurrencySymbol: "BOT",
+  },
+  968: {
+    chainId: 968,
+    name: "BOT Chain Testnet",
+    family: "evm",
+    testnet: true,
+    networkPassphrase: null,
+    rpcUrl: "https://rpc.bohr.life",
+    blockExplorerUrl: "https://scan.bohr.life",
+    nativeCurrencySymbol: "BOT",
+  },
 
   // ── Stellar ──
   // Network passphrases per https://developers.stellar.org/docs/networks.

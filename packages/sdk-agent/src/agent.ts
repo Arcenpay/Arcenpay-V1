@@ -18,7 +18,7 @@ import {
 } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 import { sepolia, baseSepolia, base } from 'viem/chains';
-import { arcTestnet, X402_VERSION, X402_SCHEME, SessionVaultABI, getContractAddresses, getTokenAddress, isStellarChainId, getChainDescriptor, getStellarNetworkPassphrase, getStellarSorobanRpcUrl, normalizeX402AmountToDecimal } from './internal/core';
+import { arcTestnet, botMainnet, botTestnet, X402_VERSION, X402_SCHEME, SessionVaultABI, getContractAddresses, getTokenAddress, isStellarChainId, getChainDescriptor, getStellarNetworkPassphrase, getStellarSorobanRpcUrl, normalizeX402AmountToDecimal } from './internal/core';
 import type { X402Response, X402PaymentHeader, AutoTopUpConfig, AutoTopUpMode, DispatchConfig, DispatchProvider, DispatchProviderType, TopUpRequest, PersistentAgentState, PersistentStore } from './internal/core';
 
 // ─── Re-exported types ───────────────────────────────────────────
@@ -95,6 +95,8 @@ const CHAIN_MAP: Record<number, Chain> = {
   84532: baseSepolia,
   8453: base,
   5042002: arcTestnet,
+  677: botMainnet,
+  968: botTestnet,
 };
 
 const ERC20_APPROVE_ABI = [{

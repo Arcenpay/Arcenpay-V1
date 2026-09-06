@@ -202,10 +202,12 @@ export const TOKENS = {
   // with the team whether USDT is the accepted settlement asset for this
   // chain before enabling billing here — do not assume USDC parity.
   677: {
+    USDC: { address: '0xaBabc7Ddc03e501d190C676BF3d92ef0e6e87a3C' as const, decimals: 6 },
     USDT: { address: '0xaBabc7Ddc03e501d190C676BF3d92ef0e6e87a3C' as const, decimals: 6 },
   },
   // BOT Chain Testnet — bridged USDT per the same bridge docs.
   968: {
+    USDC: { address: '0x75edC9335175Fc0552D51D48439F229c10420fe3' as const, decimals: 6 },
     USDT: { address: '0x75edC9335175Fc0552D51D48439F229c10420fe3' as const, decimals: 6 },
   },
   // Stellar Mainnet — Circle USDC (SAC issuer account). Address is the G…

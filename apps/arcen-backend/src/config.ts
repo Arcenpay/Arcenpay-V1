@@ -379,6 +379,8 @@ export function getRpcUrl(chainId: number): string {
     // Arc Testnet: use QuikNode paid endpoint as dev fallback (higher rate limits)
     5042002:
       "https://sleek-sleek-resonance.arc-testnet.quiknode.pro/9447b76a1f0e822664b55dc6858f4ba4beebc153/",
+    677: "https://rpc.botchain.ai",
+    968: "https://rpc.bohr.life",
     1: "https://cloudflare-eth.com",
   };
   const fromPublic = publicRpcs[chainId];

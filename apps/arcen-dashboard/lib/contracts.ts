@@ -25,6 +25,8 @@ import {
 import {
   BASE_SEPOLIA_CHAIN_ID,
   ARC_TESTNET_CHAIN_ID,
+  BOT_TESTNET_CHAIN_ID,
+  BOT_MAINNET_CHAIN_ID,
   BASE_MAINNET_CHAIN_ID,
   DEFAULT_CHAIN_ID,
   getChainLabel,
@@ -51,6 +53,8 @@ function resolveUsdcOverride(chainId: number): string | null {
     84532: process.env.NEXT_PUBLIC_USDC_ADDRESS_84532,
     8453: process.env.NEXT_PUBLIC_USDC_ADDRESS_8453,
     5042002: process.env.NEXT_PUBLIC_USDC_ADDRESS_5042002,
+    677: process.env.NEXT_PUBLIC_USDC_ADDRESS_677,
+    968: process.env.NEXT_PUBLIC_USDC_ADDRESS_968,
     9000000: process.env.NEXT_PUBLIC_USDC_ADDRESS_9000000,
     9000001: process.env.NEXT_PUBLIC_USDC_ADDRESS_9000001,
     9000002: process.env.NEXT_PUBLIC_USDC_ADDRESS_9000002,
@@ -104,6 +108,11 @@ const TESTNET_CHAIN_LIST: Array<{
     tag: "testnet",
   },
   {
+    chainId: BOT_TESTNET_CHAIN_ID,
+    label: getChainLabel(BOT_TESTNET_CHAIN_ID),
+    tag: "testnet",
+  },
+  {
     chainId: STELLAR_TESTNET_CHAIN_ID,
     label: getChainLabel(STELLAR_TESTNET_CHAIN_ID),
     tag: "testnet",
@@ -123,6 +132,11 @@ const MAINNET_CHAIN_LIST: Array<{
   {
     chainId: BASE_MAINNET_CHAIN_ID,
     label: getChainLabel(BASE_MAINNET_CHAIN_ID),
+    tag: "mainnet",
+  },
+  {
+    chainId: BOT_MAINNET_CHAIN_ID,
+    label: getChainLabel(BOT_MAINNET_CHAIN_ID),
     tag: "mainnet",
   },
   {

@@ -36,7 +36,7 @@ interface ChainOption {
 }
 
 const CHAIN_FAMILIES: Array<{ value: ChainFamily; label: string }> = [
-  { value: "evm", label: "EVM (Base, Ethereum, Arc)" },
+  { value: "evm", label: "EVM (Base, BOT, Arc, Ethereum)" },
   { value: "stellar", label: "Stellar (Soroban)" },
 ];
 

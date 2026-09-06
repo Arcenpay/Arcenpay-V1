@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, useTransition } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useAccount, useChainId, useSignMessage } from "wagmi";
 import { ArrowLeft, CheckCircle2, Loader2, Mail, Wallet, Shield, AlertTriangle, ExternalLink, ArrowRight, Star } from "lucide-react";
@@ -410,15 +411,25 @@ export function EmailAuthFlow({ inviteToken }: EmailAuthFlowProps) {
                   onClick={() => selectChainFamily("evm")}
                   className="w-full flex items-center gap-4 p-5 rounded-xl border-2 border-border hover:border-brand/40 hover:bg-accent/5 transition-all text-left group"
                 >
-                  <div className="relative flex shrink-0" style={{ width: 56, height: 44 }}>
-                    <NetworkIcon name="base" variant="branded" size={28} className="rounded-full bg-white dark:bg-white p-[2px] absolute left-0 top-0 z-20 ring-2 ring-background" />
-                    <NetworkIcon name="Arc" variant="branded" size={28} className="rounded-full bg-white dark:bg-white p-[2px] absolute left-[14px] top-0 z-10 ring-2 ring-background" />
-                    <NetworkIcon name="ethereum" variant="branded" size={28} className="rounded-full bg-white dark:bg-white p-[2px] absolute left-[28px] top-0 z-0 ring-2 ring-background" />
+                  <div className="relative flex shrink-0" style={{ width: 70, height: 44 }}>
+                    <div className="w-7 h-7 rounded-full bg-white dark:bg-white p-[2px] absolute left-[42px] top-0 z-0 ring-2 ring-background overflow-hidden flex items-center justify-center">
+                      <Image
+                        src="/botchain.jpg"
+                        alt="BOT Chain"
+                        width={28}
+                        height={28}
+                        className="rounded-full object-cover"
+                        unoptimized
+                      />
+                    </div>
+                    <NetworkIcon name="ethereum" variant="branded" size={28} className="rounded-full bg-white dark:bg-white p-[2px] absolute left-[28px] top-0 z-10 ring-2 ring-background" />
+                    <NetworkIcon name="Arc" variant="branded" size={28} className="rounded-full bg-white dark:bg-white p-[2px] absolute left-[14px] top-0 z-20 ring-2 ring-background" />
+                    <NetworkIcon name="base" variant="branded" size={28} className="rounded-full bg-white dark:bg-white p-[2px] absolute left-0 top-0 z-30 ring-2 ring-background" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <h3 className="text-sm font-semibold text-foreground group-hover:text-brand transition-colors">EVM Networks</h3>
                     <p className="text-xs text-muted-foreground mt-1">
-                      Base, Arc, Ethereum — MetaMask, Rainbow, WalletConnect
+                      Base, Arc, BOT, Ethereum — MetaMask, Rainbow, WalletConnect
                     </p>
                   </div>
                   <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-brand transition-colors shrink-0" />

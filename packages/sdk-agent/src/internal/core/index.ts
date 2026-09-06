@@ -80,6 +80,8 @@ export {
   baseSepolia,
   baseMainnet,
   arcTestnet,
+  botMainnet,
+  botTestnet,
   SUPPORTED_CHAINS,
   SUPPORTED_CHAIN_IDS,
   EVM_SUPPORTED_CHAIN_IDS,

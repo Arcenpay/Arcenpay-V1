@@ -4,7 +4,6 @@
 // ============================================================
 
 import { createResilientFacilitatorClient } from "../rpc-client.js";
-import { sepolia, baseSepolia, base } from "viem/chains";
 import type { BillingSettlement } from "@arcenpay/internal-core";
 import {
   DEFAULT_CHAIN_ID,
@@ -14,13 +13,6 @@ import {
 } from "@arcenpay/internal-core";
 
 type SettlementCallback = (settlement: BillingSettlement) => void;
-
-const CHAIN_MAP: Record<number, any> = {
-  11155111: sepolia,
-  84532: baseSepolia,
-  8453: base,
-  5042002: baseSepolia, // Arc Testnet — USDC-native chain, uses Base Sepolia transport
-};
 
 /**
  * SettlementService — Monitors on-chain BillingSettled events

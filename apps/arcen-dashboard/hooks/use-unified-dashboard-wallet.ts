@@ -2,6 +2,7 @@
 
 import { useCallback, useMemo } from "react";
 import { isStellarChainId } from "@arcenpay/internal-core";
+import { getChainLabel } from "@/lib/default-chain";
 import { useDashboardWallet } from "./use-dashboard-wallet";
 import { useStellarWallet } from "./use-stellar-wallet";
 
@@ -134,17 +135,4 @@ export function useUnifiedDashboardWallet(
     stellar,
     evm,
   ]);
-}
-
-function getChainLabel(chainId: number): string {
-  switch (chainId) {
-    case 9_000_000:
-      return "Stellar";
-    case 9_000_001:
-      return "Stellar Testnet";
-    case 9_000_002:
-      return "Stellar Futurenet";
-    default:
-      return `Chain ${chainId}`;
-  }
 }

@@ -21,6 +21,9 @@ import {
   getStellarSorobanRpcUrl,
   getStellarNetworkPassphrase,
   normalizeX402AmountToDecimal,
+  arcTestnet,
+  botMainnet,
+  botTestnet,
 } from "../sdk";
 import {
   createPublicClient,
@@ -116,12 +119,18 @@ const CHAIN_MAP: Record<number, any> = {
   11155111: sepolia,
   84532: baseSepolia,
   8453: base,
+  5042002: arcTestnet,
+  677: botMainnet,
+  968: botTestnet,
 };
 
 const CHAIN_ID_TO_NETWORK: Record<number, string> = {
   11155111: "ethereum-sepolia",
   84532: "base-sepolia",
   8453: "base-mainnet",
+  5042002: "arc-testnet",
+  677: "bot-mainnet",
+  968: "bot-testnet",
 };
 
 function coerceBigInt(

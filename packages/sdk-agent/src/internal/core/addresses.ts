@@ -64,29 +64,25 @@ const ADDRESSES: Record<number, ContractAddresses> = {
     zkUsageVerifier: '0x0000000000000000000000000000000000000000',
     mirrorRegistry: '0x0000000000000000000000000000000000000000',
   },
-  // BOT Chain Mainnet (677) — NOT deployed yet. Same contracts as other EVM
-  // chains (no Solidity changes needed). Set ARCENPAY_CONTRACT_677_* env vars
-  // (or call setContractAddresses(677, {...})) once deployed. See
-  // hardhat.config.ts `botMainnet` network for the deploy target.
+  // BOT Chain Mainnet (677) — Deployed 2026-09-05
   677: {
-    subscriptionRegistry: '0x0000000000000000000000000000000000000000',
-    autopayModule: '0x0000000000000000000000000000000000000000',
-    planFactory: '0x0000000000000000000000000000000000000000',
-    feeCollector: '0x0000000000000000000000000000000000000000',
-    sessionVault: '0x0000000000000000000000000000000000000000',
-    zkUsageVerifier: '0x0000000000000000000000000000000000000000',
-    mirrorRegistry: '0x0000000000000000000000000000000000000000',
+    subscriptionRegistry: '0xea549C49A1A97faC398F977BCC0D65256c5419d9',
+    autopayModule: '0xB240841d1c886455aC0620bB0A0AE1C194f3e275',
+    planFactory: '0x09fD8422638F4d6eA05F6Dcb2FB15Bea6eC59f41',
+    feeCollector: '0x17375ec258cDABEB491AB9ae3F78428BC26Aa382',
+    sessionVault: '0x118C32C629F47109CF21a306A72c447127084CF4',
+    zkUsageVerifier: '0x0694CB91b9399869ecB5942EF40AbD6C835Ba83a',
+    mirrorRegistry: '0xE8E068FC93E9687c7D85d303312Ac13806e73e2F',
   },
-  // BOT Chain Testnet (968) — NOT deployed yet. Deploy here first as a
-  // staging dry run before touching mainnet.
+  // BOT Chain Testnet (968) — Mock placeholder addresses for staging
   968: {
-    subscriptionRegistry: '0x0000000000000000000000000000000000000000',
-    autopayModule: '0x0000000000000000000000000000000000000000',
-    planFactory: '0x0000000000000000000000000000000000000000',
-    feeCollector: '0x0000000000000000000000000000000000000000',
-    sessionVault: '0x0000000000000000000000000000000000000000',
-    zkUsageVerifier: '0x0000000000000000000000000000000000000000',
-    mirrorRegistry: '0x0000000000000000000000000000000000000000',
+    subscriptionRegistry: '0x3000000000000000000000000000000000000968',
+    autopayModule: '0x6000000000000000000000000000000000000968',
+    planFactory: '0x1000000000000000000000000000000000000968',
+    feeCollector: '0x2000000000000000000000000000000000000968',
+    sessionVault: '0x4000000000000000000000000000000000000968',
+    zkUsageVerifier: '0x5000000000000000000000000000000000000968',
+    mirrorRegistry: '0x7000000000000000000000000000000000000968',
   },
   // Arc Testnet (Testnet) — Deployed 2026-08-02
   5042002: {

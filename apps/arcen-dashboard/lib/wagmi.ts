@@ -1,7 +1,7 @@
 import { cookieStorage, createStorage } from "@wagmi/core";
 import { WagmiAdapter } from "@reown/appkit-adapter-wagmi";
 import { base, baseSepolia } from "@reown/appkit/networks";
-import { arcTestnet } from "@arcenpay/internal-core";
+import { arcTestnet, botMainnet, botTestnet } from "@arcenpay/internal-core";
 import {
   BASE_MAINNET_CHAIN_ID,
   BASE_SEPOLIA_CHAIN_ID,
@@ -11,7 +11,7 @@ import {
 export const projectId =
   process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || "";
 
-export const networks = [arcTestnet, baseSepolia, base] as const;
+export const networks = [arcTestnet, botTestnet, botMainnet, baseSepolia, base] as const;
 
 export const defaultNetwork =
   DEFAULT_CHAIN_ID === BASE_MAINNET_CHAIN_ID
@@ -24,7 +24,7 @@ export const wagmiAdapter = new WagmiAdapter({
   storage: createStorage({ storage: cookieStorage }),
   ssr: true,
   projectId,
-  networks: networks as unknown as [typeof arcTestnet, typeof baseSepolia, typeof base],
+  networks: networks as unknown as [typeof arcTestnet, ...typeof networks],
 });
 
 export const wagmiConfig = wagmiAdapter.wagmiConfig;

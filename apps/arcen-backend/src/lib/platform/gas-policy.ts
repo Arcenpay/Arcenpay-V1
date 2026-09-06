@@ -23,6 +23,7 @@ import { resolveChainFamilyForPrisma } from "./chain-family.js";
 const SPONSORED_CHAIN_IDS = new Set<number>([
     84532,   // Base Sepolia
     5042002, // Arc Testnet
+    968,     // BOT Chain Testnet
 ]);
 
 // Chains where sponsorship is explicitly blocked
@@ -30,6 +31,7 @@ const BLOCKED_CHAIN_IDS = new Set<number>([
     1,          // Ethereum mainnet
     11155111,   // Sepolia (L1 testnet)
     8453,       // Base mainnet
+    677,        // BOT Chain Mainnet
 ]);
 
 // ── Anti-abuse limits ────────────────────────────────────────────────────────

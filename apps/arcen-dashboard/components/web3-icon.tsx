@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { NetworkIcon, TokenIcon } from "@web3icons/react/dynamic";
 import { Network, Coins } from "lucide-react";
@@ -9,6 +10,8 @@ import { Network, Coins } from "lucide-react";
 // Stellar synthetic chainIds (9_000_000 / 9_000_001 / 9_000_002) come from
 // packages/internal-core/src/chain-family.ts. They have no EVM equivalent
 // so we map them to the web3icons "stellar" sprite directly.
+//
+// BOT Chain (677 mainnet, 968 testnet) renders the custom brand asset /botchain.jpg.
 
 const chainIdToNetworkName: Record<number, string> = {
   1: "ethereum",
@@ -61,6 +64,33 @@ export function Web3Icon({
   className,
 }: Web3IconProps) {
   const iconSize = sizeMap[size] ?? 20;
+
+  // ── BOT Chain or Token check (renders public/botchain.jpg) ──────────
+  const isBot =
+    chainId === 677 ||
+    chainId === 968 ||
+    (typeof chainLabel === "string" && /bot\s*chain/i.test(chainLabel)) ||
+    token?.toUpperCase() === "BOT";
+
+  if (isBot) {
+    return (
+      <span
+        className={cn(
+          "shrink-0 inline-flex items-center justify-center rounded-full bg-white dark:bg-white p-px overflow-hidden",
+          className,
+        )}
+      >
+        <Image
+          src="/botchain.jpg"
+          alt={chainLabel || token || "BOT Chain"}
+          width={iconSize}
+          height={iconSize}
+          className="rounded-full object-cover shrink-0"
+          unoptimized
+        />
+      </span>
+    );
+  }
 
   // ── Token icon ──────────────────────────────────────────────────────
   if (token) {

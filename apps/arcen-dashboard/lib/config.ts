@@ -8,6 +8,8 @@ import {
   ARC_TESTNET_CHAIN_ID,
   BASE_MAINNET_CHAIN_ID,
   BASE_SEPOLIA_CHAIN_ID,
+  BOT_MAINNET_CHAIN_ID,
+  BOT_TESTNET_CHAIN_ID,
   DEFAULT_CHAIN_ID,
   SEPOLIA_CHAIN_ID,
 } from "@/lib/default-chain";
@@ -40,6 +42,12 @@ const PUBLIC_CHAIN_SUBGRAPH_URLS: Record<number, string | undefined> = {
   [ARC_TESTNET_CHAIN_ID]:
     process.env.NEXT_PUBLIC_ARCENPAY_SUBGRAPH_URL_5042002 ||
     process.env.NEXT_PUBLIC_GRAPH_URL_5042002,
+  [BOT_MAINNET_CHAIN_ID]:
+    process.env.NEXT_PUBLIC_ARCENPAY_SUBGRAPH_URL_677 ||
+    process.env.NEXT_PUBLIC_GRAPH_URL_677,
+  [BOT_TESTNET_CHAIN_ID]:
+    process.env.NEXT_PUBLIC_ARCENPAY_SUBGRAPH_URL_968 ||
+    process.env.NEXT_PUBLIC_GRAPH_URL_968,
 };
 
 const SERVER_CHAIN_SUBGRAPH_URLS: Record<number, string | undefined> = {
@@ -47,6 +55,8 @@ const SERVER_CHAIN_SUBGRAPH_URLS: Record<number, string | undefined> = {
   [BASE_SEPOLIA_CHAIN_ID]: process.env.ARCENPAY_SUBGRAPH_URL_84532,
   [BASE_MAINNET_CHAIN_ID]: process.env.ARCENPAY_SUBGRAPH_URL_8453,
   [ARC_TESTNET_CHAIN_ID]: process.env.ARCENPAY_SUBGRAPH_URL_5042002,
+  [BOT_MAINNET_CHAIN_ID]: process.env.ARCENPAY_SUBGRAPH_URL_677,
+  [BOT_TESTNET_CHAIN_ID]: process.env.ARCENPAY_SUBGRAPH_URL_968,
 };
 
 function getConfiguredGraphUrlForChain(chainId: number): string {

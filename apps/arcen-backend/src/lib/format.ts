@@ -64,6 +64,8 @@ export function getBlockExplorerUrl(
     8453: "https://basescan.org",
     84532: "https://sepolia.basescan.org",
     5042002: "https://testnet.arcscan.app",
+    677: "https://scan.botchain.ai",
+    968: "https://scan.bohr.life",
   };
   const base = BASE_URLS[chainId] ?? "https://sepolia.etherscan.io";
   return `${base}/${type}/${hash}`;
@@ -77,6 +79,8 @@ export function getBlockExplorerBase(chainId: number): string {
     8453: "https://basescan.org",
     84532: "https://sepolia.basescan.org",
     5042002: "https://testnet.arcscan.app",
+    677: "https://scan.botchain.ai",
+    968: "https://scan.bohr.life",
   };
   return BASE_URLS[chainId] ?? "https://sepolia.etherscan.io";
 }
