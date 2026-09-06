@@ -17,6 +17,7 @@ import { auditRoutes } from "./audit/index.js";
 import { environmentRoutes } from "./environment/index.js";
 import { publicRoutes } from "./public/index.js";
 import { companiesRoutes } from "./companies/index.js";
+import { mandateRoutes } from "./mandates.js";
 
 // ── SDK flat files (Next.js-style exports: GET, POST, OPTIONS) ──────────────
 import { GET as getCheck, OPTIONS as checkOptions } from "./check.js";
@@ -72,6 +73,7 @@ export const v1Router = new Hono()
   .route("/environments", environmentRoutes)
   .route("/environment", environmentRoutes)
   .route("/public", publicRoutes)
+  .route("/mandates", mandateRoutes)
 
   // ── SDK flat routes ──────────────────────────────────────────────────────
   .get("/check", getCheck)

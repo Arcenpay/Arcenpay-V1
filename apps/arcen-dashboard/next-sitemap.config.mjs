@@ -16,11 +16,16 @@ function normalizeBaseUrl(value) {
   return withProtocol.replace(/\/$/, "");
 }
 
-const siteUrl =
+function isLocalhost(url) {
+  return !url || url.includes("localhost") || url.includes("127.0.0.1");
+}
+
+const rawCandidate =
   normalizeBaseUrl(process.env.NEXT_PUBLIC_APP_URL) ||
   normalizeBaseUrl(process.env.NEXTAUTH_URL) ||
-  normalizeBaseUrl(process.env.VERCEL_URL) ||
-  PROD_FALLBACK_APP_URL;
+  normalizeBaseUrl(process.env.VERCEL_URL);
+
+const siteUrl = isLocalhost(rawCandidate) ? PROD_FALLBACK_APP_URL : rawCandidate;
 
 /** @type {import("next-sitemap").IConfig} */
 const config = {

@@ -9,6 +9,7 @@ import {
   GET as getSmartAccountConfig,
   OPTIONS as smartAccountOptions,
 } from "./smart-account-config.js";
+import { publicEscrowRoutes } from "./escrow.js";
 
 export const publicRoutes = new Hono()
   .get("/checkout/:sessionId", getCheckout)
@@ -18,4 +19,5 @@ export const publicRoutes = new Hono()
   .get("/payment-links/:slug/spec", getPublicPaymentLinkSpec)
   .post("/payment-links/:slug/session", createPaymentLinkSession)
   .get("/smart-account-config", getSmartAccountConfig)
-  .options("/smart-account-config", smartAccountOptions);
+  .options("/smart-account-config", smartAccountOptions)
+  .route("/escrow", publicEscrowRoutes);

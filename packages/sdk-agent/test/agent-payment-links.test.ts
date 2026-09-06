@@ -208,12 +208,20 @@ describe("ArcenAgent — Agentic Payment Links", () => {
 
   describe("MCP Tools", () => {
     it("should export MCP tool definitions with schemas", () => {
-      expect(ARCENPAY_MCP_TOOL_DEFINITIONS).toHaveLength(4);
+      expect(ARCENPAY_MCP_TOOL_DEFINITIONS).toHaveLength(12);
       const names = ARCENPAY_MCP_TOOL_DEFINITIONS.map((t) => t.name);
       expect(names).toContain("arcenpay_resolve_payment_link");
       expect(names).toContain("arcenpay_pay_payment_link");
       expect(names).toContain("arcenpay_create_payment_link");
       expect(names).toContain("arcenpay_get_spend_summary");
+      expect(names).toContain("arcenpay_issue_mandate");
+      expect(names).toContain("arcenpay_check_policy");
+      expect(names).toContain("arcenpay_revoke_mandate");
+      expect(names).toContain("arcenpay_mandate_status");
+      expect(names).toContain("arcenpay_fetch_escrowed");
+      expect(names).toContain("arcenpay_verify_commitment");
+      expect(names).toContain("arcenpay_dispute_claim");
+      expect(names).toContain("arcenpay_settlement_status");
     });
 
     it("should handle MCP tool calls through dispatcher", async () => {

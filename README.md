@@ -74,7 +74,9 @@ The standard product integration path today is:
 ## Docs
 
 - Public docs source: `apps/arcenpay-docs`
-- Demo integration source: `apps/arcen-demo`
+- Demo integration source: `apps/demo-dapp`
+- Agent Architecture & Developer Manual: [ARCEN_AGENT.md](./ARCEN_AGENT.md)
+- Billing Architecture & Ledger Rules: [BILLING.md](./BILLING.md)
 - SDK READMEs:
   - `packages/sdk-react/README.md`
   - `packages/sdk-node/README.md`

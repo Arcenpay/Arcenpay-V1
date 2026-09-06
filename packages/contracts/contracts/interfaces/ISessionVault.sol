@@ -30,6 +30,12 @@ interface ISessionVault {
         address indexed agent
     );
 
+    /// @notice Emitted when a mandate is revoked on-chain
+    event MandateRevoked(
+        bytes32 indexed mandateId,
+        address indexed revoker
+    );
+
     // ============================================================
     //                     CORE FUNCTIONS
     // ============================================================
@@ -62,4 +68,12 @@ interface ISessionVault {
     /// @param agent The agent address
     /// @return The total balance
     function getAgentBalance(address agent) external view returns (uint256);
+
+    /// @notice Records an on-chain mandate revocation (Tier 1 invariant)
+    /// @param mandateId The identifier of the revoked mandate
+    function revokeMandate(bytes32 mandateId) external;
+
+    /// @notice Returns whether a mandate has been revoked on-chain
+    /// @param mandateId The identifier of the mandate
+    function isMandateRevoked(bytes32 mandateId) external view returns (bool);
 }

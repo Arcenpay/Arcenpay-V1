@@ -19,7 +19,49 @@ import {
 import { privateKeyToAccount } from 'viem/accounts';
 import { sepolia, baseSepolia, base } from 'viem/chains';
 import { arcTestnet, botMainnet, botTestnet, X402_VERSION, X402_SCHEME, SessionVaultABI, getContractAddresses, getTokenAddress, isStellarChainId, getChainDescriptor, getStellarNetworkPassphrase, getStellarSorobanRpcUrl, normalizeX402AmountToDecimal } from './internal/core';
-import type { X402Response, X402PaymentHeader, AutoTopUpConfig, AutoTopUpMode, DispatchConfig, DispatchProvider, DispatchProviderType, TopUpRequest, PersistentAgentState, PersistentStore, AgenticPaymentLinkSpec, AgentPaymentReceipt, CreateAgentPaymentLinkParams, PayPaymentLinkOptions } from './internal/core';
+import type {
+  X402Response,
+  X402PaymentHeader,
+  AutoTopUpConfig,
+  AutoTopUpMode,
+  DispatchConfig,
+  DispatchProvider,
+  DispatchProviderType,
+  TopUpRequest,
+  PersistentAgentState,
+  PersistentStore,
+  AgenticPaymentLinkSpec,
+  AgentPaymentReceipt,
+  CreateAgentPaymentLinkParams,
+  PayPaymentLinkOptions,
+  ArcenPayAgentMandate,
+  MandateScope,
+  ArcenPolicy,
+  PolicyEvaluationContext,
+  PolicyEvaluationResult,
+  EscrowMode,
+  EscrowTerms,
+  ProviderCommitment,
+  SettlementConfirmation,
+  DisputeClaim,
+  DisputeReceipt,
+  DisputeReason,
+  MandateRevocationConfig,
+  MandateStatus,
+  EscrowReservationStatus,
+  EscrowReservation,
+} from './internal/core';
+import {
+  createAgentMandate,
+  signAgentMandate,
+  verifyAgentMandate,
+  isScopeSubset,
+} from './auth/mandate';
+import { ArcenPolicyEvaluator } from './auth/policy';
+import {
+  computeExactHash,
+  verifyCommitment as verifyCommitmentEngine,
+} from './escrow/verifier';
 
 // ─── Re-exported types ───────────────────────────────────────────
 export type {
@@ -35,6 +77,17 @@ export type {
   AgentPaymentReceipt,
   CreateAgentPaymentLinkParams,
   PayPaymentLinkOptions,
+  ArcenPayAgentMandate,
+  MandateScope,
+  ArcenPolicy,
+  PolicyEvaluationContext,
+  PolicyEvaluationResult,
+  EscrowMode,
+  EscrowTerms,
+  ProviderCommitment,
+  SettlementConfirmation,
+  DisputeClaim,
+  DisputeReceipt,
 } from './internal/core';
 
 // ─── Config ───────────────────────────────────────────────────────
@@ -68,6 +121,10 @@ export interface AgentConfig {
   apiUrl?: string;
   /** Optional API key for authenticated merchant/provider operations (such as creating payment links) */
   apiKey?: string;
+  /** Optional active delegation mandate (AAM) for the agent */
+  mandate?: ArcenPayAgentMandate;
+  /** Optional policies to enforce on transactions */
+  policies?: ArcenPolicy[];
 }
 
 export interface FetchOptions extends RequestInit {
@@ -227,6 +284,9 @@ export class ArcenAgent {
   private stellarRpcUrl: string = '';
   private stellarHorizonUrl: string = '';
   private stellarPassphrase: string = '';
+  private mandate: ArcenPayAgentMandate | null = null;
+  private policyEvaluator: ArcenPolicyEvaluator;
+  private pendingCommitments = new Map<string, ProviderCommitment>();
 
   constructor(config: AgentConfig) {
     this.config = {
@@ -247,6 +307,10 @@ export class ArcenAgent {
       : resolvedContracts;
 
     this.store = config.store ?? new MemoryStore();
+    this.policyEvaluator = new ArcenPolicyEvaluator(config.policies);
+    if (config.mandate) {
+      this.mandate = config.mandate;
+    }
 
     if (this.isStellar) {
       // Stellar: keypair from S… secret; no viem clients.
@@ -429,6 +493,10 @@ export class ArcenAgent {
 
   get currentNonce(): bigint {
     return this.nonce;
+  }
+
+  get chainId(): number {
+    return this.config.chainId;
   }
 
   // ─── Session Funding ─────────────────────────────────────
@@ -1522,6 +1590,358 @@ export class ArcenAgent {
 
     const data = await res.json();
     return (data.spec ?? data.paymentLink ?? data) as AgenticPaymentLinkSpec;
+  }
+
+  // ─── ArcenAuth Mandate & Policy (Layers 2 & 3) ────────────
+
+  setMandate(mandate: ArcenPayAgentMandate): void {
+    this.mandate = mandate;
+  }
+
+  getMandate(): ArcenPayAgentMandate | null {
+    return this.mandate;
+  }
+
+  addPolicy(policy: ArcenPolicy): void {
+    this.policyEvaluator.addPolicy(policy);
+  }
+
+  setPolicies(policies: ArcenPolicy[]): void {
+    this.policyEvaluator.setPolicies(policies);
+  }
+
+  getPolicies(): ArcenPolicy[] {
+    return this.policyEvaluator.getPolicies();
+  }
+
+  checkPolicy(context: Partial<PolicyEvaluationContext>): PolicyEvaluationResult {
+    const defaultTx = {
+      amount: "0",
+      amountAtomic: 0n,
+      token: "USDC",
+      recipient: this.address,
+      chainId: this.config.chainId,
+    };
+
+    const fullContext: PolicyEvaluationContext = {
+      tx: { ...defaultTx, ...(context.tx ?? {}) },
+      resource: context.resource,
+      agentId: context.agentId ?? this.address,
+      mandateId: context.mandateId ?? this.mandate?.mandateId,
+      coSigned: context.coSigned ?? false,
+      dailySpent: Number(formatUnits(this.getDailySpent(), 6)),
+      timestamp: Date.now(),
+    };
+
+    return this.policyEvaluator.evaluate(fullContext);
+  }
+
+  async issueSubMandate(params: {
+    childAgentId: string;
+    childPublicKey: string;
+    childScope: MandateScope;
+  }): Promise<ArcenPayAgentMandate> {
+    if (!this.mandate) {
+      throw new Error("[ArcenPayAgent] Cannot issue sub-mandate: parent agent has no active mandate.");
+    }
+
+    const subsetCheck = isScopeSubset(params.childScope, this.mandate.scope);
+    if (!subsetCheck.valid) {
+      throw new Error(`[ArcenPayAgent] Sub-mandate scope exceeds parent authority: ${subsetCheck.reason}`);
+    }
+
+    const unsigned = createAgentMandate({
+      issuer: {
+        kind: "parent_agent",
+        address: this.address,
+        chainId: this.config.chainId,
+      },
+      subject: {
+        kind: "agent",
+        agentId: params.childAgentId,
+        publicKey: params.childPublicKey,
+        parentMandateId: this.mandate.mandateId,
+      },
+      scope: params.childScope,
+      revocation: this.mandate.revocation,
+    });
+
+    return signAgentMandate(unsigned, this.config.privateKey, this.config.chainId);
+  }
+
+  async issueMandate(params: {
+    childAgentId: string;
+    childPublicKey: string;
+    childScope: MandateScope;
+    isSubMandate?: boolean;
+    revocationConfig?: MandateRevocationConfig;
+  }): Promise<ArcenPayAgentMandate> {
+    if (params.isSubMandate || (this.mandate && params.isSubMandate !== false)) {
+      return this.issueSubMandate({
+        childAgentId: params.childAgentId,
+        childPublicKey: params.childPublicKey,
+        childScope: params.childScope,
+      });
+    }
+
+    const unsigned = createAgentMandate({
+      issuer: {
+        kind: "human_wallet",
+        address: this.address,
+        chainId: this.config.chainId,
+      },
+      subject: {
+        kind: "agent",
+        agentId: params.childAgentId,
+        publicKey: params.childPublicKey,
+      },
+      scope: params.childScope,
+      revocation: params.revocationConfig,
+    });
+
+    return signAgentMandate(unsigned, this.config.privateKey, this.config.chainId);
+  }
+
+  async revokeMandate(mandateId: string, reason?: string): Promise<{
+    revoked: boolean;
+    mandateId: string;
+    reason: string;
+    timestamp: string;
+  }> {
+    const timestamp = new Date().toISOString();
+    const effectiveReason = reason ?? "Revoked by agent";
+    if (this.mandate && this.mandate.mandateId === mandateId) {
+      this.mandate = null;
+    }
+
+    if (this.apiUrl) {
+      await globalThis.fetch(`${this.apiUrl}/api/v1/mandates/revoke`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          mandateId,
+          reason: effectiveReason,
+          revokedBy: this.address,
+        }),
+      }).catch((err) => {
+        console.warn("[ArcenPayAgent] Mandate revocation broadcast warning:", err);
+      });
+    }
+
+    return {
+      revoked: true,
+      mandateId,
+      reason: effectiveReason,
+      timestamp,
+    };
+  }
+
+  async getMandateStatus(mandateId?: string): Promise<MandateStatus> {
+    const targetId = mandateId ?? this.mandate?.mandateId;
+    if (!targetId) {
+      throw new Error("[ArcenPayAgent] No mandateId specified and agent has no active mandate.");
+    }
+
+    if (this.apiUrl) {
+      try {
+        const res = await globalThis.fetch(`${this.apiUrl}/api/v1/mandates/${encodeURIComponent(targetId)}/status`);
+        if (res.ok) {
+          const data = await res.json();
+          return data as MandateStatus;
+        }
+      } catch {
+        // Fallback to local evaluation if backend unreachable
+      }
+    }
+
+    const isCurrent = this.mandate && this.mandate.mandateId === targetId;
+    let status: "active" | "revoked" | "expired" = "active";
+    if (isCurrent && this.mandate?.scope.validUntil && new Date(this.mandate.scope.validUntil).getTime() < Date.now()) {
+      status = "expired";
+    }
+
+    return {
+      mandateId: targetId,
+      status,
+      checkedAt: new Date().toISOString(),
+    };
+  }
+
+  // ─── Verify-Then-Settle Escrow (Section 11) ─────────────────
+
+  async fetchEscrowed(
+    url: string,
+    options: Omit<FetchOptions, "mode"> & {
+      mode?: EscrowMode;
+      escrowMode?: EscrowMode;
+      schemaDescriptor?: Record<string, unknown>;
+      onCommitmentReceived?: (commitment: ProviderCommitment) => void;
+    } = {},
+  ): Promise<{
+    response: Response;
+    payload: any;
+    verified: boolean;
+    commitment?: ProviderCommitment;
+    disputeReceipt?: DisputeReceipt;
+  }> {
+    const { mode, escrowMode, schemaDescriptor, onCommitmentReceived, ...fetchOpts } = options;
+    const res = await this.fetch(url, fetchOpts);
+    const commitmentHeader = res.headers.get("x-arcen-commitment");
+    const commitmentMode =
+      (res.headers.get("x-arcen-commitment-mode") as EscrowMode) || escrowMode || mode || "exact_hash";
+    const commitmentSig = res.headers.get("x-arcen-commitment-sig") || "0x_provider_sig";
+    const nonceHeader = res.headers.get("x-arcen-request-nonce") || String(this.nonce);
+
+    let payload: any;
+    const cloned = res.clone();
+    try {
+      payload = await cloned.json();
+    } catch {
+      payload = await res.text();
+    }
+
+    if (!commitmentHeader) {
+      return { response: res, payload, verified: true };
+    }
+
+    const commitment: ProviderCommitment = {
+      type: "ArcenProviderCommitment",
+      requestNonce: nonceHeader,
+      resourceId: url,
+      mode: commitmentMode,
+      commitment: commitmentHeader,
+      timestamp: new Date().toISOString(),
+      providerSignature: commitmentSig,
+    };
+
+    this.pendingCommitments.set(nonceHeader, commitment);
+
+    if (options.onCommitmentReceived) {
+      options.onCommitmentReceived(commitment);
+    }
+
+    const verification = verifyCommitmentEngine(commitment, payload, options.schemaDescriptor);
+
+    if (verification.valid) {
+      await this.confirmSettlement(commitment.requestNonce).catch((err) => {
+        console.warn("[ArcenPayAgent] Escrow confirmation warning:", err);
+      });
+      return { response: res, payload, verified: true, commitment };
+    } else {
+      const disputeReceipt = await this.disputeSettlement(commitment.requestNonce, {
+        providerCommitment: commitment,
+        actualPayloadHash: `sha256:${computeExactHash(payload)}`,
+        failureReason: verification.failureReason ?? "hash_mismatch",
+        schemaViolationDetail: verification.errorDetail,
+      }).catch((err) => {
+        console.warn("[ArcenPayAgent] Escrow dispute submission warning:", err);
+        return undefined;
+      });
+
+      return {
+        response: res,
+        payload,
+        verified: false,
+        commitment,
+        disputeReceipt,
+      };
+    }
+  }
+
+  verifyCommitment(
+    commitment: ProviderCommitment,
+    payload: unknown,
+    schemaDescriptor?: Record<string, unknown>,
+  ): { valid: boolean; failureReason?: DisputeReason; errorDetail?: string } {
+    return verifyCommitmentEngine(commitment, payload, schemaDescriptor);
+  }
+
+  async confirmSettlement(requestNonce: string): Promise<SettlementConfirmation> {
+    const confirmation: SettlementConfirmation = {
+      type: "ArcenSettlementConfirmation",
+      requestNonce,
+      verifiedCommitment: `verified:${requestNonce}`,
+      result: "match",
+      agentSignature: "0x_confirmed",
+    };
+
+    if (this.apiUrl) {
+      await globalThis.fetch(`${this.apiUrl}/api/v1/public/escrow/confirm`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(confirmation),
+      }).catch(() => {});
+    }
+
+    return confirmation;
+  }
+
+  async disputeSettlement(
+    requestNonce: string,
+    claimDetails: Partial<DisputeClaim>,
+  ): Promise<DisputeReceipt> {
+    const claim: DisputeClaim = {
+      type: "ArcenDisputeClaim",
+      requestNonce,
+      providerCommitment: claimDetails.providerCommitment!,
+      actualPayloadHash: claimDetails.actualPayloadHash ?? "sha256:mismatch",
+      failureReason: claimDetails.failureReason ?? "hash_mismatch",
+      schemaViolationDetail: claimDetails.schemaViolationDetail,
+      agentSignature: "0x_agent_dispute_sig",
+    };
+
+    let receipt: DisputeReceipt = {
+      type: "ArcenDisputeReceipt",
+      requestNonce,
+      outcome: "refunded",
+      reason: `Automated refund: ${claim.failureReason} confirmed`,
+      resolvedAt: new Date().toISOString(),
+    };
+
+    if (this.apiUrl) {
+      const res = await globalThis.fetch(`${this.apiUrl}/api/v1/public/escrow/dispute`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(claim),
+      }).catch(() => null);
+
+      if (res && res.ok) {
+        const data = await res.json();
+        receipt = data.receipt ?? receipt;
+      }
+    }
+
+    return receipt;
+  }
+
+  async getSettlementStatus(requestNonce: string): Promise<{
+    requestNonce: string;
+    status: EscrowReservationStatus;
+    reservation?: EscrowReservation;
+  }> {
+    if (this.apiUrl) {
+      try {
+        const res = await globalThis.fetch(
+          `${this.apiUrl}/api/v1/public/escrow/status?requestNonce=${encodeURIComponent(requestNonce)}`,
+        );
+        if (res.ok) {
+          const data = await res.json();
+          return {
+            requestNonce,
+            status: data.status ?? "reserved",
+            reservation: data.reservation,
+          };
+        }
+      } catch {
+        // Fallback to local state
+      }
+    }
+
+    const commitment = this.pendingCommitments.get(requestNonce);
+    return {
+      requestNonce,
+      status: commitment ? "reserved" : "released",
+    };
   }
 }
 

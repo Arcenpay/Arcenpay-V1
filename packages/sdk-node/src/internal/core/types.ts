@@ -788,3 +788,195 @@ export interface PayPaymentLinkOptions {
   maxPrice?: string | bigint;
   autoApprove?: boolean;
 }
+
+// ─── ArcenAuth / Mandate (AAM) Types ─────────────────────────
+
+export type MandateIssuerKind = "human_wallet" | "org_multisig" | "parent_agent";
+export type MandateSubjectKind = "agent";
+
+export interface MandateIssuer {
+  kind: MandateIssuerKind;
+  address: string;
+  chainId: number;
+}
+
+export interface MandateSubject {
+  kind: MandateSubjectKind;
+  agentId: string;
+  publicKey: string;
+  parentMandateId?: string | null;
+}
+
+export interface MandateScope {
+  maxPerTxn?: string;
+  maxDaily?: string;
+  maxTotal?: string;
+  allowedTokens?: string[];
+  allowedChains?: number[];
+  allowedRecipients?: string[];
+  deniedRecipients?: string[];
+  allowedResourceDomains?: string[];
+  requiresCoSignAbove?: string;
+  validFrom: string; // ISO 8601
+  validUntil: string; // ISO 8601
+}
+
+export interface MandateRevocationConfig {
+  method: "onchain_registry" | "offchain_endpoint";
+  registryAddress?: string;
+  checkUrl?: string;
+}
+
+export interface HumanAttestation {
+  required: boolean;
+  protocol: "x401";
+  issuer: string;
+  credentialRef: string;
+  presentedAt: string;
+  verifierPolicy?: string;
+}
+
+export interface ArcenPayAgentMandate {
+  type: "ArcenPayAgentMandate";
+  version: "1.0";
+  mandateId: string;
+  issuer: MandateIssuer;
+  subject: MandateSubject;
+  scope: MandateScope;
+  revocation?: MandateRevocationConfig;
+  humanAttestation?: HumanAttestation | null;
+  signature: string;
+  issuedAt: string;
+}
+
+export interface MandateStatus {
+  mandateId: string;
+  status: "active" | "revoked" | "expired";
+  revokedAt?: string | null;
+  scopeHash?: string;
+  checkedAt: string;
+}
+
+// ─── ArcenPolicy Types ───────────────────────────────────────
+
+export type PolicyEffect = "EFFECT_ALLOW" | "EFFECT_DENY";
+export type PolicyOutcome = "OUTCOME_ALLOW" | "OUTCOME_DENY";
+
+export interface ArcenPolicy {
+  policyId: string;
+  name?: string;
+  effect: PolicyEffect;
+  consensus?: string;
+  condition: string;
+  priority: number;
+  appliesTo?: {
+    agentId?: string;
+    mandateId?: string;
+  };
+}
+
+export interface PolicyEvaluationContext {
+  tx: {
+    amount: string | number;
+    amountAtomic: bigint;
+    token: string;
+    recipient: string;
+    chainId: number;
+  };
+  resource?: {
+    domain: string;
+    url: string;
+    method?: string;
+  };
+  agentId: string;
+  mandateId?: string;
+  coSigned?: boolean;
+  timestamp?: number;
+  dailySpent?: string | number;
+}
+
+export interface PolicyEvaluationResult {
+  outcome: PolicyOutcome;
+  matchedPolicyId?: string;
+  requiresCoSign?: boolean;
+  consensusRequired?: string;
+  reason: string;
+}
+
+// ─── Verify-Then-Settle Escrow Types ─────────────────────────
+
+export type EscrowMode = "exact_hash" | "schema_conformance" | "attestation";
+export type DisputeReason =
+  | "hash_mismatch"
+  | "schema_violation"
+  | "sample_contradiction"
+  | "non_delivery";
+
+export interface EscrowTerms {
+  supported: boolean;
+  mode: EscrowMode;
+  challengeWindowSeconds: number;
+  schemaDescriptor?: Record<string, unknown> | null;
+  sampleSizeHint?: number | null;
+}
+
+export interface ProviderCommitment {
+  type: "ArcenProviderCommitment";
+  requestNonce: string;
+  resourceId: string;
+  mode: EscrowMode;
+  commitment: string;
+  timestamp: string;
+  providerSignature: string;
+}
+
+export interface SettlementConfirmation {
+  type: "ArcenSettlementConfirmation";
+  requestNonce: string;
+  verifiedCommitment: string;
+  result: "match";
+  agentSignature: string;
+}
+
+export interface DisputeClaim {
+  type: "ArcenDisputeClaim";
+  requestNonce: string;
+  providerCommitment: ProviderCommitment;
+  actualPayloadHash: string;
+  failureReason: DisputeReason;
+  schemaViolationDetail?: string | null;
+  sampleEvidence?: Record<string, unknown> | null;
+  agentSignature: string;
+}
+
+export interface DisputeReceipt {
+  type: "ArcenDisputeReceipt";
+  requestNonce: string;
+  outcome: "refunded" | "dispute_rejected";
+  reason: string;
+  refundedAmount?: string;
+  resolvedAt: string;
+}
+
+export type EscrowReservationStatus = "reserved" | "released" | "refunded" | "disputed";
+
+export interface EscrowReservation {
+  id: string;
+  requestNonce: string;
+  sessionId: string;
+  payerWallet: string;
+  recipientWallet: string;
+  amount: string;
+  amountAtomic: string;
+  tokenAddress: string;
+  chainId: number;
+  mode: EscrowMode;
+  status: EscrowReservationStatus;
+  challengeWindowSeconds: number;
+  expiresAt: string;
+  commitment?: ProviderCommitment | null;
+  confirmation?: SettlementConfirmation | null;
+  dispute?: DisputeClaim | null;
+  createdAt: string;
+  updatedAt: string;
+}

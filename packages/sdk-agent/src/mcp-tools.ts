@@ -5,7 +5,14 @@
 // ============================================================
 
 import type { ArcenAgent } from "./agent";
-import type { CreateAgentPaymentLinkParams, PayPaymentLinkOptions } from "./internal/core";
+import type {
+  CreateAgentPaymentLinkParams,
+  PayPaymentLinkOptions,
+  MandateScope,
+  EscrowMode,
+  DisputeReason,
+  ProviderCommitment,
+} from "./internal/core";
 
 export interface McpToolDefinition {
   name: string;
@@ -120,6 +127,223 @@ export const ARCENPAY_MCP_TOOL_DEFINITIONS: McpToolDefinition[] = [
       properties: {},
     },
   },
+  {
+    name: "arcenpay_issue_mandate",
+    description:
+      "Issues a scoped financial delegation credential (AAM) for a sub-agent or delegate with bounded limits (maxAmount, tokens, allowedDomains, expiry).",
+    inputSchema: {
+      type: "object",
+      properties: {
+        childAgentId: {
+          type: "string",
+          description: "Unique identifier for the delegate / child agent.",
+        },
+        childPublicKey: {
+          type: "string",
+          description: "Public key or address of the delegate / child agent.",
+        },
+        maxPerTxn: {
+          type: "string",
+          description: "Maximum spend permitted per single transaction in decimal units (e.g. '5.0' USDC).",
+        },
+        maxDaily: {
+          type: "string",
+          description: "Maximum cumulative spend permitted per 24 hours (e.g. '25.0' USDC).",
+        },
+        maxTotal: {
+          type: "string",
+          description: "Maximum lifetime spend permitted under this delegation (e.g. '100.0' USDC).",
+        },
+        allowedTokens: {
+          type: "array",
+          items: { type: "string" },
+          description: "List of token symbols allowed (e.g. ['USDC']). Defaults to ['USDC', 'USDT'].",
+        },
+        allowedRecipients: {
+          type: "array",
+          items: { type: "string" },
+          description: "List of allowed recipient addresses or '*' for wildcard.",
+        },
+        allowedDomains: {
+          type: "array",
+          items: { type: "string" },
+          description: "List of allowed merchant / resource domains (e.g. ['*.anthropic.com']).",
+        },
+        validUntil: {
+          type: "string",
+          description: "ISO timestamp when this mandate expires.",
+        },
+        isSubMandate: {
+          type: "boolean",
+          description: "Whether to issue as a sub-mandate under parent mandate (default true if agent has mandate).",
+        },
+      },
+      required: ["childAgentId", "childPublicKey"],
+    },
+  },
+  {
+    name: "arcenpay_check_policy",
+    description:
+      "Evaluates Turnkey-style deterministic policies (evaluates Root Co-sign -> Explicit Deny -> Explicit Allow -> Default Deny) against a prospective transaction or resource request.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        amount: {
+          type: "string",
+          description: "Transaction amount in decimal currency units (e.g. '2.50').",
+        },
+        token: {
+          type: "string",
+          description: "Token symbol (e.g. 'USDC').",
+        },
+        recipient: {
+          type: "string",
+          description: "Recipient wallet address.",
+        },
+        domain: {
+          type: "string",
+          description: "Domain or host of the target resource.",
+        },
+        coSigned: {
+          type: "boolean",
+          description: "Whether this transaction has a root or human co-signature.",
+        },
+      },
+      required: ["amount"],
+    },
+  },
+  {
+    name: "arcenpay_revoke_mandate",
+    description:
+      "Revokes an active mandate locally and notifies the facilitator/registry to prevent further authorization.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        mandateId: {
+          type: "string",
+          description: "Identifier of the mandate to revoke.",
+        },
+        reason: {
+          type: "string",
+          description: "Optional reason for revocation.",
+        },
+      },
+      required: ["mandateId"],
+    },
+  },
+  {
+    name: "arcenpay_mandate_status",
+    description:
+      "Queries active delegation state, remaining depth, root issuer, and revocation status for a mandate.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        mandateId: {
+          type: "string",
+          description: "Mandate ID to inspect (defaults to agent's current mandate).",
+        },
+      },
+    },
+  },
+  {
+    name: "arcenpay_fetch_escrowed",
+    description:
+      "Executes an escrow-protected x402 resource fetch. Funds are reserved in escrow and only released if the provider returns deliverable conforming to the commitment terms.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        url: {
+          type: "string",
+          description: "URL of the escrow-protected resource to fetch.",
+        },
+        mode: {
+          type: "string",
+          enum: ["exact_hash", "schema_conformance", "attestation"],
+          description: "Escrow verification mode (defaults to 'exact_hash').",
+        },
+        schemaDescriptor: {
+          type: "object",
+          description: "JSON schema descriptor when using schema_conformance mode.",
+        },
+        maxPrice: {
+          type: "string",
+          description: "Maximum price willing to spend (e.g. '1.00').",
+        },
+      },
+      required: ["url"],
+    },
+  },
+  {
+    name: "arcenpay_verify_commitment",
+    description:
+      "Cryptographically verifies whether a delivered payload matches a provider's commitment (exact_hash SHA-256 or schema conformance).",
+    inputSchema: {
+      type: "object",
+      properties: {
+        commitment: {
+          type: "object",
+          description: "Provider commitment object containing hash/schema reference and signature.",
+        },
+        payload: {
+          description: "Delivered data or response payload to verify.",
+        },
+        schemaDescriptor: {
+          type: "object",
+          description: "Schema descriptor if verifying under schema_conformance mode.",
+        },
+      },
+      required: ["commitment", "payload"],
+    },
+  },
+  {
+    name: "arcenpay_dispute_claim",
+    description:
+      "Automatically files a settlement dispute and triggers refund on failure or mismatch of deliverable.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        requestNonce: {
+          type: "string",
+          description: "Request nonce of the disputed escrow reservation.",
+        },
+        failureReason: {
+          type: "string",
+          enum: [
+            "hash_mismatch",
+            "schema_violation",
+            "timeout",
+            "bad_signature",
+            "malformed_commitment",
+          ],
+          description: "Reason for the dispute.",
+        },
+        schemaViolationDetail: {
+          type: "string",
+          description: "Optional description of schema violation error.",
+        },
+        actualPayloadHash: {
+          type: "string",
+          description: "Optional SHA-256 hash of the actual delivered payload.",
+        },
+      },
+      required: ["requestNonce", "failureReason"],
+    },
+  },
+  {
+    name: "arcenpay_settlement_status",
+    description:
+      "Checks the current lifecycle status of an escrow reservation (reserved, released, refunded, disputed) by requestNonce.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        requestNonce: {
+          type: "string",
+          description: "Escrow request nonce to check.",
+        },
+      },
+      required: ["requestNonce"],
+    },
+  },
 ];
 
 /**
@@ -213,6 +437,162 @@ export function createArcenAgentMcpTools(agent: ArcenAgent) {
                   text: JSON.stringify(summary, null, 2),
                 },
               ],
+            };
+          }
+
+          case "arcenpay_issue_mandate": {
+            const childAgentId = String(args.childAgentId ?? "");
+            const childPublicKey = String(args.childPublicKey ?? "");
+            if (!childAgentId || !childPublicKey) {
+              return {
+                isError: true,
+                content: [{ type: "text", text: "Missing childAgentId or childPublicKey" }],
+              };
+            }
+            const scope: MandateScope = {
+              maxPerTxn: args.maxPerTxn ? String(args.maxPerTxn) : undefined,
+              maxDaily: args.maxDaily ? String(args.maxDaily) : undefined,
+              maxTotal: args.maxTotal ? String(args.maxTotal) : undefined,
+              allowedTokens: Array.isArray(args.allowedTokens) ? args.allowedTokens.map(String) : ["USDC", "USDT"],
+              allowedRecipients: Array.isArray(args.allowedRecipients) ? args.allowedRecipients.map(String) : ["*"],
+              allowedResourceDomains: Array.isArray(args.allowedDomains) ? args.allowedDomains.map(String) : undefined,
+              validFrom: args.validFrom ? String(args.validFrom) : new Date().toISOString(),
+              validUntil: args.validUntil
+                ? String(args.validUntil)
+                : new Date(Date.now() + 30 * 86400000).toISOString(),
+            };
+            const mandate = await agent.issueMandate({
+              childAgentId,
+              childPublicKey,
+              childScope: scope,
+              isSubMandate: args.isSubMandate !== undefined ? Boolean(args.isSubMandate) : undefined,
+            });
+            return {
+              content: [{ type: "text", text: JSON.stringify(mandate, null, 2) }],
+            };
+          }
+
+          case "arcenpay_check_policy": {
+            const amount = String(args.amount ?? "0");
+            const result = agent.checkPolicy({
+              tx: {
+                amount,
+                amountAtomic: BigInt(Math.round(parseFloat(amount || "0") * 1_000_000)),
+                token: String(args.token ?? "USDC"),
+                recipient: String(args.recipient ?? agent.address),
+                chainId: agent.chainId,
+              },
+              resource: args.domain ? { domain: String(args.domain), url: `https://${args.domain}` } : undefined,
+              coSigned: Boolean(args.coSigned),
+            });
+            return {
+              content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+            };
+          }
+
+          case "arcenpay_revoke_mandate": {
+            const mandateId = String(args.mandateId ?? "");
+            if (!mandateId) {
+              return {
+                isError: true,
+                content: [{ type: "text", text: "Missing mandateId" }],
+              };
+            }
+            const res = await agent.revokeMandate(mandateId, args.reason ? String(args.reason) : undefined);
+            return {
+              content: [{ type: "text", text: JSON.stringify(res, null, 2) }],
+            };
+          }
+
+          case "arcenpay_mandate_status": {
+            const mandateId = args.mandateId ? String(args.mandateId) : undefined;
+            const status = await agent.getMandateStatus(mandateId);
+            return {
+              content: [{ type: "text", text: JSON.stringify(status, null, 2) }],
+            };
+          }
+
+          case "arcenpay_fetch_escrowed": {
+            const url = String(args.url ?? "");
+            if (!url) {
+              return {
+                isError: true,
+                content: [{ type: "text", text: "Missing url" }],
+              };
+            }
+            const escrowResult = await agent.fetchEscrowed(url, {
+              mode: args.mode as EscrowMode | undefined,
+              schemaDescriptor: args.schemaDescriptor as Record<string, unknown> | undefined,
+              maxPrice: args.maxPrice ? String(args.maxPrice) : undefined,
+            });
+            return {
+              content: [
+                {
+                  type: "text",
+                  text: JSON.stringify(
+                    {
+                      verified: escrowResult.verified,
+                      payload: escrowResult.payload,
+                      commitment: escrowResult.commitment,
+                      disputeReceipt: escrowResult.disputeReceipt,
+                    },
+                    null,
+                    2,
+                  ),
+                },
+              ],
+            };
+          }
+
+          case "arcenpay_verify_commitment": {
+            const commitment = args.commitment as ProviderCommitment;
+            const payload = args.payload;
+            if (!commitment) {
+              return {
+                isError: true,
+                content: [{ type: "text", text: "Missing commitment object" }],
+              };
+            }
+            const verification = agent.verifyCommitment(
+              commitment,
+              payload,
+              args.schemaDescriptor as Record<string, unknown> | undefined,
+            );
+            return {
+              content: [{ type: "text", text: JSON.stringify(verification, null, 2) }],
+            };
+          }
+
+          case "arcenpay_dispute_claim": {
+            const requestNonce = String(args.requestNonce ?? "");
+            const failureReason = args.failureReason as DisputeReason;
+            if (!requestNonce || !failureReason) {
+              return {
+                isError: true,
+                content: [{ type: "text", text: "Missing requestNonce or failureReason" }],
+              };
+            }
+            const receipt = await agent.disputeSettlement(requestNonce, {
+              failureReason,
+              schemaViolationDetail: args.schemaViolationDetail ? String(args.schemaViolationDetail) : undefined,
+              actualPayloadHash: args.actualPayloadHash ? String(args.actualPayloadHash) : undefined,
+            });
+            return {
+              content: [{ type: "text", text: JSON.stringify(receipt, null, 2) }],
+            };
+          }
+
+          case "arcenpay_settlement_status": {
+            const requestNonce = String(args.requestNonce ?? "");
+            if (!requestNonce) {
+              return {
+                isError: true,
+                content: [{ type: "text", text: "Missing requestNonce" }],
+              };
+            }
+            const status = await agent.getSettlementStatus(requestNonce);
+            return {
+              content: [{ type: "text", text: JSON.stringify(status, null, 2) }],
             };
           }
 

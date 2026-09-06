@@ -680,6 +680,35 @@ export const SessionVaultABI = [
       { name: "agent", type: "address", indexed: true },
     ],
   },
+  {
+    type: "function",
+    name: "revokeMandate",
+    inputs: [{ name: "mandateId", type: "bytes32" }],
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    name: "isMandateRevoked",
+    inputs: [{ name: "mandateId", type: "bytes32" }],
+    outputs: [{ name: "", type: "bool" }],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "revokedMandates",
+    inputs: [{ name: "", type: "bytes32" }],
+    outputs: [{ name: "", type: "bool" }],
+    stateMutability: "view",
+  },
+  {
+    type: "event",
+    name: "MandateRevoked",
+    inputs: [
+      { name: "mandateId", type: "bytes32", indexed: true },
+      { name: "revoker", type: "address", indexed: true },
+    ],
+  },
 ] as const;
 
 export const ZKUsageVerifierABI = [

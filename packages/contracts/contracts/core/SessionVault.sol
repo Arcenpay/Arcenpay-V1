@@ -59,6 +59,9 @@ contract SessionVault is
     /// @notice Whether provider whitelist is active
     bool public providerWhitelistEnabled;
 
+    /// @notice On-chain mandate revocation registry (mandateId => isRevoked) (Tier 1 invariant)
+    mapping(bytes32 => bool) public revokedMandates;
+
     // ============================================================
     //                         EVENTS
     // ============================================================
@@ -259,6 +262,18 @@ contract SessionVault is
     /// @param agent The agent address
     function getAgentSessions(address agent) external view returns (bytes32[] memory) {
         return _agentSessions[agent];
+    }
+
+    /// @inheritdoc ISessionVault
+    function revokeMandate(bytes32 mandateId) external whenNotPaused {
+        require(mandateId != bytes32(0), "SessionVault: zero mandateId");
+        revokedMandates[mandateId] = true;
+        emit MandateRevoked(mandateId, msg.sender);
+    }
+
+    /// @inheritdoc ISessionVault
+    function isMandateRevoked(bytes32 mandateId) external view returns (bool) {
+        return revokedMandates[mandateId];
     }
 
     function _authorizeUpgrade(address newImplementation) internal view override onlyOwner {
