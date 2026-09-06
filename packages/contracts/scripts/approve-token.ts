@@ -8,6 +8,10 @@ const DEFAULT_USDC_BY_CHAIN: Record<number, string> = {
   84532: "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
   8453: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
   5042002: "0x3600000000000000000000000000000000000000",
+  // BOT Chain has no canonical USDC — official bridged USDT per
+  // dev-docs.botchain.ai/docs/Bridge/contract-addresses.
+  968: "0x75edC9335175Fc0552D51D48439F229c10420fe3",
+  677: "0xaBabc7Ddc03e501d190C676BF3d92ef0e6e87a3C",
 };
 
 function deploymentFileFor(chainId: number): string {
@@ -15,6 +19,8 @@ function deploymentFileFor(chainId: number): string {
   if (chainId === 84532) return "baseSepolia-latest.json";
   if (chainId === 8453) return "baseMainnet-latest.json";
   if (chainId === 5042002) return "arcTestnet-latest.json";
+  if (chainId === 968) return "botTestnet-latest.json";
+  if (chainId === 677) return "botMainnet-latest.json";
   throw new Error(`No deployment file mapping for chainId=${chainId}`);
 }
 

@@ -11,7 +11,20 @@ import fs from "fs";
 import path from "path";
 import { randomUUID } from "node:crypto";
 
+// Multi-chain deployments run one facilitator PROCESS per chainId (see
+// architecture note in @arcenpay/internal-core chains.ts). Set
+// FACILITATOR_ENV_FILE to point a given process at a chain-specific env
+// file (e.g. `.env.bot-testnet`) WITHOUT touching the default `.env` used
+// by any other already-running facilitator instance for a different chain.
+const explicitEnvFile = process.env.FACILITATOR_ENV_FILE;
+
 const FACILITATOR_ENV_PATHS = [
+  ...(explicitEnvFile
+    ? [
+        path.resolve(process.cwd(), explicitEnvFile),
+        path.resolve(process.cwd(), "apps/facilitator", explicitEnvFile),
+      ]
+    : []),
   path.resolve(process.cwd(), ".env.local"),
   path.resolve(process.cwd(), ".env"),
   path.resolve(process.cwd(), "apps/facilitator/.env.local"),

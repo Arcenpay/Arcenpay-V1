@@ -10,23 +10,16 @@ import {
 } from "viem";
 import { createResilientFacilitatorClient, getFacilitatorRpcTransport } from "../rpc-client.js";
 import { privateKeyToAccount } from "viem/accounts";
-import { sepolia, baseSepolia, base } from "viem/chains";
 import {
   DEFAULT_CHAIN_ID,
   SessionVaultABI,
   FeeCollectorABI,
   getContractAddresses,
   getChainFamily,
+  getChain,
   getStellarNetworkPassphrase,
   getStellarSorobanRpcUrl,
 } from "@arcenpay/internal-core";
-
-const CHAIN_MAP: Record<number, any> = {
-  11155111: sepolia,
-  84532: baseSepolia,
-  8453: base,
-  5042002: baseSepolia, // Arc Testnet — USDC-native chain, uses Base Sepolia transport
-};
 
 type SessionState = {
   agent: `0x${string}`;
@@ -141,7 +134,6 @@ export class SettlementWriterService {
   constructor(config: SettlementWriterConfig) {
     this.chainId = config.chainId ?? DEFAULT_CHAIN_ID;
     this.isStellar = getChainFamily(this.chainId) === "stellar";
-    const chain = CHAIN_MAP[this.chainId] || baseSepolia;
     const contracts = getContractAddresses(this.chainId);
 
     this.sessionVaultAddress =
@@ -192,6 +184,10 @@ export class SettlementWriterService {
 
     this.publicClient = createResilientFacilitatorClient(config.rpcUrl, this.chainId) as any;
 
+    // Resolve the viem `Chain` from the canonical internal-core registry
+    // (never a stale local map) so the signed transaction embeds the real
+    // chainId instead of silently defaulting to the wrong network.
+    const chain = getChain(this.chainId);
     this.walletClient = createWalletClient({
       account,
       chain,

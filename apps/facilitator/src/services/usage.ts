@@ -20,6 +20,7 @@ import {
   DEFAULT_CHAIN_ID,
   ZKUsageVerifierABI,
   getContractAddresses,
+  getChainFamily,
 } from "@arcenpay/internal-core";
 
 interface UsageLogEntry {
@@ -160,7 +161,7 @@ export class UsageService {
       signerPrivateKey: config.signerPrivateKey,
     };
 
-    if (config.signerPrivateKey) {
+    if (getChainFamily(chainId) === "evm" && config.signerPrivateKey) {
       const key = config.signerPrivateKey.startsWith("0x")
         ? config.signerPrivateKey
         : `0x${config.signerPrivateKey}`;

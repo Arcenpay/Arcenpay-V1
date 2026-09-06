@@ -40,6 +40,8 @@ const CHAIN_SLUG: Record<number, string> = {
   84532: "baseSepolia",
   8453: "baseMainnet",
   5042002: "arcTestnet",
+  968: "botTestnet",
+  677: "botMainnet",
 };
 
 function loadJson<T>(filePath: string): T {

@@ -45,6 +45,19 @@ const DEFAULT_SERVICES: Record<number, ChainServiceEndpoints> = {
   5042002: {
     rpcUrl: "https://rpc.testnet.arc.network",
   },
+  // WARNING: BOT Chain's own docs state `eth_getLogs` is DISABLED on this
+  // default public Mainnet endpoint. The facilitator's event pipeline
+  // (EventListenerService) depends entirely on getLogs polling — billing
+  // events will silently never arrive against this default. This default
+  // exists only so the SDK/manifest has *a* value; production facilitator
+  // deployments MUST override via ARCENPAY_RPC_URL_677 / RPC_URL_677 with a
+  // getLogs-capable provider before going live.
+  677: {
+    rpcUrl: "https://rpc.botchain.ai",
+  },
+  968: {
+    rpcUrl: "https://rpc.bohr.life",
+  },
 };
 
 type ServiceKey = keyof ChainServiceEndpoints;
@@ -54,6 +67,8 @@ const LEGACY_RPC_ENV_KEYS: Record<number, string[]> = {
   84532: ["MEAP_RPC_URL_84532", "BASE_SEPOLIA_RPC_URL"],
   8453: ["MEAP_RPC_URL_8453", "BASE_MAINNET_RPC_URL"],
   5042002: ["MEAP_RPC_URL_5042002", "ARC_RPC_URL", "ARC_SEPOLIA_RPC_URL"],
+  677: ["BOT_MAINNET_RPC_URL"],
+  968: ["BOT_TESTNET_RPC_URL"],
 };
 
 const SERVICE_ENV_KEYS: Record<ServiceKey, (chainId: number) => string[]> = {

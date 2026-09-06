@@ -69,6 +69,45 @@ export const arcTestnet: Chain = defineChain({
   testnet: true,
 });
 
+// --- BOT Chain Mainnet ---
+// EVM-compatible Layer 1 (Parlia/BSC-style consensus). Native gas token is
+// BOT (18 decimals) — NOT a stablecoin. See TOKENS below: BOT Chain has no
+// canonical USDC; only a bridged USDT exists per BOT Chain's own bridge docs
+// (dev-docs.botchain.ai/docs/Bridge/contract-addresses). Confirm the intended
+// settlement asset before relying on the USDT entry for real billing.
+//
+// IMPORTANT: the default public RPC below has `eth_getLogs` DISABLED per
+// BOT Chain's own docs (dev-docs.botchain.ai/docs/Developers/json-rpc-endpoint).
+// The facilitator's EventListenerService polls via `getLogs` every ~15s —
+// billing events will NEVER be detected against this default endpoint.
+// Override with a getLogs-capable RPC via ARCENPAY_RPC_URL_677 / RPC_URL_677
+// before running the facilitator against BOT Chain Mainnet in production.
+export const botMainnet: Chain = defineChain({
+  id: 677,
+  name: 'BOT Chain',
+  nativeCurrency: { name: 'BOT', symbol: 'BOT', decimals: 18 },
+  rpcUrls: {
+    default: { http: ['https://rpc.botchain.ai'] },
+  },
+  blockExplorers: {
+    default: { name: 'BOTScan', url: 'https://scan.botchain.ai' },
+  },
+});
+
+// --- BOT Chain Testnet ("Bohr") ---
+export const botTestnet: Chain = defineChain({
+  id: 968,
+  name: 'BOT Chain Testnet',
+  nativeCurrency: { name: 'BOT', symbol: 'BOT', decimals: 18 },
+  rpcUrls: {
+    default: { http: ['https://rpc.bohr.life'] },
+  },
+  blockExplorers: {
+    default: { name: 'BOTScan Testnet', url: 'https://scan.bohr.life' },
+  },
+  testnet: true,
+});
+
 // --- Supported Chains Map ---
 //
 // EVM chain definitions live above (viem `defineChain`). Non-EVM chains
@@ -93,10 +132,12 @@ export const SUPPORTED_CHAINS = {
   baseSepolia,
   baseMainnet,
   arcTestnet,
+  botMainnet,
+  botTestnet,
 } as const;
 
 // EVM-only chainId list (preserved for call sites that genuinely require viem).
-export const EVM_SUPPORTED_CHAIN_IDS = [11155111, 84532, 8453, 5042002] as const;
+export const EVM_SUPPORTED_CHAIN_IDS = [11155111, 84532, 8453, 5042002, 677, 968] as const;
 
 // Consolidated chainId list across all families — the source of truth.
 export const SUPPORTED_CHAIN_IDS = [
@@ -154,6 +195,18 @@ export const TOKENS = {
   // Arc Testnet — canonical default USDC.
   5042002: {
     USDC: { address: '0x3600000000000000000000000000000000000000' as const, decimals: 6 },
+  },
+  // BOT Chain Mainnet — NO canonical USDC exists. This is the official
+  // bridged USDT address per dev-docs.botchain.ai/docs/Bridge/contract-addresses
+  // (verified against BOT Chain's own bridge docs, NOT fabricated). Confirm
+  // with the team whether USDT is the accepted settlement asset for this
+  // chain before enabling billing here — do not assume USDC parity.
+  677: {
+    USDT: { address: '0xaBabc7Ddc03e501d190C676BF3d92ef0e6e87a3C' as const, decimals: 6 },
+  },
+  // BOT Chain Testnet — bridged USDT per the same bridge docs.
+  968: {
+    USDT: { address: '0x75edC9335175Fc0552D51D48439F229c10420fe3' as const, decimals: 6 },
   },
   // Stellar Mainnet — Circle USDC (SAC issuer account). Address is the G…
   // issuer; the asset code "USDC" is implied by the symbol key.
@@ -216,6 +269,8 @@ const CHAIN_MAP: Record<number, Chain> = {
   84532: baseSepolia,
   8453: baseMainnet,
   5042002: arcTestnet,
+  677: botMainnet,
+  968: botTestnet,
 };
 
 // --- Default Chain ---

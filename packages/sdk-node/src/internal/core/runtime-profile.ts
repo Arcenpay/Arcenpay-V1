@@ -55,6 +55,10 @@ function legacyRpcEnvKeys(chainId: number): string[] {
       return ["MEAP_RPC_URL_8453", "BASE_MAINNET_RPC_URL", "BASE_RPC_URL"];
     case 5042002:
       return ["MEAP_RPC_URL_5042002", "ARC_RPC_URL", "ARC_SEPOLIA_RPC_URL"];
+    case 677:
+      return ["BOT_MAINNET_RPC_URL"];
+    case 968:
+      return ["BOT_TESTNET_RPC_URL"];
     default:
       return [];
   }

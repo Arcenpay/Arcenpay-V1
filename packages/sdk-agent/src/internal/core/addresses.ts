@@ -64,6 +64,30 @@ const ADDRESSES: Record<number, ContractAddresses> = {
     zkUsageVerifier: '0x0000000000000000000000000000000000000000',
     mirrorRegistry: '0x0000000000000000000000000000000000000000',
   },
+  // BOT Chain Mainnet (677) — NOT deployed yet. Same contracts as other EVM
+  // chains (no Solidity changes needed). Set ARCENPAY_CONTRACT_677_* env vars
+  // (or call setContractAddresses(677, {...})) once deployed. See
+  // hardhat.config.ts `botMainnet` network for the deploy target.
+  677: {
+    subscriptionRegistry: '0x0000000000000000000000000000000000000000',
+    autopayModule: '0x0000000000000000000000000000000000000000',
+    planFactory: '0x0000000000000000000000000000000000000000',
+    feeCollector: '0x0000000000000000000000000000000000000000',
+    sessionVault: '0x0000000000000000000000000000000000000000',
+    zkUsageVerifier: '0x0000000000000000000000000000000000000000',
+    mirrorRegistry: '0x0000000000000000000000000000000000000000',
+  },
+  // BOT Chain Testnet (968) — NOT deployed yet. Deploy here first as a
+  // staging dry run before touching mainnet.
+  968: {
+    subscriptionRegistry: '0x0000000000000000000000000000000000000000',
+    autopayModule: '0x0000000000000000000000000000000000000000',
+    planFactory: '0x0000000000000000000000000000000000000000',
+    feeCollector: '0x0000000000000000000000000000000000000000',
+    sessionVault: '0x0000000000000000000000000000000000000000',
+    zkUsageVerifier: '0x0000000000000000000000000000000000000000',
+    mirrorRegistry: '0x0000000000000000000000000000000000000000',
+  },
   // Arc Testnet (Testnet) — Deployed 2026-08-02
   5042002: {
     subscriptionRegistry: '0x4a8B7CE3Fc1c767329c50D9230FA46c2c16df0A9',
@@ -77,7 +101,7 @@ const ADDRESSES: Record<number, ContractAddresses> = {
 
   // ── Stellar Mainnet — synthetic chainId 9_000_000 ──
   // Addresses are C… Soroban contract ids; deploy via env overrides.
-  900000: {
+  [STELLAR_MAINNET_CHAIN_ID]: {
     subscriptionRegistry: STELLAR_UNSET,
     autopayModule: STELLAR_UNSET, // Stellar analogue: autopay-account
     planFactory: STELLAR_UNSET,
