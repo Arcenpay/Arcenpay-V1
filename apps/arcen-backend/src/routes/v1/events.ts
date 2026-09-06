@@ -20,6 +20,7 @@ import { touchEntityActivity } from "../../lib/platform/activity.js";
 import { resolveEntitlementResult } from "../../lib/entitlements/entitlements.js";
 import { resolveCreditBurnConfig } from "../../lib/billing/usage-credits.js";
 import { consumeMeteredEntitlement } from "../../lib/billing/usage-consume.js";
+import { normalizeWallet } from "../../lib/billing/utils.js";
 import { Prisma } from "../../generated/client/client.js";
 import { corsHeaders } from "../../middleware/cors.js";
 
@@ -129,7 +130,7 @@ async function upsertCompany(
 ): Promise<{ id: string; created: boolean } | null> {
   if (!input.id && !input.wallet && !input.email) return null;
 
-  const walletAddress = input.wallet?.toLowerCase();
+  const walletAddress = normalizeWallet(input.wallet);
 
   // Find existing company
   const where: Record<string, unknown>[] = [];
@@ -219,7 +220,7 @@ async function upsertUser(
 ): Promise<{ id: string; created: boolean } | null> {
   if (!input.id && !input.clerk_user_id && !input.wallet && !input.email) return null;
 
-  const walletAddress = input.wallet?.toLowerCase();
+  const walletAddress = normalizeWallet(input.wallet);
 
   const where: Record<string, unknown>[] = [];
   if (input.id) where.push({ externalId: input.id });

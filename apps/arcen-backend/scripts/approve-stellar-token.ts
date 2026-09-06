@@ -26,17 +26,28 @@ import {
 // drive the shared testnet PlanFactory deployment. It has no value on any
 // other network — never point this script (or reuse its key) at mainnet.
 // Prefer env vars (STELLAR_ADMIN_SECRET, PLAN_FACTORY_CONTRACT_ID) in real
-// workflows.
-
-const ADMIN_SECRET_KEY = "SDF4YHZLS7UP5R456NVWCCMTNPQEDCF67QYXADFE2RJM66I2NKKY7B6I";
-const PLAN_FACTORY_CONTRACT_ID = "CAF4VS5OMM6DW5ZN5JFJH4U2RJD6DODZYBHNXMTS6RSUMPDO3T4C73S7";
-const TOKEN_ADDRESS = "GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5";
-const SOROBAN_RPC_URL = "https://soroban-testnet.stellar.org";
-const NETWORK_PASSPHRASE = Networks.TESTNET;
+const ADMIN_SECRET_KEY =
+  process.env.STELLAR_ADMIN_SECRET || process.env.ADMIN_SECRET_KEY;
+const PLAN_FACTORY_CONTRACT_ID =
+  process.env.PLAN_FACTORY_CONTRACT_ID ||
+  "CAF4VS5OMM6DW5ZN5JFJH4U2RJD6DODZYBHNXMTS6RSUMPDO3T4C73S7";
+const TOKEN_ADDRESS =
+  process.env.TOKEN_ADDRESS ||
+  "GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5";
+const SOROBAN_RPC_URL =
+  process.env.SOROBAN_RPC_URL || "https://soroban-testnet.stellar.org";
+const NETWORK_PASSPHRASE =
+  process.env.STELLAR_NETWORK_PASSPHRASE || Networks.TESTNET;
 
 // ─── Execution ───────────────────────────────────────────────────────────────
 
 async function main() {
+  if (!ADMIN_SECRET_KEY) {
+    console.error(
+      "[approve-token] Error: Missing STELLAR_ADMIN_SECRET (or ADMIN_SECRET_KEY) environment variable.",
+    );
+    process.exit(1);
+  }
   console.log("[approve-token] Starting token approval...\n");
 
   const adminKeypair = Keypair.fromSecret(ADMIN_SECRET_KEY);

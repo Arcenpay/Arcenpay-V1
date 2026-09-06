@@ -12,8 +12,17 @@ import {
 function createNoopClient(): PublicClient {
   return new Proxy({} as PublicClient, {
     get: (_target, prop) => {
-      if (typeof prop === "string" && ["then", "catch", "toString", "inspect", Symbol.toPrimitive].includes(prop))
+      // Safe handling for symbol inspections (Symbol.toPrimitive, Symbol.toStringTag, etc.)
+      if (typeof prop === "symbol") {
         return undefined;
+      }
+      // Common inspection, serialization, and promise-like checks
+      if (
+        typeof prop === "string" &&
+        ["then", "catch", "finally", "toJSON", "toString", "valueOf", "inspect"].includes(prop)
+      ) {
+        return undefined;
+      }
       throw new Error(
         "EVM client used on a non-EVM (Stellar) chain. Stellar on-chain reads must go through StellarChainAdapter.",
       );
