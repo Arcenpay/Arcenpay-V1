@@ -4,6 +4,7 @@ import { requirePermission, isErrorResponse } from "../../../lib/auth/api-auth.j
 import { writeAuditEvent } from "../../../lib/platform/audit.js";
 import { createResilientPublicClient, getRpcUrl } from "../../../config.js";
 import { isSupportedDashboardChainId } from "../../../lib/platform/default-chain.js";
+import { resolveChainFamilyForPrisma } from "../../../lib/platform/chain-family.js";
 import { resolvePlanNetwork } from "../../../lib/catalog/plan-network.js";
 import {
   createPublicClient,
@@ -11,7 +12,15 @@ import {
   http,
   verifyTypedData,
 } from "viem";
-import { PlanFactoryABI, getChain, getContractAddresses } from "@arcenpay/internal-core";
+import {
+  PlanFactoryABI,
+  getChain,
+  getContractAddresses,
+  isEvmChain,
+  getStellarSorobanRpcUrl,
+  getStellarNetworkPassphrase,
+} from "@arcenpay/internal-core";
+import { rpc, contract as stellarContract } from "@stellar/stellar-sdk";
 import { z } from "zod";
 
 const RegisterOnChainSchema = z.object({
@@ -20,10 +29,9 @@ const RegisterOnChainSchema = z.object({
     .regex(/^0x[0-9a-fA-F]+$/)
     .optional(),
   deadline: z.number().int().positive().optional(),
-  userAddress: z
-    .string()
-    .regex(/^0x[0-9a-fA-F]{40}$/)
-    .optional(),
+  userAddress: z.string().optional(),
+  onChainPlanId: z.string().optional(),
+  txHash: z.string().optional(),
 });
 
 const PLAN_FACTORY_DOMAIN = {
@@ -100,8 +108,11 @@ const UPDATE_PLAN_FOR_ABI = [
   },
 ] as const;
 
-function sameAddress(a: string, b: string): boolean {
-  return a.toLowerCase() === b.toLowerCase();
+function sameAddress(a: string, b: string, chainId: number): boolean {
+  if (isEvmChain(chainId)) {
+    return a.toLowerCase() === b.toLowerCase();
+  }
+  return a === b;
 }
 
 function resolveMaxOnChainChargeMicros(plan: {
@@ -136,30 +147,7 @@ export async function registerPlanOnChain(c: Context) {
     return c.json({ error: "Invalid request", details: parsed.error.flatten().fieldErrors }, 400 as any);
   }
 
-  const { signature, deadline, userAddress } = parsed.data;
-  const providerAddress = auth.team.walletAddress ?? userAddress ?? null;
-  const requiresUserSignature = true;
-
-  if (requiresUserSignature) {
-    if (!auth.team.walletAddress) {
-      return c.json({
-          error:
-            "No wallet linked to this account. Please link your wallet first.",
-        }, 400 as any);
-    }
-
-    if (!userAddress || !signature || !deadline) {
-      return c.json({ error: "signature, deadline, and userAddress are required." }, 400 as any);
-    }
-
-    if (auth.team.walletAddress.toLowerCase() !== userAddress.toLowerCase()) {
-      return c.json({ error: "Signature must be from your authenticated wallet" }, 403 as any);
-    }
-  }
-
-  if (!providerAddress) {
-    return c.json({ error: "No provider wallet is available for on-chain registration." }, 400 as any);
-  }
+  const { signature, deadline, userAddress, onChainPlanId, txHash } = parsed.data;
 
   const storedPlan = await db.catalogPlan.findFirst({
     where: { id: planId, teamId: auth.team.teamId },
@@ -178,10 +166,11 @@ export async function registerPlanOnChain(c: Context) {
   }
 
   const resolvedNetwork = resolvePlanNetwork({
-    environmentMode: storedPlan.environment?.mode ?? storedPlan.environmentMode,
+    environmentMode: storedPlan.environment?.mode ?? "DEVELOPMENT",
     acceptedToken: storedPlan.acceptedToken,
-    requestedChainId: storedPlan.environment?.chainId ?? storedPlan.chainId,
+    requestedChainId: storedPlan.environment?.chainId,
   });
+
   if (!resolvedNetwork) {
     return c.json({
       error:
@@ -189,17 +178,29 @@ export async function registerPlanOnChain(c: Context) {
     }, 400 as any);
   }
 
+  const chainId = resolvedNetwork.chainId;
+  const providerAddress = isEvmChain(chainId)
+    ? auth.team.walletAddress
+    : auth.team.stellarWalletAddress;
+
+  if (!providerAddress) {
+    return c.json({ error: "No provider wallet is available for on-chain registration." }, 400 as any);
+  }
+
+  const tokenMismatch = isEvmChain(storedPlan.chainId)
+    ? storedPlan.acceptedToken.toLowerCase() !== resolvedNetwork.acceptedToken.toLowerCase()
+    : storedPlan.acceptedToken !== resolvedNetwork.acceptedToken;
+
   const needsPlanRepair =
     !storedPlan.onChainPlanId &&
-    (storedPlan.chainId !== resolvedNetwork.chainId ||
-      storedPlan.acceptedToken.toLowerCase() !==
-        resolvedNetwork.acceptedToken.toLowerCase());
+    (storedPlan.chainId !== resolvedNetwork.chainId || tokenMismatch);
 
   const plan = needsPlanRepair
     ? await db.catalogPlan.update({
         where: { id: storedPlan.id },
         data: {
           chainId: resolvedNetwork.chainId,
+          chainFamily: resolveChainFamilyForPrisma(resolvedNetwork.chainId),
           acceptedToken: resolvedNetwork.acceptedToken,
           chainSyncStatus:
             parseFloat(storedPlan.price.toString()) === 0
@@ -235,7 +236,108 @@ export async function registerPlanOnChain(c: Context) {
       400 as any,
     );
   }
-  const chainId = plan.chainId;
+
+  // ── Stellar Soroban confirmation path ──────────────────────────────────────
+  if (!isEvmChain(chainId)) {
+    if (!onChainPlanId) {
+      return c.json({ error: "onChainPlanId is required for Stellar confirmation." }, 400 as any);
+    }
+
+    const sorobanRpcUrl = getStellarSorobanRpcUrl(chainId);
+    const networkPassphrase = getStellarNetworkPassphrase(chainId);
+    const contracts = getContractAddresses(chainId);
+
+    try {
+      const client = (await stellarContract.Client.from({
+        contractId: contracts.planFactory,
+        networkPassphrase,
+        rpcUrl: sorobanRpcUrl,
+      })) as any;
+
+      const { result: onChainPlan } = await client.get_plan({
+        plan_id: BigInt(onChainPlanId),
+      });
+
+      if (!onChainPlan) {
+        return c.json({ error: `Plan ${onChainPlanId} not found on-chain.` }, 404 as any);
+      }
+
+      const onChainProvider = String(onChainPlan.provider ?? "");
+      const onChainName = String(onChainPlan.name ?? "");
+      const onChainTier = String(onChainPlan.tier ?? "");
+      const onChainPrice = BigInt(onChainPlan.price ?? 0);
+      const onChainInterval = Number(onChainPlan.billing_interval ?? 0);
+      const onChainToken = String(onChainPlan.accepted_token ?? "");
+      const onChainActive = Boolean(onChainPlan.active ?? false);
+
+      const priceInMicros = resolveMaxOnChainChargeMicros(plan);
+
+      if (
+        onChainProvider !== providerAddress ||
+        onChainName !== plan.name ||
+        onChainTier !== plan.tier ||
+        onChainPrice !== priceInMicros ||
+        onChainInterval !== plan.billingInterval ||
+        onChainToken !== plan.acceptedToken ||
+        !onChainActive
+      ) {
+        return c.json(
+          { error: "On-chain plan details do not match the catalog plan." },
+          409 as any,
+        );
+      }
+
+      const updated = await db.catalogPlan.update({
+        where: { id: plan.id },
+        data: {
+          onChainPlanId,
+          chainSyncStatus: "SYNCED",
+          chainSyncError: null,
+          chainSyncedAt: new Date(),
+        },
+      });
+
+      await writeAuditEvent({
+        headers: c.req.raw.headers,
+        teamId: auth.team.teamId,
+        userId: auth.team.userId,
+        walletAddress: providerAddress,
+        action: "PLAN_REGISTERED_ON_CHAIN",
+        resourceType: "CatalogPlan",
+        resourceId: plan.id,
+        metadata: {
+          chainId,
+          onChainPlanId,
+          txHash: txHash ?? null,
+          family: "stellar",
+        },
+      });
+
+      return c.json({
+        success: true,
+        onChainPlanId: updated.onChainPlanId,
+        status: updated.chainSyncStatus,
+      });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error("[plan-register-onchain] Stellar verification failed:", msg);
+      return c.json({ error: `Stellar verification failed: ${msg}` }, 500 as any);
+    }
+  }
+
+  // ── EVM path (signature verification + on-chain write) ───────────────────
+  const requiresUserSignature = true;
+
+  if (requiresUserSignature) {
+    if (!userAddress || !signature || !deadline) {
+      return c.json({ error: "signature, deadline, and userAddress are required." }, 400 as any);
+    }
+
+    if (providerAddress.toLowerCase() !== userAddress.toLowerCase()) {
+      return c.json({ error: "Signature must be from your authenticated wallet" }, 403 as any);
+    }
+  }
+
   const rpcUrl = getRpcUrl(chainId);
   const chain = getChain(chainId);
 
@@ -258,7 +360,7 @@ export async function registerPlanOnChain(c: Context) {
   let shouldReplaceOnChainPlan = false;
   let replacedOnChainPlanId: string | null = null;
   const usdcAddress = plan.onChainPlanId
-    ? (plan.acceptedToken as `0x${string}`)
+    ? plan.acceptedToken
     : resolvedNetwork.acceptedToken;
 
   if (plan.onChainPlanId) {
@@ -270,7 +372,7 @@ export async function registerPlanOnChain(c: Context) {
       tier: string;
       price: bigint;
       billingInterval: number;
-      acceptedToken: `0x${string}`;
+      acceptedToken: string;
       active: boolean;
       metadataURI: string;
     };
@@ -295,7 +397,7 @@ export async function registerPlanOnChain(c: Context) {
       return c.json({ error: cleanMessage }, status as any);
     }
 
-    if (!sameAddress(onChainPlan.provider, providerAddress)) {
+    if (!sameAddress(onChainPlan.provider, providerAddress, chainId)) {
       const message = `Configured provider wallet ${providerAddress} does not own on-chain plan ${plan.onChainPlanId}. Current owner is ${onChainPlan.provider}.`;
       await db.catalogPlan.update({
         where: { id: planId },
@@ -310,7 +412,7 @@ export async function registerPlanOnChain(c: Context) {
     if (Number(onChainPlan.billingInterval) !== billingIntervalSeconds) {
       immutableMismatches.push("billing interval");
     }
-    if (!sameAddress(onChainPlan.acceptedToken, usdcAddress)) {
+    if (!sameAddress(onChainPlan.acceptedToken, usdcAddress, chainId)) {
       immutableMismatches.push("accepted token");
     }
 
@@ -479,7 +581,7 @@ export async function registerPlanOnChain(c: Context) {
         tier: plan.tier,
         price: priceInUsdc,
         billingInterval: billingIntervalSeconds,
-        acceptedToken: usdcAddress,
+        acceptedToken: usdcAddress as `0x${string}`,
         metadataURI: "",
         nonce,
         deadline: BigInt(deadline as number),
@@ -506,7 +608,7 @@ export async function registerPlanOnChain(c: Context) {
       plan.tier,
       priceInUsdc,
       billingIntervalSeconds,
-      usdcAddress,
+      usdcAddress as `0x${string}`,
       "",
       BigInt(deadline as number),
       signature as `0x${string}`,

@@ -6,7 +6,6 @@
 
 import { parseEventLogs } from "viem";
 import { createResilientFacilitatorClient } from "../rpc-client.js";
-import { sepolia, baseSepolia, base } from "viem/chains";
 import {
   DEFAULT_CHAIN_ID,
   SubscriptionRegistryABI,
@@ -40,13 +39,6 @@ export interface SubscriptionEventData {
 
 type EventCallback = (event: SubscriptionEventData) => void | Promise<void>;
 
-const CHAIN_MAP: Record<number, any> = {
-  11155111: sepolia,
-  84532: baseSepolia,
-  8453: base,
-  5042002: baseSepolia, // Arc Testnet
-};
-
 /**
  * EventListenerService — Persistent event watchers for the SubscriptionRegistry.
  *
@@ -73,7 +65,6 @@ export class EventListenerService {
     registryAddress?: string;
   }) {
     const chainId = config.chainId ?? DEFAULT_CHAIN_ID;
-    const chain = CHAIN_MAP[chainId] || baseSepolia;
     const contracts = getContractAddresses(chainId);
     this.registryAddress =
       config.registryAddress || contracts.subscriptionRegistry;

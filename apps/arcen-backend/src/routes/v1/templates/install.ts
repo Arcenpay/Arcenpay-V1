@@ -3,6 +3,7 @@ import { z } from "zod";
 import { db } from "../../../db.js";
 import { requirePermission, isErrorResponse } from "../../../lib/auth/api-auth.js";
 import { writeAuditEvent } from "../../../lib/platform/audit.js";
+import { resolveChainFamilyForPrisma } from "../../../lib/platform/chain-family.js";
 
 const installSchema = z.object({
   version: z.coerce.number().int().positive().optional(),
@@ -67,6 +68,7 @@ export async function installTemplate(c: Context) {
       installedVersion: targetVersion,
       environmentMode: parsed.data.environmentMode,
       chainId: parsed.data.chainId,
+      chainFamily: resolveChainFamilyForPrisma(parsed.data.chainId),
       status: "INSTALLED",
     },
   });

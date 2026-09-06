@@ -1,11 +1,14 @@
 #![no_std]
+#![allow(clippy::too_many_arguments)]
 
-use soroban_sdk::{contract, contractimpl, contracttype, Address, Env, String, Vec};
+extern crate alloc;
+
 use arcenpay_common::{
     auth::*,
-    errors::ArcenPayError,
+    errors::{ArcenPayError, fail},
     types::*,
 };
+use soroban_sdk::{Address, Env, String, Vec, contract, contractevent, contractimpl, contracttype};
 
 #[contracttype]
 enum DataKey {
@@ -60,23 +63,36 @@ pub struct TokenRevoked {
 }
 
 fn read_next_plan_id(env: &Env) -> u128 {
-    env.storage().instance().get(&DataKey::NextPlanId).unwrap_or(1)
+    env.storage()
+        .instance()
+        .get(&DataKey::NextPlanId)
+        .unwrap_or(1)
 }
 
 fn increment_plan_id(env: &Env) -> u128 {
     let id: u128 = read_next_plan_id(env);
-    env.storage().instance().set(&DataKey::NextPlanId, &(id + 1));
+    env.storage()
+        .instance()
+        .set(&DataKey::NextPlanId, &(id + 1));
     id
 }
 
 fn is_provider(env: &Env, provider: &Address) -> bool {
-    env.storage().persistent().get(&DataKey::ProviderRegistered(provider.clone())).unwrap_or(false)
+    env.storage()
+        .persistent()
+        .get(&DataKey::ProviderRegistered(provider.clone()))
+        .unwrap_or(false)
 }
 
 fn register_provider_if_needed(env: &Env, provider: &Address) {
     if !is_provider(env, provider) {
-        env.storage().persistent().set(&DataKey::ProviderRegistered(provider.clone()), &true);
-        ProviderRegistered { provider: provider.clone() }.publish(env);
+        env.storage()
+            .persistent()
+            .set(&DataKey::ProviderRegistered(provider.clone()), &true);
+        ProviderRegistered {
+            provider: provider.clone(),
+        }
+        .publish(env);
     }
 }
 
@@ -84,11 +100,13 @@ fn read_plan(env: &Env, plan_id: u128) -> PlanRecord {
     env.storage()
         .persistent()
         .get(&DataKey::Plan(plan_id))
-        .expect("Plan not found")
+        .unwrap_or_else(|| fail(env, ArcenPayError::PlanNotFound))
 }
 
 fn write_plan(env: &Env, plan_id: u128, plan: &PlanRecord) {
-    env.storage().persistent().set(&DataKey::Plan(plan_id), plan);
+    env.storage()
+        .persistent()
+        .set(&DataKey::Plan(plan_id), plan);
     let mut provider_plans: Vec<u128> = env
         .storage()
         .persistent()
@@ -103,14 +121,18 @@ fn write_plan(env: &Env, plan_id: u128, plan: &PlanRecord) {
     }
     if !found {
         provider_plans.push_back(plan_id);
-        env.storage()
-            .persistent()
-            .set(&DataKey::ProviderPlans(plan.provider.clone()), &provider_plans);
+        env.storage().persistent().set(
+            &DataKey::ProviderPlans(plan.provider.clone()),
+            &provider_plans,
+        );
     }
 }
 
 fn is_approved_token(env: &Env, token: &Address) -> bool {
-    env.storage().persistent().get(&DataKey::ApprovedToken(token.clone())).unwrap_or(false)
+    env.storage()
+        .persistent()
+        .get(&DataKey::ApprovedToken(token.clone()))
+        .unwrap_or(false)
 }
 
 #[contract]
@@ -119,12 +141,16 @@ pub struct PlanFactory;
 #[contractimpl]
 impl PlanFactory {
     pub fn __constructor(env: Env, admin: Address, approved_tokens: Vec<Address>) {
-        assert!(!read_initialized(&env), "Already initialized");
+        if read_initialized(&env) {
+            fail(&env, ArcenPayError::AlreadyInitialized);
+        }
         write_admin(&env, &admin);
         write_initialized(&env);
         for i in 0..approved_tokens.len() {
             let token = approved_tokens.get(i).unwrap();
-            env.storage().persistent().set(&DataKey::ApprovedToken(token.clone()), &true);
+            env.storage()
+                .persistent()
+                .set(&DataKey::ApprovedToken(token.clone()), &true);
             TokenApproved { token }.publish(&env);
         }
         env.storage().instance().set(&DataKey::NextPlanId, &1u128);
@@ -141,29 +167,41 @@ impl PlanFactory {
     pub fn transfer_admin(env: Env, new_admin: Address) {
         let current = read_admin(&env);
         current.require_auth();
-        assert_ne!(new_admin, current);
+        if new_admin == current {
+            fail(&env, ArcenPayError::InvalidAddress);
+        }
         write_admin(&env, &new_admin);
     }
 
     pub fn approve_token(env: Env, admin: Address, token: Address) {
         let stored = read_admin(&env);
-        assert_eq!(admin, stored);
+        if admin != stored {
+            fail(&env, ArcenPayError::NotAuthorized);
+        }
         admin.require_auth();
-        env.storage().persistent().set(&DataKey::ApprovedToken(token.clone()), &true);
+        env.storage()
+            .persistent()
+            .set(&DataKey::ApprovedToken(token.clone()), &true);
         TokenApproved { token }.publish(&env);
     }
 
     pub fn revoke_token(env: Env, admin: Address, token: Address) {
         let stored = read_admin(&env);
-        assert_eq!(admin, stored);
+        if admin != stored {
+            fail(&env, ArcenPayError::NotAuthorized);
+        }
         admin.require_auth();
-        env.storage().persistent().set(&DataKey::ApprovedToken(token.clone()), &false);
+        env.storage()
+            .persistent()
+            .set(&DataKey::ApprovedToken(token.clone()), &false);
         TokenRevoked { token }.publish(&env);
     }
 
     pub fn register_provider(env: Env, admin: Address, provider: Address) {
         let stored = read_admin(&env);
-        assert_eq!(admin, stored);
+        if admin != stored {
+            fail(&env, ArcenPayError::NotAuthorized);
+        }
         admin.require_auth();
         register_provider_if_needed(&env, &provider);
     }
@@ -183,10 +221,18 @@ impl PlanFactory {
         metadata_uri: String,
     ) -> u128 {
         provider.require_auth();
-        assert!(price > 0, "Price must be greater than zero");
-        assert!(!name.is_empty(), "Name must not be empty");
-        assert!(billing_interval >= MIN_BILLING_INTERVAL, "Billing interval too short");
-        assert!(is_approved_token(&env, &accepted_token), "Token not approved");
+        if price <= 0 {
+            fail(&env, ArcenPayError::ZeroPrice);
+        }
+        if name.is_empty() {
+            fail(&env, ArcenPayError::InvalidConfig);
+        }
+        if billing_interval < MIN_BILLING_INTERVAL {
+            fail(&env, ArcenPayError::InvalidInterval);
+        }
+        if !is_approved_token(&env, &accepted_token) {
+            fail(&env, ArcenPayError::TokenNotApproved);
+        }
 
         register_provider_if_needed(&env, &provider);
 
@@ -226,21 +272,34 @@ impl PlanFactory {
     ) {
         provider.require_auth();
         let mut plan = read_plan(&env, plan_id);
-        assert_eq!(plan.provider, provider, "Not the plan provider");
-        assert!(price > 0, "Price must be greater than zero");
+        if plan.provider != provider {
+            fail(&env, ArcenPayError::NotAuthorized);
+        }
+        if price <= 0 {
+            fail(&env, ArcenPayError::ZeroPrice);
+        }
 
         plan.price = price;
         plan.metadata_uri = metadata_uri.clone();
         write_plan(&env, plan_id, &plan);
 
-        PlanUpdated { plan_id, price, metadata_uri }.publish(&env);
+        PlanUpdated {
+            plan_id,
+            price,
+            metadata_uri,
+        }
+        .publish(&env);
     }
 
     pub fn deactivate_plan(env: Env, provider: Address, plan_id: u128) {
         provider.require_auth();
         let mut plan = read_plan(&env, plan_id);
-        assert_eq!(plan.provider, provider, "Not the plan provider");
-        assert!(plan.active, "Plan already inactive");
+        if plan.provider != provider {
+            fail(&env, ArcenPayError::NotAuthorized);
+        }
+        if !plan.active {
+            fail(&env, ArcenPayError::PlanNotActive);
+        }
 
         plan.active = false;
         write_plan(&env, plan_id, &plan);

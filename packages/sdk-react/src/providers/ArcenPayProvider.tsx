@@ -16,6 +16,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ContractAddresses, NetworkConfig, PlanTier } from "../sdk";
 import {
   arcTestnet,
+  botMainnet,
+  botTestnet,
   getChainEnvironment,
   DEFAULT_CHAIN_ID,
   isSupportedChainId,
@@ -111,7 +113,7 @@ export interface ArcenIdentifyInput {
 
 import { resolveDashboardBaseUrl } from "../lib/api";
 
-const ARCENPAY_WAGMI_CHAINS = [sepolia, baseSepolia, base, arcTestnet] as const;
+const ARCENPAY_WAGMI_CHAINS = [sepolia, baseSepolia, base, arcTestnet, botTestnet, botMainnet] as const;
 const wagmiConfigCache = new Map<string, ReturnType<typeof createConfig>>();
 
 const IDENTIFY_TIMEOUT_MS = 20_000;
@@ -199,6 +201,8 @@ function getOrCreateWagmiConfig(walletConnectProjectId?: string) {
       [baseSepolia.id]: getRpcTransport(baseSepolia.id),
       [base.id]: getRpcTransport(base.id),
       [arcTestnet.id]: getRpcTransport(arcTestnet.id),
+      [botTestnet.id]: getRpcTransport(botTestnet.id),
+      [botMainnet.id]: getRpcTransport(botMainnet.id),
     },
     ssr: true,
   });
@@ -213,7 +217,7 @@ function getChainId(): number {
     const env = process.env.NEXT_PUBLIC_CHAIN_ID;
     if (env) {
       const parsed = parseInt(env, 10);
-      if (!isNaN(parsed) && [11155111, 84532, 8453, 5042002].includes(parsed)) {
+      if (!isNaN(parsed) && isSupportedChainId(parsed)) {
         return parsed;
       }
     }

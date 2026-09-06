@@ -74,7 +74,8 @@ import {
 } from "viem";
 import { resolveDashboardBaseUrl } from "../lib/api";
 import { useArcenPay } from "../providers/ArcenPayProvider";
-import { sanitizeSvg } from "@arcenpay/internal-core";
+import { sanitizeSvg, isEvmChain, getStellarNetworkPassphrase } from "../internal/core";
+import { useStellarEmbedWallet } from "../hooks/useStellarEmbedWallet";
 
 export interface ArcenEmbedProps {
   /** Short-lived access token. When omitted, auto-reads from NEXT_PUBLIC_ARCENPAY_ACCESS_TOKEN env var. */
@@ -937,6 +938,10 @@ function formatChainLabel(chainId?: number | null): string | null {
   if (chainId === 84532) return "Base Sepolia";
   if (chainId === 8453) return "Base";
   if (chainId === 5042002) return "Arc Testnet";
+  // Stellar synthetic chain ids (9_000_000+)
+  if (chainId === 9_000_000) return "Stellar";
+  if (chainId === 9_000_001) return "Stellar Testnet";
+  if (chainId === 9_000_002) return "Stellar Futurenet";
   return `Chain ${chainId}`;
 }
 
@@ -1520,16 +1525,236 @@ function SecondaryButton({
   );
 }
 
+// ─── Modern Plan Card (replaces legacy grid) ─────────────────────────────────
+
+function PlanCard({
+  plan,
+  isActive,
+  isPendingTarget,
+  billingPeriod,
+  tokens,
+  onSelect,
+}: {
+  plan: ComponentPlanSummary;
+  isActive: boolean;
+  isPendingTarget: boolean;
+  billingPeriod: "monthly" | "annual";
+  tokens: Tokens;
+  onSelect: () => void;
+}) {
+  const price = getPlanDisplayPrice(plan, billingPeriod);
+  const interval = getPlanDisplayIntervalLabel(plan, billingPeriod);
+  const features = (plan.metadata?.entitlements ?? [])
+    .filter((e) => e.enabled !== false)
+    .slice(0, 5);
+  const remaining = Math.max(
+    0,
+    (plan.metadata?.entitlements?.filter((e) => e.enabled !== false).length ?? 0) -
+      features.length,
+  );
+
+  return (
+    <div
+      style={{
+        position: "relative",
+        padding: 28,
+        borderRadius: 16,
+        border: isActive
+          ? `2px solid ${tokens.primary}`
+          : "1px solid rgba(0,0,0,0.06)",
+        background: isActive ? `${tokens.primary}06` : tokens.bg,
+        display: "flex",
+        flexDirection: "column",
+        gap: 16,
+        cursor: isActive ? "default" : "pointer",
+        transition: "all 0.2s ease",
+        boxShadow: isActive
+          ? `0 0 0 1px ${tokens.primary}, 0 8px 24px -4px ${tokens.primary}20`
+          : "0 1px 3px rgba(0,0,0,0.04)",
+      }}
+      onClick={isActive ? undefined : onSelect}
+      role="button"
+      tabIndex={isActive ? -1 : 0}
+      onKeyDown={(e) => {
+        if (!isActive && (e.key === "Enter" || e.key === " ")) {
+          e.preventDefault();
+          onSelect();
+        }
+      }}
+    >
+      {/* Header */}
+      <div>
+        <div
+          style={{
+            fontWeight: 800,
+            fontSize: tokens.size + 4,
+            color: tokens.textColor,
+            marginBottom: 4,
+            lineHeight: 1.2,
+          }}
+        >
+          {plan.name}
+        </div>
+        <div
+          style={{
+            color: tokens.mutedColor,
+            fontSize: tokens.size - 1,
+            lineHeight: 1.5,
+          }}
+        >
+          {plan.description || "ArcenPay platform subscription"}
+        </div>
+      </div>
+
+      {/* Price */}
+      <div style={{ display: "flex", alignItems: "baseline", gap: 4 }}>
+        <span
+          style={{
+            fontSize: tokens.size + 10,
+            fontWeight: 800,
+            color: tokens.textColor,
+            lineHeight: 1,
+          }}
+        >
+          {price === 0 ? "Free" : `$${price.toFixed(2)}`}
+        </span>
+        {price > 0 && (
+          <span
+            style={{
+              fontSize: tokens.size,
+              color: tokens.mutedColor,
+              fontWeight: 500,
+            }}
+          >
+            {interval}
+          </span>
+        )}
+      </div>
+
+      {/* Divider */}
+      <div
+        style={{
+          height: 1,
+          background: "rgba(0,0,0,0.06)",
+          width: "100%",
+        }}
+      />
+
+      {/* Features */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        {features.map((f) => (
+          <div
+            key={f.featureKey}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+              fontSize: tokens.size - 1,
+              color: tokens.textColor,
+            }}
+          >
+            <span
+              style={{
+                width: 18,
+                height: 18,
+                borderRadius: "50%",
+                background: `${tokens.primary}15`,
+                color: tokens.primary,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: 11,
+                fontWeight: 700,
+                flexShrink: 0,
+              }}
+            >
+              ✓
+            </span>
+            <span style={{ lineHeight: 1.4 }}>{f.featureName}</span>
+          </div>
+        ))}
+        {remaining > 0 && (
+          <div
+            style={{
+              fontSize: tokens.size - 1,
+              fontWeight: 700,
+              color: tokens.textColor,
+              marginTop: 2,
+            }}
+          >
+            +{remaining} more features
+          </div>
+        )}
+      </div>
+
+      {/* CTA */}
+      <div style={{ marginTop: "auto", paddingTop: 8 }}>
+        {isActive ? (
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 6,
+              padding: "12px 0",
+              fontSize: tokens.size - 1,
+              fontWeight: 700,
+              color: tokens.primary,
+              borderRadius: 10,
+              border: `1.5px solid ${tokens.primary}40`,
+              background: `${tokens.primary}08`,
+            }}
+          >
+            <span>✓</span>
+            Current plan
+          </div>
+        ) : (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onSelect();
+            }}
+            style={{
+              width: "100%",
+              padding: "12px 0",
+              borderRadius: 10,
+              border: "none",
+              background: tokens.primary,
+              color: "#fff",
+              fontSize: tokens.size - 1,
+              fontWeight: 700,
+              cursor: "pointer",
+              transition: "opacity 0.15s ease",
+            }}
+            onMouseEnter={(e) => {
+              (e.target as HTMLElement).style.opacity = "0.85";
+            }}
+            onMouseLeave={(e) => {
+              (e.target as HTMLElement).style.opacity = "1";
+            }}
+          >
+            Select plan
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function WalletSelector({
   tokens,
   connecting,
+  isStellar,
   onConnectMetaMask,
   onConnectBase,
+  onConnectFreighter,
 }: {
   tokens: Tokens;
   connecting: boolean;
+  isStellar?: boolean;
   onConnectMetaMask: () => void;
   onConnectBase: () => void;
+  onConnectFreighter: () => void;
 }) {
   if (connecting) {
     return (
@@ -1563,6 +1788,87 @@ function WalletSelector({
             Connecting…
           </div>
         </PrimaryButton>
+      </div>
+    );
+  }
+
+  if (isStellar) {
+    return (
+      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        <button
+          onClick={onConnectFreighter}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 12,
+            width: "100%",
+            padding: "12px 16px",
+            background: "#fff",
+            border: "2px solid #e5e7eb",
+            borderRadius: 10,
+            cursor: "pointer",
+            transition: "border-color 0.15s, box-shadow 0.15s",
+            textAlign: "left",
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.borderColor = "#3e1e69";
+            e.currentTarget.style.boxShadow = "0 0 0 2px rgba(62,30,105,0.15)";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.borderColor = "#e5e7eb";
+            e.currentTarget.style.boxShadow = "none";
+          }}
+        >
+          <div
+            style={{
+              width: 40,
+              height: 40,
+              borderRadius: 10,
+              background: "#f3e8ff",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              flexShrink: 0,
+            }}
+          >
+            <span style={{ fontSize: 22 }}>🚀</span>
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div
+              style={{
+                fontWeight: 600,
+                fontSize: tokens.size - 1,
+                color: tokens.textColor,
+              }}
+            >
+              Freighter
+            </div>
+            <div
+              style={{
+                fontSize: 11,
+                color: tokens.mutedColor,
+                marginTop: 2,
+              }}
+            >
+              Stellar wallet for testnet & mainnet
+            </div>
+          </div>
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 16 16"
+            fill="none"
+            style={{ flexShrink: 0, opacity: 0.4 }}
+          >
+            <path
+              d="M6 4L10 8L6 12"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </button>
       </div>
     );
   }
@@ -1730,7 +2036,7 @@ function WalletSelector({
   );
 }
 
-function NoWalletSelector({ tokens }: { tokens: Tokens }) {
+function NoWalletSelector({ tokens, isStellar }: { tokens: Tokens; isStellar?: boolean }) {
   const cbWalletDeepLink =
     typeof window !== "undefined"
       ? "https://go.cb-w.com/dapp?cb_url=" +
@@ -1764,117 +2070,151 @@ function NoWalletSelector({ tokens }: { tokens: Tokens }) {
           marginBottom: 10,
         }}
       >
-        Install one of these wallets to connect:
+        {isStellar
+          ? "Install Freighter to connect your Stellar wallet:"
+          : "Install one of these wallets to connect:"}
       </div>
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        <a
-          href="https://metamask.io/download/"
-          target="_blank"
-          rel="noreferrer"
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-            padding: "8px 10px",
-            background: "#fff",
-            border: "1px solid #fde68a",
-            borderRadius: 8,
-            textDecoration: "none",
-            cursor: "pointer",
-          }}
-        >
-          <img
-            src="https://upload.wikimedia.org/wikipedia/commons/3/36/MetaMask_Fox.svg"
-            alt="MetaMask"
-            style={{ width: 22, height: 22 }}
-          />
-          <span
+        {isStellar ? (
+          <a
+            href="https://www.freighter.app/"
+            target="_blank"
+            rel="noreferrer"
             style={{
-              fontSize: tokens.size - 2,
-              fontWeight: 600,
-              color: "#92400e",
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              padding: "8px 10px",
+              background: "#fff",
+              border: "1px solid #fde68a",
+              borderRadius: 8,
+              textDecoration: "none",
+              cursor: "pointer",
             }}
           >
-            Install MetaMask
-          </span>
-        </a>
-        <a
-          href="https://chromewebstore.google.com/detail/coinbase-wallet-extension/hnfanknocfeofbddgcijnmhnfnkdnaad"
-          target="_blank"
-          rel="noreferrer"
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-            padding: "8px 10px",
-            background: "#fff",
-            border: "1px solid #fde68a",
-            borderRadius: 8,
-            textDecoration: "none",
-            cursor: "pointer",
-          }}
-        >
-          <img
-            src="https://raw.githubusercontent.com/base/brand-kit/refs/heads/main/logo/Logotype/Digital/Base_lockup_2color.svg"
-            alt="Base"
-            style={{ width: 26, height: 14 }}
-          />
-          <span
-            style={{
-              fontSize: tokens.size - 2,
-              fontWeight: 600,
-              color: "#92400e",
-            }}
-          >
-            Install Coinbase Wallet
-          </span>
-        </a>
-        <a
-          href={cbWalletDeepLink}
-          target="_blank"
-          rel="noreferrer"
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-            padding: "8px 10px",
-            background: "#fff",
-            border: "1px solid #fde68a",
-            borderRadius: 8,
-            textDecoration: "none",
-            cursor: "pointer",
-          }}
-        >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-            <rect
-              x="3"
-              y="6"
-              width="16"
-              height="10"
-              rx="2"
-              stroke="#0052ff"
-              strokeWidth="1.5"
-            />
-            <rect
-              x="7"
-              y="2"
-              width="8"
-              height="5"
-              rx="1.5"
-              stroke="#0052ff"
-              strokeWidth="1.5"
-            />
-          </svg>
-          <span
-            style={{
-              fontSize: tokens.size - 2,
-              fontWeight: 600,
-              color: "#0052ff",
-            }}
-          >
-            Open Coinbase Wallet app
-          </span>
-        </a>
+            <span style={{ fontSize: 20 }}>🚀</span>
+            <span
+              style={{
+                fontSize: tokens.size - 2,
+                fontWeight: 600,
+                color: "#92400e",
+              }}
+            >
+              Install Freighter
+            </span>
+          </a>
+        ) : (
+          <>
+            <a
+              href="https://metamask.io/download/"
+              target="_blank"
+              rel="noreferrer"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                padding: "8px 10px",
+                background: "#fff",
+                border: "1px solid #fde68a",
+                borderRadius: 8,
+                textDecoration: "none",
+                cursor: "pointer",
+              }}
+            >
+              <img
+                src="https://upload.wikimedia.org/wikipedia/commons/3/36/MetaMask_Fox.svg"
+                alt="MetaMask"
+                style={{ width: 22, height: 22 }}
+              />
+              <span
+                style={{
+                  fontSize: tokens.size - 2,
+                  fontWeight: 600,
+                  color: "#92400e",
+                }}
+              >
+                Install MetaMask
+              </span>
+            </a>
+            <a
+              href="https://chromewebstore.google.com/detail/coinbase-wallet-extension/hnfanknocfeofbddgcijnmhnfnkdnaad"
+              target="_blank"
+              rel="noreferrer"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                padding: "8px 10px",
+                background: "#fff",
+                border: "1px solid #fde68a",
+                borderRadius: 8,
+                textDecoration: "none",
+                cursor: "pointer",
+              }}
+            >
+              <img
+                src="https://raw.githubusercontent.com/base/brand-kit/refs/heads/main/logo/Logotype/Digital/Base_lockup_2color.svg"
+                alt="Base"
+                style={{ width: 26, height: 14 }}
+              />
+              <span
+                style={{
+                  fontSize: tokens.size - 2,
+                  fontWeight: 600,
+                  color: "#92400e",
+                }}
+              >
+                Install Coinbase Wallet
+              </span>
+            </a>
+            <a
+              href={cbWalletDeepLink}
+              target="_blank"
+              rel="noreferrer"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                padding: "8px 10px",
+                background: "#fff",
+                border: "1px solid #fde68a",
+                borderRadius: 8,
+                textDecoration: "none",
+                cursor: "pointer",
+              }}
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                <rect
+                  x="3"
+                  y="6"
+                  width="16"
+                  height="10"
+                  rx="2"
+                  stroke="#0052ff"
+                  strokeWidth="1.5"
+                />
+                <rect
+                  x="7"
+                  y="2"
+                  width="8"
+                  height="5"
+                  rx="1.5"
+                  stroke="#0052ff"
+                  strokeWidth="1.5"
+                />
+              </svg>
+              <span
+                style={{
+                  fontSize: tokens.size - 2,
+                  fontWeight: 600,
+                  color: "#0052ff",
+                }}
+              >
+                Open Coinbase Wallet app
+              </span>
+            </a>
+          </>
+        )}
       </div>
     </div>
   );
@@ -2087,6 +2427,40 @@ function useSafeWalletClient(): { walletClient: WalletClient | null } {
   } catch {
     return { walletClient: null };
   }
+}
+
+function useSafeStellarAccount(chainId: number | null): {
+  address: string | null;
+  isConnected: boolean;
+  connect: () => Promise<void>;
+  disconnect: () => Promise<void>;
+  signTransaction: (xdr: string, opts?: { networkPassphrase?: string }) => Promise<{ signedTxXdr: string }>;
+} {
+  const isStellar = chainId !== null && !isEvmChain(chainId);
+  // Stellar mainnet is synthetic chainId 9_000_000; everything else in the
+  // Stellar range is testnet. Signing must use the matching network or the
+  // wallet passphrase check fails on-chain.
+  const stellarNetwork: "PUBLIC" | "TESTNET" =
+    isStellar && chainId === 9_000_000 ? "PUBLIC" : "TESTNET";
+  const stellar = useStellarEmbedWallet(isStellar ? stellarNetwork : "TESTNET");
+
+  if (!isStellar) {
+    return {
+      address: null,
+      isConnected: false,
+      connect: async () => {},
+      disconnect: async () => {},
+      signTransaction: async () => ({ signedTxXdr: "" }),
+    };
+  }
+
+  return {
+    address: stellar.address,
+    isConnected: stellar.isConnected,
+    connect: stellar.connect,
+    disconnect: stellar.disconnect,
+    signTransaction: stellar.signTransaction,
+  };
 }
 
 function useRuntimeChainId(): number {
@@ -3464,8 +3838,8 @@ export function renderElement(
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
-              gap: 14,
+              gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+              gap: 20,
               alignItems: "stretch",
             }}
           >
@@ -3479,178 +3853,16 @@ export function renderElement(
                       pendingTransition?.targetBillingPeriod === "annual"
                     ? "annual"
                     : "monthly";
-              const cardPrice = getPlanDisplayPrice(p, cardBillingPeriod);
-              const cardIntervalLabel = getPlanDisplayIntervalLabel(
-                p,
-                cardBillingPeriod,
-              );
-              const featurePreview = (p.metadata?.entitlements ?? [])
-                .filter((entitlement) => entitlement.enabled !== false)
-                .slice(0, 3);
-              const remainingFeatureCount = Math.max(
-                0,
-                (p.metadata?.entitlements?.filter(
-                  (entitlement) => entitlement.enabled !== false,
-                ).length ?? 0) - featurePreview.length,
-              );
               return (
-                <div
+                <PlanCard
                   key={p.id}
-                  onClick={onChangePlan}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter" || event.key === " ") {
-                      event.preventDefault();
-                      onChangePlan();
-                    }
-                  }}
-                  role="button"
-                  tabIndex={0}
-                  style={{
-                    minWidth: 0,
-                    minHeight: 0,
-                    padding: 20,
-                    borderRadius: tokens.radius,
-                    border: isActive
-                      ? `2px solid ${tokens.primary}`
-                      : `1px solid #e5e7eb`,
-                    background: isActive ? `${tokens.primary}08` : tokens.bg,
-                    display: "flex",
-                    flexDirection: "column",
-                    cursor: "pointer",
-                    boxSizing: "border-box",
-                  }}
-                >
-                  <div
-                    style={{
-                      fontWeight: 700,
-                      fontSize: tokens.size + 3,
-                      color: tokens.textColor,
-                      marginBottom: 4,
-                      lineHeight: 1.3,
-                      minHeight: 0,
-                    }}
-                  >
-                    {p.name}
-                  </div>
-                  <div
-                    style={{
-                      minHeight: 0,
-                      marginBottom: 10,
-                      color: tokens.mutedColor,
-                      fontSize: tokens.size - 1,
-                      lineHeight: 1.45,
-                    }}
-                  >
-                    {p.description || "A flexible plan for your workspace."}
-                  </div>
-                  <div
-                    style={{
-                      fontSize: tokens.size + 4,
-                      fontWeight: 800,
-                      color: tokens.textColor,
-                      marginBottom: 12,
-                    }}
-                  >
-                    {cardPrice === 0
-                      ? "Free"
-                      : `$${cardPrice.toFixed(2)}`}
-                    {cardPrice > 0 ? (
-                      <span
-                        style={{
-                          fontSize: tokens.size - 2,
-                          fontWeight: 400,
-                          color: tokens.mutedColor,
-                        }}
-                      >
-                        {cardIntervalLabel}
-                      </span>
-                    ) : null}
-                  </div>
-                  {featurePreview.length > 0 ? (
-                    <div
-                      style={{
-                        display: "flex",
-                        flexDirection: "column",
-                        gap: 5,
-                        marginBottom: 14,
-                        color: tokens.mutedColor,
-                        fontSize: tokens.size - 2,
-                      }}
-                    >
-                      {featurePreview.map((entitlement) => (
-                        <div
-                          key={entitlement.featureKey}
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: 6,
-                            minWidth: 0,
-                          }}
-                        >
-                          <span style={{ color: tokens.primary, fontWeight: 800 }}>
-                            ✓
-                          </span>
-                          <span
-                            style={{
-                              overflow: "hidden",
-                              textOverflow: "ellipsis",
-                              whiteSpace: "nowrap",
-                            }}
-                            title={entitlement.featureName}
-                          >
-                            {entitlement.featureName}
-                          </span>
-                        </div>
-                      ))}
-                      {remainingFeatureCount > 0 ? (
-                        <span style={{ color: tokens.textColor, fontWeight: 600 }}>
-                          +{remainingFeatureCount} more features
-                        </span>
-                      ) : null}
-                    </div>
-                  ) : null}
-                  {isActive ? (
-                    <div
-                      style={{
-                        fontSize: tokens.size - 1,
-                        color: tokens.mutedColor,
-                      }}
-                    >
-                      ✓ Current plan
-                    </div>
-                  ) : isPendingTarget ? (
-                    <div
-                      style={{
-                        fontSize: tokens.size - 1,
-                        color: "#9a3412",
-                        fontWeight: 600,
-                      }}
-                    >
-                      Pending next renewal
-                    </div>
-                  ) : (
-                    <button
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        onChangePlan();
-                      }}
-                      style={{
-                        width: "100%",
-                        padding: "6px 0",
-                        background: tokens.primary,
-                        color: isLightColor(tokens.primary) ? "#000" : "#fff",
-                        border: "none",
-                        borderRadius: tokens.radius / 1.5,
-                        cursor: "pointer",
-                        fontSize: tokens.size - 1,
-                        fontWeight: 600,
-                        marginTop: "auto",
-                      }}
-                    >
-                      Select plan
-                    </button>
-                  )}
-                </div>
+                  plan={p}
+                  isActive={isActive}
+                  isPendingTarget={isPendingTarget}
+                  billingPeriod={cardBillingPeriod}
+                  tokens={tokens}
+                  onSelect={onChangePlan}
+                />
               );
             })}
           </div>
@@ -6791,19 +7003,37 @@ function PaymentContent({
       : price;
 
   const isNarrowPayment = containerWidth < 700;
-  const finalAddress = address || localAddress;
-  const finalConnected = isConnected || !!localAddress;
+
+  // ── Family-aware wallet resolution ────────────────────────────────────────
+  const planChainId =
+    selectedPlan?.acceptedChainId ??
+    activePlan?.acceptedChainId ??
+    paymentMethod?.chainId ??
+    runtimeChainId;
+  const isStellarChain = planChainId !== 0 && !isEvmChain(planChainId);
+  const stellarWallet = useSafeStellarAccount(planChainId);
+
+  const finalAddress = isStellarChain
+    ? (stellarWallet.address ?? undefined)
+    : (address || localAddress);
+  const finalConnected = isStellarChain
+    ? stellarWallet.isConnected
+    : (isConnected || !!localAddress);
+
   const resolvedWalletClient =
-    wagmiWalletClient ??
-    (chainId
-      ? createBrowserWalletClient({
-          chainId,
-          account: finalAddress,
-          provider: localProvider,
-        })
-      : null);
-  const resolvedWalletAddress =
-    resolvedWalletClient?.account?.address ?? finalAddress ?? null;
+    isStellarChain
+      ? null
+      : (wagmiWalletClient ??
+         (chainId
+           ? createBrowserWalletClient({
+               chainId,
+               account: finalAddress,
+               provider: localProvider,
+             })
+           : null));
+  const resolvedWalletAddress = isStellarChain
+    ? (stellarWallet.address ?? null)
+    : (resolvedWalletClient?.account?.address ?? finalAddress ?? null);
   const requiresSmartAccountPlanChangeExecution = Boolean(
     isOnChainPlanChange &&
     smartAccountAddress &&
@@ -6825,15 +7055,19 @@ function PaymentContent({
     chainId,
   });
 
-  async function connectWindowEthereum(walletKind?: WalletKind) {
+  async function connectWallet(walletKind?: WalletKind) {
     setTxError("");
     setTxStatus("idle");
     setConnecting(true);
     try {
-      const result = await requestWindowEthereumAccounts(walletKind);
-      setPreferredWindowEthereum(result.provider);
-      setLocalProvider(result.provider);
-      setLocalAddress(result.accounts[0] ?? null);
+      if (isStellarChain) {
+        await stellarWallet.connect();
+      } else {
+        const result = await requestWindowEthereumAccounts(walletKind);
+        setPreferredWindowEthereum(result.provider);
+        setLocalProvider(result.provider);
+        setLocalAddress(result.accounts[0] ?? null);
+      }
     } catch (error) {
       setTxStatus("error");
       setTxError(getWalletConnectionErrorMessage(error));
@@ -6917,6 +7151,38 @@ function PaymentContent({
     });
   }
 
+  async function submitStellarTransaction(params: {
+    contractId: string;
+    method: string;
+    args: Record<string, unknown>;
+  }): Promise<{ txHash: string }> {
+    if (!stellarWallet.address) {
+      throw new Error("Freighter wallet not connected.");
+    }
+
+    const { getStellarNetworkPassphrase, getStellarSorobanRpcUrl } = await import("../internal/core");
+    const stellarChainId = planChainId;
+    const networkPassphrase = getStellarNetworkPassphrase(stellarChainId);
+    const rpcUrl = getStellarSorobanRpcUrl(stellarChainId);
+
+    const { contract: stellarContract } = await import("@stellar/stellar-sdk");
+    const client = (await stellarContract.Client.from({
+      contractId: params.contractId,
+      networkPassphrase,
+      rpcUrl,
+      publicKey: stellarWallet.address,
+      signTransaction: stellarWallet.signTransaction,
+    })) as any;
+
+    const tx = await (client as any)[params.method](params.args);
+    const sent = await tx.signAndSend();
+    const hash = sent.sendTransactionResponse?.hash ?? "";
+    if (!hash) {
+      throw new Error("Stellar transaction was submitted but no hash was returned. Check Freighter for status.");
+    }
+    return { txHash: hash };
+  }
+
   async function ensureBillingSmartAccount(): Promise<`0x${string}`> {
     if (!chainId || !resolvedWalletClient) {
       throw new Error(
@@ -6952,7 +7218,7 @@ function PaymentContent({
 
   async function requestHostedActivation(body: {
     planId: string;
-    paymentAccount: `0x${string}`;
+    paymentAccount: string;
     subscriberEmail?: string;
     company: {
       id?: string;
@@ -6960,7 +7226,7 @@ function PaymentContent({
       name?: string;
       email?: string;
     };
-    activationTxHash?: `0x${string}`;
+    activationTxHash?: string;
   }) {
     const res = await fetchApiWithTimeout(`${apiBaseUrl}/api/v1/subscriptions/activate`, {
       method: "POST",
@@ -6991,7 +7257,7 @@ function PaymentContent({
   async function confirmHostedActivation(params: {
     body: {
       planId: string;
-      paymentAccount: `0x${string}`;
+      paymentAccount: string;
       subscriberEmail?: string;
       company: {
         id?: string;
@@ -7000,7 +7266,7 @@ function PaymentContent({
         email?: string;
       };
     };
-    activationTxHash: `0x${string}`;
+    activationTxHash: string;
   }) {
     const maxAttempts = 12;
 
@@ -7500,11 +7766,19 @@ function PaymentContent({
       }
 
       setTxStatus("approving");
-      let activationTx: { txHash: `0x${string}` } | undefined;
+      let activationTx: { txHash: string } | undefined;
       try {
-        const readyPaymentAccount = await ensureAutopayReadyForActivation(
-          selectedOnChainPlanId,
-        );
+        // Stellar: skip EVM autopay setup, use connected wallet directly
+        const readyPaymentAccount = isStellarChain
+          ? (resolvedWalletAddress ?? stellarWallet.address ?? "")
+          : await ensureAutopayReadyForActivation(selectedOnChainPlanId);
+
+        if (isStellarChain && !readyPaymentAccount) {
+          throw new Error(
+            "Stellar wallet is not connected. Please connect Freighter before activating.",
+          );
+        }
+
         const company =
           (data.company as Record<string, unknown> | null | undefined) ?? null;
         const body = {
@@ -7549,25 +7823,73 @@ function PaymentContent({
         };
 
         if (json.data?.activationRequired) {
-          const preparedTarget = json.data.preparedTransaction?.target;
-          const preparedData = json.data.preparedTransaction?.data;
+          if (isStellarChain) {
+            // Stellar: backend may return multiple steps (configure → execute).
+            // We loop until activationRequired is no longer true.
+            let currentJson = json;
+            let stellarTxHash = "";
+            let stepCount = 0;
+            const maxSteps = 3;
 
-          if (!preparedTarget || !isAddress(preparedTarget) || !preparedData) {
-            throw new Error(
-              "Hosted activation returned an invalid sponsored transaction payload.",
-            );
+            while (currentJson.data?.activationRequired && stepCount < maxSteps) {
+              stepCount += 1;
+              const stellarTx = currentJson.data.preparedTransaction as unknown as {
+                contractId?: string;
+                method?: string;
+                args?: Record<string, unknown>;
+              } | undefined;
+
+              if (!stellarTx?.contractId || !stellarTx?.method) {
+                throw new Error(
+                  "Hosted activation returned an invalid Stellar transaction payload.",
+                );
+              }
+
+              activationTx = await submitStellarTransaction({
+                contractId: stellarTx.contractId,
+                method: stellarTx.method,
+                args: stellarTx.args ?? {},
+              });
+              stellarTxHash = activationTx.txHash;
+
+              // Re-query backend with the new txHash for the next step
+              const next = await requestHostedActivation({
+                ...body,
+                activationTxHash: stellarTxHash,
+              });
+
+              if (!next.res.ok) {
+                throw new Error(next.json.error ?? `HTTP ${next.res.status}`);
+              }
+
+              currentJson = next.json;
+            }
+
+            activationResult = {
+              txHash: stellarTxHash,
+              pending: false,
+            };
+          } else {
+            const preparedTarget = json.data.preparedTransaction?.target;
+            const preparedData = json.data.preparedTransaction?.data;
+
+            if (!preparedTarget || !isAddress(preparedTarget) || !preparedData) {
+              throw new Error(
+                "Hosted activation returned an invalid sponsored transaction payload.",
+              );
+            }
+
+            activationTx = await submitPaymentAccountTransaction({
+              to: preparedTarget as `0x${string}`,
+              data: preparedData as `0x${string}`,
+              smartAccountAddressOverride: readyPaymentAccount as `0x${string}`,
+            });
+
+            activationResult = await confirmHostedActivation({
+              body,
+              activationTxHash: activationTx.txHash,
+            });
           }
-
-          activationTx = await submitPaymentAccountTransaction({
-            to: preparedTarget as `0x${string}`,
-            data: preparedData as `0x${string}`,
-            smartAccountAddressOverride: readyPaymentAccount,
-          });
-
-          activationResult = await confirmHostedActivation({
-            body,
-            activationTxHash: activationTx.txHash,
-          });
         }
 
         setTxStatus("confirmed");
@@ -7588,12 +7910,17 @@ function PaymentContent({
         if (isUserRejectedWalletAction(err)) {
           setTxStatus("error");
           setTxError("Transaction cancelled");
-        } else {
+        } else if (activationTx?.txHash) {
+          // Transaction was broadcast but confirmation polling failed — show pending
           await onActivationComplete({
-            txHash: activationTx?.txHash as `0x${string}` | undefined,
+            txHash: activationTx.txHash as `0x${string}`,
             pending: true,
             successMsg: "Subscription activation submitted. We're finalizing your billing state now.",
           });
+        } else {
+          // No transaction was broadcast — show the real error
+          setTxStatus("error");
+          setTxError(msg);
         }
       }
       return;
@@ -7603,6 +7930,17 @@ function PaymentContent({
       setTxStatus("error");
       setTxError(
         "This embed does not support direct payments for plan changes. Please use the checkout or select a supported plan.",
+      );
+      return;
+    }
+
+    if (isStellarChain) {
+      // Stellar plan changes require a Soroban autopay-account plan_change
+      // flow that is not yet wired into this embed. Fail clearly instead of
+      // surfacing a confusing EVM-only viem error.
+      setTxStatus("error");
+      setTxError(
+        "On-chain plan changes are not yet supported on Stellar from this embed. Please contact support to change plans.",
       );
       return;
     }
@@ -7947,16 +8285,17 @@ function PaymentContent({
                     before authorizing this
                     {isImmediateOnChainUpgrade ? "upgrade" : "plan change"}.
                   </div>
-                  {hasWindowEth || isMobileDevice() ? (
+                  {isStellarChain || hasWindowEth || isMobileDevice() ? (
                     <WalletSelector
                       tokens={tokens}
                       connecting={connecting}
+                      isStellar={isStellarChain}
                       onConnectMetaMask={() => {
                         if (isMobileDevice() && !getWindowEthereum()) {
                           openMetaMaskDeepLink();
                           return;
                         }
-                        connectWindowEthereum("metamask");
+                        connectWallet("metamask");
                       }}
                       onConnectBase={() => {
                         if (isMobileDevice() && !getWindowEthereum()) {
@@ -7967,11 +8306,14 @@ function PaymentContent({
                           openCoinbaseWalletDeepLink();
                           return;
                         }
-                        connectWindowEthereum("coinbase");
+                        connectWallet("coinbase");
+                      }}
+                      onConnectFreighter={() => {
+                        connectWallet();
                       }}
                     />
                   ) : (
-                    <NoWalletSelector tokens={tokens} />
+                    <NoWalletSelector tokens={tokens} isStellar={isStellarChain} />
                   )}
                   <div
                     style={{
@@ -8036,7 +8378,7 @@ function PaymentContent({
                           fontSize: tokens.size - 1,
                         }}
                       >
-                        Wallet connected
+                        {isStellarChain ? "Freighter" : "Wallet"} connected
                       </div>
                       <div
                         style={{
@@ -8050,7 +8392,10 @@ function PaymentContent({
                       </div>
                     </div>
                     <button
-                      onClick={() => {
+                      onClick={async () => {
+                        if (isStellarChain) {
+                          await stellarWallet.disconnect();
+                        }
                         setLocalAddress(null);
                         setLocalProvider(null);
                         setPreferredWindowEthereum(null);
@@ -8450,16 +8795,17 @@ function PaymentContent({
               </div>
 
               {needsWallet ? (
-                hasWindowEth || isMobileDevice() ? (
+                isStellarChain || hasWindowEth || isMobileDevice() ? (
                   <WalletSelector
                     tokens={tokens}
                     connecting={connecting}
+                    isStellar={isStellarChain}
                     onConnectMetaMask={() => {
                       if (isMobileDevice() && !getWindowEthereum()) {
                         openMetaMaskDeepLink();
                         return;
                       }
-                      connectWindowEthereum("metamask");
+                      connectWallet("metamask");
                     }}
                     onConnectBase={() => {
                       if (isMobileDevice() && !getWindowEthereum()) {
@@ -8470,11 +8816,14 @@ function PaymentContent({
                         openCoinbaseWalletDeepLink();
                         return;
                       }
-                      connectWindowEthereum("coinbase");
+                      connectWallet("coinbase");
+                    }}
+                    onConnectFreighter={() => {
+                      connectWallet();
                     }}
                   />
                 ) : (
-                  <NoWalletSelector tokens={tokens} />
+                  <NoWalletSelector tokens={tokens} isStellar={isStellarChain} />
                 )
               ) : (
                 <div>
@@ -8953,6 +9302,8 @@ function UnsubscribeContent({
   const [txError, setTxError] = useState("");
   const paymentMethod = data.paymentMethod as ComponentPaymentMethod | null;
   const chainId = paymentMethod?.chainId ?? runtimeChainId;
+  const isStellarChain = chainId !== 0 && !isEvmChain(chainId);
+  const stellarWallet = useSafeStellarAccount(chainId);
   const smartAccountAddress =
     typeof paymentMethod?.walletAddress === "string"
       ? paymentMethod.walletAddress
@@ -8965,19 +9316,26 @@ function UnsubscribeContent({
         paymasterUrl: smartAccountConfig?.paymasterUrl,
       }),
   );
-  const finalAddress = address || localAddress;
-  const finalConnected = isConnected || !!localAddress;
+  const finalAddress = isStellarChain
+    ? (stellarWallet.address ?? undefined)
+    : (address || localAddress);
+  const finalConnected = isStellarChain
+    ? stellarWallet.isConnected
+    : (isConnected || !!localAddress);
   const resolvedWalletClient =
-    wagmiWalletClient ??
-    (chainId
-      ? createBrowserWalletClient({
-          chainId,
-          account: finalAddress,
-          provider: localProvider,
-        })
-      : null);
-  const resolvedWalletAddress =
-    resolvedWalletClient?.account?.address ?? finalAddress ?? null;
+    isStellarChain
+      ? null
+      : (wagmiWalletClient ??
+         (chainId
+           ? createBrowserWalletClient({
+               chainId,
+               account: finalAddress,
+               provider: localProvider,
+             })
+           : null));
+  const resolvedWalletAddress = isStellarChain
+    ? (stellarWallet.address ?? null)
+    : (resolvedWalletClient?.account?.address ?? finalAddress ?? null);
   const requiresOnChainCancellation = Boolean(
     activePlan?.onChainPlanId && smartAccountAddress && price > 0,
   );
@@ -8988,15 +9346,19 @@ function UnsubscribeContent({
     requiresOnChainCancellation && (!finalConnected || !finalAddress);
   const needsWalletClient = requiresOnChainCancellation && !resolvedWalletClient;
 
-  async function connectWindowEthereum(walletKind?: WalletKind) {
+  async function connectWallet(walletKind?: WalletKind) {
     setTxError("");
     setTxStatus("idle");
     setConnecting(true);
     try {
-      const result = await requestWindowEthereumAccounts(walletKind);
-      setPreferredWindowEthereum(result.provider);
-      setLocalProvider(result.provider);
-      setLocalAddress(result.accounts[0] ?? null);
+      if (isStellarChain) {
+        await stellarWallet.connect();
+      } else {
+        const result = await requestWindowEthereumAccounts(walletKind);
+        setPreferredWindowEthereum(result.provider);
+        setLocalProvider(result.provider);
+        setLocalAddress(result.accounts[0] ?? null);
+      }
     } catch (error) {
       setTxStatus("error");
       setTxError(getWalletConnectionErrorMessage(error));
@@ -9010,6 +9372,17 @@ function UnsubscribeContent({
 
     if (!requiresOnChainCancellation) {
       onConfirm({ intent: "scheduled" });
+      return;
+    }
+
+    if (isStellarChain) {
+      // Stellar on-chain cancellation requires a Soroban revoke flow that is
+      // not yet wired. A scheduled (period-end) cancellation is still
+      // available; fail clearly for immediate on-chain cancels.
+      setTxStatus("error");
+      setTxError(
+        "Immediate on-chain cancellation is not yet supported on Stellar from this embed. You can schedule cancellation at the end of your billing period.",
+      );
       return;
     }
 
@@ -9277,12 +9650,13 @@ function UnsubscribeContent({
             <WalletSelector
               tokens={tokens}
               connecting={connecting}
+              isStellar={isStellarChain}
               onConnectMetaMask={() => {
                 if (isMobileDevice() && !getWindowEthereum()) {
                   openMetaMaskDeepLink();
                   return;
                 }
-                connectWindowEthereum("metamask");
+                connectWallet("metamask");
               }}
               onConnectBase={() => {
                 if (isMobileDevice() && !getWindowEthereum()) {
@@ -9293,7 +9667,10 @@ function UnsubscribeContent({
                   openCoinbaseWalletDeepLink();
                   return;
                 }
-                connectWindowEthereum("coinbase");
+                connectWallet("coinbase");
+              }}
+              onConnectFreighter={() => {
+                connectWallet();
               }}
             />
           </div>

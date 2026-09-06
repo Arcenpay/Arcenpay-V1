@@ -116,7 +116,7 @@ export async function POST(c: Context) {
       return c.json({ error: "Invalid email format" }, 400 as any);
     }
   }
-  if (body.wallet !== undefined && !/^0x[0-9a-fA-F]{40}$/.test(body.wallet)) {
+  if (body.wallet !== undefined && (typeof body.wallet !== "string" || body.wallet.trim().length === 0 || body.wallet.length > 128)) {
     return c.json({ error: "Invalid wallet address format" }, 400 as any);
   }
   if (body.id !== undefined && body.id.length > 64) {

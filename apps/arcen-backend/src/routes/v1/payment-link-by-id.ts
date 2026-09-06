@@ -31,7 +31,7 @@ export async function GET(c: Context) {
   if (isAnyAuthError(auth)) return c.json({ ok: false, error: auth.error }, auth.status as any as any);
 
   const id = c.req.param("id");
-  const paymentLink = await getPaymentLinkById(auth.teamId, id);
+  const paymentLink = await getPaymentLinkById(auth.teamId, id!);
   if (!paymentLink) {
     return c.json({ error: "Payment link not found" }, 404 as any);
   }
@@ -51,7 +51,7 @@ export async function PATCH(c: Context) {
 
   await updatePaymentLink({
     teamId: auth.teamId,
-    id,
+    id: id!,
     status: parsed.data.status,
     name: parsed.data.name,
     description: parsed.data.description ?? undefined,
@@ -68,7 +68,7 @@ export async function PATCH(c: Context) {
       parsed.data.metadata === undefined ? undefined : parsed.data.metadata,
   });
 
-  const updated = await getPaymentLinkById(auth.teamId, id);
+  const updated = await getPaymentLinkById(auth.teamId, id!);
   if (!updated) {
     return c.json({ error: "Payment link not found" }, 404 as any);
   }

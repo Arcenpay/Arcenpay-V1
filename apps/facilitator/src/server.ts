@@ -11,7 +11,20 @@ import fs from "fs";
 import path from "path";
 import { randomUUID } from "node:crypto";
 
+// Multi-chain deployments run one facilitator PROCESS per chainId (see
+// architecture note in @arcenpay/internal-core chains.ts). Set
+// FACILITATOR_ENV_FILE to point a given process at a chain-specific env
+// file (e.g. `.env.bot-testnet`) WITHOUT touching the default `.env` used
+// by any other already-running facilitator instance for a different chain.
+const explicitEnvFile = process.env.FACILITATOR_ENV_FILE;
+
 const FACILITATOR_ENV_PATHS = [
+  ...(explicitEnvFile
+    ? [
+        path.resolve(process.cwd(), explicitEnvFile),
+        path.resolve(process.cwd(), "apps/facilitator", explicitEnvFile),
+      ]
+    : []),
   path.resolve(process.cwd(), ".env.local"),
   path.resolve(process.cwd(), ".env"),
   path.resolve(process.cwd(), "apps/facilitator/.env.local"),
@@ -58,6 +71,9 @@ import {
   formatRuntimeChainMismatch,
   getContractAddresses,
   getChainEnvironment,
+  getChainFamily,
+  isValidAddressForChain,
+  normalizeWalletForChain,
   validateChainEnvironment,
   type PlanTier,
   type X402VerifiedPaymentContext,
@@ -100,8 +116,15 @@ import { TablelandService } from "./services/tableland.js";
 import { LitProtocolService } from "./services/lit.js";
 import { ProofOrchestrator } from "./services/proof-orchestrator.js";
 import { BillingKeeper } from "./services/keeper.js";
+import { StellarRenewalDriver } from "./services/stellar-renewal-driver.js";
 import { AxelarTransport } from "./services/transport-axelar.js";
 import { CCIPTransport } from "./services/transport-ccip.js";
+import {
+  registerChainAdapter,
+  type ChainAdapter,
+} from "./services/chain-adapter.js";
+import { EvmChainAdapter } from "./services/evm-adapter.js";
+import { StellarChainAdapter } from "./services/stellar-adapter.js";
 
 const app = express();
 const PORT = process.env.PORT || 3402;
@@ -114,7 +137,24 @@ const RPC_URL =
   RUNTIME_CHAIN_PROFILE.rpcUrl ||
   "https://sepolia.base.org";
 const CONTRACTS = CHAIN_ENV.contracts;
-const chainClient = createResilientFacilitatorClient(RPC_URL, CHAIN_ID);
+// viem chain client — EVM chains only. On Stellar there is no viem client
+// (the StellarChainAdapter owns the Soroban RPC), so we install a stub that
+// throws a descriptive error if any EVM-only code path touches it. Stellar
+// code paths never call chainClient.
+const chainClient: ReturnType<typeof createResilientFacilitatorClient> =
+  getChainFamily(CHAIN_ID) === "evm"
+    ? createResilientFacilitatorClient(RPC_URL, CHAIN_ID)
+    : (new Proxy(
+        {},
+        {
+          get(_target, prop) {
+            throw new Error(
+              `[Facilitator] chainClient.${String(prop)} is EVM-only but the runtime chain ${CHAIN_ID} is Stellar. ` +
+                `Use the StellarChainAdapter / Soroban client instead.`,
+            );
+          },
+        },
+      ) as ReturnType<typeof createResilientFacilitatorClient>);
 const FACILITATOR_PROFILE = (
   process.env.FACILITATOR_PROFILE || "development"
 ).toLowerCase();
@@ -299,9 +339,15 @@ function validateRuntimeConfig(): void {
     errors.push(err instanceof Error ? err.message : String(err));
   }
 
+  // On EVM chains the verifier is a 0x hex address; on Stellar it is a C…
+  // Soroban contract id. Validate with the family-aware helper so a Stellar
+  // facilitator does not fail production boot on a non-hex contract id.
+  const verifierFamily = getChainFamily(CHAIN_ID);
   const verifierInvalid =
-    !isHexAddress(verifierAddress) ||
-    verifierAddress === "0x0000000000000000000000000000000000000000";
+    verifierFamily === null ||
+    !isValidAddressForChain(verifierAddress, CHAIN_ID) ||
+    (verifierFamily === "evm" &&
+      verifierAddress === "0x0000000000000000000000000000000000000000");
   if (verifierInvalid && FACILITATOR_PROFILE === "production") {
     errors.push(
       `Invalid ZKUsageVerifier address for chain ${CHAIN_ID}: ${String(verifierAddress)}`,
@@ -341,11 +387,15 @@ function validateRuntimeConfig(): void {
       );
     }
 
-    for (const chainId of PAYMASTER_CHAIN_IDS) {
-      if (!getPaymasterRpcUrl(chainId)) {
-        errors.push(
-          `A paymaster RPC URL is required for chain ${chainId}. Set PAYMASTER_RPC_URL_${chainId}, PIMLICO_RPC_${chainId}, or PIMLICO_API_KEY.`,
-        );
+    // ERC-4337 paymasters are EVM-only — skip on Stellar where there is no
+    // user-operation gas sponsorship model.
+    if (getChainFamily(CHAIN_ID) === "evm") {
+      for (const chainId of PAYMASTER_CHAIN_IDS) {
+        if (!getPaymasterRpcUrl(chainId)) {
+          errors.push(
+            `A paymaster RPC URL is required for chain ${chainId}. Set PAYMASTER_RPC_URL_${chainId}, PIMLICO_RPC_${chainId}, or PIMLICO_API_KEY.`,
+          );
+        }
       }
     }
 
@@ -618,10 +668,17 @@ const proofOrchestrator = new ProofOrchestrator({
 });
 const usageService = proofOrchestrator.getUsageService();
 
-const settlementService = new SettlementService({
-  rpcUrl: RPC_URL,
-  chainId: CHAIN_ID,
-});
+// SettlementService (EVM SessionVault polling + proof submission watcher) —
+// EVM-only. On Stellar, settlement runs through the SettlementWriterService
+// (Soroban client) and the StellarChainAdapter; this viem-based watcher is
+// not constructed.
+const settlementService: SettlementService | null =
+  getChainFamily(CHAIN_ID) === "evm"
+    ? new SettlementService({
+        rpcUrl: RPC_URL,
+        chainId: CHAIN_ID,
+      })
+    : null;
 
 function normalizePrivateKey(value: string): `0x${string}` {
   const trimmed = value.trim();
@@ -647,16 +704,18 @@ if (enableOnchainSettlement) {
     );
   } else {
     try {
+      // For Stellar chains the key is an S… secret (handled by the
+      // SettlementWriterService Keypair branch). For EVM chains it must be a
+      // 32-byte hex private key.
+      const isStellarChain = getChainFamily(CHAIN_ID) === "stellar";
       settlementWriter = new SettlementWriterService({
         rpcUrl: RPC_URL,
         chainId: CHAIN_ID,
-        privateKey: normalizePrivateKey(privateKeyRaw),
-        providerAddress: process.env.X402_PROVIDER_ADDRESS as
-          | `0x${string}`
-          | undefined,
-        sessionVaultAddress: process.env.SESSION_VAULT_ADDRESS as
-          | `0x${string}`
-          | undefined,
+        privateKey: isStellarChain
+          ? privateKeyRaw.trim()
+          : normalizePrivateKey(privateKeyRaw),
+        providerAddress: process.env.X402_PROVIDER_ADDRESS || undefined,
+        sessionVaultAddress: process.env.SESSION_VAULT_ADDRESS || undefined,
         waitForReceipt: process.env.X402_WAIT_FOR_RECEIPT !== "false",
       });
       console.log("[Facilitator] x402 on-chain settlement writer active");
@@ -865,6 +924,11 @@ async function buildBillingEventRequest(
     payload: payload.payload,
     triggerInvoice: payload.triggerInvoice,
     source: payload.source,
+    // Top-level chainId so the backend can derive `chainFamily` for any rows
+    // it creates (SubscriptionState, etc.). The backend Zod accepts this
+    // optionally; if absent, it falls back to reading from payload.chainId
+    // (legacy path) or to its schema default (84532 = EVM).
+    chainId: payload.chainId ?? CHAIN_ID,
   };
 }
 
@@ -899,7 +963,12 @@ async function buildSubscriptionSyncRequest(
       `Unable to resolve subscriber wallet for subscription ${payload.event} (${payload.sourceTokenId ?? "unknown-token"})`,
     );
   }
-  const wallet = resolvedWallet.toLowerCase();
+  // EVM wallets are lowercased canonically; Stellar G… addresses are
+  // case-sensitive base32 and MUST be preserved exactly.
+  const resolvedChainId = payload.chainId ?? CHAIN_ID;
+  const wallet =
+    normalizeWalletForChain(resolvedWallet, resolvedChainId) ??
+    resolvedWallet;
 
   return {
     teamId,
@@ -909,6 +978,7 @@ async function buildSubscriptionSyncRequest(
     occurredAt: payload.occurredAt,
     sourceTxHash: payload.sourceTxHash,
     sourceTokenId: payload.sourceTokenId,
+    chainId: resolvedChainId,
   };
 }
 
@@ -998,10 +1068,54 @@ const replayProtection = new X402ReplayProtection(
   Number(process.env.X402_REPLAY_WINDOW_MS || 10 * 60 * 1000),
 );
 
-const eventListener = new EventListenerService({
-  rpcUrl: RPC_URL,
-  chainId: CHAIN_ID,
-});
+// viem-based EVM event listener — only constructed for EVM chains. On Stellar
+// the StellarChainAdapter polls Soroban events instead and this is never
+// started (see startup IIFE).
+const eventListener: EventListenerService | null =
+  getChainFamily(CHAIN_ID) === "evm"
+    ? new EventListenerService({
+        rpcUrl: RPC_URL,
+        chainId: CHAIN_ID,
+      })
+    : null;
+
+// ── Chain Adapter Registry ────────────────────────────────────────────────
+//
+// Every chain the facilitator watches is registered with a family-aware
+// ChainAdapter. Today only the runtime CHAIN_ID is registered (via the EVM
+// adapter for EVM ids, the Stellar adapter for Stellar synthetic ids). When
+// the facilitator later supports multi-chain watchers, register an adapter
+// per chain here.
+//
+// The EvmChainAdapter wraps the existing viem-based EventListenerService
+// (above) so the existing event pipeline keeps working unchanged. The
+// StellarChainAdapter polls Soroban getEvents and dispatches normalised
+// events through the same ChainAdapter.on() seam. The startup IIFE below
+// starts whichever adapter matches the runtime CHAIN_ID's family.
+const chainFamily = getChainFamily(CHAIN_ID);
+let primaryChainAdapter: ChainAdapter;
+if (chainFamily === "evm") {
+  primaryChainAdapter = new EvmChainAdapter({
+    chainId: CHAIN_ID,
+    rpcUrl: RPC_URL,
+  });
+  registerChainAdapter(primaryChainAdapter);
+} else if (chainFamily === "stellar") {
+  primaryChainAdapter = new StellarChainAdapter({
+    chainId: CHAIN_ID,
+    // The server-level RPC_URL is normally an EVM-style URL for the runtime
+    // CHAIN_ID; for Stellar we DON'T pass it — let the adapter resolve the
+    // Soroban RPC URL via getStellarSorobanRpcUrl() honoring env vars.
+  });
+  registerChainAdapter(primaryChainAdapter);
+} else {
+  // Unknown family — cannot arm any listener. Fatal: the facilitator has no
+  // meaningful chain work to do and silently running would mask the misconfig.
+  throw new Error(
+    `[Facilitator] No ChainAdapter available for chainId ${CHAIN_ID} ` +
+      `(family ${chainFamily ?? "unknown"}). Supported families: evm, stellar.`,
+  );
+}
 
 // Optional: Webhook service (if webhook URL is configured)
 // Accepts WEBHOOK_SIGNING_SECRET or SVIX_SIGNING_SECRET (alias)
@@ -1085,9 +1199,10 @@ function setFlagMeta(
   flagMetadataStore.get(provider)!.set(flagKey, { ...existing, ...meta });
 }
 
-// Optional: Axelar GMP transport (cross-chain subscription mirroring)
+// Optional: Axelar GMP transport (cross-chain subscription mirroring) — EVM-only.
 let axelarTransport: AxelarTransport | null = null;
 if (
+  getChainFamily(CHAIN_ID) === "evm" &&
   process.env.AXELAR_GATEWAY_ADDRESS &&
   process.env.AXELAR_GAS_SERVICE_ADDRESS &&
   PROOF_SIGNER_PRIVATE_KEY
@@ -1103,9 +1218,13 @@ if (
   console.log("[Facilitator] Axelar GMP transport initialized");
 }
 
-// Optional: CCIP transport fallback (cross-chain subscription mirroring)
+// Optional: CCIP transport fallback (cross-chain subscription mirroring) — EVM-only.
 let ccipTransport: CCIPTransport | null = null;
-if (process.env.CCIP_ROUTER_ADDRESS && PROOF_SIGNER_PRIVATE_KEY) {
+if (
+  getChainFamily(CHAIN_ID) === "evm" &&
+  process.env.CCIP_ROUTER_ADDRESS &&
+  PROOF_SIGNER_PRIVATE_KEY
+) {
   ccipTransport = new CCIPTransport({
     routerAddress: process.env.CCIP_ROUTER_ADDRESS as `0x${string}`,
     rpcUrl: RPC_URL,
@@ -1143,6 +1262,11 @@ type BillingEventJobPayload = {
   onChainPlanId?: string | null;
   sourceTokenId?: string;
   wallet?: string | null;
+  // ChainId is threaded through the durable queue so the backend can derive
+  // `chainFamily` for any rows it creates from this event (SubscriptionState,
+  // Payment, etc.). Defaults to the facilitator's runtime CHAIN_ID; for
+  // Stellar synthetic ids (9_000_000+) the backend resolves "STELLAR".
+  chainId?: number;
 };
 
 type SubscriptionSyncJobPayload = {
@@ -1153,6 +1277,9 @@ type SubscriptionSyncJobPayload = {
   occurredAt?: string;
   sourceTxHash?: string;
   sourceTokenId?: string;
+  // Threaded so the backend derives chainFamily/chainId for ledger rows.
+  // Defaults to the facilitator's runtime CHAIN_ID when omitted.
+  chainId?: number;
 };
 
 const billingBridgeStats: {
@@ -1335,6 +1462,7 @@ async function persistBillingEvent(
       onChainPlanId: routing?.onChainPlanId ?? null,
       sourceTokenId: routing?.sourceTokenId,
       wallet: routing?.wallet ?? null,
+      chainId: CHAIN_ID,
     } satisfies BillingEventJobPayload,
     { idempotencyKey: `billing:${eventEnvelope.idempotencyKey}` },
   );
@@ -1348,6 +1476,7 @@ async function enqueueSubscriptionSync(input: {
   occurredAt?: string;
   sourceTxHash?: string;
   sourceTokenId?: string;
+  chainId?: number;
 }): Promise<void> {
   const dedupeParts = [
     input.event,
@@ -1882,7 +2011,7 @@ function parseSessionTuple(raw: unknown): {
 // ============================================================
 
 // Watch all subscription events and forward to webhooks
-eventListener.on("*", async (event) => {
+eventListener?.on("*", async (event) => {
   console.log(`[Facilitator] Event: ${event.type} tokenId=${event.tokenId}`);
 
   // Forward to webhook if configured
@@ -1892,7 +2021,7 @@ eventListener.on("*", async (event) => {
 });
 
 // Specific handlers for each event type
-eventListener.on("minted", async (event) => {
+eventListener?.on("minted", async (event) => {
   console.log(
     `[Facilitator] 🎉 New subscriber: ${event.subscriber} (Plan ${event.planId})`,
   );
@@ -2000,7 +2129,7 @@ eventListener.on("minted", async (event) => {
   }
 });
 
-eventListener.on("renewed", async (event) => {
+eventListener?.on("renewed", async (event) => {
   console.log(
     `[Facilitator] 🔄 Renewed: tokenId=${event.tokenId} until ${event.expiration}`,
   );
@@ -2087,7 +2216,7 @@ eventListener.on("renewed", async (event) => {
   }
 });
 
-eventListener.on("billing_executed", async (event) => {
+eventListener?.on("billing_executed", async (event) => {
   const tokenId = event.tokenId.toString();
   const billingReason = Number(event.billingReason ?? 0n);
   const onChainPlanId = event.planId?.toString() ?? null;
@@ -2222,7 +2351,7 @@ eventListener.on("billing_executed", async (event) => {
   }
 });
 
-eventListener.on("plan_changed", async (event) => {
+eventListener?.on("plan_changed", async (event) => {
   console.log(
     `[Facilitator] 🔀 Plan changed: tokenId=${event.tokenId} ${event.previousPlanId ?? "?"} -> ${event.planId ?? "?"}`,
   );
@@ -2272,7 +2401,7 @@ eventListener.on("plan_changed", async (event) => {
   );
 });
 
-eventListener.on("cancelled", async (event) => {
+eventListener?.on("cancelled", async (event) => {
   console.log(`[Facilitator] ❌ Cancelled: tokenId=${event.tokenId}`);
   const tokenId = event.tokenId.toString();
   const existingRouteState = await subscriptionRouteStore.read(tokenId);
@@ -2357,6 +2486,300 @@ eventListener.on("cancelled", async (event) => {
     console.error("[Facilitator] sync-subscription (cancelled) failed:", err),
   );
 });
+
+// ── Stellar event handlers ─────────────────────────────────────────────────
+// When the runtime chain is Stellar, register the billing pipeline on the
+// StellarChainAdapter instead of the viem eventListener. The adapter emits
+// NormalisedSubscriptionEvent (already stringified, wallet case preserved),
+// so these handlers drive the same route-store + dashboard-sync + billing
+// seams the EVM handlers use, without viem chain re-reads.
+if (chainFamily === "stellar") {
+  const routeStoreWallet = (
+    wallet: string | null | undefined,
+  ): string | null => {
+    // Stellar addresses are case-sensitive base32 — never lowercase them.
+    return wallet && wallet.length > 0 ? wallet : null;
+  };
+
+  const resolveStellarPlanScope = async (
+    onChainPlanId: string | null,
+  ): Promise<{ teamId: string | null; planId: string | null; environmentId: string | null } | null> => {
+    if (!onChainPlanId) return null;
+    return resolvePlanScopeFromDashboard(onChainPlanId).catch((err) => {
+      console.error(
+        "[Facilitator] Failed to resolve team for Stellar subscription:",
+        err,
+      );
+      return null;
+    });
+  };
+
+  primaryChainAdapter.on("*", (event) => {
+    console.log(
+      `[Facilitator] Stellar event: ${event.type} tokenId=${event.tokenId} tx=${event.transactionHash}`,
+    );
+  });
+
+  primaryChainAdapter.on("minted", async (event) => {
+    const tokenId = event.tokenId;
+    const subscriber = routeStoreWallet(event.subscriber);
+    const onChainPlanId = event.planId ?? null;
+    const occurredAt = event.timestamp
+      ? new Date(Number(event.timestamp) * 1000).toISOString()
+      : undefined;
+    const planScope = await resolveStellarPlanScope(onChainPlanId);
+    const teamId = planScope?.teamId ?? null;
+
+    if (subscriber) {
+      await subscriptionRouteStore.write(tokenId, {
+        wallet: subscriber,
+        teamId,
+        onChainPlanId,
+        updatedAt: occurredAt ?? new Date().toISOString(),
+      });
+    }
+    if (subscriber) {
+      enqueueSubscriptionSync({
+        teamId,
+        wallet: subscriber,
+        onChainPlanId,
+        event: "minted",
+        occurredAt,
+        sourceTxHash: event.transactionHash,
+        sourceTokenId: tokenId,
+        chainId: CHAIN_ID,
+      }).catch((err) =>
+        console.error(
+          "[Facilitator] sync-subscription (stellar minted) failed:",
+          err,
+        ),
+      );
+    }
+  });
+
+  primaryChainAdapter.on("renewed", async (event) => {
+    const tokenId = event.tokenId;
+    const existing = await subscriptionRouteStore.read(tokenId);
+    const subscriber = routeStoreWallet(
+      event.subscriber ?? existing?.wallet,
+    );
+    const onChainPlanId = event.planId ?? existing?.onChainPlanId ?? null;
+    const occurredAt = event.timestamp
+      ? new Date(Number(event.timestamp) * 1000).toISOString()
+      : undefined;
+    const planScope = await resolveStellarPlanScope(onChainPlanId);
+    const teamId = existing?.teamId ?? planScope?.teamId ?? null;
+
+    if (subscriber) {
+      await subscriptionRouteStore.write(tokenId, {
+        wallet: subscriber,
+        teamId,
+        onChainPlanId,
+        updatedAt: occurredAt ?? new Date().toISOString(),
+      });
+    }
+    if (subscriber) {
+      enqueueSubscriptionSync({
+        teamId,
+        wallet: subscriber,
+        onChainPlanId,
+        event: "renewed",
+        occurredAt,
+        sourceTxHash: event.transactionHash,
+        sourceTokenId: tokenId,
+        chainId: CHAIN_ID,
+      }).catch((err) =>
+        console.error(
+          "[Facilitator] sync-subscription (stellar renewed) failed:",
+          err,
+        ),
+      );
+    }
+  });
+
+  primaryChainAdapter.on("billing_executed", async (event) => {
+    const tokenId = event.tokenId;
+    const billingReason = Number(event.billingReason ?? 0);
+    const onChainPlanId = event.planId ?? null;
+    const subscriberWallet = routeStoreWallet(
+      event.account ?? event.subscriber,
+    );
+    const existing = await subscriptionRouteStore.read(tokenId);
+    const planScope = await resolveStellarPlanScope(onChainPlanId);
+    const teamId = existing?.teamId ?? planScope?.teamId ?? null;
+    const catalogPlanId = planScope?.planId ?? null;
+    const environmentId = planScope?.environmentId ?? null;
+    const amount = microsToDecimalString(
+      BigInt(event.amountPaidMicros ?? "0"),
+    );
+    const merchantAmount = microsToDecimalString(
+      BigInt(event.merchantAmountMicros ?? "0"),
+    );
+    const protocolFee = microsToDecimalString(
+      BigInt(event.protocolFeeMicros ?? "0"),
+    );
+    const occurredAtMs = event.timestamp
+      ? Number(event.timestamp) * 1000
+      : undefined;
+    const occurredAtIso = occurredAtMs
+      ? new Date(occurredAtMs).toISOString()
+      : undefined;
+
+    if (subscriberWallet) {
+      await subscriptionRouteStore.write(tokenId, {
+        wallet: subscriberWallet,
+        teamId,
+        onChainPlanId,
+        updatedAt: occurredAtIso ?? new Date().toISOString(),
+      });
+    }
+
+    const billingEventName: ProtocolEventName =
+      billingReason === 0 ? "subscription.minted" : "subscription.renewed";
+
+    await persistBillingEvent(
+      billingEventName,
+      buildEventIdempotencyKey(billingEventName, [
+        event.transactionHash || tokenId,
+        tokenId,
+      ]),
+      {
+        tokenId,
+        planId: catalogPlanId ?? onChainPlanId,
+        catalogPlanId,
+        onChainPlanId,
+        environmentId,
+        subscriber: subscriberWallet,
+        customerWallet: subscriberWallet,
+        amount,
+        grossAmount: amount,
+        merchantAmount,
+        protocolFee,
+        txHash: event.transactionHash,
+        timestamp: event.timestamp?.toString(),
+        expiration: event.expiration?.toString(),
+        billingReason,
+        description:
+          billingReason === 0
+            ? "Subscription activation"
+            : "Subscription renewal",
+      },
+      true,
+      occurredAtMs,
+      {
+        teamId,
+        onChainPlanId,
+        sourceTokenId: tokenId,
+        wallet: subscriberWallet ?? null,
+      },
+    );
+
+    if (subscriberWallet) {
+      enqueueSubscriptionSync({
+        teamId,
+        wallet: subscriberWallet,
+        onChainPlanId,
+        event: billingReason === 0 ? "minted" : "renewed",
+        occurredAt: occurredAtIso,
+        sourceTxHash: event.transactionHash,
+        sourceTokenId: tokenId,
+        chainId: CHAIN_ID,
+      }).catch((err) =>
+        console.error(
+          "[Facilitator] sync-subscription (stellar billing_executed) failed:",
+          err,
+        ),
+      );
+    }
+  });
+
+  primaryChainAdapter.on("plan_changed", async (event) => {
+    const tokenId = event.tokenId;
+    const existing = await subscriptionRouteStore.read(tokenId);
+    const subscriber = routeStoreWallet(
+      event.subscriber ?? existing?.wallet,
+    );
+    const onChainPlanId = event.planId ?? null;
+    const occurredAt = event.timestamp
+      ? new Date(Number(event.timestamp) * 1000).toISOString()
+      : undefined;
+    const planScope = await resolveStellarPlanScope(onChainPlanId);
+    const teamId = existing?.teamId ?? planScope?.teamId ?? null;
+
+    if (subscriber) {
+      await subscriptionRouteStore.write(tokenId, {
+        wallet: subscriber,
+        teamId,
+        onChainPlanId,
+        updatedAt: occurredAt ?? new Date().toISOString(),
+      });
+    }
+    if (subscriber) {
+      enqueueSubscriptionSync({
+        teamId,
+        wallet: subscriber,
+        onChainPlanId,
+        event: "plan_changed",
+        occurredAt,
+        sourceTxHash: event.transactionHash,
+        sourceTokenId: tokenId,
+        chainId: CHAIN_ID,
+      }).catch((err) =>
+        console.error(
+          "[Facilitator] sync-subscription (stellar plan_changed) failed:",
+          err,
+        ),
+      );
+    }
+  });
+
+  primaryChainAdapter.on("cancelled", async (event) => {
+    const tokenId = event.tokenId;
+    const existing = await subscriptionRouteStore.read(tokenId);
+    const subscriber = routeStoreWallet(existing?.wallet);
+    const teamId = existing?.teamId ?? null;
+
+    await persistBillingEvent(
+      "subscription.cancelled",
+      buildEventIdempotencyKey("subscription.cancelled", [
+        event.transactionHash || tokenId,
+      ]),
+      {
+        tokenId,
+        txHash: event.transactionHash,
+        timestamp: event.timestamp?.toString(),
+      },
+      false,
+      event.timestamp ? Number(event.timestamp) * 1000 : undefined,
+      {
+        teamId,
+        onChainPlanId: existing?.onChainPlanId ?? null,
+        sourceTokenId: tokenId,
+        wallet: subscriber,
+      },
+    );
+
+    if (subscriber) {
+      enqueueSubscriptionSync({
+        teamId,
+        wallet: subscriber,
+        onChainPlanId: null,
+        event: "cancelled",
+        occurredAt: event.timestamp
+          ? new Date(Number(event.timestamp) * 1000).toISOString()
+          : undefined,
+        sourceTxHash: event.transactionHash,
+        sourceTokenId: tokenId,
+        chainId: CHAIN_ID,
+      }).catch((err) =>
+        console.error(
+          "[Facilitator] sync-subscription (stellar cancelled) failed:",
+          err,
+        ),
+      );
+    }
+  });
+}
 
 // Watch for cross-chain dispatch requests and relay via Axelar/CCIP (PRD §7.2)
 if (axelarTransport || ccipTransport) {
@@ -2493,8 +2916,8 @@ if (axelarTransport || ccipTransport) {
   }, 5000);
 }
 
-// Watch for settlement events
-settlementService.watchSettlements((settlement) => {
+// Watch for settlement events (EVM-only service — no-op on Stellar)
+settlementService?.watchSettlements((settlement) => {
   console.log(
     `[Facilitator] 💰 Settlement: ${settlement.sessionId} — ${settlement.settlementAmount} (${settlement.callCount} calls)`,
   );
@@ -2571,8 +2994,15 @@ const balanceMonitor = new BalanceMonitor({
 });
 
 // Optional: Billing Keeper (if private key is configured and explicitly enabled)
+// EVM-only today — the renewal scanner reads the EVM SubscriptionRegistry via
+// viem and executes ERC-7579 AutopayModule calls. Stellar renewals flow
+// through backend activation/sync + Soroban autopay-account events instead.
 let billingKeeper: BillingKeeper | null = null;
-if (process.env.ENABLE_BILLING_KEEPER === "true" && process.env.PRIVATE_KEY) {
+if (
+  process.env.ENABLE_BILLING_KEEPER === "true" &&
+  process.env.PRIVATE_KEY &&
+  getChainFamily(CHAIN_ID) === "evm"
+) {
   try {
     billingKeeper = new BillingKeeper({
       rpcUrl: RPC_URL,
@@ -2650,6 +3080,39 @@ if (process.env.ENABLE_BILLING_KEEPER === "true" && process.env.PRIVATE_KEY) {
   } catch (err) {
     console.error("[Facilitator] BillingKeeper init failed:", err);
     billingKeeper = null;
+  }
+}
+
+// ── Stellar Renewal Driver ─────────────────────────────────────────────────
+// The Soroban autopay-account analog of the EVM BillingKeeper. Only relevant
+// when the facilitator runs a Stellar chain AND the operator explicitly enables
+// it AND configures subscriber keypairs. Soroban requires the SUBSCRIBER's
+// authorization on every charge, so the driver only auto-charges subscribers
+// whose S… secrets are configured (STELLAR_RENEWAL_KEYS="G…:S…,…"); other due
+// renewals are surfaced as log notices for the co-sign flow.
+let stellarRenewalDriver: StellarRenewalDriver | null = null;
+if (
+  chainFamily === "stellar" &&
+  process.env.STELLAR_RENEWAL_DRIVER_ENABLED === "true"
+) {
+  try {
+    stellarRenewalDriver = new StellarRenewalDriver({
+      chainId: CHAIN_ID,
+      intervalMs: Number(process.env.STELLAR_RENEWAL_DRIVER_INTERVAL_MS || 60_000),
+      subscriberKeys: process.env.STELLAR_RENEWAL_KEYS || "",
+    });
+    stellarRenewalDriver.onRenewal((result) => {
+      console.log(
+        `[Facilitator] Stellar renewal result: wallet=${result.wallet} ` +
+          `due=${result.due} charged=${result.charged} ${result.txHash ? `tx=${result.txHash}` : ""}` +
+          (result.error ? ` error=${result.error}` : ""),
+      );
+    });
+    stellarRenewalDriver.start();
+    console.log("[Facilitator] StellarRenewalDriver active");
+  } catch (err) {
+    console.error("[Facilitator] StellarRenewalDriver init failed:", err);
+    stellarRenewalDriver = null;
   }
 }
 
@@ -2813,11 +3276,18 @@ app.get("/health", async (_req, res) => {
 // ============================================================
 
 app.get("/info", (_req, res) => {
+  const networkLabel =
+    getChainFamily(CHAIN_ID) === "stellar"
+      ? CHAIN_ID === 9_000_000
+        ? "stellar-mainnet"
+        : "stellar-testnet"
+      : process.env.X402_NETWORK || "base-sepolia";
   res.json({
     protocol: "ArcenPay + ZKVUB",
     version: "0.1.0",
     x402Version: "1",
-    supportedNetworks: ["base-sepolia", "base-mainnet"],
+    chainId: CHAIN_ID,
+    supportedNetworks: [networkLabel],
     supportedTokens: ["USDC"],
   });
 });
@@ -2880,7 +3350,16 @@ app.use(
   x402Middleware({
     planId: process.env.X402_PLAN_ID || "demo",
     ratePerCall: process.env.X402_RATE_PER_CALL || "0.001",
-    network: process.env.X402_NETWORK || "base-sepolia",
+    // The runtime chain drives verification: pass CHAIN_ID so the middleware
+    // picks the correct family branch (EVM EIP-712 vs Stellar ed25519) and
+    // the right SessionVault balance-check contract.
+    chainId: CHAIN_ID,
+    // Only pass an explicit network for EVM chains. For Stellar, omit it so
+    // the middleware does not try to map a synthetic chainId to an EVM
+    // network name (CHAIN_ID_TO_NETWORK has no Stellar entries).
+    ...(getChainFamily(CHAIN_ID) === "evm"
+      ? { network: process.env.X402_NETWORK || "base-sepolia" }
+      : {}),
     failOpenOnBalanceCheck: process.env.X402_FAIL_OPEN_BALANCE_CHECK === "true",
     ...(settlementWriter
       ? {
@@ -2889,7 +3368,7 @@ app.use(
             amount,
             sessionId,
           }: {
-            signer: `0x${string}`;
+            signer: string;
             amount: bigint;
             sessionId: string;
           }) => {
@@ -2908,9 +3387,7 @@ app.use(
                 signer,
                 amount,
                 sessionIdHint: sessionId,
-                providerAddress: process.env.X402_PROVIDER_ADDRESS as
-                  | `0x${string}`
-                  | undefined,
+                providerAddress: process.env.X402_PROVIDER_ADDRESS || undefined,
               });
 
               observe({ outcome: "success" });
@@ -3676,6 +4153,11 @@ app.get("/api/session/:agentAddress/balance", async (req, res) => {
   if (!isValidAddress(req.params.agentAddress)) {
     return res.status(400).json({ error: "Invalid agent address." });
   }
+  if (!settlementService) {
+    return res
+      .status(400)
+      .json({ error: "SessionVault balances are not available on this chain." });
+  }
   try {
     const balance = await settlementService.getSessionBalance(
       req.params.agentAddress,
@@ -3693,6 +4175,11 @@ app.get("/api/session/:agentAddress", async (req, res) => {
   const { agentAddress } = req.params;
   if (!isValidAddress(agentAddress)) {
     return res.status(400).json({ error: "Invalid agent address." });
+  }
+  if (!settlementService) {
+    return res
+      .status(400)
+      .json({ error: "Session data is not available on this chain." });
   }
 
   const limitParam = Number(req.query.limit || 20);
@@ -3745,6 +4232,11 @@ app.get("/api/session/details/:sessionId", async (req, res) => {
     return res
       .status(400)
       .json({ error: "sessionId must be a bytes32 hex value." });
+  }
+  if (!settlementService) {
+    return res
+      .status(400)
+      .json({ error: "Session details are not available on this chain." });
   }
 
   try {
@@ -4482,13 +4974,25 @@ void (async () => {
     }
     await queueRedisReady;
 
-    // Start event listener before printing the banner so status is accurate
+    // Start event listener before printing the banner so status is accurate.
+    // Which listener runs depends on the runtime chain family: EVM chains use
+    // the viem EventListenerService; Stellar chains use the StellarChainAdapter
+    // (Soroban getEvents polling). Never point the viem listener at a Stellar
+    // RPC — it would poll a Soroban/Horizon endpoint and fail forever.
     try {
-      await eventListener.start(12000);
-      eventListenerActive = true;
-      console.log(
-        "[Facilitator] EventListener started — watching on-chain events",
-      );
+      if (chainFamily === "stellar") {
+        await primaryChainAdapter.startEventListener(12000);
+        eventListenerActive = true;
+        console.log(
+          `[Facilitator] StellarChainAdapter started — watching Soroban events for chain ${CHAIN_ID}`,
+        );
+      } else {
+        await eventListener!.start(12000);
+        eventListenerActive = true;
+        console.log(
+          "[Facilitator] EventListener started — watching on-chain events",
+        );
+      }
     } catch (err) {
       eventListenerActive = false;
       console.error("[Facilitator] EventListener failed to start:", err);
@@ -4514,10 +5018,19 @@ void (async () => {
 })();
 
 // Graceful shutdown
+function stopEventListener() {
+  if (chainFamily === "stellar") {
+    primaryChainAdapter.stopEventListener();
+  } else {
+    eventListener?.stop();
+  }
+}
+
 process.on("SIGTERM", () => {
   console.log("[Facilitator] Shutting down after SIGTERM...");
-  eventListener.stop();
-  settlementService.stop();
+  stopEventListener();
+  stellarRenewalDriver?.stop();
+  settlementService?.stop();
   proofOrchestrator.stop();
   billingKeeper?.stop();
   webhookService?.stop();
@@ -4530,8 +5043,9 @@ process.on("SIGTERM", () => {
 
 process.on("SIGINT", () => {
   console.log("[Facilitator] Shutting down after SIGINT...");
-  eventListener.stop();
-  settlementService.stop();
+  stopEventListener();
+  stellarRenewalDriver?.stop();
+  settlementService?.stop();
   proofOrchestrator.stop();
   billingKeeper?.stop();
   webhookService?.stop();

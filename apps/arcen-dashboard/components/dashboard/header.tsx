@@ -6,15 +6,14 @@ import { Bell, ChevronDown, Wallet } from "lucide-react";
 import { Web3Icon } from "@/components/web3-icon";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { useChainId } from "wagmi";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useDashboardSession } from "@/hooks/use-dashboard-session";
 import { getChainLabel, resolveEnvironmentChainId } from "@/lib/default-chain";
 import {
   SUPPORTED_WALLET_CHAIN_LABEL,
-  useDashboardWallet,
 } from "@/hooks/use-dashboard-wallet";
+import { useUnifiedDashboardWallet } from "@/hooks/use-unified-dashboard-wallet";
 import { useEnvironment } from "@/contexts/environment-context";
 
 type AuditEntry = {
@@ -48,7 +47,7 @@ const sectionTitles: Record<Section, string> = {
   companies: "Companies",
   "events-stream": "Events",
   "feature-flags": "Feature Flags",
-  agent: "Agent",
+  agent: "Arcen Agent",
   webhooks: "Webhooks",
 };
 
@@ -70,7 +69,7 @@ const sectionDescriptions: Record<Section, string> = {
   companies: "Manage companies, entitlements, and overrides",
   "events-stream": "Live stream of track and identify events",
   "feature-flags": "Manage flags, targeting rules, and zkTLS conditions",
-  agent: "AI agent SDK, API keys, session management, auto-topup & dispatch",
+  agent: "ArcenPay agent SDK, API keys, session management, auto-topup & dispatch",
   webhooks: "Configure endpoints, signing secrets, and delivery logs",
 };
 
@@ -82,16 +81,18 @@ export function Header({ activeSection, onMobileMenuToggle }: HeaderProps) {
     environments,
     selectEnvironment,
   } = useEnvironment();
-  const chainId = useChainId();
   const { data: sessionData, refresh: refreshSessionData } = useDashboardSession();
-  const storedWallet = sessionData?.user.walletAddress ?? null;
+  const configuredChainId = activeEnvironment?.chainId ?? resolveEnvironmentChainId(envMode);
+  const configuredChainLabel = getChainLabel(configuredChainId);
   const {
+    storedWallet,
     connectedWalletLabel,
     currentNetworkLabel,
     disconnectWallet,
     hasConnectedWallet,
     isDisconnecting,
     isLinkedWalletConnected,
+    isLoading: walletLoading,
     isSwitchingChain,
     isWrongWalletConnected,
     linkedWalletLabel,
@@ -99,10 +100,12 @@ export function Header({ activeSection, onMobileMenuToggle }: HeaderProps) {
     openConnectModal,
     reconnectWallet,
     switchToRequiredNetwork,
-  } = useDashboardWallet(storedWallet);
-  const configuredChainId = activeEnvironment?.chainId ?? resolveEnvironmentChainId(envMode);
-  const configuredChainLabel = getChainLabel(configuredChainId);
-  const isOnConfiguredNetwork = hasConnectedWallet && chainId === configuredChainId;
+    isOnConfiguredNetwork,
+  } = useUnifiedDashboardWallet(
+    configuredChainId,
+    sessionData?.user.walletAddress ?? null,
+    sessionData?.user.stellarWalletAddress ?? null,
+  );
 
   const [showNotifications, setShowNotifications] = useState(false);
   const [showWalletMenu, setShowWalletMenu] = useState(false);
@@ -476,7 +479,7 @@ export function Header({ activeSection, onMobileMenuToggle }: HeaderProps) {
                   type="button"
                   onClick={() => {
                     setShowEnvironmentMenu(false);
-                    router.push("/onboarding/environment");
+                    router.push("/environments/new");
                   }}
                   className="flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm text-muted-foreground transition-colors hover:bg-secondary/50 hover:text-foreground"
                 >

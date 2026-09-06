@@ -18,8 +18,8 @@ import {
 } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 import { sepolia, baseSepolia, base } from 'viem/chains';
-import { arcTestnet, X402_VERSION, X402_SCHEME, SessionVaultABI, getContractAddresses, getTokenAddress } from './internal/core';
-import type { X402Response, X402PaymentHeader, AutoTopUpConfig, AutoTopUpMode, DispatchConfig, DispatchProvider, DispatchProviderType, TopUpRequest, PersistentAgentState, PersistentStore } from './internal/core';
+import { arcTestnet, botMainnet, botTestnet, X402_VERSION, X402_SCHEME, SessionVaultABI, getContractAddresses, getTokenAddress, isStellarChainId, getChainDescriptor, getStellarNetworkPassphrase, getStellarSorobanRpcUrl, normalizeX402AmountToDecimal } from './internal/core';
+import type { X402Response, X402PaymentHeader, AutoTopUpConfig, AutoTopUpMode, DispatchConfig, DispatchProvider, DispatchProviderType, TopUpRequest, PersistentAgentState, PersistentStore, AgenticPaymentLinkSpec, AgentPaymentReceipt, CreateAgentPaymentLinkParams, PayPaymentLinkOptions } from './internal/core';
 
 // ─── Re-exported types ───────────────────────────────────────────
 export type {
@@ -31,19 +31,25 @@ export type {
   TopUpRequest,
   PersistentAgentState,
   PersistentStore,
+  AgenticPaymentLinkSpec,
+  AgentPaymentReceipt,
+  CreateAgentPaymentLinkParams,
+  PayPaymentLinkOptions,
 } from './internal/core';
 
 // ─── Config ───────────────────────────────────────────────────────
 
 export interface AgentConfig {
-  /** Agent's wallet private key (for signing payments) */
+  /** Agent's wallet private key (EVM hex for EVM chains, S… secret for Stellar). */
   privateKey: string;
-  /** RPC URL for the target chain */
-  rpcUrl: string;
+  /** RPC URL for the target chain (EVM only; optional on Stellar). */
+  rpcUrl?: string;
   /** Chain ID */
   chainId: number;
   /** Maximum amount to auto-approve per request (in USDC, e.g., "0.01") */
   maxAutoApprove?: string;
+  /** Maximum total daily spend ceiling (in USDC, e.g. "50.00" or 50) */
+  maxDailySpend?: string | number;
   /** Session vault address (if pre-funded) */
   sessionVaultAddress?: string;
   /** Auto-top-up configuration */
@@ -52,6 +58,16 @@ export interface AgentConfig {
   dispatch?: DispatchConfig;
   /** Persistent store for nonce/session data */
   store?: PersistentStore;
+  /** Stellar-only: Horizon URL. Defaults from the chain registry. */
+  horizonUrl?: string;
+  /** Stellar-only: Soroban RPC URL. Defaults from the chain registry/env. */
+  sorobanRpcUrl?: string;
+  /** Stellar-only: network passphrase. Defaults from the chain registry. */
+  networkPassphrase?: string;
+  /** Optional ArcenPay API base URL (e.g., 'https://api.arcenpay.xyz' or 'http://localhost:3300') */
+  apiUrl?: string;
+  /** Optional API key for authenticated merchant/provider operations (such as creating payment links) */
+  apiKey?: string;
 }
 
 export interface FetchOptions extends RequestInit {
@@ -65,6 +81,13 @@ export interface FetchOptions extends RequestInit {
 
 const PAYMENT_DOMAIN_NAME = 'ArcenPay x402 Payment';
 const PAYMENT_DOMAIN_VERSION = '1';
+
+/**
+ * Stellar signature domain separation prefix. The Stellar analogue of
+ * EIP-712: we sign `PREFIX + JSON.stringify({...})` so signatures are
+ * distinct from arbitrary wallet signing and bound to the x402 scheme.
+ */
+export const STELLAR_X402_SIGNING_PREFIX = 'ArcenPay x402 Payment\n';
 
 const PAYMENT_TYPES = {
   Payment: [
@@ -82,6 +105,8 @@ const CHAIN_MAP: Record<number, Chain> = {
   84532: baseSepolia,
   8453: base,
   5042002: arcTestnet,
+  677: botMainnet,
+  968: botTestnet,
 };
 
 const ERC20_APPROVE_ABI = [{
@@ -89,6 +114,17 @@ const ERC20_APPROVE_ABI = [{
   name: 'approve',
   inputs: [
     { name: 'spender', type: 'address' },
+    { name: 'amount', type: 'uint256' },
+  ],
+  outputs: [{ name: '', type: 'bool' }],
+  stateMutability: 'nonpayable',
+}] as const;
+
+const ERC20_TRANSFER_ABI = [{
+  type: 'function',
+  name: 'transfer',
+  inputs: [
+    { name: 'to', type: 'address' },
     { name: 'amount', type: 'uint256' },
   ],
   outputs: [{ name: '', type: 'bool' }],
@@ -166,19 +202,31 @@ class MemoryStore implements PersistentStore {
 
 // ─── Main Agent Class ─────────────────────────────────────────────
 
-export class MEAPAgent {
+/**
+ * ArcenPay AI agent client — autonomous x402/USDC payment negotiation.
+ * `ArcenPayAgent` is kept as a documented alias.
+ */
+export class ArcenAgent {
   private config: AgentConfig;
   private sessionId: string | null = null;
   private totalSpent: bigint = 0n;
   private nonce: bigint = 0n;
-  private publicClient: PublicClient;
-  private walletClient: WalletClient;
+  private publicClient: PublicClient | null;
+  private walletClient: WalletClient | null;
   private account: ReturnType<typeof privateKeyToAccount>;
   private contracts: ReturnType<typeof getContractAddresses>;
   private chain: Chain;
   private store: PersistentStore;
   private dailySpent: bigint = 0n;
   private lastDailyReset: Date = new Date();
+  readonly isStellar: boolean;
+  /** Stellar account address (G…) when on a Stellar chain. */
+  readonly stellarAddress: string | null = null;
+  readonly apiUrl: string;
+  private stellarKeypair: any = null;
+  private stellarRpcUrl: string = '';
+  private stellarHorizonUrl: string = '';
+  private stellarPassphrase: string = '';
 
   constructor(config: AgentConfig) {
     this.config = {
@@ -186,8 +234,13 @@ export class MEAPAgent {
       ...config,
     };
 
-    this.chain = CHAIN_MAP[config.chainId] ?? sepolia;
-    this.account = privateKeyToAccount(config.privateKey as `0x${string}`);
+    this.apiUrl = (
+      config.apiUrl ??
+      (typeof process !== 'undefined' && process.env?.ARCENPAY_API_URL ? process.env.ARCENPAY_API_URL : undefined) ??
+      'https://api.arcenpay.xyz'
+    ).replace(/\/+$/, '');
+
+    this.isStellar = isStellarChainId(config.chainId);
     const resolvedContracts = getContractAddresses(config.chainId);
     this.contracts = config.sessionVaultAddress
       ? { ...resolvedContracts, sessionVault: config.sessionVaultAddress }
@@ -195,16 +248,139 @@ export class MEAPAgent {
 
     this.store = config.store ?? new MemoryStore();
 
+    if (this.isStellar) {
+      // Stellar: keypair from S… secret; no viem clients.
+      // Lazy-import the SDK so EVM-only consumers don't pay the bundle cost.
+      const { Keypair } = require('@stellar/stellar-sdk');
+      this.stellarKeypair = Keypair.fromSecret(config.privateKey);
+      this.stellarAddress = this.stellarKeypair.publicKey();
+      this.stellarPassphrase =
+        config.networkPassphrase ?? getStellarNetworkPassphrase(config.chainId);
+      this.stellarRpcUrl =
+        config.sorobanRpcUrl ?? getStellarSorobanRpcUrl(config.chainId);
+      this.stellarHorizonUrl =
+        config.horizonUrl ??
+        getChainDescriptor(config.chainId)?.rpcUrl ??
+        (this.stellarPassphrase.includes('Test')
+          ? 'https://horizon-testnet.stellar.org'
+          : 'https://horizon.stellar.org');
+      this.chain = CHAIN_MAP[config.chainId] ?? sepolia;
+      this.account = privateKeyToAccount(
+        '0x0000000000000000000000000000000000000000000000000000000000000001' as `0x${string}`,
+      );
+      this.publicClient = null;
+      this.walletClient = null;
+      return;
+    }
+
+    this.chain = CHAIN_MAP[config.chainId] ?? sepolia;
+    this.account = privateKeyToAccount(config.privateKey as `0x${string}`);
+    const defaultRpc = this.chain.rpcUrls?.default?.http?.[0];
+    const rpcUrl = config.rpcUrl || defaultRpc;
+    if (!rpcUrl) {
+      throw new Error('[ArcenPayAgent] rpcUrl is required for EVM chains.');
+    }
+
     this.publicClient = createPublicClient({
       chain: this.chain,
-      transport: http(config.rpcUrl),
+      transport: http(rpcUrl),
     });
-
     this.walletClient = createWalletClient({
       account: this.account,
       chain: this.chain,
-      transport: http(config.rpcUrl),
+      transport: http(rpcUrl),
     });
+  }
+
+  // ─── Stellar helpers ──────────────────────────────────────────
+
+  private async getStellarClient() {
+    const { contract: stellarContract } = await import('@stellar/stellar-sdk');
+    return (stellarContract as any).Client.from({
+      contractId: this.contracts.sessionVault,
+      networkPassphrase: this.stellarPassphrase,
+      rpcUrl: this.stellarRpcUrl,
+      publicKey: this.stellarAddress,
+    });
+  }
+
+  private async getStellarHorizonServer() {
+    const { Horizon } = await import('@stellar/stellar-sdk');
+    return new Horizon.Server(this.stellarHorizonUrl);
+  }
+
+  /**
+   * Resolves the Stellar SAC contract id (C…) for a USDC asset issuer (G…).
+   *
+   * The SessionVault Soroban contract calls `sac_transfer` on the `token`
+   * Address it is given, which instantiates a token client on that address —
+   * so `fund_session`/`top_up` require the C… SAC contract id, NOT the G…
+   * issuer. Classic assets (USDC) get their SAC contract id from
+   * `Asset.contractId(networkPassphrase)`.
+   */
+  private async resolveStellarSacContractId(assetIssuer: string): Promise<string> {
+    const { Asset } = await import('@stellar/stellar-sdk');
+    const asset = new Asset('USDC', assetIssuer);
+    return (asset as unknown as { contractId(passphrase: string): string }).contractId(
+      this.stellarPassphrase,
+    );
+  }
+
+  /**
+   * Builds the canonical Stellar x402 signing payload string and signs it
+   * with the agent keypair. Returns { signature (base64), message }.
+   */
+  private async signStellarPayment(message: Record<string, unknown>): Promise<{
+    signature: string;
+    messageText: string;
+  }> {
+    const messageText =
+      STELLAR_X402_SIGNING_PREFIX + JSON.stringify(message);
+    const signature = this.stellarKeypair.sign(Buffer.from(messageText, 'utf8'));
+    return { signature: signature.toString('base64'), messageText };
+  }
+
+  /**
+   * Sends a SAC / Stellar asset transfer from the agent wallet to `destination`,
+   * then returns the tx hash.
+   */
+  private async sendStellarSacTransfer(
+    destination: string,
+    amountHuman: string,
+    currency: string = 'USDC',
+    customTokenAddress?: string,
+  ): Promise<string> {
+    const { Asset, TransactionBuilder, Operation, BASE_FEE } =
+      await import('@stellar/stellar-sdk');
+    const server = await this.getStellarHorizonServer();
+    let asset: any;
+    if (currency.toUpperCase() === 'XLM' || customTokenAddress === 'native') {
+      asset = Asset.native();
+    } else {
+      const issuerOrAddress =
+        customTokenAddress ??
+        getTokenAddress(this.config.chainId, currency) ??
+        getTokenAddress(this.config.chainId, 'USDC');
+      if (!issuerOrAddress) {
+        throw new Error(
+          `[ArcenPayAgent] No ${currency} asset configured for chain ${this.config.chainId}`,
+        );
+      }
+      asset = new Asset(currency, issuerOrAddress);
+    }
+    const account = await server.loadAccount(this.stellarAddress!);
+    const tx = new TransactionBuilder(account, {
+      fee: BASE_FEE,
+      networkPassphrase: this.stellarPassphrase,
+    })
+      .addOperation(
+        Operation.payment({ destination, asset, amount: amountHuman }),
+      )
+      .setTimeout(300)
+      .build();
+    tx.sign(this.stellarKeypair);
+    const submitted = await server.submitTransaction(tx);
+    return submitted.hash;
   }
 
   // ─── Persistence ──────────────────────────────────────────
@@ -244,7 +420,7 @@ export class MEAPAgent {
   // ─── Properties ──────────────────────────────────────────
 
   get address(): string {
-    return this.account.address;
+    return this.isStellar ? this.stellarAddress! : this.account.address;
   }
 
   get currentSessionId(): string | null {
@@ -260,13 +436,18 @@ export class MEAPAgent {
   /**
    * Pre-funds a ZKVUB session vault with USDC
    *
-   * Steps:
+   * EVM steps:
    * 1. Approve SessionVault to spend `amount` of USDC
    * 2. Call SessionVault.fundSession(amount, token)
    * 3. Store returned sessionId and persist
    *
+   * Stellar steps:
+   * 1. SAC transfer USDC to the vault contract
+   * 2. Call SessionVault.fund_session(agent, amount, token)
+   * 3. Store returned sessionId and persist
+   *
    * @param amount Amount to deposit (human-readable, e.g., "10" = 10 USDC)
-   * @returns Session ID (bytes32 hex)
+   * @returns Session ID
    */
   async fundSession(amount: string): Promise<string> {
     const amountAtomic = parseHumanUsdcAmount(amount, 'amount');
@@ -277,8 +458,34 @@ export class MEAPAgent {
       throw new Error(`No USDC address configured for chain ${this.config.chainId}`);
     }
 
+    if (this.isStellar) {
+      // Step 1: SAC transfer USDC to the vault (agent signs with its keypair).
+      await this.sendStellarSacTransfer(vaultAddress, amount);
+      // Step 2: Invoke fund_session on the Soroban vault. The vault's
+      // `sac_transfer` requires the C… SAC contract id, not the G… issuer.
+      const tokenContractId = await this.resolveStellarSacContractId(usdcAddress);
+      const client = await this.getStellarClient();
+      const result = await client.fund_session({
+        agent: this.stellarAddress,
+        amount: amountAtomic,
+        token: tokenContractId,
+      });
+      const sessionId = String(result?.result ?? '');
+      if (!sessionId) {
+        throw new Error(
+          '[ArcenPayAgent] fundSession() succeeded on-chain but no session id was returned',
+        );
+      }
+      this.sessionId = sessionId;
+      await this.persist();
+      console.log(
+        `[ArcenPayAgent] Session funded: ${amount} USDC → ${this.sessionId}`,
+      );
+      return this.sessionId;
+    }
+
     // Step 1: Approve SessionVault to spend USDC
-    const approveHash = await this.walletClient.writeContract({
+    const approveHash = await this.walletClient!.writeContract({
       chain: this.chain,
       account: this.account,
       address: usdcAddress,
@@ -288,10 +495,10 @@ export class MEAPAgent {
     } as any);
 
     console.log(`[ArcenPayAgent] USDC approve tx: ${approveHash}`);
-    await this.publicClient.waitForTransactionReceipt({ hash: approveHash });
+    await this.publicClient!.waitForTransactionReceipt({ hash: approveHash });
 
     // Step 2: Call SessionVault.fundSession()
-    const fundHash = await this.walletClient.writeContract({
+    const fundHash = await this.walletClient!.writeContract({
       chain: this.chain,
       account: this.account,
       address: vaultAddress,
@@ -301,7 +508,7 @@ export class MEAPAgent {
     } as any);
 
     console.log(`[ArcenPayAgent] Fund session tx: ${fundHash}`);
-    const receipt = await this.publicClient.waitForTransactionReceipt({ hash: fundHash });
+    const receipt = await this.publicClient!.waitForTransactionReceipt({ hash: fundHash });
 
     let sessionId: string | null = null;
     for (const log of receipt.logs) {
@@ -381,17 +588,15 @@ export class MEAPAgent {
 
     // Step 6: Check daily spend limit for auto-topup
     this.resetDailySpendIfNeeded();
-    if (this.config.autoTopUp?.mode !== 'off') {
-      const dailyLimit = parseHumanUsdcAmount(this.config.autoTopUp?.dailyLimit ?? '0', 'dailyLimit');
-      if (dailyLimit > 0n && this.dailySpent + requiredAmount > dailyLimit) {
-        throw new Error(
-          `Daily spend limit reached: ${formatUsdc(this.dailySpent)} already spent, ${formatUsdc(requiredAmount)} needed, limit is ${formatUsdc(dailyLimit)}`,
-        );
-      }
+    const dailyLimit = this.getDailySpendLimit();
+    if (dailyLimit > 0n && this.dailySpent + requiredAmount > dailyLimit) {
+      throw new Error(
+        `[ArcenPayAgent] Daily spend limit reached: ${formatUsdc(this.dailySpent)} already spent, ${formatUsdc(requiredAmount)} needed, limit is ${formatUsdc(dailyLimit)}.`,
+      );
     }
 
     // Step 7: Check balance before constructing payment (FIXED: check BEFORE nonce)
-    const balance = await this.getBalanceWithRetry();
+    const balance = await this.getBalance();
     if (balance < requiredAmount) {
       // Attempt auto-topup if configured
       const toppedUp = await this.tryAutoTopUp(requiredAmount - balance, url);
@@ -448,9 +653,33 @@ export class MEAPAgent {
   private async getBalanceWithRetry(): Promise<bigint> {
     let lastError: unknown;
 
+    if (this.isStellar) {
+      for (let attempt = 0; attempt < BALANCE_RETRY_MAX; attempt++) {
+        try {
+          const client = await this.getStellarClient();
+          const result = await client.get_agent_balance({
+            agent: this.stellarAddress,
+          });
+          return BigInt(result?.result ?? 0);
+        } catch (err) {
+          lastError = err;
+          if (attempt < BALANCE_RETRY_MAX - 1) {
+            const delay = BALANCE_RETRY_BASE_MS * Math.pow(2, attempt);
+            console.warn(
+              `[ArcenPayAgent] Stellar balance query attempt ${attempt + 1}/${BALANCE_RETRY_MAX} failed, retrying in ${delay}ms…`,
+            );
+            await sleep(delay);
+          }
+        }
+      }
+      throw new Error(
+        `[ArcenPayAgent] Balance query failed after ${BALANCE_RETRY_MAX} attempts: ${lastError}`,
+      );
+    }
+
     for (let attempt = 0; attempt < BALANCE_RETRY_MAX; attempt++) {
       try {
-        const balance = await this.publicClient.readContract({
+        const balance = await this.publicClient!.readContract({
           address: this.contracts.sessionVault as `0x${string}`,
           abi: SessionVaultABI,
           functionName: 'getAgentBalance',
@@ -509,8 +738,23 @@ export class MEAPAgent {
       throw new Error(`No USDC address configured for chain ${this.config.chainId}`);
     }
 
+    if (this.isStellar) {
+      // SAC transfer to the vault, then invoke top_up on the Soroban vault.
+      await this.sendStellarSacTransfer(vaultAddress, amount);
+      const client = await this.getStellarClient();
+      await client.top_up({
+        agent: this.stellarAddress,
+        session_id: sessionId,
+        amount: amountAtomic,
+      });
+      console.log(
+        `[ArcenPayAgent] Session ${sessionId.slice(0, 10)}… topped up with ${amount} USDC (Stellar)`,
+      );
+      return;
+    }
+
     // Approve
-    const approveHash = await this.walletClient.writeContract({
+    const approveHash = await this.walletClient!.writeContract({
       chain: this.chain,
       account: this.account,
       address: usdcAddress,
@@ -520,10 +764,10 @@ export class MEAPAgent {
     } as any);
 
     console.log(`[ArcenPayAgent] Top-up approve tx: ${approveHash}`);
-    await this.publicClient.waitForTransactionReceipt({ hash: approveHash });
+    await this.publicClient!.waitForTransactionReceipt({ hash: approveHash });
 
     // Top up
-    const topUpHash = await this.walletClient.writeContract({
+    const topUpHash = await this.walletClient!.writeContract({
       chain: this.chain,
       account: this.account,
       address: vaultAddress,
@@ -533,7 +777,7 @@ export class MEAPAgent {
     } as any);
 
     console.log(`[ArcenPayAgent] Top-up tx: ${topUpHash}`);
-    await this.publicClient.waitForTransactionReceipt({ hash: topUpHash });
+    await this.publicClient!.waitForTransactionReceipt({ hash: topUpHash });
 
     console.log(`[ArcenPayAgent] Session ${sessionId.slice(0, 10)}… topped up with ${amount} USDC`);
   }
@@ -561,7 +805,7 @@ export class MEAPAgent {
 
       const topUpRequest: TopUpRequest = {
         id: requestId,
-        agentAddress: this.account.address,
+        agentAddress: this.address,
         amount,
         reason,
         status: 'pending',
@@ -805,10 +1049,42 @@ export class MEAPAgent {
     }
   }
 
-  /** Returns current daily spend */
+  /** Returns the configured daily spend limit in atomic units, or 0n if unconfigured. */
+  getDailySpendLimit(): bigint {
+    if (this.config.maxDailySpend !== undefined) {
+      return parseHumanUsdcAmount(String(this.config.maxDailySpend), 'maxDailySpend');
+    }
+    if (this.config.autoTopUp?.dailyLimit) {
+      return parseHumanUsdcAmount(this.config.autoTopUp.dailyLimit, 'dailyLimit');
+    }
+    return 0n;
+  }
+
+  /** Returns current daily spend in atomic units */
   getDailySpent(): bigint {
     this.resetDailySpendIfNeeded();
     return this.dailySpent;
+  }
+
+  /** Returns total spent across all operations in atomic units */
+  getTotalSpent(): bigint {
+    return this.totalSpent;
+  }
+
+  /** Returns a structured spend summary for agent monitoring, logging, and budget audits. */
+  getSpendSummary(): {
+    dailySpent: string;
+    totalSpent: string;
+    dailyLimit?: string;
+    maxAutoApprove?: string;
+  } {
+    const dailyLimit = this.getDailySpendLimit();
+    return {
+      dailySpent: formatUsdc(this.getDailySpent()),
+      totalSpent: formatUsdc(this.totalSpent),
+      dailyLimit: dailyLimit > 0n ? formatUsdc(dailyLimit) : undefined,
+      maxAutoApprove: this.config.maxAutoApprove,
+    };
   }
 
   /**
@@ -871,10 +1147,45 @@ export class MEAPAgent {
     console.log('[ArcenPayAgent] Dispatch config updated');
   }
 
-  // ─── EIP-712 Payment Construction ────────────────────────
+  // ─── Payment Construction (EIP-712 / Stellar) ─────────────
 
   private async constructPayment(option: X402Response['accepts'][0]): Promise<string> {
     const timestamp = BigInt(Date.now());
+
+    if (this.isStellar) {
+      const from = this.stellarAddress!;
+      // The verifier (sdk-node middleware) rebuilds the signed message with
+      // the amount normalized to a decimal string. Sign the SAME string so
+      // atomic-unit 402 options ("10000") don't produce a signature mismatch.
+      const amountDecimal = normalizeX402AmountToDecimal(option.maxAmountRequired);
+      const message = {
+        from,
+        amount: amountDecimal,
+        resource: option.resource,
+        sessionId: this.sessionId ?? '',
+        nonce: this.nonce.toString(),
+        timestamp: timestamp.toString(),
+        chainId: this.config.chainId,
+      };
+      const { signature } = await this.signStellarPayment(message);
+      const payload: X402PaymentHeader = {
+        version: X402_VERSION,
+        scheme: option.scheme,
+        network: option.network,
+        payload: JSON.stringify({
+          from,
+          amount: amountDecimal,
+          payTo: option.payTo,
+          resource: option.resource,
+          sessionId: this.sessionId,
+          nonce: this.nonce.toString(),
+          timestamp: timestamp.toString(),
+          chainId: this.config.chainId,
+        }),
+        signature,
+      };
+      return Buffer.from(JSON.stringify(payload)).toString('base64');
+    }
 
     const message = {
       from: this.account.address,
@@ -885,7 +1196,7 @@ export class MEAPAgent {
       timestamp,
     };
 
-    const signature = await this.walletClient.signTypedData({
+    const signature = await this.walletClient!.signTypedData({
       account: this.account,
       domain: {
         name: PAYMENT_DOMAIN_NAME,
@@ -915,7 +1226,304 @@ export class MEAPAgent {
 
     return Buffer.from(JSON.stringify(payload)).toString('base64');
   }
+
+  // ─── Agentic Payment Links ────────────────────────────────
+
+  /**
+   * Resolves an ArcenPay payment link (by full URL or slug) into an AgenticPaymentLinkSpec.
+   * Sends Accept: application/json to negotiate machine-readable specifications.
+   */
+  async resolvePaymentLink(urlOrSlug: string): Promise<AgenticPaymentLinkSpec> {
+    const trimmed = urlOrSlug.trim();
+    let targetUrl: string;
+
+    if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+      const parsed = new URL(trimmed);
+      if (parsed.pathname.includes('/spec')) {
+        targetUrl = trimmed;
+      } else if (parsed.pathname.includes('/public/payment-links/')) {
+        targetUrl = trimmed.endsWith('/spec') ? trimmed : `${trimmed}/spec`;
+      } else if (parsed.pathname.includes('/pay/')) {
+        const slug = parsed.pathname.split('/pay/')[1]?.split('/')[0]?.split('?')[0];
+        if (this.apiUrl) {
+          targetUrl = `${this.apiUrl}/api/v1/public/payment-links/${slug}/spec`;
+        } else {
+          targetUrl = `${parsed.origin}/pay/${slug}/spec`;
+        }
+      } else {
+        targetUrl = trimmed;
+      }
+    } else {
+      const cleanSlug = trimmed.split('?')[0].replace(/^\/+|\/+$/g, '');
+      targetUrl = `${this.apiUrl}/api/v1/public/payment-links/${cleanSlug}/spec`;
+    }
+
+    const res = await globalThis.fetch(targetUrl, {
+      headers: {
+        Accept: 'application/json',
+      },
+    });
+
+    if (!res.ok) {
+      if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+        const parsed = new URL(trimmed);
+        const slugMatch = parsed.pathname.match(/\/pay\/([^/?#]+)/);
+        if (slugMatch && slugMatch[1]) {
+          const altUrl = this.apiUrl && !trimmed.startsWith(this.apiUrl)
+            ? `${this.apiUrl}/api/v1/public/payment-links/${slugMatch[1]}/spec`
+            : `${parsed.origin}/pay/${slugMatch[1]}/spec`;
+          if (altUrl !== targetUrl) {
+            const fallbackRes = await globalThis.fetch(altUrl, {
+              headers: { Accept: 'application/json' },
+            });
+            if (fallbackRes.ok) {
+              const fallbackData = await fallbackRes.json();
+              return (fallbackData.spec ?? fallbackData.paymentLink ?? fallbackData) as AgenticPaymentLinkSpec;
+            }
+          }
+        }
+      }
+      const errText = await res.text().catch(() => '');
+      throw new Error(`[ArcenPayAgent] Failed to resolve payment link (${res.status}): ${errText || res.statusText}`);
+    }
+
+    const data = await res.json();
+    const spec = (data.spec ?? data.paymentLink ?? data) as AgenticPaymentLinkSpec;
+    if (!spec || !spec.id || !spec.amount) {
+      throw new Error(`[ArcenPayAgent] Invalid payment link specification received from ${targetUrl}`);
+    }
+    return spec;
+  }
+
+  /**
+   * Discovers payment requirements, enforces spending limits, executes on-chain payment
+   * (EVM transfer or Stellar SAC transfer), and confirms the checkout session.
+   */
+  async payPaymentLink(
+    urlOrSlug: string,
+    options?: PayPaymentLinkOptions,
+  ): Promise<AgentPaymentReceipt> {
+    // 1. Resolve specification
+    const spec = await this.resolvePaymentLink(urlOrSlug);
+
+    // 2. Validate status and expiration
+    if (spec.status !== "ACTIVE") {
+      throw new Error(`[ArcenPayAgent] Payment link is ${spec.status}, cannot execute payment.`);
+    }
+    if (spec.expiresAt && new Date(spec.expiresAt).getTime() <= Date.now()) {
+      throw new Error(`[ArcenPayAgent] Payment link expired at ${spec.expiresAt}.`);
+    }
+
+    // 3. Verify Chain Compatibility
+    if (spec.chainId !== this.config.chainId) {
+      throw new Error(
+        `[ArcenPayAgent] Chain mismatch: agent is configured for chain ${this.config.chainId} (${getChainDescriptor(this.config.chainId)?.name ?? "unknown"}), but payment link requires chain ${spec.chainId}.`,
+      );
+    }
+
+    const requiredAmountAtomic = BigInt(spec.amountAtomic);
+    const requiredAmountHuman = spec.amount;
+
+    // 4. Budget & Limit Enforcement
+    if (options?.maxPrice !== undefined) {
+      const priceLimit = parsePriceLimit(options.maxPrice, "maxPrice");
+      if (requiredAmountAtomic > priceLimit) {
+        throw new Error(
+          `[ArcenPayAgent] Payment amount ${formatUsdc(requiredAmountAtomic)} exceeds maxPrice limit of ${formatUsdc(priceLimit)}.`,
+        );
+      }
+    }
+
+    // Auto-approve check against maxAutoApprove
+    if (options?.autoApprove !== false && this.config.maxAutoApprove) {
+      const maxAutoApproveLimit = parseHumanUsdcAmount(this.config.maxAutoApprove, "maxAutoApprove");
+      if (requiredAmountAtomic > maxAutoApproveLimit && options?.maxPrice === undefined) {
+        throw new Error(
+          `[ArcenPayAgent] Payment amount ${formatUsdc(requiredAmountAtomic)} exceeds agent maxAutoApprove limit of ${formatUsdc(maxAutoApproveLimit)}. To approve, pass options.maxPrice >= ${formatUsdc(requiredAmountAtomic)}.`,
+        );
+      }
+    }
+
+    // Daily spend check
+    this.resetDailySpendIfNeeded();
+    const dailyLimit = this.getDailySpendLimit();
+    if (dailyLimit > 0n && this.dailySpent + requiredAmountAtomic > dailyLimit) {
+      throw new Error(
+        `[ArcenPayAgent] Daily spend limit reached: ${formatUsdc(this.dailySpent)} already spent, ${formatUsdc(requiredAmountAtomic)} needed, limit is ${formatUsdc(dailyLimit)}.`,
+      );
+    }
+
+    const payerWallet = this.isStellar ? this.stellarAddress! : this.account.address;
+
+    // 5. Create checkout session
+    let sessionUrl = spec.sessionUrl;
+    if (!sessionUrl.startsWith("http://") && !sessionUrl.startsWith("https://")) {
+      sessionUrl = `${this.apiUrl}${sessionUrl.startsWith("/") ? "" : "/"}${sessionUrl}`;
+    }
+
+    const sessionRes = await globalThis.fetch(sessionUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify({
+        customerWallet: payerWallet,
+        customerName: options?.customerName ?? "AI Agent",
+        customerEmail: options?.customerEmail,
+        isAgentic: true,
+      }),
+    });
+
+    if (!sessionRes.ok) {
+      const errText = await sessionRes.text().catch(() => "");
+      throw new Error(`[ArcenPayAgent] Failed to create checkout session (${sessionRes.status}): ${errText || sessionRes.statusText}`);
+    }
+
+    const sessionData = await sessionRes.json();
+    const session = sessionData.checkoutSession ?? sessionData;
+    const sessionId = session.id;
+    const recipientWallet = session.recipientWallet ?? spec.recipientWallet;
+
+    // 6. Execute On-Chain Transfer
+    let txHash: string;
+
+    if (this.isStellar) {
+      txHash = await this.sendStellarSacTransfer(
+        recipientWallet,
+        requiredAmountHuman,
+        spec.currency,
+        spec.acceptedToken,
+      );
+    } else {
+      const tokenAddress =
+        getTokenAddress(this.config.chainId, spec.acceptedToken || spec.currency) ??
+        spec.acceptedToken;
+
+      if (!tokenAddress) {
+        throw new Error(
+          `[ArcenPayAgent] No token address found for ${spec.currency} on chain ${this.config.chainId}.`,
+        );
+      }
+
+      if (!this.walletClient) {
+        throw new Error("[ArcenPayAgent] Wallet client not initialized for EVM chain.");
+      }
+
+      txHash = await this.walletClient.writeContract({
+        chain: this.chain,
+        account: this.account,
+        address: tokenAddress as `0x${string}`,
+        abi: ERC20_TRANSFER_ABI,
+        functionName: "transfer",
+        args: [recipientWallet as `0x${string}`, requiredAmountAtomic],
+      } as any);
+
+      if (this.publicClient) {
+        await this.publicClient.waitForTransactionReceipt({ hash: txHash as `0x${string}` }).catch((err) => {
+          console.warn("[ArcenPayAgent] Transaction receipt wait warning (will proceed to confirm):", err);
+        });
+      }
+    }
+
+    // 7. Confirm checkout session
+    const confirmTemplate =
+      spec.confirmUrl || `${this.apiUrl}/api/v1/public/checkout/:sessionId/confirm`;
+    let confirmUrl = confirmTemplate.replace(":sessionId", sessionId);
+    if (!confirmUrl.startsWith("http://") && !confirmUrl.startsWith("https://")) {
+      confirmUrl = `${this.apiUrl}${confirmUrl.startsWith("/") ? "" : "/"}${confirmUrl}`;
+    }
+
+    const confirmRes = await globalThis.fetch(confirmUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify({ txHash }),
+    });
+
+    if (!confirmRes.ok) {
+      const errText = await confirmRes.text().catch(() => "");
+      console.warn(`[ArcenPayAgent] Payment confirmation returned ${confirmRes.status}: ${errText}`);
+    }
+
+    // 8. Update spend accounting
+    this.totalSpent += requiredAmountAtomic;
+    this.dailySpent += requiredAmountAtomic;
+
+    // 9. Return receipt
+    const receipt: AgentPaymentReceipt = {
+      success: true,
+      sessionId,
+      paymentLinkId: spec.id,
+      paymentLinkSlug: spec.slug,
+      txHash,
+      amount: requiredAmountHuman,
+      currency: spec.currency,
+      chainId: spec.chainId,
+      chainFamily: spec.chainFamily,
+      payerWallet,
+      recipientWallet,
+      timestamp: new Date().toISOString(),
+    };
+
+    return receipt;
+  }
+
+  /**
+   * Programmatically creates a new payment link (with isAgentic: true).
+   * Enables agents to act as merchants selling data, model inferences, or services.
+   */
+  async createPaymentLink(params: CreateAgentPaymentLinkParams): Promise<AgenticPaymentLinkSpec> {
+    const targetUrl = `${this.apiUrl}/api/v1/payment-links`;
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    };
+
+    if (this.config.apiKey) {
+      headers["Authorization"] = `Bearer ${this.config.apiKey}`;
+    }
+
+    const recipientWallet =
+      params.recipientWallet ??
+      (this.isStellar ? this.stellarAddress! : this.account.address);
+
+    const title = params.title ?? params.name ?? "Agent Payment Link";
+    const acceptedToken = params.acceptedToken ?? params.currency ?? "USDC";
+
+    const body = {
+      title,
+      name: title,
+      description: params.description,
+      amount: params.amount,
+      currency: params.currency ?? "USDC",
+      acceptedToken,
+      chainId: params.chainId ?? this.config.chainId,
+      recipientWallet,
+      isAgentic: true,
+      expiresInMinutes: params.expiresInMinutes,
+      successUrl: params.successUrl,
+      cancelUrl: params.cancelUrl,
+      metadata: params.metadata,
+    };
+
+    const res = await globalThis.fetch(targetUrl, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(body),
+    });
+
+    if (!res.ok) {
+      const errText = await res.text().catch(() => "");
+      throw new Error(`[ArcenPayAgent] Failed to create payment link (${res.status}): ${errText || res.statusText}`);
+    }
+
+    const data = await res.json();
+    return (data.spec ?? data.paymentLink ?? data) as AgenticPaymentLinkSpec;
+  }
 }
 
-/** @alias MEAPAgent — ArcenPay-branded alias */
-export { MEAPAgent as ArcenPayAgent };
+/** @alias ArcenPayAgent, MEAPAgent — Aliases for ArcenAgent */
+export { ArcenAgent as ArcenPayAgent, ArcenAgent as MEAPAgent };

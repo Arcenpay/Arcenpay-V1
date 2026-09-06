@@ -1,4 +1,7 @@
 // ArcenPay Common — shared types, auth, token helpers for Stellar Soroban contracts.
+#![no_std]
+
+extern crate alloc;
 
 pub mod auth;
 pub mod errors;

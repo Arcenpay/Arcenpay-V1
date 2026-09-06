@@ -8,20 +8,13 @@
 import { createWalletClient } from "viem";
 import { createResilientFacilitatorClient, getFacilitatorRpcTransport } from "../rpc-client.js";
 import { privateKeyToAccount } from "viem/accounts";
-import { sepolia, baseSepolia, base } from "viem/chains";
 import {
   DEFAULT_CHAIN_ID,
   SubscriptionRegistryABI,
   ERC7579AutopayModuleABI,
   getContractAddresses,
+  getChain,
 } from "@arcenpay/internal-core";
-
-const CHAIN_MAP: Record<number, any> = {
-  11155111: sepolia,
-  84532: baseSepolia,
-  8453: base,
-  5042002: baseSepolia, // Arc Testnet
-};
 
 export interface BillingKeeperConfig {
   /** RPC URL for the chain */
@@ -78,7 +71,13 @@ export class BillingKeeper {
 
   constructor(config: BillingKeeperConfig) {
     this.chainId = config.chainId ?? DEFAULT_CHAIN_ID;
-    const chain = CHAIN_MAP[this.chainId] || baseSepolia;
+    // Always resolve the viem `Chain` object from the canonical internal-core
+    // registry — never hardcode/guess a chain here. A stale local map (this
+    // used to fall back to Base Sepolia for any unmapped chainId) causes
+    // viem to sign transactions with the WRONG chainId embedded, since
+    // `createWalletClient({ chain })` uses `chain.id` directly without
+    // verifying it against the RPC's actual chainId.
+    const chain = getChain(this.chainId);
     const contracts = getContractAddresses(this.chainId);
 
     this.registryAddress = contracts.subscriptionRegistry as `0x${string}`;

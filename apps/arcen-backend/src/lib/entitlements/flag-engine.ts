@@ -14,7 +14,7 @@ import { db } from "../../db.js";
 import { aggregateUsage } from "../platform/event-aggregator.js";
 import { getCachedFlag, setCachedFlag } from "./flag-cache.js";
 import { createPublicClient, http } from "viem";
-import { getChain, getContractAddresses } from "@arcenpay/internal-core";
+import { getChain, getContractAddresses, getChainFamily } from "@arcenpay/internal-core";
 import { getRpcUrl } from "../../config.js";
 import { DEFAULT_CHAIN_ID } from "../platform/default-chain.js";
 import { normalizeCatalogBillingPeriod } from "../catalog/catalog-entitlements.js";
@@ -96,6 +96,9 @@ async function resolveOnChainPlan(
       // Non-fatal — fall back to DEFAULT_CHAIN_ID
     }
   }
+
+  // Skip on-chain reads for non-EVM chains (Stellar uses a different RPC stack)
+  if (getChainFamily(chainId) !== "evm") return null;
 
   const client = getViemClient(chainId);
   if (!client) return null;
@@ -194,7 +197,11 @@ export async function resolveCompany(
   const where: Record<string, unknown>[] = [];
   if (keys.internalId) where.push({ id: keys.internalId });
   if (keys.id) where.push({ externalId: keys.id });
-  if (keys.wallet) where.push({ walletAddress: keys.wallet.toLowerCase() });
+  if (keys.wallet) {
+    const normalizedWallet = keys.wallet.trim();
+    const isStellar = normalizedWallet.startsWith("G") && normalizedWallet.length === 56;
+    where.push({ walletAddress: isStellar ? normalizedWallet : normalizedWallet.toLowerCase() });
+  }
   if (keys.email) {
     where.push({
       email: { equals: keys.email.trim(), mode: "insensitive" },
@@ -240,28 +247,38 @@ export async function resolveCompany(
     .catch(() => {});
 
   const now = new Date();
-  const subscriptionHasPaidAccess =
-    company.subscriptionState?.status === "ACTIVE" &&
-    (!company.subscriptionState.currentPeriodEnd ||
-      company.subscriptionState.currentPeriodEnd > now);
-  const subscriptionHasGraceAccess =
-    company.subscriptionState?.status === "PAST_DUE" &&
-    Boolean(company.subscriptionState.graceEndsAt) &&
-    company.subscriptionState.graceEndsAt! > now;
+  // Effective plan access mirrors the dashboard's company-render gate
+  // (apps/arcen-backend/src/routes/v1/component-render.ts and the companies
+  // listing handler): status is the source of truth. The dunning +
+  // maintenance sweeps are responsible for flipping ACTIVE -> PAST_DUE ->
+  // CANCELLED once a period lapses or grace ends, and they rewrite
+  // catalogPlanId/activePlanId at the same time.
+  //
+  // This previously additionally enforced `currentPeriodEnd > now`. That
+  // freshness check was STRICTER than the dashboard path, so an ACTIVE
+  // subscription whose renewal event had not yet rewritten currentPeriodEnd
+  // (or whose payload.expiration resolved to a stale date) silently collapsed
+  // activePlanId -> null here, while the dashboard still rendered the paid
+  // plan. The divergence is exactly the "ArcenPay shows Pro + invoices but
+  // my app sees free plan" bug. Keep the gates aligned.
+  const subscriptionHasAccess =
+    company.subscriptionState?.status === "ACTIVE" ||
+    company.subscriptionState?.status === "PAST_DUE";
 
-  let activePlanId =
-    subscriptionHasPaidAccess || subscriptionHasGraceAccess
-      ? company.subscriptionState?.catalogPlanId ?? company.activePlanId
-      : company.subscriptionState
-        ? null
-        : company.activePlanId;
+  let activePlanId = subscriptionHasAccess
+    ? (company.subscriptionState?.catalogPlanId ?? company.activePlanId)
+    : company.subscriptionState
+      ? null
+      : company.activePlanId;
 
   // On-chain fallback: if activePlanId is null but we have a wallet, try to resolve from chain
   if (!activePlanId && keys.wallet && !company.subscriptionState) {
+    const normalizedWallet = keys.wallet.trim();
+    const isStellar = normalizedWallet.startsWith("G") && normalizedWallet.length === 56;
     const onChainPlanId = await resolveOnChainPlan(
       teamId,
       company.id,
-      keys.wallet.toLowerCase(),
+      isStellar ? normalizedWallet : normalizedWallet.toLowerCase(),
       keys.environmentId,
     );
     if (onChainPlanId) activePlanId = onChainPlanId;

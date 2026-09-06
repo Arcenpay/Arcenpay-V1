@@ -46,6 +46,7 @@ export type TemplateInstallMinAggregateOutputType = {
   installedVersion: number | null
   environmentMode: $Enums.EnvironmentMode | null
   chainId: number | null
+  chainFamily: $Enums.ChainFamily | null
   status: $Enums.TemplateInstallStatus | null
 }
 
@@ -59,6 +60,7 @@ export type TemplateInstallMaxAggregateOutputType = {
   installedVersion: number | null
   environmentMode: $Enums.EnvironmentMode | null
   chainId: number | null
+  chainFamily: $Enums.ChainFamily | null
   status: $Enums.TemplateInstallStatus | null
 }
 
@@ -72,6 +74,7 @@ export type TemplateInstallCountAggregateOutputType = {
   installedVersion: number
   environmentMode: number
   chainId: number
+  chainFamily: number
   status: number
   _all: number
 }
@@ -97,6 +100,7 @@ export type TemplateInstallMinAggregateInputType = {
   installedVersion?: true
   environmentMode?: true
   chainId?: true
+  chainFamily?: true
   status?: true
 }
 
@@ -110,6 +114,7 @@ export type TemplateInstallMaxAggregateInputType = {
   installedVersion?: true
   environmentMode?: true
   chainId?: true
+  chainFamily?: true
   status?: true
 }
 
@@ -123,6 +128,7 @@ export type TemplateInstallCountAggregateInputType = {
   installedVersion?: true
   environmentMode?: true
   chainId?: true
+  chainFamily?: true
   status?: true
   _all?: true
 }
@@ -223,6 +229,7 @@ export type TemplateInstallGroupByOutputType = {
   installedVersion: number
   environmentMode: $Enums.EnvironmentMode
   chainId: number
+  chainFamily: $Enums.ChainFamily
   status: $Enums.TemplateInstallStatus
   _count: TemplateInstallCountAggregateOutputType | null
   _avg: TemplateInstallAvgAggregateOutputType | null
@@ -259,6 +266,7 @@ export type TemplateInstallWhereInput = {
   installedVersion?: Prisma.IntFilter<"TemplateInstall"> | number
   environmentMode?: Prisma.EnumEnvironmentModeFilter<"TemplateInstall"> | $Enums.EnvironmentMode
   chainId?: Prisma.IntFilter<"TemplateInstall"> | number
+  chainFamily?: Prisma.EnumChainFamilyFilter<"TemplateInstall"> | $Enums.ChainFamily
   status?: Prisma.EnumTemplateInstallStatusFilter<"TemplateInstall"> | $Enums.TemplateInstallStatus
   team?: Prisma.XOR<Prisma.TeamScalarRelationFilter, Prisma.TeamWhereInput>
   template?: Prisma.XOR<Prisma.BillingTemplateScalarRelationFilter, Prisma.BillingTemplateWhereInput>
@@ -275,6 +283,7 @@ export type TemplateInstallOrderByWithRelationInput = {
   installedVersion?: Prisma.SortOrder
   environmentMode?: Prisma.SortOrder
   chainId?: Prisma.SortOrder
+  chainFamily?: Prisma.SortOrder
   status?: Prisma.SortOrder
   team?: Prisma.TeamOrderByWithRelationInput
   template?: Prisma.BillingTemplateOrderByWithRelationInput
@@ -295,6 +304,7 @@ export type TemplateInstallWhereUniqueInput = Prisma.AtLeast<{
   installedVersion?: Prisma.IntFilter<"TemplateInstall"> | number
   environmentMode?: Prisma.EnumEnvironmentModeFilter<"TemplateInstall"> | $Enums.EnvironmentMode
   chainId?: Prisma.IntFilter<"TemplateInstall"> | number
+  chainFamily?: Prisma.EnumChainFamilyFilter<"TemplateInstall"> | $Enums.ChainFamily
   status?: Prisma.EnumTemplateInstallStatusFilter<"TemplateInstall"> | $Enums.TemplateInstallStatus
   team?: Prisma.XOR<Prisma.TeamScalarRelationFilter, Prisma.TeamWhereInput>
   template?: Prisma.XOR<Prisma.BillingTemplateScalarRelationFilter, Prisma.BillingTemplateWhereInput>
@@ -311,6 +321,7 @@ export type TemplateInstallOrderByWithAggregationInput = {
   installedVersion?: Prisma.SortOrder
   environmentMode?: Prisma.SortOrder
   chainId?: Prisma.SortOrder
+  chainFamily?: Prisma.SortOrder
   status?: Prisma.SortOrder
   _count?: Prisma.TemplateInstallCountOrderByAggregateInput
   _avg?: Prisma.TemplateInstallAvgOrderByAggregateInput
@@ -332,6 +343,7 @@ export type TemplateInstallScalarWhereWithAggregatesInput = {
   installedVersion?: Prisma.IntWithAggregatesFilter<"TemplateInstall"> | number
   environmentMode?: Prisma.EnumEnvironmentModeWithAggregatesFilter<"TemplateInstall"> | $Enums.EnvironmentMode
   chainId?: Prisma.IntWithAggregatesFilter<"TemplateInstall"> | number
+  chainFamily?: Prisma.EnumChainFamilyWithAggregatesFilter<"TemplateInstall"> | $Enums.ChainFamily
   status?: Prisma.EnumTemplateInstallStatusWithAggregatesFilter<"TemplateInstall"> | $Enums.TemplateInstallStatus
 }
 
@@ -342,6 +354,7 @@ export type TemplateInstallCreateInput = {
   installedVersion: number
   environmentMode?: $Enums.EnvironmentMode
   chainId: number
+  chainFamily?: $Enums.ChainFamily
   status?: $Enums.TemplateInstallStatus
   team: Prisma.TeamCreateNestedOneWithoutTemplateInstallsInput
   template: Prisma.BillingTemplateCreateNestedOneWithoutInstallsInput
@@ -358,6 +371,7 @@ export type TemplateInstallUncheckedCreateInput = {
   installedVersion: number
   environmentMode?: $Enums.EnvironmentMode
   chainId: number
+  chainFamily?: $Enums.ChainFamily
   status?: $Enums.TemplateInstallStatus
 }
 
@@ -368,6 +382,7 @@ export type TemplateInstallUpdateInput = {
   installedVersion?: Prisma.IntFieldUpdateOperationsInput | number
   environmentMode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
   chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  chainFamily?: Prisma.EnumChainFamilyFieldUpdateOperationsInput | $Enums.ChainFamily
   status?: Prisma.EnumTemplateInstallStatusFieldUpdateOperationsInput | $Enums.TemplateInstallStatus
   team?: Prisma.TeamUpdateOneRequiredWithoutTemplateInstallsNestedInput
   template?: Prisma.BillingTemplateUpdateOneRequiredWithoutInstallsNestedInput
@@ -384,6 +399,7 @@ export type TemplateInstallUncheckedUpdateInput = {
   installedVersion?: Prisma.IntFieldUpdateOperationsInput | number
   environmentMode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
   chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  chainFamily?: Prisma.EnumChainFamilyFieldUpdateOperationsInput | $Enums.ChainFamily
   status?: Prisma.EnumTemplateInstallStatusFieldUpdateOperationsInput | $Enums.TemplateInstallStatus
 }
 
@@ -397,6 +413,7 @@ export type TemplateInstallCreateManyInput = {
   installedVersion: number
   environmentMode?: $Enums.EnvironmentMode
   chainId: number
+  chainFamily?: $Enums.ChainFamily
   status?: $Enums.TemplateInstallStatus
 }
 
@@ -407,6 +424,7 @@ export type TemplateInstallUpdateManyMutationInput = {
   installedVersion?: Prisma.IntFieldUpdateOperationsInput | number
   environmentMode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
   chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  chainFamily?: Prisma.EnumChainFamilyFieldUpdateOperationsInput | $Enums.ChainFamily
   status?: Prisma.EnumTemplateInstallStatusFieldUpdateOperationsInput | $Enums.TemplateInstallStatus
 }
 
@@ -420,6 +438,7 @@ export type TemplateInstallUncheckedUpdateManyInput = {
   installedVersion?: Prisma.IntFieldUpdateOperationsInput | number
   environmentMode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
   chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  chainFamily?: Prisma.EnumChainFamilyFieldUpdateOperationsInput | $Enums.ChainFamily
   status?: Prisma.EnumTemplateInstallStatusFieldUpdateOperationsInput | $Enums.TemplateInstallStatus
 }
 
@@ -450,6 +469,7 @@ export type TemplateInstallCountOrderByAggregateInput = {
   installedVersion?: Prisma.SortOrder
   environmentMode?: Prisma.SortOrder
   chainId?: Prisma.SortOrder
+  chainFamily?: Prisma.SortOrder
   status?: Prisma.SortOrder
 }
 
@@ -468,6 +488,7 @@ export type TemplateInstallMaxOrderByAggregateInput = {
   installedVersion?: Prisma.SortOrder
   environmentMode?: Prisma.SortOrder
   chainId?: Prisma.SortOrder
+  chainFamily?: Prisma.SortOrder
   status?: Prisma.SortOrder
 }
 
@@ -481,6 +502,7 @@ export type TemplateInstallMinOrderByAggregateInput = {
   installedVersion?: Prisma.SortOrder
   environmentMode?: Prisma.SortOrder
   chainId?: Prisma.SortOrder
+  chainFamily?: Prisma.SortOrder
   status?: Prisma.SortOrder
 }
 
@@ -626,6 +648,7 @@ export type TemplateInstallCreateWithoutTeamInput = {
   installedVersion: number
   environmentMode?: $Enums.EnvironmentMode
   chainId: number
+  chainFamily?: $Enums.ChainFamily
   status?: $Enums.TemplateInstallStatus
   template: Prisma.BillingTemplateCreateNestedOneWithoutInstallsInput
   environment?: Prisma.WorkspaceEnvironmentCreateNestedOneWithoutTemplateInstallsInput
@@ -640,6 +663,7 @@ export type TemplateInstallUncheckedCreateWithoutTeamInput = {
   installedVersion: number
   environmentMode?: $Enums.EnvironmentMode
   chainId: number
+  chainFamily?: $Enums.ChainFamily
   status?: $Enums.TemplateInstallStatus
 }
 
@@ -682,6 +706,7 @@ export type TemplateInstallScalarWhereInput = {
   installedVersion?: Prisma.IntFilter<"TemplateInstall"> | number
   environmentMode?: Prisma.EnumEnvironmentModeFilter<"TemplateInstall"> | $Enums.EnvironmentMode
   chainId?: Prisma.IntFilter<"TemplateInstall"> | number
+  chainFamily?: Prisma.EnumChainFamilyFilter<"TemplateInstall"> | $Enums.ChainFamily
   status?: Prisma.EnumTemplateInstallStatusFilter<"TemplateInstall"> | $Enums.TemplateInstallStatus
 }
 
@@ -692,6 +717,7 @@ export type TemplateInstallCreateWithoutEnvironmentInput = {
   installedVersion: number
   environmentMode?: $Enums.EnvironmentMode
   chainId: number
+  chainFamily?: $Enums.ChainFamily
   status?: $Enums.TemplateInstallStatus
   team: Prisma.TeamCreateNestedOneWithoutTemplateInstallsInput
   template: Prisma.BillingTemplateCreateNestedOneWithoutInstallsInput
@@ -706,6 +732,7 @@ export type TemplateInstallUncheckedCreateWithoutEnvironmentInput = {
   installedVersion: number
   environmentMode?: $Enums.EnvironmentMode
   chainId: number
+  chainFamily?: $Enums.ChainFamily
   status?: $Enums.TemplateInstallStatus
 }
 
@@ -742,6 +769,7 @@ export type TemplateInstallCreateWithoutTemplateInput = {
   installedVersion: number
   environmentMode?: $Enums.EnvironmentMode
   chainId: number
+  chainFamily?: $Enums.ChainFamily
   status?: $Enums.TemplateInstallStatus
   team: Prisma.TeamCreateNestedOneWithoutTemplateInstallsInput
   environment?: Prisma.WorkspaceEnvironmentCreateNestedOneWithoutTemplateInstallsInput
@@ -756,6 +784,7 @@ export type TemplateInstallUncheckedCreateWithoutTemplateInput = {
   installedVersion: number
   environmentMode?: $Enums.EnvironmentMode
   chainId: number
+  chainFamily?: $Enums.ChainFamily
   status?: $Enums.TemplateInstallStatus
 }
 
@@ -794,6 +823,7 @@ export type TemplateInstallCreateManyTeamInput = {
   installedVersion: number
   environmentMode?: $Enums.EnvironmentMode
   chainId: number
+  chainFamily?: $Enums.ChainFamily
   status?: $Enums.TemplateInstallStatus
 }
 
@@ -804,6 +834,7 @@ export type TemplateInstallUpdateWithoutTeamInput = {
   installedVersion?: Prisma.IntFieldUpdateOperationsInput | number
   environmentMode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
   chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  chainFamily?: Prisma.EnumChainFamilyFieldUpdateOperationsInput | $Enums.ChainFamily
   status?: Prisma.EnumTemplateInstallStatusFieldUpdateOperationsInput | $Enums.TemplateInstallStatus
   template?: Prisma.BillingTemplateUpdateOneRequiredWithoutInstallsNestedInput
   environment?: Prisma.WorkspaceEnvironmentUpdateOneWithoutTemplateInstallsNestedInput
@@ -818,6 +849,7 @@ export type TemplateInstallUncheckedUpdateWithoutTeamInput = {
   installedVersion?: Prisma.IntFieldUpdateOperationsInput | number
   environmentMode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
   chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  chainFamily?: Prisma.EnumChainFamilyFieldUpdateOperationsInput | $Enums.ChainFamily
   status?: Prisma.EnumTemplateInstallStatusFieldUpdateOperationsInput | $Enums.TemplateInstallStatus
 }
 
@@ -830,6 +862,7 @@ export type TemplateInstallUncheckedUpdateManyWithoutTeamInput = {
   installedVersion?: Prisma.IntFieldUpdateOperationsInput | number
   environmentMode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
   chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  chainFamily?: Prisma.EnumChainFamilyFieldUpdateOperationsInput | $Enums.ChainFamily
   status?: Prisma.EnumTemplateInstallStatusFieldUpdateOperationsInput | $Enums.TemplateInstallStatus
 }
 
@@ -842,6 +875,7 @@ export type TemplateInstallCreateManyEnvironmentInput = {
   installedVersion: number
   environmentMode?: $Enums.EnvironmentMode
   chainId: number
+  chainFamily?: $Enums.ChainFamily
   status?: $Enums.TemplateInstallStatus
 }
 
@@ -852,6 +886,7 @@ export type TemplateInstallUpdateWithoutEnvironmentInput = {
   installedVersion?: Prisma.IntFieldUpdateOperationsInput | number
   environmentMode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
   chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  chainFamily?: Prisma.EnumChainFamilyFieldUpdateOperationsInput | $Enums.ChainFamily
   status?: Prisma.EnumTemplateInstallStatusFieldUpdateOperationsInput | $Enums.TemplateInstallStatus
   team?: Prisma.TeamUpdateOneRequiredWithoutTemplateInstallsNestedInput
   template?: Prisma.BillingTemplateUpdateOneRequiredWithoutInstallsNestedInput
@@ -866,6 +901,7 @@ export type TemplateInstallUncheckedUpdateWithoutEnvironmentInput = {
   installedVersion?: Prisma.IntFieldUpdateOperationsInput | number
   environmentMode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
   chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  chainFamily?: Prisma.EnumChainFamilyFieldUpdateOperationsInput | $Enums.ChainFamily
   status?: Prisma.EnumTemplateInstallStatusFieldUpdateOperationsInput | $Enums.TemplateInstallStatus
 }
 
@@ -878,6 +914,7 @@ export type TemplateInstallUncheckedUpdateManyWithoutEnvironmentInput = {
   installedVersion?: Prisma.IntFieldUpdateOperationsInput | number
   environmentMode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
   chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  chainFamily?: Prisma.EnumChainFamilyFieldUpdateOperationsInput | $Enums.ChainFamily
   status?: Prisma.EnumTemplateInstallStatusFieldUpdateOperationsInput | $Enums.TemplateInstallStatus
 }
 
@@ -890,6 +927,7 @@ export type TemplateInstallCreateManyTemplateInput = {
   installedVersion: number
   environmentMode?: $Enums.EnvironmentMode
   chainId: number
+  chainFamily?: $Enums.ChainFamily
   status?: $Enums.TemplateInstallStatus
 }
 
@@ -900,6 +938,7 @@ export type TemplateInstallUpdateWithoutTemplateInput = {
   installedVersion?: Prisma.IntFieldUpdateOperationsInput | number
   environmentMode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
   chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  chainFamily?: Prisma.EnumChainFamilyFieldUpdateOperationsInput | $Enums.ChainFamily
   status?: Prisma.EnumTemplateInstallStatusFieldUpdateOperationsInput | $Enums.TemplateInstallStatus
   team?: Prisma.TeamUpdateOneRequiredWithoutTemplateInstallsNestedInput
   environment?: Prisma.WorkspaceEnvironmentUpdateOneWithoutTemplateInstallsNestedInput
@@ -914,6 +953,7 @@ export type TemplateInstallUncheckedUpdateWithoutTemplateInput = {
   installedVersion?: Prisma.IntFieldUpdateOperationsInput | number
   environmentMode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
   chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  chainFamily?: Prisma.EnumChainFamilyFieldUpdateOperationsInput | $Enums.ChainFamily
   status?: Prisma.EnumTemplateInstallStatusFieldUpdateOperationsInput | $Enums.TemplateInstallStatus
 }
 
@@ -926,6 +966,7 @@ export type TemplateInstallUncheckedUpdateManyWithoutTemplateInput = {
   installedVersion?: Prisma.IntFieldUpdateOperationsInput | number
   environmentMode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
   chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  chainFamily?: Prisma.EnumChainFamilyFieldUpdateOperationsInput | $Enums.ChainFamily
   status?: Prisma.EnumTemplateInstallStatusFieldUpdateOperationsInput | $Enums.TemplateInstallStatus
 }
 
@@ -941,6 +982,7 @@ export type TemplateInstallSelect<ExtArgs extends runtime.Types.Extensions.Inter
   installedVersion?: boolean
   environmentMode?: boolean
   chainId?: boolean
+  chainFamily?: boolean
   status?: boolean
   team?: boolean | Prisma.TeamDefaultArgs<ExtArgs>
   template?: boolean | Prisma.BillingTemplateDefaultArgs<ExtArgs>
@@ -957,6 +999,7 @@ export type TemplateInstallSelectCreateManyAndReturn<ExtArgs extends runtime.Typ
   installedVersion?: boolean
   environmentMode?: boolean
   chainId?: boolean
+  chainFamily?: boolean
   status?: boolean
   team?: boolean | Prisma.TeamDefaultArgs<ExtArgs>
   template?: boolean | Prisma.BillingTemplateDefaultArgs<ExtArgs>
@@ -973,6 +1016,7 @@ export type TemplateInstallSelectUpdateManyAndReturn<ExtArgs extends runtime.Typ
   installedVersion?: boolean
   environmentMode?: boolean
   chainId?: boolean
+  chainFamily?: boolean
   status?: boolean
   team?: boolean | Prisma.TeamDefaultArgs<ExtArgs>
   template?: boolean | Prisma.BillingTemplateDefaultArgs<ExtArgs>
@@ -989,10 +1033,11 @@ export type TemplateInstallSelectScalar = {
   installedVersion?: boolean
   environmentMode?: boolean
   chainId?: boolean
+  chainFamily?: boolean
   status?: boolean
 }
 
-export type TemplateInstallOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "createdAt" | "updatedAt" | "teamId" | "environmentId" | "templateId" | "installedVersion" | "environmentMode" | "chainId" | "status", ExtArgs["result"]["templateInstall"]>
+export type TemplateInstallOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "createdAt" | "updatedAt" | "teamId" | "environmentId" | "templateId" | "installedVersion" | "environmentMode" | "chainId" | "chainFamily" | "status", ExtArgs["result"]["templateInstall"]>
 export type TemplateInstallInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   team?: boolean | Prisma.TeamDefaultArgs<ExtArgs>
   template?: boolean | Prisma.BillingTemplateDefaultArgs<ExtArgs>
@@ -1026,6 +1071,7 @@ export type $TemplateInstallPayload<ExtArgs extends runtime.Types.Extensions.Int
     installedVersion: number
     environmentMode: $Enums.EnvironmentMode
     chainId: number
+    chainFamily: $Enums.ChainFamily
     status: $Enums.TemplateInstallStatus
   }, ExtArgs["result"]["templateInstall"]>
   composites: {}
@@ -1462,6 +1508,7 @@ export interface TemplateInstallFieldRefs {
   readonly installedVersion: Prisma.FieldRef<"TemplateInstall", 'Int'>
   readonly environmentMode: Prisma.FieldRef<"TemplateInstall", 'EnvironmentMode'>
   readonly chainId: Prisma.FieldRef<"TemplateInstall", 'Int'>
+  readonly chainFamily: Prisma.FieldRef<"TemplateInstall", 'ChainFamily'>
   readonly status: Prisma.FieldRef<"TemplateInstall", 'TemplateInstallStatus'>
 }
     

@@ -74,6 +74,6 @@ async function forwardRequest(
   });
 }
 
-export async function handleProviderFlags(c: Context) {
+export async function handleProviderFlags(c: Context): Promise<Response> {
   return forwardRequest(c.req.method as "GET" | "POST" | "PUT" | "PATCH" | "DELETE", c);
 }

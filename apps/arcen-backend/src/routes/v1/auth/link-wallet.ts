@@ -7,14 +7,19 @@ import { consumeNonce } from "../../../lib/auth/nonce.server.js";
 import { getSessionFromCtx } from "../../../lib/auth/auth.server.js";
 import { maskEmail } from "../../../lib/auth/auth-flow.js";
 import { isSupportedDashboardChainId, getChainLabel, TESTNET_CHAIN_IDS } from "../../../lib/platform/default-chain.js";
+import { getChainFamily } from "@arcenpay/internal-core";
 
 const Schema = z.object({
   message: z.string().min(1),
-  signature: z.string().regex(/^0x[0-9a-fA-F]+$/),
-  address: z.string().regex(/^0x[0-9a-fA-F]{40}$/),
+  signature: z.string().min(1),
+  address: z.string().min(1),
   chainId: z.number().int().positive(),
   nonce: z.string().min(1),
 });
+
+function isStellarChainId(chainId: number) {
+  return getChainFamily(chainId) === "stellar";
+}
 
 export async function linkWallet(c: Context) {
   try {
@@ -35,9 +40,11 @@ export async function linkWallet(c: Context) {
     }
 
     const { message, signature, address, chainId, nonce } = parsed.data;
-    const normalizedAddress = address.toLowerCase();
+    const isStellar = isStellarChainId(chainId);
+    const normalizedAddress = isStellar ? address : address.toLowerCase();
 
-    if (!isSupportedDashboardChainId(chainId)) {
+    // Support Stellar chain ID (synthetic: 9_000_000+)
+    if (!isSupportedDashboardChainId(chainId) && !isStellarChainId(chainId)) {
       const labels = TESTNET_CHAIN_IDS.map(getChainLabel).join(" or ");
       return c.json({
           ok: false,
@@ -51,6 +58,61 @@ export async function linkWallet(c: Context) {
       return c.json({ ok: false, error: "Invalid or expired nonce", code: "UNAUTHORIZED" }, 401 as any);
     }
 
+    // ── Stellar path ──────────────────────────────────────────────────────
+    if (isStellarChainId(chainId)) {
+      // Stellar signature: a base64-encoded ed25519 signature produced by
+      // StellarWalletsKit/Freighter's `signMessage` over the exact message
+      // text below. We reconstruct the expected message and verify the
+      // signature cryptographically (Keypair.verify).
+      //
+      // Reconstruct expected message from the same format the frontend builds:
+      //   `ArcenPay Stellar Sign-In\n\nAddress: ${addr}\nNonce: ${n}\nIssued At: ${d}\nDomain: ${host}`
+      const host = c.req.header("x-forwarded-host") || c.req.header("host") || "arcenpay.xyz";
+      const expectedMessage = `ArcenPay Stellar Sign-In\n\nAddress: ${normalizedAddress}\nNonce: ${nonce}\nIssued At: ${nonceRecord.issuedAt}\nDomain: ${host}`;
+
+      if (message !== expectedMessage) {
+        return c.json({ ok: false, error: "Message mismatch", code: "UNAUTHORIZED" }, 401 as any);
+      }
+
+      const { Keypair } = await import("@stellar/stellar-sdk");
+      let signatureValid = false;
+      try {
+        signatureValid = Keypair.fromPublicKey(normalizedAddress).verify(
+          Buffer.from(expectedMessage, "utf8"),
+          Buffer.from(signature, "base64"),
+        );
+      } catch {
+        signatureValid = false;
+      }
+      if (!signatureValid) {
+        return c.json({ ok: false, error: "Invalid signature", code: "UNAUTHORIZED" }, 401 as any);
+      }
+
+      const walletOwner = await db.user.findUnique({
+        where: isStellar ? { stellarWalletAddress: normalizedAddress } : { walletAddress: normalizedAddress },
+        select: { id: true, email: true },
+      });
+
+      if (walletOwner && walletOwner.id !== session.userId) {
+        return c.json({
+            ok: false,
+            error: "This wallet is already linked to another account",
+            code: "CONFLICT",
+            maskedOwnerEmail: maskEmail(walletOwner.email ?? ""),
+          }, 409 as any);
+      }
+
+      await db.user.update({
+        where: { id: session.userId },
+        data: isStellar
+          ? { stellarWalletAddress: normalizedAddress }
+          : { walletAddress: normalizedAddress },
+      });
+
+      return c.json({ ok: true, address: normalizedAddress });
+    }
+
+    // ── EVM path (SIWE) ───────────────────────────────────────────────────
     const host =
       c.req.header("x-forwarded-host") || c.req.header("host") || "arcenpay.xyz";
     const isLocal = host.includes("localhost") || host.includes("127.0.0.1");
@@ -94,9 +156,7 @@ export async function linkWallet(c: Context) {
 
     await db.user.update({
       where: { id: session.userId },
-      data: {
-        walletAddress: normalizedAddress,
-      },
+      data: { walletAddress: normalizedAddress },
     });
 
     return c.json({ ok: true, address: normalizedAddress });

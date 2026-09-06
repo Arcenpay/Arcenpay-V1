@@ -2,6 +2,7 @@ import type { Context } from "hono";
 import { z } from "zod";
 import { db } from "../../../db.js";
 import { requireFacilitatorAuth } from "../../../lib/auth/facilitator-auth.js";
+import { resolveChainFamilyForPrisma } from "../../../lib/platform/chain-family.js";
 
 const spendSchema = z.object({
   teamId: z.string().min(1),
@@ -37,6 +38,7 @@ export async function recordGasSpend(c: Context) {
     data: {
       teamId,
       chainId,
+      chainFamily: resolveChainFamilyForPrisma(chainId),
       txHash,
       gasUsedWei: String(gasUsed),
       gasCostUsd,

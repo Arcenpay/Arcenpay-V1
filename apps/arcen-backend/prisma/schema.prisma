@@ -262,6 +262,16 @@ enum PlatformTier {
   PRO
 }
 
+// Chain family — the protocol family a chainId belongs to. Drives
+// address encoding, RPC client construction, event sourcing, and wallet
+// connection. Default EVM keeps existing rows (which all use real EVM
+// chainIds) valid. Stellar and future families use synthetic chainIds
+// (see packages/internal-core/src/chain-family.ts).
+enum ChainFamily {
+  EVM
+  STELLAR
+}
+
 // ─── Core identity ────────────────────────────────────────────────────────────
 
 model User {
@@ -272,6 +282,7 @@ model User {
   email         String? @unique
   emailVerified Boolean @default(false)
   walletAddress String? @unique
+  stellarWalletAddress String? @unique
 
   currentTeamId String?
 
@@ -282,6 +293,7 @@ model User {
 
   @@index([email])
   @@index([walletAddress])
+  @@index([stellarWalletAddress])
 }
 
 // ─── Dashboard auth ───────────────────────────────────────────────────────────
@@ -401,6 +413,9 @@ model WorkspaceEnvironment {
   name      String
   mode      EnvironmentMode
   chainId   Int
+  // Chain family — defaults to EVM (historical rows are all EVM chains).
+  // Set to STELLAR for environments created on the Stellar synthetic chainIds.
+  chainFamily ChainFamily @default(EVM)
 
   team                       Team                        @relation(fields: [teamId], references: [id], onDelete: Cascade)
   authSessions               AuthSession[]
@@ -574,6 +589,7 @@ model CatalogPlan {
   // On-chain identity — chainId tells us which network this plan is registered on.
   // Default 84532 = Base Sepolia (matches historic DEFAULT_CHAIN_ID).
   chainId         Int             @default(84532)
+  chainFamily     ChainFamily     @default(EVM)
   onChainPlanId   String?
   chainSyncStatus ChainSyncStatus @default(NOT_APPLICABLE)
   chainTxHash     String?
@@ -784,6 +800,7 @@ model TemplateInstall {
   installedVersion Int
   environmentMode  EnvironmentMode       @default(DEVELOPMENT)
   chainId          Int
+  chainFamily      ChainFamily          @default(EVM)
   status           TemplateInstallStatus @default(INSTALLED)
 
   team        Team                  @relation(fields: [teamId], references: [id], onDelete: Cascade)
@@ -982,6 +999,7 @@ model SubscriptionState {
   // chainId records which chain this subscription is active on.
   // Default 84532 = Base Sepolia (matches historic DEFAULT_CHAIN_ID).
   chainId            Int                @default(84532)
+  chainFamily        ChainFamily        @default(EVM)
   currentPeriodStart DateTime?
   currentPeriodEnd   DateTime?
   lastEvent          String?
@@ -1064,6 +1082,8 @@ model Payment {
   status              PaymentStatus @default(PENDING)
   currency            String        @default("USDC")
   amount              Decimal       @db.Decimal(20, 6)
+  chainFamily         ChainFamily   @default(EVM)
+  chainId             Int?
   payerWallet         String?
   recipientWallet     String?
   acceptedToken       String?
@@ -1088,6 +1108,7 @@ model Payment {
   creditLedgerEntries CreditLedgerEntry[]
 
   @@index([teamId, status, occurredAt])
+  @@index([teamId, chainId, status])
   @@index([teamId, environmentId])
   @@index([companyId, createdAt])
   @@index([invoiceId])
@@ -1272,6 +1293,7 @@ model PlatformBillingPlan {
   tier          PlatformTier
   environmentId String
   chainId       Int
+  chainFamily   ChainFamily @default(EVM)
 
   onChainPlanId          String?
   planName               String
@@ -1338,6 +1360,7 @@ model GasSpend {
   createdAt     DateTime @default(now())
   teamId        String
   chainId       Int
+  chainFamily   ChainFamily @default(EVM)
   txHash        String   @unique
   gasUsedWei    String
   gasCostUsd    Decimal  @db.Decimal(20, 8)
@@ -1608,6 +1631,7 @@ model PaymentLink {
   amount          Decimal           @db.Decimal(20, 6)
   acceptedToken   String
   chainId         Int               @default(84532)
+  chainFamily     ChainFamily       @default(EVM)
   recipientWallet String
   successUrl      String?
   cancelUrl       String?
@@ -1649,6 +1673,7 @@ model CheckoutSession {
   amount              Decimal                @db.Decimal(20, 6)
   acceptedToken       String
   chainId             Int                    @default(84532)
+  chainFamily         ChainFamily            @default(EVM)
   recipientWallet     String
   txHash              String?                @unique
   verificationError   String?
@@ -1866,6 +1891,8 @@ model ArcenAgentConfig {
   autoTopUp          Json    @default("{\"mode\":\"off\",\"dailyLimit\":\"5.00\",\"perTxnLimit\":\"1.00\",\"threshold\":\"0.50\"}")
   dispatch           Json    @default("{\"enabled\":false,\"providers\":[],\"cooldownSeconds\":120,\"maxRetries\":3}")
   agentWalletAddress String?
+  chainId            Int?
+  chainFamily        ChainFamily @default(EVM)
 
   team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
 

@@ -7,6 +7,7 @@ export type DashboardSessionPayload = {
     id: string;
     email: string | null;
     walletAddress: string | null;
+    stellarWalletAddress: string | null;
   };
   currentTeam: {
     id: string;

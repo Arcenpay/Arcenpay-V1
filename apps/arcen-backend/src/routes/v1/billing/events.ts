@@ -36,6 +36,10 @@ const eventSchema = z.object({
   payload: z.record(z.unknown()),
   source: z.string().default("facilitator"),
   triggerInvoice: z.boolean().default(false),
+  // Top-level chainId supplied by the facilitator (falls back to payload.chainId
+  // or schema default 84532 = EVM downstream). Used to derive `chainFamily`
+  // for SubscriptionState rows created from this event.
+  chainId: z.number().int().positive().optional(),
 });
 
 const listQuerySchema = z.object({
@@ -86,23 +90,32 @@ export async function POST(c: Context) {
     return c.json({ error: "Invalid request", details: parsed.error.flatten().fieldErrors }, 400 as any);
   }
 
-  const data = parsed.data;
+const data = parsed.data;
 
-  const canonicalEventName = resolveCanonicalBillingEventName(
-    data.eventType,
-    data.eventName,
-  );
+// Inject the top-level chainId into the payload (if absent) so any downstream
+// consumer reading `payload.chainId` (the billing ledger) sees the correct
+// chainId for chainFamily derivation. EVM: real chain id. Stellar: 9_000_000+.
+const payloadWithChainId: Record<string, unknown> =
+  data.chainId !== undefined &&
+  typeof data.payload.chainId !== "number"
+    ? { ...data.payload, chainId: data.chainId }
+    : data.payload;
 
-  const result = await ingestBillingEvent({
-    teamId: data.teamId,
-    eventType: data.eventType,
-    eventName: canonicalEventName,
-    idempotencyKey: data.idempotencyKey,
-    payload: data.payload,
-    source: data.source,
-    occurredAt: data.occurredAt,
-    triggerInvoice: data.triggerInvoice,
-  });
+const canonicalEventName = resolveCanonicalBillingEventName(
+  data.eventType,
+  data.eventName,
+);
+
+const result = await ingestBillingEvent({
+  teamId: data.teamId,
+  eventType: data.eventType,
+  eventName: canonicalEventName,
+  idempotencyKey: data.idempotencyKey,
+  payload: payloadWithChainId,
+  source: data.source,
+  occurredAt: data.occurredAt,
+  triggerInvoice: data.triggerInvoice,
+});
 
   await writeAuditEvent({
     headers: { get: (name: string) => c.req.header(name) },

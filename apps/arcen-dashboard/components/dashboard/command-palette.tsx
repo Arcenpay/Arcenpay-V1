@@ -65,7 +65,7 @@ const searchItems: SearchItem[] = [
   { id: "webhooks", label: "Webhooks", icon: Webhook, href: "/?section=webhooks", group: "Connections", keywords: ["webhook", "endpoint", "callback"] },
 
   // Agent
-  { id: "agent", label: "Agent", icon: Bot, href: "/?section=agent", group: "Agent", keywords: ["agent", "ai", "sdk"] },
+  { id: "agent", label: "Arcen Agent", icon: Bot, href: "/?section=agent", group: "Arcen Agent", keywords: ["agent", "arcen", "ai", "sdk"] },
 
   // Admin
   { id: "invoices", label: "Invoices", icon: ReceiptText, href: "/?section=invoices", group: "Admin", keywords: ["invoice", "billing", "payment"] },

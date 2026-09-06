@@ -72,6 +72,10 @@ export type {
   EntitlementResult,
   ConsumeEntitlementResult,
   IdentifyResult,
+  AgenticPaymentLinkSpec,
+  AgentPaymentReceipt,
+  CreateAgentPaymentLinkParams,
+  PayPaymentLinkOptions,
 } from "./types";
 
 // Chain configs
@@ -80,8 +84,11 @@ export {
   baseSepolia,
   baseMainnet,
   arcTestnet,
+  botMainnet,
+  botTestnet,
   SUPPORTED_CHAINS,
   SUPPORTED_CHAIN_IDS,
+  EVM_SUPPORTED_CHAIN_IDS,
   TOKENS,
   DEFAULT_CHAIN_ID,
   getTokenAddress,
@@ -90,8 +97,44 @@ export {
   getChain,
   getBlockExplorerUrl,
   isSupportedChainId,
+  isEvmSupportedChainId,
 } from "./chains";
-export type { SupportedChainId, TokenInfo } from "./chains";
+export type {
+  SupportedChainId,
+  EvmSupportedChainId,
+  TokenInfo,
+} from "./chains";
+
+// Chain family + multi-chain registry (EVM, Stellar, …)
+export {
+  CHAIN_FAMILY_METADATA,
+  CHAIN_REGISTRY,
+  STELLAR_MAINNET_CHAIN_ID,
+  STELLAR_TESTNET_CHAIN_ID,
+  STELLAR_FUTURENET_CHAIN_ID,
+  getChainFamily,
+  getChainDescriptor,
+  getStellarNetworkPassphrase,
+  getStellarSorobanRpcUrl,
+  getAllRegisteredChainIds,
+  getChainIdsForFamily,
+  isEvmChain,
+  isStellarChain,
+  isStellarChainId,
+  isValidAddress,
+  isValidTxHash,
+  isValidAddressForChain,
+  isValidTxHashForChain,
+  normalizeWalletForChain,
+  unsetAddressForFamily,
+  isUnsetAddress,
+  isUnsetAddressForChain,
+} from "./chain-family";
+export type {
+  ChainFamily,
+  ChainFamilyMetadata,
+  ChainDescriptor,
+} from "./chain-family";
 
 // Contract addresses
 export { getContractAddresses, setContractAddresses } from "./addresses";
@@ -171,6 +214,7 @@ export {
   formatCurrency,
   formatUsdc,
   formatInvoiceTotal,
+  normalizeX402AmountToDecimal,
 } from "./format";
 
 // SVG sanitization

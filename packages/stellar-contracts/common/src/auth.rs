@@ -1,4 +1,6 @@
-use soroban_sdk::{Address, Env, symbol_short};
+use soroban_sdk::{Address, Env};
+
+use crate::errors::{ArcenPayError, fail};
 
 #[derive(Clone)]
 #[soroban_sdk::contracttype]
@@ -15,7 +17,7 @@ pub fn read_admin(env: &Env) -> Address {
     env.storage()
         .instance()
         .get(&CommonDataKey::Admin)
-        .expect("ArcenPay: admin not initialized")
+        .unwrap_or_else(|| fail(env, ArcenPayError::NotInitialized))
 }
 
 pub fn write_admin(env: &Env, admin: &Address) {
@@ -36,11 +38,15 @@ pub fn read_paused(env: &Env) -> bool {
 }
 
 pub fn write_paused(env: &Env, paused: bool) {
-    env.storage().instance().set(&CommonDataKey::Paused, &paused);
+    env.storage()
+        .instance()
+        .set(&CommonDataKey::Paused, &paused);
 }
 
 pub fn require_not_paused(env: &Env) {
-    assert!(!read_paused(env), "ArcenPay: contract is paused");
+    if read_paused(env) {
+        fail(env, ArcenPayError::ContractPaused);
+    }
 }
 
 pub fn read_initialized(env: &Env) -> bool {
@@ -51,7 +57,9 @@ pub fn read_initialized(env: &Env) -> bool {
 }
 
 pub fn write_initialized(env: &Env) {
-    env.storage().instance().set(&CommonDataKey::Initialized, &true);
+    env.storage()
+        .instance()
+        .set(&CommonDataKey::Initialized, &true);
 }
 
 pub fn read_version(env: &Env) -> u32 {
@@ -62,7 +70,9 @@ pub fn read_version(env: &Env) -> u32 {
 }
 
 pub fn write_version(env: &Env, version: u32) {
-    env.storage().instance().set(&CommonDataKey::Version, &version);
+    env.storage()
+        .instance()
+        .set(&CommonDataKey::Version, &version);
 }
 
 pub fn acquire_reentrancy_lock(env: &Env) -> bool {

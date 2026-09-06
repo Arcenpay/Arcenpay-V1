@@ -14,6 +14,7 @@ export type DashboardSession = {
   email: string | null;
   currentTeamId: string | null;
   walletAddress: string | null;
+  stellarWalletAddress: string | null;
   currentTeamRole: string | null;
   activeEnvironment: {
     id: string;
@@ -39,6 +40,7 @@ type BackendSessionResponse = {
     id?: string;
     email?: string | null;
     walletAddress?: string | null;
+    stellarWalletAddress?: string | null;
   };
   currentTeam?: {
     id?: string;
@@ -104,6 +106,7 @@ export async function getSession(): Promise<DashboardSession | null> {
     email: data.user.email ?? null,
     currentTeamId: data.currentTeam?.id ?? null,
     walletAddress: data.user.walletAddress ?? null,
+    stellarWalletAddress: data.user.stellarWalletAddress ?? null,
     currentTeamRole: data.currentTeam?.role ?? null,
     activeEnvironment: data.activeEnvironment ?? null,
     environments: Array.isArray(data.environments) ? data.environments : [],
@@ -141,6 +144,7 @@ export async function createSession(userId: string): Promise<DashboardSession> {
     email: session.email ?? null,
     currentTeamId: session.currentTeamId ?? null,
     walletAddress: session.walletAddress ?? null,
+    stellarWalletAddress: session.stellarWalletAddress ?? null,
     currentTeamRole: null,
     activeEnvironment: null,
     environments: [],

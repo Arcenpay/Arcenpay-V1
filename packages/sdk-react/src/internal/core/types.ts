@@ -265,12 +265,19 @@ export interface ContractAddresses {
   sessionVault: string;
   zkUsageVerifier: string;
   mirrorRegistry?: string;
-  /** Optional ERC-4626 yield vault — set ARCENPAY_CONTRACT_<chainId>_yieldSessionVault to enable */
+  /** Optional ERC-4626 yield vault — set ARCENPAY_CONTRACT_<chainId>_yieldSessionVault to enable (EVM only) */
   yieldSessionVault?: string;
+  /**
+   * EVM-only alias of zkUsageVerifier. Stellar's analogue is the
+   * usage-verifier contract; both map to the on-chain zk proof verifier.
+   * The `zkUsageVerifier` field is the canonical key for both families.
+   */
 }
 
 export interface ChainServiceEndpoints {
   rpcUrl: string;
+  /** Stellar-only: Soroban RPC URL for contract reads/simulation. */
+  sorobanRpcUrl?: string;
   subgraphUrl?: string;
   facilitatorUrl?: string;
 }
@@ -717,4 +724,67 @@ export interface IdentifyResult {
   companyId: string;
   userId?: string;
   expiresAt: string; // ISO timestamp
+}
+
+// --- Agentic Payment Link Types ---
+
+export interface AgenticPaymentLinkSpec {
+  type: "agentic_payment_link";
+  version: "1.0";
+  id: string;
+  slug: string;
+  name: string;
+  description: string | null;
+  amount: string; // decimal string, e.g. "5.000000"
+  amountAtomic: string; // atomic integer string, e.g. "5000000"
+  currency: string;
+  acceptedToken: string;
+  chainId: number;
+  chainFamily: "evm" | "stellar";
+  recipientWallet: string;
+  status: "ACTIVE" | "INACTIVE" | "ARCHIVED";
+  isAgentic: boolean;
+  expiresAt: string | null;
+  sessionUrl: string;
+  confirmUrl?: string;
+  metadata?: Record<string, unknown> | null;
+}
+
+export interface AgentPaymentReceipt {
+  success: boolean;
+  txHash: string;
+  sessionId: string;
+  paymentLinkId?: string;
+  paymentLinkSlug?: string;
+  amount: string;
+  currency: string;
+  chainId: number;
+  chainFamily: "evm" | "stellar";
+  payerWallet: string;
+  recipientWallet: string;
+  timestamp: string;
+}
+
+export interface CreateAgentPaymentLinkParams {
+  name?: string;
+  title?: string;
+  amount: number | string;
+  acceptedToken?: string;
+  chainId?: number;
+  recipientWallet?: string;
+  currency?: string;
+  description?: string;
+  expiresAt?: Date | string;
+  expiresInMinutes?: number;
+  successUrl?: string;
+  cancelUrl?: string;
+  metadata?: Record<string, unknown>;
+  apiKey?: string;
+}
+
+export interface PayPaymentLinkOptions {
+  customerName?: string;
+  customerEmail?: string;
+  maxPrice?: string | bigint;
+  autoApprove?: boolean;
 }

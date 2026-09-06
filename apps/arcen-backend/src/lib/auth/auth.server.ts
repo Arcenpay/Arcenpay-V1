@@ -19,6 +19,7 @@ export type DashboardSession = {
   currentTeamId: string | null;
   activeEnvironmentId: string | null;
   walletAddress: string | null;
+  stellarWalletAddress: string | null;
   expiresAt: Date;
 };
 
@@ -56,6 +57,7 @@ export async function getSessionFromCtx(c: Context): Promise<DashboardSession | 
             email: true,
             currentTeamId: true,
             walletAddress: true,
+            stellarWalletAddress: true,
           },
         },
       },
@@ -87,6 +89,7 @@ export async function getSessionFromCtx(c: Context): Promise<DashboardSession | 
       currentTeamId: record.user.currentTeamId ?? null,
       activeEnvironmentId: record.activeEnvironmentId ?? null,
       walletAddress: record.user.walletAddress ?? null,
+      stellarWalletAddress: record.user.stellarWalletAddress ?? null,
       expiresAt,
     };
   }
@@ -99,6 +102,7 @@ export async function getSessionFromCtx(c: Context): Promise<DashboardSession | 
     currentTeamId: record.user.currentTeamId ?? null,
     activeEnvironmentId: record.activeEnvironmentId ?? null,
     walletAddress: record.user.walletAddress ?? null,
+    stellarWalletAddress: record.user.stellarWalletAddress ?? null,
     expiresAt: record.expiresAt,
   };
 }
@@ -132,6 +136,7 @@ export async function createSession(c: Context, userId: string): Promise<Dashboa
           email: true,
           currentTeamId: true,
           walletAddress: true,
+          stellarWalletAddress: true,
         },
       }),
     ),
@@ -182,6 +187,7 @@ export async function createSession(c: Context, userId: string): Promise<Dashboa
     currentTeamId: user.currentTeamId ?? null,
     activeEnvironmentId,
     walletAddress: user.walletAddress ?? null,
+    stellarWalletAddress: user.stellarWalletAddress ?? null,
     expiresAt,
   };
 }

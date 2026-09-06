@@ -8,12 +8,17 @@ import {
 import {
   ERC7579AutopayModuleABI,
   getChain,
+  getChainFamily,
   getContractAddresses,
   PlanFactoryABI,
   SubscriptionRegistryABI,
 } from "@arcenpay/internal-core";
 import { createResilientPublicClient, getRpcUrl } from "../../config.js";
 import { DEFAULT_CHAIN_ID } from "../platform/default-chain.js";
+import {
+  verifyStellarPayment,
+  type VerifyStellarPaymentInput,
+} from "./stellar-payment-verification.js";
 
 const ERC20_TRANSFER_ABI = [
   {
@@ -55,6 +60,100 @@ export function normalizeTxHash(value?: string | null): `0x${string}` | null {
   const trimmed = value?.trim();
   if (!trimmed || !/^0x[0-9a-fA-F]{64}$/.test(trimmed)) return null;
   return trimmed as `0x${string}`;
+}
+
+/**
+ * Family-aware tx-hash normalization. EVM hashes keep their `0x` prefix;
+ * Stellar hashes are 64 hex chars without a prefix (a stray `0x` is stripped).
+ * Returns null when the value is not a valid hash for the chain's family.
+ */
+export function normalizeTxHashForFamily(
+  value?: string | null,
+  chainId?: number,
+): string | null {
+  if (!chainId) return normalizeTxHash(value);
+  const trimmed = value?.trim();
+  if (!trimmed) return null;
+  // Stellar hashes are 64 hex chars without a prefix; a stray 0x is stripped.
+  if (getChainFamily(chainId) === "stellar") {
+    const clean = trimmed.startsWith("0x") ? trimmed.slice(2) : trimmed;
+    if (!/^[a-fA-F0-9]{64}$/.test(clean)) return null;
+    return clean;
+  }
+  if (!/^0x[0-9a-fA-F]{64}$/.test(trimmed)) return null;
+  return trimmed;
+}
+
+export type VerifyDirectPaymentInput = {
+  chainId: number;
+  txHash: string;
+  expectedAmountAtomic: bigint;
+  acceptedToken: string;
+  recipientWallet: string;
+  senderWallet?: string | null;
+};
+
+export type VerifyDirectPaymentResult =
+  | {
+      ok: true;
+      txHash: string;
+      senderWallet: string;
+      recipientWallet: string;
+      amountAtomic: bigint;
+    }
+  | {
+      ok: false;
+      status: number;
+      error: string;
+    };
+
+/**
+ * Dispatches direct-payment verification to the right chain family:
+ * EVM → ERC-20 transfer receipt decoding; Stellar → Soroban + Horizon.
+ */
+export async function verifyDirectPayment(
+  params: VerifyDirectPaymentInput,
+): Promise<VerifyDirectPaymentResult> {
+  if (getChainFamily(params.chainId) === "stellar") {
+    const stellarInput: VerifyStellarPaymentInput = {
+      chainId: params.chainId,
+      txHash: params.txHash,
+      acceptedToken: params.acceptedToken,
+      expectedAmountMicros: params.expectedAmountAtomic,
+      recipientWallet: params.recipientWallet,
+      senderWallet: params.senderWallet,
+    };
+    const result = await verifyStellarPayment(stellarInput);
+    if (!result.ok) {
+      return { ok: false, status: result.status, error: result.error };
+    }
+    return {
+      ok: true,
+      txHash: result.txHash,
+      senderWallet: result.senderWallet,
+      recipientWallet: result.recipientWallet,
+      amountAtomic: result.amountMicros,
+    };
+  }
+
+  const result = await verifyDirectErc20Transfer({
+    acceptedToken: params.acceptedToken,
+    txHash: params.txHash as `0x${string}`,
+    expectedAmountAtomic: params.expectedAmountAtomic,
+    recipientWallet: params.recipientWallet,
+    senderWallet: params.senderWallet,
+    chainId: params.chainId,
+  });
+  if (!result.ok) {
+    return { ok: false, status: result.status, error: result.error };
+  }
+  return {
+    ok: true,
+    txHash: result.txHash,
+    senderWallet: result.senderWallet,
+    recipientWallet: result.recipientWallet,
+    amountAtomic: result.amountAtomic,
+  };
 }
 
 export function decimalToAtomicUnits(value: string, decimals = 6): bigint {

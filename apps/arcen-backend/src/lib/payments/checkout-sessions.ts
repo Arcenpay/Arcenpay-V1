@@ -1,9 +1,11 @@
 import { db } from "../../db.js";
 import { toPrismaJson } from "../../utils/prisma-json.js";
 import { DEFAULT_CHAIN_ID } from "../platform/default-chain.js";
+import { resolveChainFamilyForPrisma } from "../platform/chain-family.js";
+import { normalizeWallet } from "../billing/utils.js";
 import {
   decimalToAtomicUnits,
-  verifyDirectErc20Transfer,
+  verifyDirectPayment,
 } from "./onchain-payment-verification.js";
 import { recordSuccessfulPayment } from "../billing/billing-ledger.js";
 import { createIssuedChargeInvoice } from "../billing/billing-events.js";
@@ -27,11 +29,6 @@ function readPositiveInteger(value: unknown): number | null {
   return Number.isSafeInteger(numberValue) && numberValue > 0
     ? numberValue
     : null;
-}
-
-function normalizeWallet(value?: string | null): string | null {
-  const trimmed = value?.trim().toLowerCase();
-  return trimmed || null;
 }
 
 function deriveCheckoutDescription(input: {
@@ -235,6 +232,7 @@ export async function createCheckoutSession(input: {
       currency: input.currency ?? "USDC",
       acceptedToken: normalizeWallet(input.acceptedToken) || input.acceptedToken,
       chainId: input.chainId ?? DEFAULT_CHAIN_ID,
+      chainFamily: resolveChainFamilyForPrisma(input.chainId ?? DEFAULT_CHAIN_ID),
       recipientWallet:
         normalizeWallet(input.recipientWallet) || input.recipientWallet,
       successUrl: input.successUrl ?? null,
@@ -327,7 +325,7 @@ export async function updateCheckoutSessionCustomerDetails(input: {
 
 export async function confirmCheckoutSessionPayment(input: {
   sessionId: string;
-  txHash: `0x${string}`;
+  txHash: string;
   senderWallet?: string | null;
 }) {
   const session = await getCheckoutSessionById(input.sessionId);
@@ -349,10 +347,11 @@ export async function confirmCheckoutSessionPayment(input: {
   }
 
   const amountAtomic = decimalToAtomicUnits(String(session.amount), 6);
-  const verification = await verifyDirectErc20Transfer({
-    acceptedToken: session.acceptedToken,
+  const verification = await verifyDirectPayment({
+    chainId: session.chainId,
     txHash: input.txHash,
     expectedAmountAtomic: amountAtomic,
+    acceptedToken: session.acceptedToken,
     recipientWallet: session.recipientWallet,
     senderWallet: input.senderWallet ?? session.customerWallet ?? undefined,
   });
@@ -416,6 +415,7 @@ export async function confirmCheckoutSessionPayment(input: {
     kind: paymentKind,
     amount: Number(session.amount),
     currency: session.currency,
+    chainId: session.chainId,
     payerWallet: verification.senderWallet,
     recipientWallet: verification.recipientWallet,
     acceptedToken: session.acceptedToken,

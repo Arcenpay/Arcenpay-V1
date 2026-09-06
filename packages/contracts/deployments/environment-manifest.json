@@ -1,7 +1,45 @@
 {
   "manifestVersion": "2026-03-09.1",
-  "generatedAt": "2026-05-16T17:13:40.124Z",
+  "generatedAt": "2026-09-06T04:34:12.343Z",
   "chains": {
+    "677": {
+      "chainId": 677,
+      "chainName": "BOT Chain",
+      "isTestnet": false,
+      "contracts": {
+        "subscriptionRegistry": "0xea549C49A1A97faC398F977BCC0D65256c5419d9",
+        "autopayModule": "0xB240841d1c886455aC0620bB0A0AE1C194f3e275",
+        "planFactory": "0x09fD8422638F4d6eA05F6Dcb2FB15Bea6eC59f41",
+        "feeCollector": "0x17375ec258cDABEB491AB9ae3F78428BC26Aa382",
+        "sessionVault": "0x118C32C629F47109CF21a306A72c447127084CF4",
+        "zkUsageVerifier": "0x0694CB91b9399869ecB5942EF40AbD6C835Ba83a",
+        "mirrorRegistry": "0xE8E068FC93E9687c7D85d303312Ac13806e73e2F"
+      },
+      "services": {
+        "rpcUrl": "",
+        "subgraphUrl": "",
+        "facilitatorUrl": ""
+      }
+    },
+    "968": {
+      "chainId": 968,
+      "chainName": "BOT Chain Testnet",
+      "isTestnet": true,
+      "contracts": {
+        "subscriptionRegistry": "0x3000000000000000000000000000000000000968",
+        "autopayModule": "0x6000000000000000000000000000000000000968",
+        "planFactory": "0x1000000000000000000000000000000000000968",
+        "feeCollector": "0x2000000000000000000000000000000000000968",
+        "sessionVault": "0x4000000000000000000000000000000000000968",
+        "zkUsageVerifier": "0x5000000000000000000000000000000000000968",
+        "mirrorRegistry": "0x7000000000000000000000000000000000000968"
+      },
+      "services": {
+        "rpcUrl": "",
+        "subgraphUrl": "",
+        "facilitatorUrl": ""
+      }
+    },
     "84532": {
       "chainId": 84532,
       "chainName": "Base Sepolia",
@@ -16,7 +54,7 @@
         "mirrorRegistry": "0xC24cBC9C664aCA41dEf6D5a3E941c1e11C163fD1"
       },
       "services": {
-        "rpcUrl": "https://sepolia.base.org",
+        "rpcUrl": "",
         "subgraphUrl": "",
         "facilitatorUrl": ""
       }
@@ -35,7 +73,7 @@
         "mirrorRegistry": "0x05BdaB1b4A87a4a5DF3Af1Ebb9Da853A0d31592E"
       },
       "services": {
-        "rpcUrl": "https://rpc.testnet.arc.network",
+        "rpcUrl": "",
         "subgraphUrl": "",
         "facilitatorUrl": ""
       }
@@ -54,7 +92,7 @@
         "mirrorRegistry": "0xC187CD32d569ec0E84B9b378f8E63f3a74afac74"
       },
       "services": {
-        "rpcUrl": "https://ethereum-sepolia-rpc.publicnode.com",
+        "rpcUrl": "",
         "subgraphUrl": "",
         "facilitatorUrl": ""
       }

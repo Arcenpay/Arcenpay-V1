@@ -2,8 +2,9 @@ import type { Context } from "hono";
 import { z } from "zod";
 import {
   confirmCheckoutSessionPayment,
+  getCheckoutSessionById,
 } from "../../../lib/payments/checkout-sessions.js";
-import { normalizeTxHash } from "../../../lib/payments/onchain-payment-verification.js";
+import { normalizeTxHashForFamily } from "../../../lib/payments/onchain-payment-verification.js";
 
 const bodySchema = z.object({
   txHash: z.string().trim().min(1),
@@ -18,13 +19,18 @@ export async function confirmCheckout(c: Context) {
     return c.json({ error: "Invalid request", details: parsed.error.flatten().fieldErrors }, 400 as any);
   }
 
-  const txHash = normalizeTxHash(parsed.data.txHash);
+  const existing = await getCheckoutSessionById(sessionId!);
+  if (!existing) {
+    return c.json({ error: "Checkout session not found." }, 404 as any);
+  }
+
+  const txHash = normalizeTxHashForFamily(parsed.data.txHash, existing.chainId);
   if (!txHash) {
     return c.json({ error: "txHash must be a valid transaction hash." }, 400 as any);
   }
 
   const result = await confirmCheckoutSessionPayment({
-    sessionId,
+    sessionId: sessionId!,
     txHash,
     senderWallet: parsed.data.senderWallet,
   });

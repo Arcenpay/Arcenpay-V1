@@ -29,6 +29,8 @@ function deploymentFileFor(chainId: number): string {
   if (chainId === 84532) return "baseSepolia-latest.json";
   if (chainId === 8453) return "baseMainnet-latest.json";
   if (chainId === 5042002) return "arcTestnet-latest.json";
+  if (chainId === 968) return "botTestnet-latest.json";
+  if (chainId === 677) return "botMainnet-latest.json";
   throw new Error(`No deployment file mapping for chainId=${chainId}`);
 }
 

@@ -45,7 +45,7 @@ export async function getAddOnEntitlements(c: Context) {
         if (isErrorResponse(auth)) return c.json({ ok: false, error: auth.error }, auth.status as any as any);
 
         const id = c.req.param("id");
-        const addOn = await findAddOn(id, auth.team.teamId);
+        const addOn = await findAddOn(id!, auth.team.teamId);
         if (!addOn) {
             return c.json({ error: "Add-on not found" }, 404 as any);
         }
@@ -63,14 +63,14 @@ export async function addAddOnEntitlement(c: Context) {
         if (isErrorResponse(auth)) return c.json({ ok: false, error: auth.error }, auth.status as any as any);
 
         const id = c.req.param("id");
-        const addOn = await findAddOn(id, auth.team.teamId);
+        const addOn = await findAddOn(id!, auth.team.teamId);
         if (!addOn) {
             return c.json({ error: "Add-on not found" }, 404 as any);
         }
 
         // Fetch the add-on's environment ID for tier check
         const fullAddOn = await db.catalogAddOn.findFirst({
-            where: { id },
+            where: { id: id! },
             select: { environmentId: true },
         });
         if (fullAddOn?.environmentId) {
@@ -123,7 +123,7 @@ export async function updateAddOnEntitlement(c: Context) {
         if (isErrorResponse(auth)) return c.json({ ok: false, error: auth.error }, auth.status as any as any);
 
         const id = c.req.param("id");
-        const addOn = await findAddOn(id, auth.team.teamId);
+        const addOn = await findAddOn(id!, auth.team.teamId);
         if (!addOn) {
             return c.json({ error: "Add-on not found" }, 404 as any);
         }
@@ -175,7 +175,7 @@ export async function deleteAddOnEntitlement(c: Context) {
             return c.json({ error: "featureKey is required" }, 400 as any);
         }
 
-        const addOn = await findAddOn(id, auth.team.teamId);
+        const addOn = await findAddOn(id!, auth.team.teamId);
         if (!addOn) {
             return c.json({ error: "Add-on not found" }, 404 as any);
         }

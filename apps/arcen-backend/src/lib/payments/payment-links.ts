@@ -2,6 +2,10 @@ import { randomUUID } from "node:crypto";
 import { db } from "../../db.js";
 import { toPrismaJson, toPrismaNullableJson } from "../../utils/prisma-json.js";
 import { DEFAULT_CHAIN_ID } from "../platform/default-chain.js";
+import { resolveChainFamilyForPrisma } from "../platform/chain-family.js";
+import { normalizeWallet } from "../billing/utils.js";
+
+import type { AgenticPaymentLinkSpec } from "@arcenpay/internal-core";
 
 function slugify(value: string): string {
   return value
@@ -12,9 +16,56 @@ function slugify(value: string): string {
     .slice(0, 48);
 }
 
-function normalizeWallet(value?: string | null): string | null {
-  const trimmed = value?.trim().toLowerCase();
-  return trimmed || null;
+export function toAgenticSpecification(
+  link: {
+    id: string;
+    slug: string;
+    name: string;
+    description?: string | null;
+    amount: any;
+    currency: string;
+    acceptedToken: string;
+    chainId: number;
+    chainFamily: string;
+    recipientWallet: string;
+    status: string;
+    expiresAt?: Date | null;
+    metadata?: any;
+  },
+  baseUrl?: string,
+): AgenticPaymentLinkSpec {
+  const decimalAmount = Number(link.amount).toFixed(6);
+  const atomicAmount = String(Math.round(Number(link.amount) * 1_000_000));
+  const root = baseUrl ? baseUrl.replace(/\/+$/, "") : "";
+
+  const isAgentic = Boolean(
+    link.metadata &&
+      typeof link.metadata === "object" &&
+      !Array.isArray(link.metadata) &&
+      (link.metadata as Record<string, unknown>).isAgentic,
+  );
+
+  return {
+    type: "agentic_payment_link",
+    version: "1.0",
+    id: link.id,
+    slug: link.slug,
+    name: link.name,
+    description: link.description ?? null,
+    amount: decimalAmount,
+    amountAtomic: atomicAmount,
+    currency: link.currency,
+    acceptedToken: link.acceptedToken,
+    chainId: link.chainId,
+    chainFamily: link.chainFamily?.toLowerCase() === "stellar" ? "stellar" : "evm",
+    recipientWallet: link.recipientWallet,
+    status: link.status as any,
+    isAgentic,
+    expiresAt: link.expiresAt ? link.expiresAt.toISOString() : null,
+    sessionUrl: `${root}/api/v1/public/payment-links/${link.slug}/session`,
+    confirmUrl: `${root}/api/v1/checkout-sessions/:sessionId/confirm`,
+    metadata: (link.metadata as Record<string, unknown>) ?? null,
+  };
 }
 
 export async function createPaymentLink(input: {
@@ -34,10 +85,17 @@ export async function createPaymentLink(input: {
   successUrl?: string | null;
   cancelUrl?: string | null;
   expiresAt?: Date | null;
+  isAgentic?: boolean;
   metadata?: Record<string, unknown>;
 }) {
   const baseSlug = slugify(input.name) || "payment";
   const slug = `${baseSlug}-${randomUUID().slice(0, 8)}`;
+
+  const resolvedChainId = input.chainId ?? DEFAULT_CHAIN_ID;
+  const mergedMetadata: Record<string, unknown> = {
+    ...(input.metadata || {}),
+    ...(input.isAgentic ? { isAgentic: true } : {}),
+  };
 
   return db.paymentLink.create({
     data: {
@@ -53,13 +111,14 @@ export async function createPaymentLink(input: {
       currency: input.currency ?? "USDC",
       amount: input.amount.toFixed(6),
       acceptedToken: normalizeWallet(input.acceptedToken) || input.acceptedToken,
-      chainId: input.chainId ?? DEFAULT_CHAIN_ID,
+      chainId: resolvedChainId,
+      chainFamily: resolveChainFamilyForPrisma(resolvedChainId),
       recipientWallet:
         normalizeWallet(input.recipientWallet) || input.recipientWallet,
       successUrl: input.successUrl ?? null,
       cancelUrl: input.cancelUrl ?? null,
       expiresAt: input.expiresAt ?? null,
-      metadata: input.metadata ? toPrismaJson(input.metadata) : undefined,
+      metadata: Object.keys(mergedMetadata).length > 0 ? toPrismaJson(mergedMetadata) : undefined,
     },
     include: {
       catalogAddOn: true,

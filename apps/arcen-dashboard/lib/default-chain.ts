@@ -1,15 +1,38 @@
-import { getChain, getConfiguredRuntimeChainId } from "@arcenpay/internal-core";
+import {
+  getChain,
+  getChainDescriptor,
+  getConfiguredRuntimeChainId,
+  STELLAR_MAINNET_CHAIN_ID,
+  STELLAR_TESTNET_CHAIN_ID,
+  STELLAR_FUTURENET_CHAIN_ID,
+} from "@arcenpay/internal-core";
 
 export const SEPOLIA_CHAIN_ID = 11155111 as const;
 export const BASE_SEPOLIA_CHAIN_ID = 84532 as const;
 export const BASE_MAINNET_CHAIN_ID = 8453 as const;
 export const ARC_TESTNET_CHAIN_ID = 5042002 as const;
+export const BOT_MAINNET_CHAIN_ID = 677 as const;
+export const BOT_TESTNET_CHAIN_ID = 968 as const;
+export { STELLAR_MAINNET_CHAIN_ID, STELLAR_TESTNET_CHAIN_ID, STELLAR_FUTURENET_CHAIN_ID };
 
 // ─── Chain sets by environment type ─────────────────────────────────────────
 // Rule: DEV environment shows ONLY testnet chains.
 //       PROD environment shows ONLY mainnet chains.
-export const TESTNET_CHAIN_IDS = [BASE_SEPOLIA_CHAIN_ID, ARC_TESTNET_CHAIN_ID] as const;
-export const MAINNET_CHAIN_IDS = [BASE_MAINNET_CHAIN_ID] as const;
+// Stellar synthetic chainIds are included so the chain picker surfaces them.
+// Wallet support is conditional: EVM ids use wagmi/Reown; Stellar ids require
+// a Stellar wallet (Freighter) — handled in the wallet layer, not here.
+export const TESTNET_CHAIN_IDS = [
+  BASE_SEPOLIA_CHAIN_ID,
+  ARC_TESTNET_CHAIN_ID,
+  BOT_TESTNET_CHAIN_ID,
+  STELLAR_TESTNET_CHAIN_ID,
+  STELLAR_FUTURENET_CHAIN_ID,
+] as const;
+export const MAINNET_CHAIN_IDS = [
+  BASE_MAINNET_CHAIN_ID,
+  BOT_MAINNET_CHAIN_ID,
+  STELLAR_MAINNET_CHAIN_ID,
+] as const;
 
 const ALL_SUPPORTED = [...TESTNET_CHAIN_IDS, ...MAINNET_CHAIN_IDS] as const;
 export const SUPPORTED_DASHBOARD_CHAIN_IDS = ALL_SUPPORTED;
@@ -91,6 +114,11 @@ export function resolveEnvironmentChainId(
 }
 
 export function getChainLabel(chainId: number): string {
+  // Family-aware: viem `getChain()` only knows EVM chains; for Stellar (and
+  // any future non-EVM family) fall back to the chain descriptor from
+  // internal-core's CHAIN_REGISTRY.
+  const descriptor = getChainDescriptor(chainId);
+  if (descriptor) return descriptor.name;
   try {
     return getChain(chainId).name;
   } catch {

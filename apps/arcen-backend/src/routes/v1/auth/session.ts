@@ -48,6 +48,7 @@ export async function getSession(c: Context) {
       id: session.userId,
       email: session.email,
       walletAddress: session.walletAddress,
+      stellarWalletAddress: session.stellarWalletAddress,
     },
     currentTeam: currentTeam
       ? {

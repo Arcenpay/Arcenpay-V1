@@ -358,7 +358,7 @@ export async function POST(c: Context) {
     if (tb.name && tb.name.length > 64) {
       return jsonWithCors(c, { error: "name too long" }, 400);
     }
-    if (tb.company?.wallet && !/^0x[0-9a-fA-F]{40}$/.test(tb.company.wallet)) {
+    if (tb.company?.wallet && (typeof tb.company.wallet !== "string" || tb.company.wallet.trim().length === 0 || tb.company.wallet.length > 128)) {
       return jsonWithCors(c, { error: "Invalid wallet address format" }, 400);
     }
     if (tb.company?.email) {
@@ -372,7 +372,7 @@ export async function POST(c: Context) {
     if (tb.company?.id && tb.company.id.length > 64) {
       return jsonWithCors(c, { error: "company id too long" }, 400);
     }
-    if (tb.user?.wallet && !/^0x[0-9a-fA-F]{40}$/.test(tb.user.wallet)) {
+    if (tb.user?.wallet && (typeof tb.user.wallet !== "string" || tb.user.wallet.trim().length === 0 || tb.user.wallet.length > 128)) {
       return jsonWithCors(c, { error: "Invalid wallet address format" }, 400);
     }
     if (tb.user?.email) {
@@ -400,7 +400,7 @@ export async function POST(c: Context) {
 
   if (body.event_type === "identify") {
     const ib = body as IdentifyEventBody;
-    if (ib.company?.wallet && !/^0x[0-9a-fA-F]{40}$/.test(ib.company.wallet)) {
+    if (ib.company?.wallet && (typeof ib.company.wallet !== "string" || ib.company.wallet.trim().length === 0 || ib.company.wallet.length > 128)) {
       return jsonWithCors(c, { error: "Invalid wallet address format" }, 400);
     }
     if (ib.company?.email) {
@@ -425,7 +425,7 @@ export async function POST(c: Context) {
         return jsonWithCors(c, { error: "Invalid email format" }, 400);
       }
     }
-    if (ib.user?.wallet && !/^0x[0-9a-fA-F]{40}$/.test(ib.user.wallet)) {
+    if (ib.user?.wallet && (typeof ib.user.wallet !== "string" || ib.user.wallet.trim().length === 0 || ib.user.wallet.length > 128)) {
       return jsonWithCors(c, { error: "Invalid wallet address format" }, 400);
     }
     if (ib.traits !== undefined && (typeof ib.traits !== "object" || ib.traits === null || Array.isArray(ib.traits))) {

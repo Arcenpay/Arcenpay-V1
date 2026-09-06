@@ -39,7 +39,14 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { getUsdcAddress } from "@/lib/contracts";
+import { resolveEnvironmentChainId } from "@/lib/default-chain";
+import { useEnvironment } from "@/contexts/environment-context";
 import { SkeletonList, SkeletonTable } from "@/components/ui/skeleton";
+import { useStellarWallet } from "@/hooks/use-stellar-wallet";
+import {
+  isStellarChainId,
+  getStellarNetworkPassphrase,
+} from "@arcenpay/internal-core";
 
 const ERC20_APPROVE_ABI = [{
   type: "function",
@@ -443,14 +450,37 @@ function SessionsTab() {
 //  Quickstart Tab
 // ─────────────────────────────────────────────
 function QuickstartTab() {
-  const installCode = `npm install @arcenpay/agent viem`;
+  const { envMode, activeEnvironment } = useEnvironment();
+  const configuredChainId =
+    activeEnvironment?.chainId ?? resolveEnvironmentChainId(envMode);
+  const isStellar = isStellarChainId(configuredChainId);
 
-  const nodeCode = `import { ArcenPayAgent } from "@arcenpay/agent";
+  const installCode = `npm install @arcenpay/agent${isStellar ? " @stellar/stellar-sdk" : " viem"}`;
+
+  const nodeCode = isStellar
+    ? `import { ArcenPayAgent } from "@arcenpay/agent";
+
+const agent = new ArcenPayAgent({
+  privateKey: process.env.AGENT_SECRET_KEY, // S… Stellar secret key
+  chainId: ${configuredChainId},            // Stellar (synthetic chain id)
+  horizonUrl: process.env.HORIZON_URL,
+  sorobanRpcUrl: process.env.SOROBAN_RPC_URL,
+  maxAutoApprove: "0.10",                   // Max $0.10 USDC per call
+});
+
+// Fund a session with $10 USDC
+const sessionId = await agent.fundSession("10.00");
+console.log("Session:", sessionId);
+
+// Call a pay-per-use API — payment handled automatically
+const res = await agent.fetch("https://api.yourprovider.com/v1/data");
+const data = await res.json();`
+    : `import { ArcenPayAgent } from "@arcenpay/agent";
 
 const agent = new ArcenPayAgent({
   privateKey: process.env.AGENT_PRIVATE_KEY,
   rpcUrl: process.env.RPC_URL,          // e.g. https://mainnet.base.org
-  chainId: 8453,                         // Base Mainnet
+  chainId: ${configuredChainId},         // chain id for this environment
   maxAutoApprove: "0.10",               // Max $0.10 USDC per call
 });
 
@@ -462,7 +492,26 @@ console.log("Session:", sessionId);
 const res = await agent.fetch("https://api.yourprovider.com/v1/data");
 const data = await res.json();`;
 
-  const x402Code = `import express from "express";
+  const x402Code = isStellar
+    ? `import express from "express";
+import { x402Middleware } from "@arcenpay/node";
+
+const app = express();
+
+// Gate any route with USDC payment (Stellar)
+app.use("/api/premium", x402Middleware({
+  facilitatorUrl: process.env.ARCENPAY_FACILITATOR_URL,
+  planId: 1,
+  chainId: ${configuredChainId},   // Stellar
+  acceptedTokens: ["USDC"],
+}));
+
+app.get("/api/premium/analyze", (req, res) => {
+  // req.arcenpay.signer = agent's wallet address
+  // req.arcenpay.amount = settled amount
+  res.json({ result: "premium data" });
+});`
+    : `import express from "express";
 import { x402Middleware } from "@arcenpay/node";
 
 const app = express();
@@ -471,7 +520,7 @@ const app = express();
 app.use("/api/premium", x402Middleware({
   facilitatorUrl: process.env.ARCENPAY_FACILITATOR_URL,
   planId: 1,
-  chainId: 8453,
+  chainId: ${configuredChainId},
   acceptedTokens: ["USDC"],
 }));
 
@@ -481,7 +530,12 @@ app.get("/api/premium/analyze", (req, res) => {
   res.json({ result: "premium data" });
 });`;
 
-  const envCode = `AGENT_PRIVATE_KEY=0x...
+  const envCode = isStellar
+    ? `AGENT_SECRET_KEY=S…
+SOROBAN_RPC_URL=https://soroban-testnet.stellar.org
+HORIZON_URL=https://horizon-testnet.stellar.org
+ARCENPAY_FACILITATOR_URL=https://facilitator.arcenpay.xyz`
+    : `AGENT_PRIVATE_KEY=0x...
 RPC_URL=https://mainnet.base.org
 ARCENPAY_FACILITATOR_URL=https://facilitator.arcenpay.xyz`;
 
@@ -497,9 +551,9 @@ ARCENPAY_FACILITATOR_URL=https://facilitator.arcenpay.xyz`;
       {/* How it works */}
       <div className="grid grid-cols-3 gap-3">
         {[
-          { icon: Bot, title: "Agent has wallet", desc: "Your AI agent holds USDC in a smart account" },
+          { icon: Bot, title: "Agent has wallet", desc: isStellar ? "Your AI agent holds USDC in a Soroban session vault" : "Your AI agent holds USDC in a smart account" },
           { icon: Zap, title: "Hits x402 API", desc: "API returns HTTP 402 with payment options" },
-          { icon: Check, title: "Auto-pays & retries", desc: "Agent signs EIP-712, retries with payment header" },
+          { icon: Check, title: "Auto-pays & retries", desc: isStellar ? "Agent signs a Stellar message, retries with payment header" : "Agent signs EIP-712, retries with payment header" },
         ].map(({ icon: Icon, title, desc }) => (
           <div key={title} className="p-4 rounded-lg border border-border bg-secondary/20">
             <div className="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center mb-3">
@@ -589,8 +643,13 @@ ARCENPAY_FACILITATOR_URL=https://facilitator.arcenpay.xyz`;
 //  Permissions Tab (Auto-Topup + Dispatch)
 // ─────────────────────────────────────────────
 function PermissionsTab() {
-  const { address: userWallet, isConnected, chainId } = useAccount();
+  const { address: userWallet, isConnected, chainId: evmChainId } = useAccount();
   const { writeContractAsync } = useWriteContract();
+  const { envMode, activeEnvironment } = useEnvironment();
+  const configuredChainId =
+    activeEnvironment?.chainId ?? resolveEnvironmentChainId(envMode);
+  const isStellar = isStellarChainId(configuredChainId);
+  const stellar = useStellarWallet(configuredChainId);
 
   const [permissions, setPermissions] = useState<PermissionConfig>({
     autoTopUp: { mode: "off", dailyLimit: "5.00", perTxnLimit: "1.00", threshold: "0.50" },
@@ -621,7 +680,10 @@ function PermissionsTab() {
 
   const { data: approveReceipt } = useWaitForTransactionReceipt({
     hash: approveTxHash as `0x${string}` | undefined,
-    query: { enabled: !!approveTxHash },
+    // Stellar hashes are 64-hex without an 0x prefix — wagmi's receipt watcher
+    // only understands EVM hashes, so disable it on Stellar (the Stellar path
+    // toasts its own success).
+    query: { enabled: !!approveTxHash && !isStellar },
   });
 
   useEffect(() => {
@@ -634,13 +696,60 @@ function PermissionsTab() {
   }, [approveReceipt, approveAmount]);
 
   const handlePreApprove = async () => {
-    if (!isConnected || !agentWallet || !chainId) return;
+    if (isStellar) {
+      if (!stellar.isConnected || !agentWallet) return;
+      setApproving(true);
+      try {
+        // Stellar has no ERC-20 approve — pre-funding is a direct USDC SAC
+        // transfer from the connected wallet to the agent wallet.
+        const { Asset, Horizon, TransactionBuilder, Operation, BASE_FEE } =
+          await import("@stellar/stellar-sdk");
+        const passphrase = getStellarNetworkPassphrase(configuredChainId);
+        const horizonUrl = passphrase.includes("Test")
+          ? "https://horizon-testnet.stellar.org"
+          : "https://horizon.stellar.org";
+        const server = new Horizon.Server(horizonUrl);
+        const usdcAddress = getUsdcAddress(configuredChainId);
+        if (!usdcAddress) {
+          throw new Error("No USDC asset configured for this chain.");
+        }
+        const asset = new Asset("USDC", usdcAddress);
+        const payer = await server.loadAccount(stellar.address!);
+        const tx = new TransactionBuilder(payer, {
+          fee: BASE_FEE,
+          networkPassphrase: passphrase,
+        })
+          .addOperation(
+            Operation.payment({
+              destination: agentWallet,
+              asset,
+              amount: approveAmount || "1",
+            }),
+          )
+          .setTimeout(300)
+          .build();
+        const { signedTxXdr } = await stellar.signTransaction(tx.toXDR(), {
+          networkPassphrase: passphrase,
+          address: stellar.address!,
+        });
+        const signedTx = TransactionBuilder.fromXDR(signedTxXdr, passphrase);
+        const submitted = await server.submitTransaction(signedTx);
+        setApproveTxHash(submitted.hash);
+        toast.info("Transfer submitted...");
+      } catch (err: unknown) {
+        toast.error(err instanceof Error ? err.message : "Transfer failed");
+        setApproving(false);
+      }
+      return;
+    }
+
+    if (!isConnected || !agentWallet || !evmChainId) return;
     setApproving(true);
     try {
-      const usdcAddress = getUsdcAddress(chainId);
+      const usdcAddress = getUsdcAddress(evmChainId);
       const amountAtomic = parseUnits(approveAmount || "0", 6);
       const hash = await writeContractAsync({
-        address: usdcAddress,
+        address: usdcAddress as `0x${string}`,
         abi: ERC20_APPROVE_ABI,
         functionName: "approve",
         args: [agentWallet as `0x${string}`, amountAtomic],
@@ -653,7 +762,16 @@ function PermissionsTab() {
     }
   };
 
-  const handleGenerateWallet = () => {
+  const handleGenerateWallet = async () => {
+    if (isStellar) {
+      // Stellar: ed25519 keypair. Public key is the G… address; the secret
+      // (S…) is what ArcenAgent uses as `privateKey`.
+      const { Keypair } = await import("@stellar/stellar-sdk");
+      const kp = Keypair.random();
+      setGeneratedKey(kp.secret());
+      setGeneratedAddress(kp.publicKey());
+      return;
+    }
     const pk = generatePrivateKey();
     const addr = privateKeyToAddress(pk);
     setGeneratedKey(pk);
@@ -671,6 +789,7 @@ function PermissionsTab() {
         body: JSON.stringify({
           autoTopUp: permissions.autoTopUp,
           dispatch: permissions.dispatch,
+          chainId: configuredChainId,
           agentWalletAddress: generatedAddress,
         }),
       });
@@ -728,6 +847,7 @@ function PermissionsTab() {
         body: JSON.stringify({
           autoTopUp: permissions.autoTopUp,
           dispatch: permissions.dispatch,
+          chainId: configuredChainId,
           agentWalletAddress: agentWallet || undefined,
         }),
       });
@@ -859,7 +979,9 @@ function PermissionsTab() {
           <h4 className="text-sm font-semibold text-foreground">Step 1: Create Agent Wallet</h4>
         </div>
         <p className="text-xs text-muted-foreground">
-          Your agent needs its own Ethereum wallet to sign payments and hold USDC. This is separate from your connected wallet for security.
+          {isStellar
+            ? "Your agent needs its own Stellar wallet to sign payments and hold USDC. This is separate from your connected wallet for security."
+            : "Your agent needs its own Ethereum wallet to sign payments and hold USDC. This is separate from your connected wallet for security."}
         </p>
 
         {agentWallet ? (
@@ -1003,7 +1125,9 @@ function PermissionsTab() {
         <div>
           <h4 className="text-sm font-semibold text-foreground">Step 2: Pre-Approve Agent</h4>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Authorize your agent wallet ({agentWallet.slice(0, 8)}…) to pull USDC from your connected wallet. Required once.
+            {isStellar
+              ? `Fund your agent wallet (${agentWallet.slice(0, 4)}…) with USDC from your connected wallet. Required once.`
+              : `Authorize your agent wallet (${agentWallet.slice(0, 8)}…) to pull USDC from your connected wallet. Required once.`}
           </p>
         </div>
         <div className="flex items-end gap-4">
@@ -1021,7 +1145,23 @@ function PermissionsTab() {
               />
             </div>
           </div>
-          {isConnected && userWallet ? (
+          {isStellar ? (
+            stellar.isConnected && stellar.address ? (
+              <Button
+                onClick={handlePreApprove}
+                disabled={!approveAmount || approving || !!approveTxHash}
+                className="gap-1.5"
+              >
+                <ArrowRightLeft className="w-3.5 h-3.5" />
+                {approving || approveTxHash ? "Transferring…" : `Transfer $${approveAmount} USDC`}
+              </Button>
+            ) : (
+              <Button onClick={() => void stellar.connect()} className="gap-1.5">
+                <Wallet className="w-3.5 h-3.5" />
+                Connect Stellar wallet
+              </Button>
+            )
+          ) : isConnected && userWallet ? (
             <Button
               onClick={handlePreApprove}
               disabled={!approveAmount || approving || !!approveTxHash}
@@ -1034,13 +1174,21 @@ function PermissionsTab() {
             <p className="text-xs text-foreground pb-1">Connect your wallet to approve</p>
           )}
         </div>
-        {isConnected && (
+        {isStellar ? (
+          stellar.isConnected && (
+            <div className="flex gap-2 text-xs text-muted-foreground">
+              <span>From: {stellar.address?.slice(0, 4)}…{stellar.address?.slice(-4)}</span>
+              <span>→</span>
+              <span>To: {agentWallet.slice(0, 4)}…{agentWallet.slice(-4)}</span>
+            </div>
+          )
+        ) : isConnected ? (
           <div className="flex gap-2 text-xs text-muted-foreground">
             <span>From: {userWallet?.slice(0, 8)}…{userWallet?.slice(-4)}</span>
             <span>→</span>
             <span>To: {agentWallet.slice(0, 8)}…{agentWallet.slice(-4)}</span>
           </div>
-        )}
+        ) : null}
       </div>
 
       {/* Dispatch Providers */}
@@ -1363,6 +1511,14 @@ type AgentTab = "quickstart" | "api-keys" | "sessions" | "permissions" | "dispat
 export function AgentSection() {
   const [tab, setTab] = useState<AgentTab>("quickstart");
   const { address, isConnected } = useAccount();
+  const { envMode, activeEnvironment } = useEnvironment();
+  const agentSectionChainId =
+    activeEnvironment?.chainId ?? resolveEnvironmentChainId(envMode);
+  const isStellar = isStellarChainId(agentSectionChainId);
+  const stellar = useStellarWallet(agentSectionChainId);
+  // Family-aware connection for the header badge: wagmi's isConnected is
+  // meaningless on a Stellar environment.
+  const walletConnected = isStellar ? stellar.isConnected : isConnected;
 
   const tabs: { id: AgentTab; label: string; icon: LucideIcon }[] = [
     { id: "quickstart", label: "Quickstart", icon: Zap },
@@ -1382,11 +1538,11 @@ export function AgentSection() {
               <Bot className="w-4 h-4 text-foreground" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-foreground">Agent</h1>
-              <p className="text-xs text-muted-foreground">AI agent SDK, API keys, session management, auto-topup & dispatch</p>
+              <h1 className="text-xl font-bold text-foreground">Arcen Agent</h1>
+              <p className="text-xs text-muted-foreground">ArcenPay agent SDK, API keys, session management, auto-topup & dispatch</p>
             </div>
           </div>
-          {isConnected && (
+          {walletConnected && (
             <Badge variant="outline" className="text-xs gap-1 text-foreground border-border bg-secondary">
               <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
               Wallet connected

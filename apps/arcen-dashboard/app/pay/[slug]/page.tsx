@@ -11,6 +11,8 @@ import {
 } from "wagmi";
 import { isAddress, parseUnits } from "viem";
 import { useAppKit } from "@reown/appkit/react";
+import { isStellarChainId, getStellarNetworkPassphrase } from "@arcenpay/internal-core";
+import { useStellarWallet } from "@/hooks/use-stellar-wallet";
 import {
   CheckCircle2,
   ChevronDown,
@@ -25,6 +27,10 @@ import {
   Shield,
   Clock,
   RefreshCw,
+  Bot,
+  Code2,
+  Copy,
+  Check,
 } from "lucide-react";
 import { Web3Icon } from "@/components/web3-icon";
 import { DEFAULT_CHAIN_ID, getChainLabel } from "@/lib/default-chain";
@@ -43,6 +49,31 @@ const ERC20_TRANSFER_ABI = [
   },
 ] as const;
 
+const KNOWN_STELLAR_USDC_ISSUERS = {
+  GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5: "USDC",
+  GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5REQK4DVZWA: "USDC",
+} as const;
+
+const STELLAR_ACCOUNT_REGEX = /^G[A-Z2-7]{55}$/;
+const STELLAR_CONTRACT_REGEX = /^C[A-Z0-9]{55}$/;
+
+function horizonUrlForPassphrase(passphrase: string): string {
+  return passphrase.includes("Test")
+    ? "https://horizon-testnet.stellar.org"
+    : "https://horizon.stellar.org";
+}
+
+function stellarAddressMatches(a?: string | null, b?: string | null): boolean {
+  if (!a || !b) return false;
+  const x = a.trim();
+  const y = b.trim();
+  if (STELLAR_ACCOUNT_REGEX.test(x) || STELLAR_ACCOUNT_REGEX.test(y)) {
+    // Stellar addresses are case-sensitive base32 — compare exactly.
+    return x === y;
+  }
+  return x.toLowerCase() === y.toLowerCase();
+}
+
 type PublicCheckoutSession = {
   id: string;
   status: "PENDING" | "PAID" | "EXPIRED" | "CANCELLED" | "FAILED";
@@ -54,6 +85,7 @@ type PublicCheckoutSession = {
   amount: string;
   acceptedToken: string;
   chainId: number;
+  chainFamily?: "EVM" | "STELLAR" | null;
   recipientWallet: string;
   txHash?: string | null;
   verificationError?: string | null;
@@ -67,6 +99,7 @@ type PublicCheckoutSession = {
     description?: string | null;
     slug: string;
     kind: string;
+    isAgentic?: boolean;
     metadata?: Record<string, unknown> | null;
     company?: {
       id: string;
@@ -203,6 +236,160 @@ function Skeleton() {
   );
 }
 
+function AgenticPaymentLinkPanel({
+  slug,
+  amount,
+  currency,
+  chainId,
+  origin,
+}: {
+  slug: string;
+  amount: string;
+  currency: string;
+  chainId: number;
+  origin: string;
+}) {
+  const [activeTab, setActiveTab] = useState<"sdk" | "curl" | "mcp">("sdk");
+  const [copied, setCopied] = useState(false);
+  const specUrl = `${origin}/api/v1/public/payment-links/${slug}/spec`;
+  const payUrl = `${origin}/pay/${slug}`;
+
+  const sdkCode = `import { ArcenAgent } from "@arcenpay/agent";
+
+const agent = new ArcenAgent({
+  privateKey: process.env.AGENT_PRIVATE_KEY!,
+  chainId: ${chainId},
+});
+
+// Autonomous payment: discovers requirements, enforces limits & transfers on-chain
+const receipt = await agent.payPaymentLink("${payUrl}");
+console.log("Payment settled:", receipt.txHash);`;
+
+  const curlCode = `# 1. Discover machine-readable specification
+curl -s -H "Accept: application/json" \\
+  "${specUrl}"
+
+# 2. Or create a checkout session directly
+curl -s -X POST "${origin}/api/v1/public/payment-links/${slug}/session" \\
+  -H "Content-Type: application/json" \\
+  -d '{"customerWallet": "0xYourWalletAddress", "isAgentic": true}'`;
+
+  const mcpCode = `{
+  "tool": "arcenpay_pay_payment_link",
+  "arguments": {
+    "urlOrSlug": "${payUrl}",
+    "maxPrice": "${amount}",
+    "customerName": "Autonomous AI Agent"
+  }
+}`;
+
+  const currentCode =
+    activeTab === "sdk" ? sdkCode : activeTab === "curl" ? curlCode : mcpCode;
+
+  const handleCopy = () => {
+    void navigator.clipboard.writeText(currentCode);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <div className="mt-8 overflow-hidden rounded-2xl border border-[#e2e4e9] bg-white shadow-[0_4px_24px_-8px_rgba(15,23,42,0.06)]">
+      <div className="border-b border-[#eceef2] bg-[#fafbfc] px-5 py-3.5 sm:px-6">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5">
+            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#111318] text-white shadow-sm">
+              <Bot className="h-4 w-4" />
+            </span>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-semibold text-[#12161d]">
+                  Agentic Payment Link
+                </span>
+                <span className="rounded-md border border-[#e2e4e9] bg-white px-1.5 py-0.2 text-[10px] font-medium text-[#5f6470]">
+                  Autonomous
+                </span>
+              </div>
+              <p className="text-[11px] text-[#7a7f89]">
+                Machine-readable specification &amp; autonomous agent execution
+              </p>
+            </div>
+          </div>
+          <a
+            href={specUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-[#d8dbe2] bg-white px-2.5 py-1 text-xs font-medium text-[#1f232b] transition hover:bg-[#f4f5f7] hover:border-[#c5c8d1]"
+          >
+            <Code2 className="h-3.5 w-3.5" />
+            <span>Open Spec JSON</span>
+          </a>
+        </div>
+      </div>
+
+      <div className="p-5 sm:p-6">
+        <div className="flex items-center justify-between border-b border-[#eceef2] pb-3">
+          <div className="flex items-center gap-1 rounded-lg bg-[#f0f1f4] p-0.5">
+            <button
+              type="button"
+              onClick={() => setActiveTab("sdk")}
+              className={`rounded-md px-2.5 py-1 text-xs font-medium transition ${
+                activeTab === "sdk"
+                  ? "bg-white text-[#111318] shadow-sm"
+                  : "text-[#6f7480] hover:text-[#111318]"
+              }`}
+            >
+              TypeScript SDK
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab("mcp")}
+              className={`rounded-md px-2.5 py-1 text-xs font-medium transition ${
+                activeTab === "mcp"
+                  ? "bg-white text-[#111318] shadow-sm"
+                  : "text-[#6f7480] hover:text-[#111318]"
+              }`}
+            >
+              MCP Tool Call
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab("curl")}
+              className={`rounded-md px-2.5 py-1 text-xs font-medium transition ${
+                activeTab === "curl"
+                  ? "bg-white text-[#111318] shadow-sm"
+                  : "text-[#6f7480] hover:text-[#111318]"
+              }`}
+            >
+              cURL
+            </button>
+          </div>
+          <button
+            type="button"
+            onClick={handleCopy}
+            className="inline-flex items-center gap-1.5 rounded-md border border-[#d8dbe2] bg-white px-2.5 py-1 text-xs font-medium text-[#1f232b] transition hover:bg-[#f4f5f7]"
+          >
+            {copied ? (
+              <>
+                <Check className="h-3.5 w-3.5 text-emerald-600" />
+                <span className="text-emerald-600">Copied</span>
+              </>
+            ) : (
+              <>
+                <Copy className="h-3.5 w-3.5 text-[#5f6470]" />
+                <span>Copy Code</span>
+              </>
+            )}
+          </button>
+        </div>
+
+        <div className="mt-3.5 overflow-x-auto rounded-xl border border-[#23272f] bg-[#0c0e12] p-4 text-xs font-mono text-[#e1e4ea] shadow-inner">
+          <pre className="whitespace-pre leading-relaxed">{currentCode}</pre>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function HostedPaymentPage() {
   return (
     <Suspense
@@ -244,6 +431,16 @@ function CheckoutContent() {
   const [sentTxHash, setSentTxHash] = useState<string | null>(null);
   const [verifying, setVerifying] = useState(false);
   const [verificationFailed, setVerificationFailed] = useState(false);
+
+  // Stellar wallet (StellarWalletsKit: Freighter/xBull/Albedo/Lobstr).
+  // Only active when the checkout session is on a Stellar chain. The chainId
+  // arrives with the session; the hook re-initializes its network when it
+  // changes so mainnet checkouts sign with the PUBLIC passphrase.
+  const stellar = useStellarWallet(
+    isStellarChainId(session?.chainId ?? 0)
+      ? (session?.chainId as number)
+      : 9_000_001,
+  );
 
   const countdown = useExpiryCountdown(session?.expiresAt);
   const normalizedCustomerEmail = normalizeCustomerEmail(customerEmail);
@@ -306,11 +503,20 @@ function CheckoutContent() {
   const accentSoftColor =
     accentColor.length === 7 ? `${accentColor}1a` : accentColor;
   const accentTextColor = getAccentTextColor(accentColor);
-  const isCorrectNetwork = !session || connectedChainId === session.chainId;
-  const isSelfPayment =
-    Boolean(session && address) &&
-    normalizeWalletAddress(address) ===
-      normalizeWalletAddress(session?.recipientWallet);
+  const isStellar = Boolean(session && session.chainFamily === "STELLAR");
+  const isAgentic = Boolean(
+    session?.paymentLink &&
+      (session.paymentLink.isAgentic ||
+        (session.paymentLink.metadata &&
+          typeof session.paymentLink.metadata === "object" &&
+          (session.paymentLink.metadata as Record<string, unknown>).isAgentic)),
+  );
+  const isCorrectNetwork =
+    !session || isStellar || connectedChainId === session.chainId;
+  const isSelfPayment = Boolean(session) &&
+    (isStellar
+      ? stellarAddressMatches(stellar.address, session?.recipientWallet)
+      : stellarAddressMatches(address, session?.recipientWallet));
   const canSubmitPayment =
     !isSending &&
     !missingCustomerName &&
@@ -325,10 +531,11 @@ function CheckoutContent() {
   });
 
   useEffect(() => {
-    if (address && !customerWallet) {
-      setCustomerWallet(address);
+    const connected = isStellar ? stellar.address : address;
+    if (connected && !customerWallet) {
+      setCustomerWallet(connected);
     }
-  }, [address]);
+  }, [address, stellar.address, isStellar, customerWallet]);
 
   const persistCustomerDetails = useCallback(async () => {
     if (!session) return null;
@@ -338,7 +545,9 @@ function CheckoutContent() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         customerEmail: normalizedCustomerEmail,
-        customerWallet: address ?? customerWallet ?? undefined,
+        customerWallet: isStellar
+          ? (stellar.address ?? customerWallet ?? undefined)
+          : (address ?? customerWallet ?? undefined),
         customerName: normalizedCustomerName || undefined,
       }),
     });
@@ -354,6 +563,8 @@ function CheckoutContent() {
     return payload.checkoutSession;
   }, [
     address,
+    stellar.address,
+    isStellar,
     customerWallet,
     normalizedCustomerEmail,
     normalizedCustomerName,
@@ -371,7 +582,7 @@ function CheckoutContent() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             txHash,
-            senderWallet: address,
+            senderWallet: isStellar ? stellar.address : address,
           }),
         });
         const payload = (await res.json()) as {
@@ -392,14 +603,23 @@ function CheckoutContent() {
         setVerifying(false);
       }
     },
-    [session, address],
+    [session, isStellar, stellar.address, address],
   );
 
+  // EVM: wait for the tx receipt then verify on the backend.
+  // Stellar: verification runs directly after submit (no wagmi receipt watcher).
   useEffect(() => {
-    if (receipt && receipt.status === "success" && sentTxHash && !verifying && session?.status === "PENDING") {
+    if (
+      !isStellar &&
+      receipt &&
+      receipt.status === "success" &&
+      sentTxHash &&
+      !verifying &&
+      session?.status === "PENDING"
+    ) {
       void verifyOnBackend(sentTxHash);
     }
-  }, [receipt, sentTxHash, verifying, session?.status, verifyOnBackend]);
+  }, [receipt, sentTxHash, verifying, session?.status, verifyOnBackend, isStellar]);
 
   useEffect(() => {
     let cancelled = false;
@@ -462,8 +682,108 @@ function CheckoutContent() {
     return () => { cancelled = true; };
   }, [params.slug]);
 
+  async function handleStellarPay() {
+    if (!session || !stellar.address) return;
+    // Validate the recipient before building/popup signing — fail fast with a
+    // clear message instead of a Horizon error after the wallet popup.
+    if (!STELLAR_ACCOUNT_REGEX.test(session.recipientWallet)) {
+      throw new Error("This checkout has an invalid Stellar recipient wallet.");
+    }
+    const { Asset, Horizon, TransactionBuilder, Operation, BASE_FEE } =
+      await import("@stellar/stellar-sdk");
+
+    const passphrase = getStellarNetworkPassphrase(session.chainId);
+    const horizonUrl = horizonUrlForPassphrase(passphrase);
+    const server = new Horizon.Server(horizonUrl);
+
+    // acceptedToken is either a G… SAC issuer or a C… SAC contract id.
+    let issuer = session.acceptedToken;
+    if (STELLAR_CONTRACT_REGEX.test(issuer)) {
+      const opsRes = await fetch(
+        `${horizonUrl}/accounts/${stellar.address}`,
+        { signal: AbortSignal.timeout(8_000) },
+      );
+      if (!opsRes.ok) {
+        throw new Error("Unable to resolve the token issuer for this checkout.");
+      }
+      const accountData = (await opsRes.json()) as {
+        balances?: Array<{ asset_code?: string; asset_issuer?: string }>;
+      };
+      const match = accountData.balances?.find((b) => b.asset_issuer);
+      if (!match?.asset_issuer) {
+        throw new Error("Unable to resolve the token issuer for this checkout.");
+      }
+      issuer = match.asset_issuer;
+    }
+    if (!STELLAR_ACCOUNT_REGEX.test(issuer)) {
+      throw new Error("This checkout session has an invalid token issuer.");
+    }
+    const assetCode = KNOWN_STELLAR_USDC_ISSUERS[issuer as keyof typeof KNOWN_STELLAR_USDC_ISSUERS] ?? "USDC";
+    const asset = new Asset(assetCode, issuer);
+
+    const payer = await server.loadAccount(stellar.address);
+    const tx = new TransactionBuilder(payer, {
+      fee: BASE_FEE,
+      networkPassphrase: passphrase,
+    })
+      .addOperation(
+        Operation.payment({
+          destination: session.recipientWallet,
+          asset,
+          amount: session.amount,
+        }),
+      )
+      .setTimeout(300)
+      .build();
+
+    const { signedTxXdr } = await stellar.signTransaction(tx.toXDR(), {
+      networkPassphrase: passphrase,
+      address: stellar.address,
+    });
+    const signedTx = TransactionBuilder.fromXDR(signedTxXdr, passphrase);
+    const submitted = await server.submitTransaction(signedTx);
+    const hash = submitted.hash;
+    setSentTxHash(hash);
+    await verifyOnBackend(hash);
+  }
+
   async function handlePay() {
-    if (!session || !address) return;
+    if (!session) return;
+    if (isStellar) {
+      if (!stellar.address) {
+        setError("Connect your Stellar wallet before paying.");
+        return;
+      }
+      setError(null);
+      setVerificationFailed(false);
+      try {
+        if (missingCustomerEmail || invalidCustomerEmail) {
+          setError("Enter a valid billing email before paying.");
+          return;
+        }
+        if (missingCustomerName) {
+          setError("Enter the billing name before paying.");
+          return;
+        }
+        if (isSelfPayment) {
+          setError(
+            "The connected wallet matches the recipient wallet. Use a different payer wallet or change the payment link recipient.",
+          );
+          return;
+        }
+        await persistCustomerDetails();
+        await handleStellarPay();
+      } catch (err) {
+        const errMsg = err instanceof Error ? err.message : "Transaction failed";
+        if (!errMsg.includes("User rejected") && !errMsg.includes("User denied") && !errMsg.includes("cancelled")) {
+          setError(errMsg);
+        }
+        setSentTxHash(null);
+      }
+      return;
+    }
+
+    if (!address) return;
     setError(null);
     setVerificationFailed(false);
     try {
@@ -548,14 +868,25 @@ function CheckoutContent() {
     }
   }
 
-  const showPay = isConnected && session?.status === "PENDING" && !sentTxHash && !verificationFailed;
-  const showProcessing = sentTxHash && (isConfirming || isSending || verifying) && session?.status === "PENDING";
+  const walletConnected = isStellar ? stellar.isConnected : isConnected;
+  const showPay =
+    walletConnected &&
+    session?.status === "PENDING" &&
+    !sentTxHash &&
+    !verificationFailed;
+  const showProcessing =
+    sentTxHash &&
+    (isConfirming || isSending || verifying || (isStellar && !verificationFailed)) &&
+    session?.status === "PENDING";
   const showError =
     sendError ||
     verificationFailed ||
     (error && session?.status === "PENDING" && !sentTxHash && !verifying);
   const showReceiptError =
-    receipt && receipt.status === "reverted" && session?.status === "PENDING";
+    !isStellar &&
+    receipt &&
+    receipt.status === "reverted" &&
+    session?.status === "PENDING";
   const paymentButtonLabel = isSending
     ? "Confirm in wallet"
     : isConfirming
@@ -799,6 +1130,22 @@ function CheckoutContent() {
                   </p>
                 </div>
 
+                {isAgentic && (
+                  <div className="mt-4 flex items-center justify-between gap-3 rounded-xl border border-[#e3e5eb] bg-white px-4 py-2.5 shadow-[0_1px_3px_rgba(0,0,0,0.03)]">
+                    <div className="flex items-center gap-2.5">
+                      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-[#111318] text-white">
+                        <Bot className="h-3.5 w-3.5" />
+                      </span>
+                      <span className="text-xs text-[#2b313a]">
+                        <strong className="font-semibold text-[#12161d]">Agent-Ready Link:</strong> Machine-readable checkout supporting autonomous AI agents via x402 &amp; MCP.
+                      </span>
+                    </div>
+                    <span className="hidden sm:inline-flex rounded-md border border-[#e3e5eb] bg-[#f7f8fa] px-2 py-0.5 text-[10px] font-medium tracking-wide text-[#5f6470]">
+                      x402 / MCP
+                    </span>
+                  </div>
+                )}
+
                 <div className="mt-10">
                   <p className="text-xl font-semibold text-[#1f232b]">
                     Order Summary
@@ -876,12 +1223,32 @@ function CheckoutContent() {
                     </div>
                   ) : null}
                 </div>
+
+                {isAgentic && (
+                  <AgenticPaymentLinkPanel
+                    slug={params.slug as string}
+                    amount={amountFormatted}
+                    currency={session.currency}
+                    chainId={session.chainId}
+                    origin={typeof window !== "undefined" ? window.location.origin : ""}
+                  />
+                )}
               </section>
 
               <section className="px-6 py-8 sm:px-10 lg:px-12 lg:py-10">
                 <button
                   type="button"
                   onClick={() => {
+                    if (isStellar) {
+                      if (!stellar.isConnected) {
+                        void stellar.connect();
+                        return;
+                      }
+                      if (showPay) {
+                        void handlePay();
+                      }
+                      return;
+                    }
                     if (!isConnected) {
                       open();
                       return;
@@ -890,7 +1257,7 @@ function CheckoutContent() {
                       void handlePay();
                     }
                   }}
-                  disabled={showProcessing || isSending}
+                  disabled={showProcessing || isSending || stellar.isLoading}
                   className="inline-flex h-12 w-full items-center justify-center gap-3 rounded-lg px-5 text-base font-semibold text-white transition disabled:cursor-not-allowed disabled:opacity-60"
                   style={{
                     backgroundColor: accentColor,
@@ -900,9 +1267,13 @@ function CheckoutContent() {
                   <Wallet className="h-4 w-4" />
                   {showProcessing
                     ? "Processing payment"
-                    : isConnected
-                      ? "Pay with wallet"
-                      : "Connect wallet to pay"}
+                    : isStellar
+                      ? stellar.isConnected
+                        ? "Pay with wallet"
+                        : "Connect Stellar wallet to pay"
+                      : isConnected
+                        ? "Pay with wallet"
+                        : "Connect wallet to pay"}
                 </button>
 
                 <div className="my-7 flex items-center gap-4 text-sm text-[#b2b6bf]">
@@ -953,7 +1324,7 @@ function CheckoutContent() {
                           </div>
                           <div>
                             <p className="text-sm font-medium text-[#1f232b]">
-                              Wallet transfer
+                              {isStellar ? "Stellar wallet transfer" : "Wallet transfer"}
                             </p>
                             <p className="text-xs text-[#7a7f89]">
                               Send {session.currency} to {recipientDisplayName}
@@ -1027,7 +1398,29 @@ function CheckoutContent() {
                     </p>
                   </div>
 
-                  {isConnected ? (
+                  {isStellar ? (
+                    stellar.isConnected ? (
+                      <div className="rounded-xl border border-[#dfe3ea] bg-[#fafbfc] px-4 py-3">
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium text-[#1f232b]">
+                              Connected Stellar wallet
+                            </p>
+                            <p className="mt-1 break-all font-mono text-xs text-[#70737d]">
+                              {stellar.address}
+                            </p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => void stellar.connect()}
+                            className="shrink-0 text-xs font-medium text-[#111827] hover:text-black"
+                          >
+                            Change
+                          </button>
+                        </div>
+                      </div>
+                    ) : null
+                  ) : isConnected ? (
                     <div className="rounded-xl border border-[#dfe3ea] bg-[#fafbfc] px-4 py-3">
                       <div className="flex items-center justify-between gap-3">
                         <div className="min-w-0">
@@ -1049,7 +1442,7 @@ function CheckoutContent() {
                     </div>
                   ) : null}
 
-                  {!isCorrectNetwork ? (
+                  {!isStellar && !isCorrectNetwork ? (
                     <div className="rounded-xl border border-warning/20 bg-warning/5 px-4 py-3 text-sm text-warning">
                       <div className="flex items-start gap-3">
                         <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />

@@ -42,6 +42,7 @@ export type WorkspaceEnvironmentMinAggregateOutputType = {
   name: string | null
   mode: $Enums.EnvironmentMode | null
   chainId: number | null
+  chainFamily: $Enums.ChainFamily | null
 }
 
 export type WorkspaceEnvironmentMaxAggregateOutputType = {
@@ -52,6 +53,7 @@ export type WorkspaceEnvironmentMaxAggregateOutputType = {
   name: string | null
   mode: $Enums.EnvironmentMode | null
   chainId: number | null
+  chainFamily: $Enums.ChainFamily | null
 }
 
 export type WorkspaceEnvironmentCountAggregateOutputType = {
@@ -62,6 +64,7 @@ export type WorkspaceEnvironmentCountAggregateOutputType = {
   name: number
   mode: number
   chainId: number
+  chainFamily: number
   _all: number
 }
 
@@ -82,6 +85,7 @@ export type WorkspaceEnvironmentMinAggregateInputType = {
   name?: true
   mode?: true
   chainId?: true
+  chainFamily?: true
 }
 
 export type WorkspaceEnvironmentMaxAggregateInputType = {
@@ -92,6 +96,7 @@ export type WorkspaceEnvironmentMaxAggregateInputType = {
   name?: true
   mode?: true
   chainId?: true
+  chainFamily?: true
 }
 
 export type WorkspaceEnvironmentCountAggregateInputType = {
@@ -102,6 +107,7 @@ export type WorkspaceEnvironmentCountAggregateInputType = {
   name?: true
   mode?: true
   chainId?: true
+  chainFamily?: true
   _all?: true
 }
 
@@ -199,6 +205,7 @@ export type WorkspaceEnvironmentGroupByOutputType = {
   name: string
   mode: $Enums.EnvironmentMode
   chainId: number
+  chainFamily: $Enums.ChainFamily
   _count: WorkspaceEnvironmentCountAggregateOutputType | null
   _avg: WorkspaceEnvironmentAvgAggregateOutputType | null
   _sum: WorkspaceEnvironmentSumAggregateOutputType | null
@@ -232,6 +239,7 @@ export type WorkspaceEnvironmentWhereInput = {
   name?: Prisma.StringFilter<"WorkspaceEnvironment"> | string
   mode?: Prisma.EnumEnvironmentModeFilter<"WorkspaceEnvironment"> | $Enums.EnvironmentMode
   chainId?: Prisma.IntFilter<"WorkspaceEnvironment"> | number
+  chainFamily?: Prisma.EnumChainFamilyFilter<"WorkspaceEnvironment"> | $Enums.ChainFamily
   team?: Prisma.XOR<Prisma.TeamScalarRelationFilter, Prisma.TeamWhereInput>
   authSessions?: Prisma.AuthSessionListRelationFilter
   catalogPlans?: Prisma.CatalogPlanListRelationFilter
@@ -268,6 +276,7 @@ export type WorkspaceEnvironmentOrderByWithRelationInput = {
   name?: Prisma.SortOrder
   mode?: Prisma.SortOrder
   chainId?: Prisma.SortOrder
+  chainFamily?: Prisma.SortOrder
   team?: Prisma.TeamOrderByWithRelationInput
   authSessions?: Prisma.AuthSessionOrderByRelationAggregateInput
   catalogPlans?: Prisma.CatalogPlanOrderByRelationAggregateInput
@@ -308,6 +317,7 @@ export type WorkspaceEnvironmentWhereUniqueInput = Prisma.AtLeast<{
   name?: Prisma.StringFilter<"WorkspaceEnvironment"> | string
   mode?: Prisma.EnumEnvironmentModeFilter<"WorkspaceEnvironment"> | $Enums.EnvironmentMode
   chainId?: Prisma.IntFilter<"WorkspaceEnvironment"> | number
+  chainFamily?: Prisma.EnumChainFamilyFilter<"WorkspaceEnvironment"> | $Enums.ChainFamily
   team?: Prisma.XOR<Prisma.TeamScalarRelationFilter, Prisma.TeamWhereInput>
   authSessions?: Prisma.AuthSessionListRelationFilter
   catalogPlans?: Prisma.CatalogPlanListRelationFilter
@@ -344,6 +354,7 @@ export type WorkspaceEnvironmentOrderByWithAggregationInput = {
   name?: Prisma.SortOrder
   mode?: Prisma.SortOrder
   chainId?: Prisma.SortOrder
+  chainFamily?: Prisma.SortOrder
   _count?: Prisma.WorkspaceEnvironmentCountOrderByAggregateInput
   _avg?: Prisma.WorkspaceEnvironmentAvgOrderByAggregateInput
   _max?: Prisma.WorkspaceEnvironmentMaxOrderByAggregateInput
@@ -362,6 +373,7 @@ export type WorkspaceEnvironmentScalarWhereWithAggregatesInput = {
   name?: Prisma.StringWithAggregatesFilter<"WorkspaceEnvironment"> | string
   mode?: Prisma.EnumEnvironmentModeWithAggregatesFilter<"WorkspaceEnvironment"> | $Enums.EnvironmentMode
   chainId?: Prisma.IntWithAggregatesFilter<"WorkspaceEnvironment"> | number
+  chainFamily?: Prisma.EnumChainFamilyWithAggregatesFilter<"WorkspaceEnvironment"> | $Enums.ChainFamily
 }
 
 export type WorkspaceEnvironmentCreateInput = {
@@ -371,6 +383,7 @@ export type WorkspaceEnvironmentCreateInput = {
   name: string
   mode: $Enums.EnvironmentMode
   chainId: number
+  chainFamily?: $Enums.ChainFamily
   team: Prisma.TeamCreateNestedOneWithoutEnvironmentsInput
   authSessions?: Prisma.AuthSessionCreateNestedManyWithoutActiveEnvironmentInput
   catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutEnvironmentInput
@@ -407,6 +420,7 @@ export type WorkspaceEnvironmentUncheckedCreateInput = {
   name: string
   mode: $Enums.EnvironmentMode
   chainId: number
+  chainFamily?: $Enums.ChainFamily
   authSessions?: Prisma.AuthSessionUncheckedCreateNestedManyWithoutActiveEnvironmentInput
   catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutEnvironmentInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedCreateNestedManyWithoutEnvironmentInput
@@ -441,6 +455,7 @@ export type WorkspaceEnvironmentUpdateInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   mode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
   chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  chainFamily?: Prisma.EnumChainFamilyFieldUpdateOperationsInput | $Enums.ChainFamily
   team?: Prisma.TeamUpdateOneRequiredWithoutEnvironmentsNestedInput
   authSessions?: Prisma.AuthSessionUpdateManyWithoutActiveEnvironmentNestedInput
   catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutEnvironmentNestedInput
@@ -477,6 +492,7 @@ export type WorkspaceEnvironmentUncheckedUpdateInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   mode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
   chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  chainFamily?: Prisma.EnumChainFamilyFieldUpdateOperationsInput | $Enums.ChainFamily
   authSessions?: Prisma.AuthSessionUncheckedUpdateManyWithoutActiveEnvironmentNestedInput
   catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutEnvironmentNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedUpdateManyWithoutEnvironmentNestedInput
@@ -512,6 +528,7 @@ export type WorkspaceEnvironmentCreateManyInput = {
   name: string
   mode: $Enums.EnvironmentMode
   chainId: number
+  chainFamily?: $Enums.ChainFamily
 }
 
 export type WorkspaceEnvironmentUpdateManyMutationInput = {
@@ -521,6 +538,7 @@ export type WorkspaceEnvironmentUpdateManyMutationInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   mode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
   chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  chainFamily?: Prisma.EnumChainFamilyFieldUpdateOperationsInput | $Enums.ChainFamily
 }
 
 export type WorkspaceEnvironmentUncheckedUpdateManyInput = {
@@ -531,6 +549,7 @@ export type WorkspaceEnvironmentUncheckedUpdateManyInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   mode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
   chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  chainFamily?: Prisma.EnumChainFamilyFieldUpdateOperationsInput | $Enums.ChainFamily
 }
 
 export type WorkspaceEnvironmentNullableScalarRelationFilter = {
@@ -561,6 +580,7 @@ export type WorkspaceEnvironmentCountOrderByAggregateInput = {
   name?: Prisma.SortOrder
   mode?: Prisma.SortOrder
   chainId?: Prisma.SortOrder
+  chainFamily?: Prisma.SortOrder
 }
 
 export type WorkspaceEnvironmentAvgOrderByAggregateInput = {
@@ -575,6 +595,7 @@ export type WorkspaceEnvironmentMaxOrderByAggregateInput = {
   name?: Prisma.SortOrder
   mode?: Prisma.SortOrder
   chainId?: Prisma.SortOrder
+  chainFamily?: Prisma.SortOrder
 }
 
 export type WorkspaceEnvironmentMinOrderByAggregateInput = {
@@ -585,6 +606,7 @@ export type WorkspaceEnvironmentMinOrderByAggregateInput = {
   name?: Prisma.SortOrder
   mode?: Prisma.SortOrder
   chainId?: Prisma.SortOrder
+  chainFamily?: Prisma.SortOrder
 }
 
 export type WorkspaceEnvironmentSumOrderByAggregateInput = {
@@ -652,6 +674,10 @@ export type WorkspaceEnvironmentUncheckedUpdateManyWithoutTeamNestedInput = {
   update?: Prisma.WorkspaceEnvironmentUpdateWithWhereUniqueWithoutTeamInput | Prisma.WorkspaceEnvironmentUpdateWithWhereUniqueWithoutTeamInput[]
   updateMany?: Prisma.WorkspaceEnvironmentUpdateManyWithWhereWithoutTeamInput | Prisma.WorkspaceEnvironmentUpdateManyWithWhereWithoutTeamInput[]
   deleteMany?: Prisma.WorkspaceEnvironmentScalarWhereInput | Prisma.WorkspaceEnvironmentScalarWhereInput[]
+}
+
+export type EnumChainFamilyFieldUpdateOperationsInput = {
+  set?: $Enums.ChainFamily
 }
 
 export type WorkspaceEnvironmentCreateNestedOneWithoutProviderProfilesInput = {
@@ -1039,6 +1065,7 @@ export type WorkspaceEnvironmentCreateWithoutAuthSessionsInput = {
   name: string
   mode: $Enums.EnvironmentMode
   chainId: number
+  chainFamily?: $Enums.ChainFamily
   team: Prisma.TeamCreateNestedOneWithoutEnvironmentsInput
   catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutEnvironmentInput
   catalogAddOns?: Prisma.CatalogAddOnCreateNestedManyWithoutEnvironmentInput
@@ -1074,6 +1101,7 @@ export type WorkspaceEnvironmentUncheckedCreateWithoutAuthSessionsInput = {
   name: string
   mode: $Enums.EnvironmentMode
   chainId: number
+  chainFamily?: $Enums.ChainFamily
   catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutEnvironmentInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedCreateNestedManyWithoutEnvironmentInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedCreateNestedManyWithoutEnvironmentInput
@@ -1123,6 +1151,7 @@ export type WorkspaceEnvironmentUpdateWithoutAuthSessionsInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   mode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
   chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  chainFamily?: Prisma.EnumChainFamilyFieldUpdateOperationsInput | $Enums.ChainFamily
   team?: Prisma.TeamUpdateOneRequiredWithoutEnvironmentsNestedInput
   catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutEnvironmentNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUpdateManyWithoutEnvironmentNestedInput
@@ -1158,6 +1187,7 @@ export type WorkspaceEnvironmentUncheckedUpdateWithoutAuthSessionsInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   mode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
   chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  chainFamily?: Prisma.EnumChainFamilyFieldUpdateOperationsInput | $Enums.ChainFamily
   catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutEnvironmentNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedUpdateManyWithoutEnvironmentNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedUpdateManyWithoutEnvironmentNestedInput
@@ -1191,6 +1221,7 @@ export type WorkspaceEnvironmentCreateWithoutTeamInput = {
   name: string
   mode: $Enums.EnvironmentMode
   chainId: number
+  chainFamily?: $Enums.ChainFamily
   authSessions?: Prisma.AuthSessionCreateNestedManyWithoutActiveEnvironmentInput
   catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutEnvironmentInput
   catalogAddOns?: Prisma.CatalogAddOnCreateNestedManyWithoutEnvironmentInput
@@ -1225,6 +1256,7 @@ export type WorkspaceEnvironmentUncheckedCreateWithoutTeamInput = {
   name: string
   mode: $Enums.EnvironmentMode
   chainId: number
+  chainFamily?: $Enums.ChainFamily
   authSessions?: Prisma.AuthSessionUncheckedCreateNestedManyWithoutActiveEnvironmentInput
   catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutEnvironmentInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedCreateNestedManyWithoutEnvironmentInput
@@ -1289,6 +1321,7 @@ export type WorkspaceEnvironmentScalarWhereInput = {
   name?: Prisma.StringFilter<"WorkspaceEnvironment"> | string
   mode?: Prisma.EnumEnvironmentModeFilter<"WorkspaceEnvironment"> | $Enums.EnvironmentMode
   chainId?: Prisma.IntFilter<"WorkspaceEnvironment"> | number
+  chainFamily?: Prisma.EnumChainFamilyFilter<"WorkspaceEnvironment"> | $Enums.ChainFamily
 }
 
 export type WorkspaceEnvironmentCreateWithoutProviderProfilesInput = {
@@ -1298,6 +1331,7 @@ export type WorkspaceEnvironmentCreateWithoutProviderProfilesInput = {
   name: string
   mode: $Enums.EnvironmentMode
   chainId: number
+  chainFamily?: $Enums.ChainFamily
   team: Prisma.TeamCreateNestedOneWithoutEnvironmentsInput
   authSessions?: Prisma.AuthSessionCreateNestedManyWithoutActiveEnvironmentInput
   catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutEnvironmentInput
@@ -1333,6 +1367,7 @@ export type WorkspaceEnvironmentUncheckedCreateWithoutProviderProfilesInput = {
   name: string
   mode: $Enums.EnvironmentMode
   chainId: number
+  chainFamily?: $Enums.ChainFamily
   authSessions?: Prisma.AuthSessionUncheckedCreateNestedManyWithoutActiveEnvironmentInput
   catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutEnvironmentInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedCreateNestedManyWithoutEnvironmentInput
@@ -1382,6 +1417,7 @@ export type WorkspaceEnvironmentUpdateWithoutProviderProfilesInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   mode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
   chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  chainFamily?: Prisma.EnumChainFamilyFieldUpdateOperationsInput | $Enums.ChainFamily
   team?: Prisma.TeamUpdateOneRequiredWithoutEnvironmentsNestedInput
   authSessions?: Prisma.AuthSessionUpdateManyWithoutActiveEnvironmentNestedInput
   catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutEnvironmentNestedInput
@@ -1417,6 +1453,7 @@ export type WorkspaceEnvironmentUncheckedUpdateWithoutProviderProfilesInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   mode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
   chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  chainFamily?: Prisma.EnumChainFamilyFieldUpdateOperationsInput | $Enums.ChainFamily
   authSessions?: Prisma.AuthSessionUncheckedUpdateManyWithoutActiveEnvironmentNestedInput
   catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutEnvironmentNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedUpdateManyWithoutEnvironmentNestedInput
@@ -1450,6 +1487,7 @@ export type WorkspaceEnvironmentCreateWithoutCatalogPlansInput = {
   name: string
   mode: $Enums.EnvironmentMode
   chainId: number
+  chainFamily?: $Enums.ChainFamily
   team: Prisma.TeamCreateNestedOneWithoutEnvironmentsInput
   authSessions?: Prisma.AuthSessionCreateNestedManyWithoutActiveEnvironmentInput
   catalogAddOns?: Prisma.CatalogAddOnCreateNestedManyWithoutEnvironmentInput
@@ -1485,6 +1523,7 @@ export type WorkspaceEnvironmentUncheckedCreateWithoutCatalogPlansInput = {
   name: string
   mode: $Enums.EnvironmentMode
   chainId: number
+  chainFamily?: $Enums.ChainFamily
   authSessions?: Prisma.AuthSessionUncheckedCreateNestedManyWithoutActiveEnvironmentInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedCreateNestedManyWithoutEnvironmentInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedCreateNestedManyWithoutEnvironmentInput
@@ -1534,6 +1573,7 @@ export type WorkspaceEnvironmentUpdateWithoutCatalogPlansInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   mode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
   chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  chainFamily?: Prisma.EnumChainFamilyFieldUpdateOperationsInput | $Enums.ChainFamily
   team?: Prisma.TeamUpdateOneRequiredWithoutEnvironmentsNestedInput
   authSessions?: Prisma.AuthSessionUpdateManyWithoutActiveEnvironmentNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUpdateManyWithoutEnvironmentNestedInput
@@ -1569,6 +1609,7 @@ export type WorkspaceEnvironmentUncheckedUpdateWithoutCatalogPlansInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   mode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
   chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  chainFamily?: Prisma.EnumChainFamilyFieldUpdateOperationsInput | $Enums.ChainFamily
   authSessions?: Prisma.AuthSessionUncheckedUpdateManyWithoutActiveEnvironmentNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedUpdateManyWithoutEnvironmentNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedUpdateManyWithoutEnvironmentNestedInput
@@ -1602,6 +1643,7 @@ export type WorkspaceEnvironmentCreateWithoutCatalogAddOnsInput = {
   name: string
   mode: $Enums.EnvironmentMode
   chainId: number
+  chainFamily?: $Enums.ChainFamily
   team: Prisma.TeamCreateNestedOneWithoutEnvironmentsInput
   authSessions?: Prisma.AuthSessionCreateNestedManyWithoutActiveEnvironmentInput
   catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutEnvironmentInput
@@ -1637,6 +1679,7 @@ export type WorkspaceEnvironmentUncheckedCreateWithoutCatalogAddOnsInput = {
   name: string
   mode: $Enums.EnvironmentMode
   chainId: number
+  chainFamily?: $Enums.ChainFamily
   authSessions?: Prisma.AuthSessionUncheckedCreateNestedManyWithoutActiveEnvironmentInput
   catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutEnvironmentInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedCreateNestedManyWithoutEnvironmentInput
@@ -1686,6 +1729,7 @@ export type WorkspaceEnvironmentUpdateWithoutCatalogAddOnsInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   mode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
   chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  chainFamily?: Prisma.EnumChainFamilyFieldUpdateOperationsInput | $Enums.ChainFamily
   team?: Prisma.TeamUpdateOneRequiredWithoutEnvironmentsNestedInput
   authSessions?: Prisma.AuthSessionUpdateManyWithoutActiveEnvironmentNestedInput
   catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutEnvironmentNestedInput
@@ -1721,6 +1765,7 @@ export type WorkspaceEnvironmentUncheckedUpdateWithoutCatalogAddOnsInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   mode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
   chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  chainFamily?: Prisma.EnumChainFamilyFieldUpdateOperationsInput | $Enums.ChainFamily
   authSessions?: Prisma.AuthSessionUncheckedUpdateManyWithoutActiveEnvironmentNestedInput
   catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutEnvironmentNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedUpdateManyWithoutEnvironmentNestedInput
@@ -1754,6 +1799,7 @@ export type WorkspaceEnvironmentCreateWithoutCatalogCreditTypesInput = {
   name: string
   mode: $Enums.EnvironmentMode
   chainId: number
+  chainFamily?: $Enums.ChainFamily
   team: Prisma.TeamCreateNestedOneWithoutEnvironmentsInput
   authSessions?: Prisma.AuthSessionCreateNestedManyWithoutActiveEnvironmentInput
   catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutEnvironmentInput
@@ -1789,6 +1835,7 @@ export type WorkspaceEnvironmentUncheckedCreateWithoutCatalogCreditTypesInput = 
   name: string
   mode: $Enums.EnvironmentMode
   chainId: number
+  chainFamily?: $Enums.ChainFamily
   authSessions?: Prisma.AuthSessionUncheckedCreateNestedManyWithoutActiveEnvironmentInput
   catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutEnvironmentInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedCreateNestedManyWithoutEnvironmentInput
@@ -1838,6 +1885,7 @@ export type WorkspaceEnvironmentUpdateWithoutCatalogCreditTypesInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   mode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
   chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  chainFamily?: Prisma.EnumChainFamilyFieldUpdateOperationsInput | $Enums.ChainFamily
   team?: Prisma.TeamUpdateOneRequiredWithoutEnvironmentsNestedInput
   authSessions?: Prisma.AuthSessionUpdateManyWithoutActiveEnvironmentNestedInput
   catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutEnvironmentNestedInput
@@ -1873,6 +1921,7 @@ export type WorkspaceEnvironmentUncheckedUpdateWithoutCatalogCreditTypesInput = 
   name?: Prisma.StringFieldUpdateOperationsInput | string
   mode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
   chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  chainFamily?: Prisma.EnumChainFamilyFieldUpdateOperationsInput | $Enums.ChainFamily
   authSessions?: Prisma.AuthSessionUncheckedUpdateManyWithoutActiveEnvironmentNestedInput
   catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutEnvironmentNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedUpdateManyWithoutEnvironmentNestedInput
@@ -1906,6 +1955,7 @@ export type WorkspaceEnvironmentCreateWithoutCatalogVersionsInput = {
   name: string
   mode: $Enums.EnvironmentMode
   chainId: number
+  chainFamily?: $Enums.ChainFamily
   team: Prisma.TeamCreateNestedOneWithoutEnvironmentsInput
   authSessions?: Prisma.AuthSessionCreateNestedManyWithoutActiveEnvironmentInput
   catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutEnvironmentInput
@@ -1941,6 +1991,7 @@ export type WorkspaceEnvironmentUncheckedCreateWithoutCatalogVersionsInput = {
   name: string
   mode: $Enums.EnvironmentMode
   chainId: number
+  chainFamily?: $Enums.ChainFamily
   authSessions?: Prisma.AuthSessionUncheckedCreateNestedManyWithoutActiveEnvironmentInput
   catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutEnvironmentInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedCreateNestedManyWithoutEnvironmentInput
@@ -1990,6 +2041,7 @@ export type WorkspaceEnvironmentUpdateWithoutCatalogVersionsInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   mode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
   chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  chainFamily?: Prisma.EnumChainFamilyFieldUpdateOperationsInput | $Enums.ChainFamily
   team?: Prisma.TeamUpdateOneRequiredWithoutEnvironmentsNestedInput
   authSessions?: Prisma.AuthSessionUpdateManyWithoutActiveEnvironmentNestedInput
   catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutEnvironmentNestedInput
@@ -2025,6 +2077,7 @@ export type WorkspaceEnvironmentUncheckedUpdateWithoutCatalogVersionsInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   mode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
   chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  chainFamily?: Prisma.EnumChainFamilyFieldUpdateOperationsInput | $Enums.ChainFamily
   authSessions?: Prisma.AuthSessionUncheckedUpdateManyWithoutActiveEnvironmentNestedInput
   catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutEnvironmentNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedUpdateManyWithoutEnvironmentNestedInput
@@ -2058,6 +2111,7 @@ export type WorkspaceEnvironmentCreateWithoutCatalogConfigsInput = {
   name: string
   mode: $Enums.EnvironmentMode
   chainId: number
+  chainFamily?: $Enums.ChainFamily
   team: Prisma.TeamCreateNestedOneWithoutEnvironmentsInput
   authSessions?: Prisma.AuthSessionCreateNestedManyWithoutActiveEnvironmentInput
   catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutEnvironmentInput
@@ -2093,6 +2147,7 @@ export type WorkspaceEnvironmentUncheckedCreateWithoutCatalogConfigsInput = {
   name: string
   mode: $Enums.EnvironmentMode
   chainId: number
+  chainFamily?: $Enums.ChainFamily
   authSessions?: Prisma.AuthSessionUncheckedCreateNestedManyWithoutActiveEnvironmentInput
   catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutEnvironmentInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedCreateNestedManyWithoutEnvironmentInput
@@ -2142,6 +2197,7 @@ export type WorkspaceEnvironmentUpdateWithoutCatalogConfigsInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   mode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
   chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  chainFamily?: Prisma.EnumChainFamilyFieldUpdateOperationsInput | $Enums.ChainFamily
   team?: Prisma.TeamUpdateOneRequiredWithoutEnvironmentsNestedInput
   authSessions?: Prisma.AuthSessionUpdateManyWithoutActiveEnvironmentNestedInput
   catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutEnvironmentNestedInput
@@ -2177,6 +2233,7 @@ export type WorkspaceEnvironmentUncheckedUpdateWithoutCatalogConfigsInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   mode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
   chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  chainFamily?: Prisma.EnumChainFamilyFieldUpdateOperationsInput | $Enums.ChainFamily
   authSessions?: Prisma.AuthSessionUncheckedUpdateManyWithoutActiveEnvironmentNestedInput
   catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutEnvironmentNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedUpdateManyWithoutEnvironmentNestedInput
@@ -2210,6 +2267,7 @@ export type WorkspaceEnvironmentCreateWithoutTemplateInstallsInput = {
   name: string
   mode: $Enums.EnvironmentMode
   chainId: number
+  chainFamily?: $Enums.ChainFamily
   team: Prisma.TeamCreateNestedOneWithoutEnvironmentsInput
   authSessions?: Prisma.AuthSessionCreateNestedManyWithoutActiveEnvironmentInput
   catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutEnvironmentInput
@@ -2245,6 +2303,7 @@ export type WorkspaceEnvironmentUncheckedCreateWithoutTemplateInstallsInput = {
   name: string
   mode: $Enums.EnvironmentMode
   chainId: number
+  chainFamily?: $Enums.ChainFamily
   authSessions?: Prisma.AuthSessionUncheckedCreateNestedManyWithoutActiveEnvironmentInput
   catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutEnvironmentInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedCreateNestedManyWithoutEnvironmentInput
@@ -2294,6 +2353,7 @@ export type WorkspaceEnvironmentUpdateWithoutTemplateInstallsInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   mode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
   chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  chainFamily?: Prisma.EnumChainFamilyFieldUpdateOperationsInput | $Enums.ChainFamily
   team?: Prisma.TeamUpdateOneRequiredWithoutEnvironmentsNestedInput
   authSessions?: Prisma.AuthSessionUpdateManyWithoutActiveEnvironmentNestedInput
   catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutEnvironmentNestedInput
@@ -2329,6 +2389,7 @@ export type WorkspaceEnvironmentUncheckedUpdateWithoutTemplateInstallsInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   mode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
   chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  chainFamily?: Prisma.EnumChainFamilyFieldUpdateOperationsInput | $Enums.ChainFamily
   authSessions?: Prisma.AuthSessionUncheckedUpdateManyWithoutActiveEnvironmentNestedInput
   catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutEnvironmentNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedUpdateManyWithoutEnvironmentNestedInput
@@ -2362,6 +2423,7 @@ export type WorkspaceEnvironmentCreateWithoutInvoicesInput = {
   name: string
   mode: $Enums.EnvironmentMode
   chainId: number
+  chainFamily?: $Enums.ChainFamily
   team: Prisma.TeamCreateNestedOneWithoutEnvironmentsInput
   authSessions?: Prisma.AuthSessionCreateNestedManyWithoutActiveEnvironmentInput
   catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutEnvironmentInput
@@ -2397,6 +2459,7 @@ export type WorkspaceEnvironmentUncheckedCreateWithoutInvoicesInput = {
   name: string
   mode: $Enums.EnvironmentMode
   chainId: number
+  chainFamily?: $Enums.ChainFamily
   authSessions?: Prisma.AuthSessionUncheckedCreateNestedManyWithoutActiveEnvironmentInput
   catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutEnvironmentInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedCreateNestedManyWithoutEnvironmentInput
@@ -2446,6 +2509,7 @@ export type WorkspaceEnvironmentUpdateWithoutInvoicesInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   mode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
   chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  chainFamily?: Prisma.EnumChainFamilyFieldUpdateOperationsInput | $Enums.ChainFamily
   team?: Prisma.TeamUpdateOneRequiredWithoutEnvironmentsNestedInput
   authSessions?: Prisma.AuthSessionUpdateManyWithoutActiveEnvironmentNestedInput
   catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutEnvironmentNestedInput
@@ -2481,6 +2545,7 @@ export type WorkspaceEnvironmentUncheckedUpdateWithoutInvoicesInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   mode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
   chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  chainFamily?: Prisma.EnumChainFamilyFieldUpdateOperationsInput | $Enums.ChainFamily
   authSessions?: Prisma.AuthSessionUncheckedUpdateManyWithoutActiveEnvironmentNestedInput
   catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutEnvironmentNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedUpdateManyWithoutEnvironmentNestedInput
@@ -2514,6 +2579,7 @@ export type WorkspaceEnvironmentCreateWithoutSubscriptionStatesInput = {
   name: string
   mode: $Enums.EnvironmentMode
   chainId: number
+  chainFamily?: $Enums.ChainFamily
   team: Prisma.TeamCreateNestedOneWithoutEnvironmentsInput
   authSessions?: Prisma.AuthSessionCreateNestedManyWithoutActiveEnvironmentInput
   catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutEnvironmentInput
@@ -2549,6 +2615,7 @@ export type WorkspaceEnvironmentUncheckedCreateWithoutSubscriptionStatesInput = 
   name: string
   mode: $Enums.EnvironmentMode
   chainId: number
+  chainFamily?: $Enums.ChainFamily
   authSessions?: Prisma.AuthSessionUncheckedCreateNestedManyWithoutActiveEnvironmentInput
   catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutEnvironmentInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedCreateNestedManyWithoutEnvironmentInput
@@ -2598,6 +2665,7 @@ export type WorkspaceEnvironmentUpdateWithoutSubscriptionStatesInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   mode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
   chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  chainFamily?: Prisma.EnumChainFamilyFieldUpdateOperationsInput | $Enums.ChainFamily
   team?: Prisma.TeamUpdateOneRequiredWithoutEnvironmentsNestedInput
   authSessions?: Prisma.AuthSessionUpdateManyWithoutActiveEnvironmentNestedInput
   catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutEnvironmentNestedInput
@@ -2633,6 +2701,7 @@ export type WorkspaceEnvironmentUncheckedUpdateWithoutSubscriptionStatesInput = 
   name?: Prisma.StringFieldUpdateOperationsInput | string
   mode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
   chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  chainFamily?: Prisma.EnumChainFamilyFieldUpdateOperationsInput | $Enums.ChainFamily
   authSessions?: Prisma.AuthSessionUncheckedUpdateManyWithoutActiveEnvironmentNestedInput
   catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutEnvironmentNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedUpdateManyWithoutEnvironmentNestedInput
@@ -2666,6 +2735,7 @@ export type WorkspaceEnvironmentCreateWithoutSubscriptionChangeRequestsInput = {
   name: string
   mode: $Enums.EnvironmentMode
   chainId: number
+  chainFamily?: $Enums.ChainFamily
   team: Prisma.TeamCreateNestedOneWithoutEnvironmentsInput
   authSessions?: Prisma.AuthSessionCreateNestedManyWithoutActiveEnvironmentInput
   catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutEnvironmentInput
@@ -2701,6 +2771,7 @@ export type WorkspaceEnvironmentUncheckedCreateWithoutSubscriptionChangeRequests
   name: string
   mode: $Enums.EnvironmentMode
   chainId: number
+  chainFamily?: $Enums.ChainFamily
   authSessions?: Prisma.AuthSessionUncheckedCreateNestedManyWithoutActiveEnvironmentInput
   catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutEnvironmentInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedCreateNestedManyWithoutEnvironmentInput
@@ -2750,6 +2821,7 @@ export type WorkspaceEnvironmentUpdateWithoutSubscriptionChangeRequestsInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   mode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
   chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  chainFamily?: Prisma.EnumChainFamilyFieldUpdateOperationsInput | $Enums.ChainFamily
   team?: Prisma.TeamUpdateOneRequiredWithoutEnvironmentsNestedInput
   authSessions?: Prisma.AuthSessionUpdateManyWithoutActiveEnvironmentNestedInput
   catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutEnvironmentNestedInput
@@ -2785,6 +2857,7 @@ export type WorkspaceEnvironmentUncheckedUpdateWithoutSubscriptionChangeRequests
   name?: Prisma.StringFieldUpdateOperationsInput | string
   mode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
   chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  chainFamily?: Prisma.EnumChainFamilyFieldUpdateOperationsInput | $Enums.ChainFamily
   authSessions?: Prisma.AuthSessionUncheckedUpdateManyWithoutActiveEnvironmentNestedInput
   catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutEnvironmentNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedUpdateManyWithoutEnvironmentNestedInput
@@ -2818,6 +2891,7 @@ export type WorkspaceEnvironmentCreateWithoutPaymentsInput = {
   name: string
   mode: $Enums.EnvironmentMode
   chainId: number
+  chainFamily?: $Enums.ChainFamily
   team: Prisma.TeamCreateNestedOneWithoutEnvironmentsInput
   authSessions?: Prisma.AuthSessionCreateNestedManyWithoutActiveEnvironmentInput
   catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutEnvironmentInput
@@ -2853,6 +2927,7 @@ export type WorkspaceEnvironmentUncheckedCreateWithoutPaymentsInput = {
   name: string
   mode: $Enums.EnvironmentMode
   chainId: number
+  chainFamily?: $Enums.ChainFamily
   authSessions?: Prisma.AuthSessionUncheckedCreateNestedManyWithoutActiveEnvironmentInput
   catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutEnvironmentInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedCreateNestedManyWithoutEnvironmentInput
@@ -2902,6 +2977,7 @@ export type WorkspaceEnvironmentUpdateWithoutPaymentsInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   mode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
   chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  chainFamily?: Prisma.EnumChainFamilyFieldUpdateOperationsInput | $Enums.ChainFamily
   team?: Prisma.TeamUpdateOneRequiredWithoutEnvironmentsNestedInput
   authSessions?: Prisma.AuthSessionUpdateManyWithoutActiveEnvironmentNestedInput
   catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutEnvironmentNestedInput
@@ -2937,6 +3013,7 @@ export type WorkspaceEnvironmentUncheckedUpdateWithoutPaymentsInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   mode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
   chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  chainFamily?: Prisma.EnumChainFamilyFieldUpdateOperationsInput | $Enums.ChainFamily
   authSessions?: Prisma.AuthSessionUncheckedUpdateManyWithoutActiveEnvironmentNestedInput
   catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutEnvironmentNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedUpdateManyWithoutEnvironmentNestedInput
@@ -2970,6 +3047,7 @@ export type WorkspaceEnvironmentCreateWithoutPlatformBillingPlansInput = {
   name: string
   mode: $Enums.EnvironmentMode
   chainId: number
+  chainFamily?: $Enums.ChainFamily
   team: Prisma.TeamCreateNestedOneWithoutEnvironmentsInput
   authSessions?: Prisma.AuthSessionCreateNestedManyWithoutActiveEnvironmentInput
   catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutEnvironmentInput
@@ -3005,6 +3083,7 @@ export type WorkspaceEnvironmentUncheckedCreateWithoutPlatformBillingPlansInput 
   name: string
   mode: $Enums.EnvironmentMode
   chainId: number
+  chainFamily?: $Enums.ChainFamily
   authSessions?: Prisma.AuthSessionUncheckedCreateNestedManyWithoutActiveEnvironmentInput
   catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutEnvironmentInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedCreateNestedManyWithoutEnvironmentInput
@@ -3054,6 +3133,7 @@ export type WorkspaceEnvironmentUpdateWithoutPlatformBillingPlansInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   mode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
   chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  chainFamily?: Prisma.EnumChainFamilyFieldUpdateOperationsInput | $Enums.ChainFamily
   team?: Prisma.TeamUpdateOneRequiredWithoutEnvironmentsNestedInput
   authSessions?: Prisma.AuthSessionUpdateManyWithoutActiveEnvironmentNestedInput
   catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutEnvironmentNestedInput
@@ -3089,6 +3169,7 @@ export type WorkspaceEnvironmentUncheckedUpdateWithoutPlatformBillingPlansInput 
   name?: Prisma.StringFieldUpdateOperationsInput | string
   mode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
   chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  chainFamily?: Prisma.EnumChainFamilyFieldUpdateOperationsInput | $Enums.ChainFamily
   authSessions?: Prisma.AuthSessionUncheckedUpdateManyWithoutActiveEnvironmentNestedInput
   catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutEnvironmentNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedUpdateManyWithoutEnvironmentNestedInput
@@ -3122,6 +3203,7 @@ export type WorkspaceEnvironmentCreateWithoutPlatformBillingAccountInput = {
   name: string
   mode: $Enums.EnvironmentMode
   chainId: number
+  chainFamily?: $Enums.ChainFamily
   team: Prisma.TeamCreateNestedOneWithoutEnvironmentsInput
   authSessions?: Prisma.AuthSessionCreateNestedManyWithoutActiveEnvironmentInput
   catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutEnvironmentInput
@@ -3157,6 +3239,7 @@ export type WorkspaceEnvironmentUncheckedCreateWithoutPlatformBillingAccountInpu
   name: string
   mode: $Enums.EnvironmentMode
   chainId: number
+  chainFamily?: $Enums.ChainFamily
   authSessions?: Prisma.AuthSessionUncheckedCreateNestedManyWithoutActiveEnvironmentInput
   catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutEnvironmentInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedCreateNestedManyWithoutEnvironmentInput
@@ -3206,6 +3289,7 @@ export type WorkspaceEnvironmentUpdateWithoutPlatformBillingAccountInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   mode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
   chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  chainFamily?: Prisma.EnumChainFamilyFieldUpdateOperationsInput | $Enums.ChainFamily
   team?: Prisma.TeamUpdateOneRequiredWithoutEnvironmentsNestedInput
   authSessions?: Prisma.AuthSessionUpdateManyWithoutActiveEnvironmentNestedInput
   catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutEnvironmentNestedInput
@@ -3241,6 +3325,7 @@ export type WorkspaceEnvironmentUncheckedUpdateWithoutPlatformBillingAccountInpu
   name?: Prisma.StringFieldUpdateOperationsInput | string
   mode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
   chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  chainFamily?: Prisma.EnumChainFamilyFieldUpdateOperationsInput | $Enums.ChainFamily
   authSessions?: Prisma.AuthSessionUncheckedUpdateManyWithoutActiveEnvironmentNestedInput
   catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutEnvironmentNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedUpdateManyWithoutEnvironmentNestedInput
@@ -3274,6 +3359,7 @@ export type WorkspaceEnvironmentCreateWithoutPlatformBillingCustomersInput = {
   name: string
   mode: $Enums.EnvironmentMode
   chainId: number
+  chainFamily?: $Enums.ChainFamily
   team: Prisma.TeamCreateNestedOneWithoutEnvironmentsInput
   authSessions?: Prisma.AuthSessionCreateNestedManyWithoutActiveEnvironmentInput
   catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutEnvironmentInput
@@ -3309,6 +3395,7 @@ export type WorkspaceEnvironmentUncheckedCreateWithoutPlatformBillingCustomersIn
   name: string
   mode: $Enums.EnvironmentMode
   chainId: number
+  chainFamily?: $Enums.ChainFamily
   authSessions?: Prisma.AuthSessionUncheckedCreateNestedManyWithoutActiveEnvironmentInput
   catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutEnvironmentInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedCreateNestedManyWithoutEnvironmentInput
@@ -3358,6 +3445,7 @@ export type WorkspaceEnvironmentUpdateWithoutPlatformBillingCustomersInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   mode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
   chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  chainFamily?: Prisma.EnumChainFamilyFieldUpdateOperationsInput | $Enums.ChainFamily
   team?: Prisma.TeamUpdateOneRequiredWithoutEnvironmentsNestedInput
   authSessions?: Prisma.AuthSessionUpdateManyWithoutActiveEnvironmentNestedInput
   catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutEnvironmentNestedInput
@@ -3393,6 +3481,7 @@ export type WorkspaceEnvironmentUncheckedUpdateWithoutPlatformBillingCustomersIn
   name?: Prisma.StringFieldUpdateOperationsInput | string
   mode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
   chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  chainFamily?: Prisma.EnumChainFamilyFieldUpdateOperationsInput | $Enums.ChainFamily
   authSessions?: Prisma.AuthSessionUncheckedUpdateManyWithoutActiveEnvironmentNestedInput
   catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutEnvironmentNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedUpdateManyWithoutEnvironmentNestedInput
@@ -3426,6 +3515,7 @@ export type WorkspaceEnvironmentCreateWithoutArcenCompaniesInput = {
   name: string
   mode: $Enums.EnvironmentMode
   chainId: number
+  chainFamily?: $Enums.ChainFamily
   team: Prisma.TeamCreateNestedOneWithoutEnvironmentsInput
   authSessions?: Prisma.AuthSessionCreateNestedManyWithoutActiveEnvironmentInput
   catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutEnvironmentInput
@@ -3461,6 +3551,7 @@ export type WorkspaceEnvironmentUncheckedCreateWithoutArcenCompaniesInput = {
   name: string
   mode: $Enums.EnvironmentMode
   chainId: number
+  chainFamily?: $Enums.ChainFamily
   authSessions?: Prisma.AuthSessionUncheckedCreateNestedManyWithoutActiveEnvironmentInput
   catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutEnvironmentInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedCreateNestedManyWithoutEnvironmentInput
@@ -3510,6 +3601,7 @@ export type WorkspaceEnvironmentUpdateWithoutArcenCompaniesInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   mode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
   chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  chainFamily?: Prisma.EnumChainFamilyFieldUpdateOperationsInput | $Enums.ChainFamily
   team?: Prisma.TeamUpdateOneRequiredWithoutEnvironmentsNestedInput
   authSessions?: Prisma.AuthSessionUpdateManyWithoutActiveEnvironmentNestedInput
   catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutEnvironmentNestedInput
@@ -3545,6 +3637,7 @@ export type WorkspaceEnvironmentUncheckedUpdateWithoutArcenCompaniesInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   mode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
   chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  chainFamily?: Prisma.EnumChainFamilyFieldUpdateOperationsInput | $Enums.ChainFamily
   authSessions?: Prisma.AuthSessionUncheckedUpdateManyWithoutActiveEnvironmentNestedInput
   catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutEnvironmentNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedUpdateManyWithoutEnvironmentNestedInput
@@ -3578,6 +3671,7 @@ export type WorkspaceEnvironmentCreateWithoutArcenUsersInput = {
   name: string
   mode: $Enums.EnvironmentMode
   chainId: number
+  chainFamily?: $Enums.ChainFamily
   team: Prisma.TeamCreateNestedOneWithoutEnvironmentsInput
   authSessions?: Prisma.AuthSessionCreateNestedManyWithoutActiveEnvironmentInput
   catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutEnvironmentInput
@@ -3613,6 +3707,7 @@ export type WorkspaceEnvironmentUncheckedCreateWithoutArcenUsersInput = {
   name: string
   mode: $Enums.EnvironmentMode
   chainId: number
+  chainFamily?: $Enums.ChainFamily
   authSessions?: Prisma.AuthSessionUncheckedCreateNestedManyWithoutActiveEnvironmentInput
   catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutEnvironmentInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedCreateNestedManyWithoutEnvironmentInput
@@ -3662,6 +3757,7 @@ export type WorkspaceEnvironmentUpdateWithoutArcenUsersInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   mode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
   chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  chainFamily?: Prisma.EnumChainFamilyFieldUpdateOperationsInput | $Enums.ChainFamily
   team?: Prisma.TeamUpdateOneRequiredWithoutEnvironmentsNestedInput
   authSessions?: Prisma.AuthSessionUpdateManyWithoutActiveEnvironmentNestedInput
   catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutEnvironmentNestedInput
@@ -3697,6 +3793,7 @@ export type WorkspaceEnvironmentUncheckedUpdateWithoutArcenUsersInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   mode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
   chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  chainFamily?: Prisma.EnumChainFamilyFieldUpdateOperationsInput | $Enums.ChainFamily
   authSessions?: Prisma.AuthSessionUncheckedUpdateManyWithoutActiveEnvironmentNestedInput
   catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutEnvironmentNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedUpdateManyWithoutEnvironmentNestedInput
@@ -3730,6 +3827,7 @@ export type WorkspaceEnvironmentCreateWithoutArcenEventsInput = {
   name: string
   mode: $Enums.EnvironmentMode
   chainId: number
+  chainFamily?: $Enums.ChainFamily
   team: Prisma.TeamCreateNestedOneWithoutEnvironmentsInput
   authSessions?: Prisma.AuthSessionCreateNestedManyWithoutActiveEnvironmentInput
   catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutEnvironmentInput
@@ -3765,6 +3863,7 @@ export type WorkspaceEnvironmentUncheckedCreateWithoutArcenEventsInput = {
   name: string
   mode: $Enums.EnvironmentMode
   chainId: number
+  chainFamily?: $Enums.ChainFamily
   authSessions?: Prisma.AuthSessionUncheckedCreateNestedManyWithoutActiveEnvironmentInput
   catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutEnvironmentInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedCreateNestedManyWithoutEnvironmentInput
@@ -3814,6 +3913,7 @@ export type WorkspaceEnvironmentUpdateWithoutArcenEventsInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   mode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
   chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  chainFamily?: Prisma.EnumChainFamilyFieldUpdateOperationsInput | $Enums.ChainFamily
   team?: Prisma.TeamUpdateOneRequiredWithoutEnvironmentsNestedInput
   authSessions?: Prisma.AuthSessionUpdateManyWithoutActiveEnvironmentNestedInput
   catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutEnvironmentNestedInput
@@ -3849,6 +3949,7 @@ export type WorkspaceEnvironmentUncheckedUpdateWithoutArcenEventsInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   mode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
   chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  chainFamily?: Prisma.EnumChainFamilyFieldUpdateOperationsInput | $Enums.ChainFamily
   authSessions?: Prisma.AuthSessionUncheckedUpdateManyWithoutActiveEnvironmentNestedInput
   catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutEnvironmentNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedUpdateManyWithoutEnvironmentNestedInput
@@ -3882,6 +3983,7 @@ export type WorkspaceEnvironmentCreateWithoutCompanyCreditGrantsInput = {
   name: string
   mode: $Enums.EnvironmentMode
   chainId: number
+  chainFamily?: $Enums.ChainFamily
   team: Prisma.TeamCreateNestedOneWithoutEnvironmentsInput
   authSessions?: Prisma.AuthSessionCreateNestedManyWithoutActiveEnvironmentInput
   catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutEnvironmentInput
@@ -3917,6 +4019,7 @@ export type WorkspaceEnvironmentUncheckedCreateWithoutCompanyCreditGrantsInput =
   name: string
   mode: $Enums.EnvironmentMode
   chainId: number
+  chainFamily?: $Enums.ChainFamily
   authSessions?: Prisma.AuthSessionUncheckedCreateNestedManyWithoutActiveEnvironmentInput
   catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutEnvironmentInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedCreateNestedManyWithoutEnvironmentInput
@@ -3966,6 +4069,7 @@ export type WorkspaceEnvironmentUpdateWithoutCompanyCreditGrantsInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   mode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
   chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  chainFamily?: Prisma.EnumChainFamilyFieldUpdateOperationsInput | $Enums.ChainFamily
   team?: Prisma.TeamUpdateOneRequiredWithoutEnvironmentsNestedInput
   authSessions?: Prisma.AuthSessionUpdateManyWithoutActiveEnvironmentNestedInput
   catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutEnvironmentNestedInput
@@ -4001,6 +4105,7 @@ export type WorkspaceEnvironmentUncheckedUpdateWithoutCompanyCreditGrantsInput =
   name?: Prisma.StringFieldUpdateOperationsInput | string
   mode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
   chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  chainFamily?: Prisma.EnumChainFamilyFieldUpdateOperationsInput | $Enums.ChainFamily
   authSessions?: Prisma.AuthSessionUncheckedUpdateManyWithoutActiveEnvironmentNestedInput
   catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutEnvironmentNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedUpdateManyWithoutEnvironmentNestedInput
@@ -4034,6 +4139,7 @@ export type WorkspaceEnvironmentCreateWithoutCreditLedgerEntriesInput = {
   name: string
   mode: $Enums.EnvironmentMode
   chainId: number
+  chainFamily?: $Enums.ChainFamily
   team: Prisma.TeamCreateNestedOneWithoutEnvironmentsInput
   authSessions?: Prisma.AuthSessionCreateNestedManyWithoutActiveEnvironmentInput
   catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutEnvironmentInput
@@ -4069,6 +4175,7 @@ export type WorkspaceEnvironmentUncheckedCreateWithoutCreditLedgerEntriesInput =
   name: string
   mode: $Enums.EnvironmentMode
   chainId: number
+  chainFamily?: $Enums.ChainFamily
   authSessions?: Prisma.AuthSessionUncheckedCreateNestedManyWithoutActiveEnvironmentInput
   catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutEnvironmentInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedCreateNestedManyWithoutEnvironmentInput
@@ -4118,6 +4225,7 @@ export type WorkspaceEnvironmentUpdateWithoutCreditLedgerEntriesInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   mode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
   chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  chainFamily?: Prisma.EnumChainFamilyFieldUpdateOperationsInput | $Enums.ChainFamily
   team?: Prisma.TeamUpdateOneRequiredWithoutEnvironmentsNestedInput
   authSessions?: Prisma.AuthSessionUpdateManyWithoutActiveEnvironmentNestedInput
   catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutEnvironmentNestedInput
@@ -4153,6 +4261,7 @@ export type WorkspaceEnvironmentUncheckedUpdateWithoutCreditLedgerEntriesInput =
   name?: Prisma.StringFieldUpdateOperationsInput | string
   mode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
   chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  chainFamily?: Prisma.EnumChainFamilyFieldUpdateOperationsInput | $Enums.ChainFamily
   authSessions?: Prisma.AuthSessionUncheckedUpdateManyWithoutActiveEnvironmentNestedInput
   catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutEnvironmentNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedUpdateManyWithoutEnvironmentNestedInput
@@ -4186,6 +4295,7 @@ export type WorkspaceEnvironmentCreateWithoutPaymentLinksInput = {
   name: string
   mode: $Enums.EnvironmentMode
   chainId: number
+  chainFamily?: $Enums.ChainFamily
   team: Prisma.TeamCreateNestedOneWithoutEnvironmentsInput
   authSessions?: Prisma.AuthSessionCreateNestedManyWithoutActiveEnvironmentInput
   catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutEnvironmentInput
@@ -4221,6 +4331,7 @@ export type WorkspaceEnvironmentUncheckedCreateWithoutPaymentLinksInput = {
   name: string
   mode: $Enums.EnvironmentMode
   chainId: number
+  chainFamily?: $Enums.ChainFamily
   authSessions?: Prisma.AuthSessionUncheckedCreateNestedManyWithoutActiveEnvironmentInput
   catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutEnvironmentInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedCreateNestedManyWithoutEnvironmentInput
@@ -4270,6 +4381,7 @@ export type WorkspaceEnvironmentUpdateWithoutPaymentLinksInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   mode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
   chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  chainFamily?: Prisma.EnumChainFamilyFieldUpdateOperationsInput | $Enums.ChainFamily
   team?: Prisma.TeamUpdateOneRequiredWithoutEnvironmentsNestedInput
   authSessions?: Prisma.AuthSessionUpdateManyWithoutActiveEnvironmentNestedInput
   catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutEnvironmentNestedInput
@@ -4305,6 +4417,7 @@ export type WorkspaceEnvironmentUncheckedUpdateWithoutPaymentLinksInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   mode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
   chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  chainFamily?: Prisma.EnumChainFamilyFieldUpdateOperationsInput | $Enums.ChainFamily
   authSessions?: Prisma.AuthSessionUncheckedUpdateManyWithoutActiveEnvironmentNestedInput
   catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutEnvironmentNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedUpdateManyWithoutEnvironmentNestedInput
@@ -4338,6 +4451,7 @@ export type WorkspaceEnvironmentCreateWithoutCheckoutSessionsInput = {
   name: string
   mode: $Enums.EnvironmentMode
   chainId: number
+  chainFamily?: $Enums.ChainFamily
   team: Prisma.TeamCreateNestedOneWithoutEnvironmentsInput
   authSessions?: Prisma.AuthSessionCreateNestedManyWithoutActiveEnvironmentInput
   catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutEnvironmentInput
@@ -4373,6 +4487,7 @@ export type WorkspaceEnvironmentUncheckedCreateWithoutCheckoutSessionsInput = {
   name: string
   mode: $Enums.EnvironmentMode
   chainId: number
+  chainFamily?: $Enums.ChainFamily
   authSessions?: Prisma.AuthSessionUncheckedCreateNestedManyWithoutActiveEnvironmentInput
   catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutEnvironmentInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedCreateNestedManyWithoutEnvironmentInput
@@ -4422,6 +4537,7 @@ export type WorkspaceEnvironmentUpdateWithoutCheckoutSessionsInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   mode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
   chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  chainFamily?: Prisma.EnumChainFamilyFieldUpdateOperationsInput | $Enums.ChainFamily
   team?: Prisma.TeamUpdateOneRequiredWithoutEnvironmentsNestedInput
   authSessions?: Prisma.AuthSessionUpdateManyWithoutActiveEnvironmentNestedInput
   catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutEnvironmentNestedInput
@@ -4457,6 +4573,7 @@ export type WorkspaceEnvironmentUncheckedUpdateWithoutCheckoutSessionsInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   mode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
   chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  chainFamily?: Prisma.EnumChainFamilyFieldUpdateOperationsInput | $Enums.ChainFamily
   authSessions?: Prisma.AuthSessionUncheckedUpdateManyWithoutActiveEnvironmentNestedInput
   catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutEnvironmentNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedUpdateManyWithoutEnvironmentNestedInput
@@ -4490,6 +4607,7 @@ export type WorkspaceEnvironmentCreateWithoutEmbedAccessTokensInput = {
   name: string
   mode: $Enums.EnvironmentMode
   chainId: number
+  chainFamily?: $Enums.ChainFamily
   team: Prisma.TeamCreateNestedOneWithoutEnvironmentsInput
   authSessions?: Prisma.AuthSessionCreateNestedManyWithoutActiveEnvironmentInput
   catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutEnvironmentInput
@@ -4525,6 +4643,7 @@ export type WorkspaceEnvironmentUncheckedCreateWithoutEmbedAccessTokensInput = {
   name: string
   mode: $Enums.EnvironmentMode
   chainId: number
+  chainFamily?: $Enums.ChainFamily
   authSessions?: Prisma.AuthSessionUncheckedCreateNestedManyWithoutActiveEnvironmentInput
   catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutEnvironmentInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedCreateNestedManyWithoutEnvironmentInput
@@ -4574,6 +4693,7 @@ export type WorkspaceEnvironmentUpdateWithoutEmbedAccessTokensInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   mode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
   chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  chainFamily?: Prisma.EnumChainFamilyFieldUpdateOperationsInput | $Enums.ChainFamily
   team?: Prisma.TeamUpdateOneRequiredWithoutEnvironmentsNestedInput
   authSessions?: Prisma.AuthSessionUpdateManyWithoutActiveEnvironmentNestedInput
   catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutEnvironmentNestedInput
@@ -4609,6 +4729,7 @@ export type WorkspaceEnvironmentUncheckedUpdateWithoutEmbedAccessTokensInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   mode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
   chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  chainFamily?: Prisma.EnumChainFamilyFieldUpdateOperationsInput | $Enums.ChainFamily
   authSessions?: Prisma.AuthSessionUncheckedUpdateManyWithoutActiveEnvironmentNestedInput
   catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutEnvironmentNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedUpdateManyWithoutEnvironmentNestedInput
@@ -4642,6 +4763,7 @@ export type WorkspaceEnvironmentCreateWithoutArcenApiKeysInput = {
   name: string
   mode: $Enums.EnvironmentMode
   chainId: number
+  chainFamily?: $Enums.ChainFamily
   team: Prisma.TeamCreateNestedOneWithoutEnvironmentsInput
   authSessions?: Prisma.AuthSessionCreateNestedManyWithoutActiveEnvironmentInput
   catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutEnvironmentInput
@@ -4677,6 +4799,7 @@ export type WorkspaceEnvironmentUncheckedCreateWithoutArcenApiKeysInput = {
   name: string
   mode: $Enums.EnvironmentMode
   chainId: number
+  chainFamily?: $Enums.ChainFamily
   authSessions?: Prisma.AuthSessionUncheckedCreateNestedManyWithoutActiveEnvironmentInput
   catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutEnvironmentInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedCreateNestedManyWithoutEnvironmentInput
@@ -4726,6 +4849,7 @@ export type WorkspaceEnvironmentUpdateWithoutArcenApiKeysInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   mode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
   chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  chainFamily?: Prisma.EnumChainFamilyFieldUpdateOperationsInput | $Enums.ChainFamily
   team?: Prisma.TeamUpdateOneRequiredWithoutEnvironmentsNestedInput
   authSessions?: Prisma.AuthSessionUpdateManyWithoutActiveEnvironmentNestedInput
   catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutEnvironmentNestedInput
@@ -4761,6 +4885,7 @@ export type WorkspaceEnvironmentUncheckedUpdateWithoutArcenApiKeysInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   mode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
   chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  chainFamily?: Prisma.EnumChainFamilyFieldUpdateOperationsInput | $Enums.ChainFamily
   authSessions?: Prisma.AuthSessionUncheckedUpdateManyWithoutActiveEnvironmentNestedInput
   catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutEnvironmentNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedUpdateManyWithoutEnvironmentNestedInput
@@ -4794,6 +4919,7 @@ export type WorkspaceEnvironmentCreateWithoutEmbedComponentsInput = {
   name: string
   mode: $Enums.EnvironmentMode
   chainId: number
+  chainFamily?: $Enums.ChainFamily
   team: Prisma.TeamCreateNestedOneWithoutEnvironmentsInput
   authSessions?: Prisma.AuthSessionCreateNestedManyWithoutActiveEnvironmentInput
   catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutEnvironmentInput
@@ -4829,6 +4955,7 @@ export type WorkspaceEnvironmentUncheckedCreateWithoutEmbedComponentsInput = {
   name: string
   mode: $Enums.EnvironmentMode
   chainId: number
+  chainFamily?: $Enums.ChainFamily
   authSessions?: Prisma.AuthSessionUncheckedCreateNestedManyWithoutActiveEnvironmentInput
   catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutEnvironmentInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedCreateNestedManyWithoutEnvironmentInput
@@ -4878,6 +5005,7 @@ export type WorkspaceEnvironmentUpdateWithoutEmbedComponentsInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   mode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
   chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  chainFamily?: Prisma.EnumChainFamilyFieldUpdateOperationsInput | $Enums.ChainFamily
   team?: Prisma.TeamUpdateOneRequiredWithoutEnvironmentsNestedInput
   authSessions?: Prisma.AuthSessionUpdateManyWithoutActiveEnvironmentNestedInput
   catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutEnvironmentNestedInput
@@ -4913,6 +5041,7 @@ export type WorkspaceEnvironmentUncheckedUpdateWithoutEmbedComponentsInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   mode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
   chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  chainFamily?: Prisma.EnumChainFamilyFieldUpdateOperationsInput | $Enums.ChainFamily
   authSessions?: Prisma.AuthSessionUncheckedUpdateManyWithoutActiveEnvironmentNestedInput
   catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutEnvironmentNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedUpdateManyWithoutEnvironmentNestedInput
@@ -4946,6 +5075,7 @@ export type WorkspaceEnvironmentCreateManyTeamInput = {
   name: string
   mode: $Enums.EnvironmentMode
   chainId: number
+  chainFamily?: $Enums.ChainFamily
 }
 
 export type WorkspaceEnvironmentUpdateWithoutTeamInput = {
@@ -4955,6 +5085,7 @@ export type WorkspaceEnvironmentUpdateWithoutTeamInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   mode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
   chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  chainFamily?: Prisma.EnumChainFamilyFieldUpdateOperationsInput | $Enums.ChainFamily
   authSessions?: Prisma.AuthSessionUpdateManyWithoutActiveEnvironmentNestedInput
   catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutEnvironmentNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUpdateManyWithoutEnvironmentNestedInput
@@ -4989,6 +5120,7 @@ export type WorkspaceEnvironmentUncheckedUpdateWithoutTeamInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   mode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
   chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  chainFamily?: Prisma.EnumChainFamilyFieldUpdateOperationsInput | $Enums.ChainFamily
   authSessions?: Prisma.AuthSessionUncheckedUpdateManyWithoutActiveEnvironmentNestedInput
   catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutEnvironmentNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedUpdateManyWithoutEnvironmentNestedInput
@@ -5023,6 +5155,7 @@ export type WorkspaceEnvironmentUncheckedUpdateManyWithoutTeamInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   mode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
   chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  chainFamily?: Prisma.EnumChainFamilyFieldUpdateOperationsInput | $Enums.ChainFamily
 }
 
 
@@ -5271,6 +5404,7 @@ export type WorkspaceEnvironmentSelect<ExtArgs extends runtime.Types.Extensions.
   name?: boolean
   mode?: boolean
   chainId?: boolean
+  chainFamily?: boolean
   team?: boolean | Prisma.TeamDefaultArgs<ExtArgs>
   authSessions?: boolean | Prisma.WorkspaceEnvironment$authSessionsArgs<ExtArgs>
   catalogPlans?: boolean | Prisma.WorkspaceEnvironment$catalogPlansArgs<ExtArgs>
@@ -5308,6 +5442,7 @@ export type WorkspaceEnvironmentSelectCreateManyAndReturn<ExtArgs extends runtim
   name?: boolean
   mode?: boolean
   chainId?: boolean
+  chainFamily?: boolean
   team?: boolean | Prisma.TeamDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["workspaceEnvironment"]>
 
@@ -5319,6 +5454,7 @@ export type WorkspaceEnvironmentSelectUpdateManyAndReturn<ExtArgs extends runtim
   name?: boolean
   mode?: boolean
   chainId?: boolean
+  chainFamily?: boolean
   team?: boolean | Prisma.TeamDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["workspaceEnvironment"]>
 
@@ -5330,9 +5466,10 @@ export type WorkspaceEnvironmentSelectScalar = {
   name?: boolean
   mode?: boolean
   chainId?: boolean
+  chainFamily?: boolean
 }
 
-export type WorkspaceEnvironmentOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "createdAt" | "updatedAt" | "teamId" | "name" | "mode" | "chainId", ExtArgs["result"]["workspaceEnvironment"]>
+export type WorkspaceEnvironmentOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "createdAt" | "updatedAt" | "teamId" | "name" | "mode" | "chainId" | "chainFamily", ExtArgs["result"]["workspaceEnvironment"]>
 export type WorkspaceEnvironmentInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   team?: boolean | Prisma.TeamDefaultArgs<ExtArgs>
   authSessions?: boolean | Prisma.WorkspaceEnvironment$authSessionsArgs<ExtArgs>
@@ -5407,6 +5544,7 @@ export type $WorkspaceEnvironmentPayload<ExtArgs extends runtime.Types.Extension
     name: string
     mode: $Enums.EnvironmentMode
     chainId: number
+    chainFamily: $Enums.ChainFamily
   }, ExtArgs["result"]["workspaceEnvironment"]>
   composites: {}
 }
@@ -5863,6 +6001,7 @@ export interface WorkspaceEnvironmentFieldRefs {
   readonly name: Prisma.FieldRef<"WorkspaceEnvironment", 'String'>
   readonly mode: Prisma.FieldRef<"WorkspaceEnvironment", 'EnvironmentMode'>
   readonly chainId: Prisma.FieldRef<"WorkspaceEnvironment", 'Int'>
+  readonly chainFamily: Prisma.FieldRef<"WorkspaceEnvironment", 'ChainFamily'>
 }
     
 

@@ -12,10 +12,10 @@ import { join, dirname } from 'path';
  *
  * @example
  * ```ts
- * import { MEAPAgent, FileStore } from '@arcenpay/agent';
+ * import { ArcenAgent, FileStore } from '@arcenpay/agent';
  *
  * const store = new FileStore('/var/arcenpay/agent-state.json');
- * const agent = new MEAPAgent({
+ * const agent = new ArcenAgent({
  *   privateKey: process.env.AGENT_PRIVATE_KEY!,
  *   rpcUrl: 'https://mainnet.base.org',
  *   chainId: 8453,

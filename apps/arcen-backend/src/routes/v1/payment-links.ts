@@ -10,6 +10,12 @@ import { getUsdcAddress } from "../../lib/platform/contracts.js";
 import { requireResolvedActiveEnvironment } from "../../lib/environments/workspace-environments.js";
 import { deliverWebhook } from "../../lib/webhooks/deliver-webhook.js";
 import { assertCanCreatePaymentLink } from "../../lib/catalog/tier-guard.js";
+import {
+  getChainFamily,
+  isValidAddressForChain,
+  normalizeWalletForChain,
+} from "@arcenpay/internal-core";
+import { normalizeWallet } from "../../lib/billing/utils.js";
 
 const createSchema = z
   .object({
@@ -21,6 +27,8 @@ const createSchema = z
     invoiceId: z.string().trim().optional(),
     amount: z.coerce.number().positive().optional(),
     acceptedToken: z.string().trim().optional(),
+    chainId: z.coerce.number().int().positive().optional(),
+    isAgentic: z.boolean().optional(),
     recipientWallet: z.string().trim().min(1),
     successUrl: z.string().url().optional(),
     cancelUrl: z.string().url().optional(),
@@ -51,10 +59,18 @@ const createSchema = z
     }
   });
 
-function withCheckoutUrl<T extends { slug: string }>(paymentLink: T) {
+function withCheckoutUrl<T extends { slug: string; metadata?: any }>(paymentLink: T) {
+  const isAgentic = Boolean(
+    paymentLink.metadata &&
+      typeof paymentLink.metadata === "object" &&
+      !Array.isArray(paymentLink.metadata) &&
+      (paymentLink.metadata as Record<string, unknown>).isAgentic,
+  );
   return {
     ...paymentLink,
+    isAgentic,
     checkoutUrl: `${APP_URL}/pay/${paymentLink.slug}`,
+    agenticSpecUrl: `${APP_URL}/api/v1/public/payment-links/${paymentLink.slug}/spec`,
   };
 }
 
@@ -115,7 +131,7 @@ export async function POST(c: Context) {
   let acceptedToken = parsed.data.acceptedToken;
   let companyId = parsed.data.companyId ?? null;
   let resolvedEnvironmentId = activeEnvironment?.id ?? null;
-  let resolvedChainId = activeEnvironment?.chainId ?? RUNTIME_CHAIN_ID;
+  let resolvedChainId = parsed.data.chainId ?? activeEnvironment?.chainId ?? RUNTIME_CHAIN_ID;
 
   if (parsed.data.catalogAddOnId) {
     const addOn = await db.catalogAddOn.findFirst({
@@ -185,7 +201,15 @@ export async function POST(c: Context) {
           ...(resolvedEnvironmentId ? { environmentId: resolvedEnvironmentId } : {}),
           OR: [
             ...(invoice.customerWallet
-              ? [{ walletAddress: invoice.customerWallet.toLowerCase() }]
+              ? [
+                  {
+                    walletAddress:
+                      normalizeWalletForChain(
+                        invoice.customerWallet,
+                        resolvedChainId,
+                      ) ?? invoice.customerWallet,
+                  },
+                ]
               : []),
             ...(invoice.customerEmail
               ? [{ email: { equals: invoice.customerEmail, mode: "insensitive" as const } }]
@@ -202,6 +226,20 @@ export async function POST(c: Context) {
     return c.json({ error: "Unable to resolve payment amount and token." }, 400 as any);
   }
 
+  const resolvedFamily = getChainFamily(resolvedChainId);
+  const normalizedRecipient =
+    normalizeWallet(parsed.data.recipientWallet) ||
+    parsed.data.recipientWallet;
+  if (
+    !resolvedFamily ||
+    !isValidAddressForChain(normalizedRecipient, resolvedChainId) ||
+    !isValidAddressForChain(acceptedToken, resolvedChainId)
+  ) {
+    return c.json({
+      error: `Recipient wallet or accepted token is not a valid address for ${resolvedChainId}.`,
+    }, 400 as any);
+  }
+
   const paymentLink = await createPaymentLink({
     teamId: auth.teamId,
     environmentId: resolvedEnvironmentId,
@@ -215,12 +253,13 @@ export async function POST(c: Context) {
     currency: "USDC",
     acceptedToken,
     chainId: resolvedChainId,
-    recipientWallet: parsed.data.recipientWallet,
+    recipientWallet: normalizedRecipient,
     successUrl: parsed.data.successUrl,
     cancelUrl: parsed.data.cancelUrl,
     expiresAt: parsed.data.expiresAt
       ? new Date(parsed.data.expiresAt)
       : null,
+    isAgentic: parsed.data.isAgentic,
     metadata: {
       ...(parsed.data.metadata ?? {}),
       source: "dashboard",

@@ -16,6 +16,14 @@ import {
   X402_SCHEME,
   SessionVaultABI,
   getChainEnvironment,
+  getChainFamily,
+  isValidAddressForChain,
+  getStellarSorobanRpcUrl,
+  getStellarNetworkPassphrase,
+  normalizeX402AmountToDecimal,
+  arcTestnet,
+  botMainnet,
+  botTestnet,
 } from "../sdk";
 import {
   createPublicClient,
@@ -27,7 +35,7 @@ import {
 import { sepolia, baseSepolia, base } from "viem/chains";
 
 type X402SettlePaymentInput = {
-  signer: `0x${string}`;
+  signer: string;
   amount: bigint;
   sessionId: string;
   planId: string;
@@ -89,6 +97,13 @@ const PAYMENT_DOMAIN = {
   version: "1",
 } as const;
 
+/**
+ * Stellar x402 signing prefix — must match @arcenpay/agent's
+ * STELLAR_X402_SIGNING_PREFIX. On Stellar we sign
+ * `PREFIX + JSON.stringify({...})` with ed25519 instead of EIP-712.
+ */
+const STELLAR_X402_SIGNING_PREFIX = "ArcenPay x402 Payment\n";
+
 const PAYMENT_TYPES = {
   Payment: [
     { name: "from", type: "address" },
@@ -104,12 +119,18 @@ const CHAIN_MAP: Record<number, any> = {
   11155111: sepolia,
   84532: baseSepolia,
   8453: base,
+  5042002: arcTestnet,
+  677: botMainnet,
+  968: botTestnet,
 };
 
 const CHAIN_ID_TO_NETWORK: Record<number, string> = {
   11155111: "ethereum-sepolia",
   84532: "base-sepolia",
   8453: "base-mainnet",
+  5042002: "arc-testnet",
+  677: "bot-mainnet",
+  968: "bot-testnet",
 };
 
 function coerceBigInt(
@@ -137,6 +158,15 @@ function normalizeSessionId(value: unknown): string {
 
 function normalizeAmount(value: unknown, fallback: bigint): bigint {
   return coerceBigInt(value as bigint | string | number, fallback);
+}
+
+/**
+ * Normalizes a payment amount to the decimal string used in Stellar x402
+ * signing/verification. Delegates to the shared internal-core helper so the
+ * @arcenpay/agent signer and this verifier always agree.
+ */
+function normalizeAmountAsDecimal(value: unknown, fallbackAtomic: bigint): string {
+  return normalizeX402AmountToDecimal(value, fallbackAtomic);
 }
 
 function normalizeNonce(value: unknown): bigint {
@@ -249,14 +279,44 @@ export function x402Middleware(options: X402MiddlewareOptions) {
     contracts.feeCollector ||
     "0x0000000000000000000000000000000000000000";
 
-  // Create viem public client for on-chain reads
+  const isStellar = getChainFamily(chainId) === "stellar";
+  const stellarPassphrase = isStellar
+    ? getStellarNetworkPassphrase(chainId)
+    : null;
+  const stellarRpcUrl = isStellar
+    ? rpcUrl || getStellarSorobanRpcUrl(chainId)
+    : null;
+
+  // Create viem public client for on-chain reads (EVM only)
   const chain = CHAIN_MAP[chainId] || sepolia;
-  const publicClient = createPublicClient({
-    chain,
-    transport: http(
-      rpcUrl || chainEnv.services.rpcUrl || chain.rpcUrls.default.http[0],
-    ),
-  });
+  const publicClient = isStellar
+    ? null
+    : createPublicClient({
+        chain,
+        transport: http(
+          rpcUrl || chainEnv.services.rpcUrl || chain.rpcUrls.default.http[0],
+        ),
+      });
+
+  // Stellar balance check via Soroban `get_agent_balance`.
+  async function checkStellarBalance(signer: string): Promise<bigint | null> {
+    try {
+      if (!contracts.sessionVault || !stellarRpcUrl || !stellarPassphrase) {
+        return null;
+      }
+      const { contract: stellarContract } = await import("@stellar/stellar-sdk");
+      const client = (await (stellarContract as any).Client.from({
+        contractId: contracts.sessionVault,
+        networkPassphrase: stellarPassphrase,
+        rpcUrl: stellarRpcUrl,
+      })) as any;
+      const result = await client.get_agent_balance({ agent: signer });
+      return BigInt(result?.result ?? 0);
+    } catch (err) {
+      console.warn("[x402] Stellar balance check failed:", err);
+      return null;
+    }
+  }
 
   return async (req: Request, res: Response, next: NextFunction) => {
     const paymentHeader = req.headers["x-payment"] as string | undefined;
@@ -316,7 +376,7 @@ export function x402Middleware(options: X402MiddlewareOptions) {
       const { signature, payload: payloadRaw } = paymentData;
       if (
         typeof signature !== "string" ||
-        !signature.startsWith("0x") ||
+        (isStellar ? signature.length === 0 : !signature.startsWith("0x")) ||
         !payloadRaw
       ) {
         sendRejection(
@@ -351,7 +411,10 @@ export function x402Middleware(options: X402MiddlewareOptions) {
 
       const signerClaimed =
         typeof payload.from === "string" ? payload.from : "";
-      if (!isAddress(signerClaimed)) {
+      if (
+        !signerClaimed ||
+        !isValidAddressForChain(signerClaimed, chainId)
+      ) {
         sendRejection(
           res,
           "MALFORMED_PAYMENT_PAYLOAD",
@@ -397,30 +460,70 @@ export function x402Middleware(options: X402MiddlewareOptions) {
         return;
       }
 
-      // Step 2: Verify EIP-712 signature (recover signer)
+      // Step 2: Verify signature. EVM → EIP-712 recovery; Stellar → ed25519.
       let recoveredSigner: string;
-      try {
-        recoveredSigner = await recoverTypedDataAddress({
-          domain: { ...PAYMENT_DOMAIN, chainId: BigInt(chainId) },
-          types: PAYMENT_TYPES,
-          primaryType: "Payment",
-          message: {
-            from: signerClaimed as `0x${string}`,
-            amount: requestedAmount,
+      if (isStellar) {
+        try {
+          // Rebuild the canonical message string the agent signs:
+          //   PREFIX + JSON.stringify({ from, amount, resource, sessionId, nonce, timestamp, chainId })
+          // where amount is the decimal string (agent signs the option amount).
+          const signedMessage = {
+            from: signerClaimed,
+            amount: normalizeAmountAsDecimal(payload.amount, requestedAmount),
             resource: String(payload.resource || ""),
             sessionId,
-            nonce: normalizeNonce(payload.nonce),
-            timestamp: normalizeTimestamp(payload.timestamp),
-          },
-          signature: signature as `0x${string}`,
-        });
-      } catch {
-        sendRejection(
-          res,
-          "INVALID_SIGNATURE",
-          "Unable to validate the payment signature",
-        );
-        return;
+            nonce: normalizeNonce(payload.nonce).toString(),
+            timestamp: normalizeTimestamp(payload.timestamp).toString(),
+            chainId,
+          };
+          const messageText =
+            STELLAR_X402_SIGNING_PREFIX + JSON.stringify(signedMessage);
+          const { Keypair } = await import("@stellar/stellar-sdk");
+          const valid = Keypair.fromPublicKey(signerClaimed).verify(
+            Buffer.from(messageText, "utf8"),
+            Buffer.from(signature, "base64"),
+          );
+          if (!valid) {
+            sendRejection(
+              res,
+              "INVALID_SIGNATURE",
+              "Unable to validate the payment signature",
+            );
+            return;
+          }
+          recoveredSigner = signerClaimed;
+        } catch {
+          sendRejection(
+            res,
+            "INVALID_SIGNATURE",
+            "Unable to validate the payment signature",
+          );
+          return;
+        }
+      } else {
+        try {
+          recoveredSigner = await recoverTypedDataAddress({
+            domain: { ...PAYMENT_DOMAIN, chainId: BigInt(chainId) },
+            types: PAYMENT_TYPES,
+            primaryType: "Payment",
+            message: {
+              from: signerClaimed as `0x${string}`,
+              amount: requestedAmount,
+              resource: String(payload.resource || ""),
+              sessionId,
+              nonce: normalizeNonce(payload.nonce),
+              timestamp: normalizeTimestamp(payload.timestamp),
+            },
+            signature: signature as `0x${string}`,
+          });
+        } catch {
+          sendRejection(
+            res,
+            "INVALID_SIGNATURE",
+            "Unable to validate the payment signature",
+          );
+          return;
+        }
       }
 
       // Step 3: Verify signer matches claimed address
@@ -469,12 +572,19 @@ export function x402Middleware(options: X402MiddlewareOptions) {
       // Step 4: Check session vault balance
       if (verifiedSigner && contracts.sessionVault) {
         try {
-          const balance = (await publicClient.readContract({
-            address: contracts.sessionVault as `0x${string}`,
-            abi: SessionVaultABI,
-            functionName: "getAgentBalance",
-            args: [verifiedSigner as `0x${string}`],
-          })) as bigint;
+          let balance: bigint;
+          if (isStellar) {
+            const stellarBalance = await checkStellarBalance(verifiedSigner);
+            if (stellarBalance === null) throw new Error("Stellar balance check failed");
+            balance = stellarBalance;
+          } else {
+            balance = (await publicClient!.readContract({
+              address: contracts.sessionVault as `0x${string}`,
+              abi: SessionVaultABI,
+              functionName: "getAgentBalance",
+              args: [verifiedSigner as `0x${string}`],
+            })) as bigint;
+          }
 
           if (balance < requestedAmount) {
             sendRejection(

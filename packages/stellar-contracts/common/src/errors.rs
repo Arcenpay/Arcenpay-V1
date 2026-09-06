@@ -1,4 +1,4 @@
-use soroban_sdk::contracterror;
+use soroban_sdk::{Env, contracterror};
 
 #[contracterror]
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
@@ -44,4 +44,11 @@ pub enum ArcenPayError {
     ProviderWhitelistRequired = 39,
     InvalidTier = 40,
     FeeRateTooHigh = 41,
+}
+
+/// Fail a contract call by emitting a typed `ArcenPayError` code through
+/// Soroban's `panic_with_error`. Callers can match on the numeric contract
+/// error code returned by the host.
+pub fn fail(env: &Env, err: ArcenPayError) -> ! {
+    env.panic_with_error(err)
 }

@@ -10,7 +10,6 @@ import { pathToFileURL } from "url";
 import { createWalletClient } from "viem";
 import { createResilientFacilitatorClient, getFacilitatorRpcTransport } from "../rpc-client.js";
 import { privateKeyToAccount } from "viem/accounts";
-import { sepolia, baseSepolia, base } from "viem/chains";
 import type {
   PublicInputs,
   UsageProof,
@@ -20,6 +19,8 @@ import {
   DEFAULT_CHAIN_ID,
   ZKUsageVerifierABI,
   getContractAddresses,
+  getChainFamily,
+  getChain,
 } from "@arcenpay/internal-core";
 
 interface UsageLogEntry {
@@ -89,13 +90,6 @@ export interface UsageServiceConfig {
   artifactManifestPath?: string;
 }
 
-const CHAIN_MAP: Record<number, any> = {
-  11155111: sepolia,
-  84532: baseSepolia,
-  8453: base,
-  5042002: baseSepolia, // Arc Testnet
-};
-
 const MAX_ENTRIES = 128;
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000" as const;
 
@@ -125,8 +119,9 @@ export class UsageService {
 
   constructor(config: UsageServiceConfig = {}) {
     const chainId = config.chainId ?? DEFAULT_CHAIN_ID;
-    const chain = CHAIN_MAP[chainId] || baseSepolia;
-    const rpcUrl = config.rpcUrl || chain.rpcUrls.default.http[0];
+    const isEvm = getChainFamily(chainId) === "evm";
+    const chain = isEvm ? getChain(chainId) : undefined;
+    const rpcUrl = config.rpcUrl || chain?.rpcUrls?.default?.http[0] || "";
     const proofMode: ProofMode =
       config.proofMode ??
       (process.env.NODE_ENV === "development" ? "dev" : "strict");
@@ -160,7 +155,7 @@ export class UsageService {
       signerPrivateKey: config.signerPrivateKey,
     };
 
-    if (config.signerPrivateKey) {
+    if (getChainFamily(chainId) === "evm" && config.signerPrivateKey) {
       const key = config.signerPrivateKey.startsWith("0x")
         ? config.signerPrivateKey
         : `0x${config.signerPrivateKey}`;

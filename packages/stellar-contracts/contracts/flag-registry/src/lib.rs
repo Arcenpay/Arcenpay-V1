@@ -1,7 +1,16 @@
 #![no_std]
+#![allow(clippy::too_many_arguments)]
 
-use soroban_sdk::{contract, contractimpl, contracttype, Address, Env, Vec, BytesN, String, Map};
-use arcenpay_common::{auth::*, errors::ArcenPayError, types::FlagEntryRecord};
+extern crate alloc;
+
+use arcenpay_common::{
+    auth::*,
+    errors::{ArcenPayError, fail},
+    types::FlagEntryRecord,
+};
+use soroban_sdk::{
+    Address, BytesN, Env, String, Vec, contract, contractevent, contractimpl, contracttype,
+};
 
 #[cfg(test)]
 mod tests;
@@ -55,10 +64,21 @@ pub struct OperatorRevoked {
 #[contract]
 pub struct FlagRegistry;
 
+impl FlagRegistry {
+    fn build_flag_key(team_id: &BytesN<32>, feature_key: &String) -> FlagKey {
+        FlagKey {
+            team_id: team_id.clone(),
+            feature_key: feature_key.clone(),
+        }
+    }
+}
+
 #[contractimpl]
 impl FlagRegistry {
     pub fn __constructor(env: Env, owner: Address) {
-        assert!(!read_initialized(&env), "Already initialized");
+        if read_initialized(&env) {
+            fail(&env, ArcenPayError::AlreadyInitialized);
+        }
         env.storage().instance().set(&DataKey::Owner, &owner);
         write_initialized(&env);
     }
@@ -68,13 +88,22 @@ impl FlagRegistry {
     }
 
     pub fn owner(env: Env) -> Address {
-        env.storage().instance().get(&DataKey::Owner).unwrap()
+        env.storage()
+            .instance()
+            .get(&DataKey::Owner)
+            .unwrap_or_else(|| fail(&env, ArcenPayError::NotInitialized))
     }
 
     pub fn transfer_ownership(env: Env, new_owner: Address) {
-        let current: Address = env.storage().instance().get(&DataKey::Owner).unwrap();
+        let current: Address = env
+            .storage()
+            .instance()
+            .get(&DataKey::Owner)
+            .unwrap_or_else(|| fail(&env, ArcenPayError::NotInitialized));
+        if new_owner == current {
+            fail(&env, ArcenPayError::InvalidAddress);
+        }
         current.require_auth();
-        assert_ne!(new_owner, current);
         env.storage().instance().set(&DataKey::Owner, &new_owner);
     }
 
@@ -84,8 +113,14 @@ impl FlagRegistry {
     }
 
     pub fn authorize_operator(env: Env, owner: Address, team_id: BytesN<32>, operator: Address) {
-        let stored_owner: Address = env.storage().instance().get(&DataKey::Owner).unwrap();
-        assert_eq!(owner, stored_owner);
+        let stored_owner: Address = env
+            .storage()
+            .instance()
+            .get(&DataKey::Owner)
+            .unwrap_or_else(|| fail(&env, ArcenPayError::NotInitialized));
+        if owner != stored_owner {
+            fail(&env, ArcenPayError::NotAuthorized);
+        }
         owner.require_auth();
         let key = DataKey::Operator(team_id.clone(), operator.clone());
         env.storage().persistent().set(&key, &true);
@@ -93,8 +128,14 @@ impl FlagRegistry {
     }
 
     pub fn revoke_operator(env: Env, owner: Address, team_id: BytesN<32>, operator: Address) {
-        let stored_owner: Address = env.storage().instance().get(&DataKey::Owner).unwrap();
-        assert_eq!(owner, stored_owner);
+        let stored_owner: Address = env
+            .storage()
+            .instance()
+            .get(&DataKey::Owner)
+            .unwrap_or_else(|| fail(&env, ArcenPayError::NotInitialized));
+        if owner != stored_owner {
+            fail(&env, ArcenPayError::NotAuthorized);
+        }
         owner.require_auth();
         let key = DataKey::Operator(team_id.clone(), operator.clone());
         env.storage().persistent().set(&key, &false);
@@ -102,13 +143,19 @@ impl FlagRegistry {
     }
 
     fn check_operator_or_owner(env: &Env, team_id: &BytesN<32>, caller: &Address) {
-        let owner: Address = env.storage().instance().get(&DataKey::Owner).unwrap();
+        let owner: Address = env
+            .storage()
+            .instance()
+            .get(&DataKey::Owner)
+            .unwrap_or_else(|| fail(env, ArcenPayError::NotInitialized));
         if caller == &owner {
             return;
         }
         let op_key = DataKey::Operator(team_id.clone(), caller.clone());
         let is_op: bool = env.storage().persistent().get(&op_key).unwrap_or(false);
-        assert!(is_op, "Not authorized to manage flags for this team");
+        if !is_op {
+            fail(env, ArcenPayError::NotAuthorized);
+        }
     }
 
     pub fn set_flag(
@@ -120,12 +167,29 @@ impl FlagRegistry {
     ) {
         caller.require_auth();
         Self::check_operator_or_owner(&env, &team_id, &caller);
-        assert!(!feature_key.is_empty(), "Feature key must not be empty");
-        assert!(feature_key.len() <= 64, "Feature key max 64 chars");
+        Self::set_flag_internal(&env, &team_id, &feature_key, default_value);
+    }
 
-        let flag_persistent_key = DataKey::Flag(FlagKey { team_id: team_id.clone(), feature_key: feature_key.clone() });
+    fn set_flag_internal(
+        env: &Env,
+        team_id: &BytesN<32>,
+        feature_key: &String,
+        default_value: bool,
+    ) {
+        if feature_key.is_empty() {
+            fail(env, ArcenPayError::InvalidConfig);
+        }
+        if feature_key.len() > 64 {
+            fail(env, ArcenPayError::FeatureKeyTooLong);
+        }
 
-        let existing: Option<FlagEntryRecord> = env.storage().persistent().get(&flag_persistent_key);
+        let flag_persistent_key = DataKey::Flag(FlagKey {
+            team_id: team_id.clone(),
+            feature_key: feature_key.clone(),
+        });
+
+        let existing: Option<FlagEntryRecord> =
+            env.storage().persistent().get(&flag_persistent_key);
         let now = env.ledger().timestamp();
 
         match existing {
@@ -140,14 +204,16 @@ impl FlagRegistry {
                     exists: true,
                     ..entry
                 };
-                env.storage().persistent().set(&flag_persistent_key, &updated);
+                env.storage()
+                    .persistent()
+                    .set(&flag_persistent_key, &updated);
                 FlagUpdated {
                     team_id: team_id.clone(),
                     feature_key: feature_key.clone(),
                     old_value,
                     new_value: default_value,
                 }
-                .publish(&env);
+                .publish(env);
             }
             None => {
                 let entry = FlagEntryRecord {
@@ -164,18 +230,18 @@ impl FlagRegistry {
                     .storage()
                     .persistent()
                     .get(&DataKey::FlagKeys(team_id.clone()))
-                    .unwrap_or(Vec::new(&env));
+                    .unwrap_or(Vec::new(env));
                 keys.push_back(feature_key.clone());
                 env.storage()
                     .persistent()
                     .set(&DataKey::FlagKeys(team_id.clone()), &keys);
 
                 FlagRegistered {
-                    team_id,
-                    feature_key,
+                    team_id: team_id.clone(),
+                    feature_key: feature_key.clone(),
                     default_value,
                 }
-                .publish(&env);
+                .publish(env);
             }
         }
     }
@@ -187,24 +253,16 @@ impl FlagRegistry {
         feature_keys: Vec<String>,
         default_values: Vec<bool>,
     ) {
-        assert_eq!(
-            feature_keys.len(),
-            default_values.len(),
-            "Keys and values length mismatch"
-        );
+        if feature_keys.len() != default_values.len() {
+            fail(&env, ArcenPayError::InvalidConfig);
+        }
         caller.require_auth();
         Self::check_operator_or_owner(&env, &team_id, &caller);
 
         for i in 0..feature_keys.len() {
             let key = feature_keys.get(i).unwrap();
             let val = default_values.get(i).unwrap();
-            Self::set_flag(
-                env.clone(),
-                caller.clone(),
-                team_id.clone(),
-                key,
-                val,
-            );
+            Self::set_flag_internal(&env, &team_id, &key, val);
         }
     }
 

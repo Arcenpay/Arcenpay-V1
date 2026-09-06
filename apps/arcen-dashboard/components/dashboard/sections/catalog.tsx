@@ -107,12 +107,14 @@ import {
   resolveEnvironmentChainId,
 } from "@/lib/default-chain";
 import { toast } from "sonner";
-import { PlanFactoryABI, YEARLY_INTERVAL } from "@arcenpay/internal-core";
+import { PlanFactoryABI, YEARLY_INTERVAL, isEvmChain } from "@arcenpay/internal-core";
+import { contract as stellarContract } from "@stellar/stellar-sdk";
 import {
   isSmartAccountInfrastructureError,
   sendSmartAccountTransaction,
 } from "@arcenpay/react/smart-account";
 import { useDashboardWallet } from "@/hooks/use-dashboard-wallet";
+import { useStellarWallet } from "@/hooks/use-stellar-wallet";
 import { useTeamTier } from "@/hooks/use-team-tier";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -263,7 +265,7 @@ function getInitialTokenForEnvironment(
   env: EnvMode,
   connectedChainId?: number,
   lockedChainId?: number,
-): `0x${string}` {
+): string {
   const resolvedChainId = lockedChainId ?? resolveEnvironmentChainId(env);
   const envTokens = lockedChainId
     ? getTokenOptionsForChain(lockedChainId)
@@ -276,10 +278,14 @@ function getInitialTokenForEnvironment(
 
   if (
     preferredConnectedToken &&
-    envTokens.some(
-      (token) =>
-        token.address.toLowerCase() === preferredConnectedToken.toLowerCase(),
-    )
+    envTokens.some((token) => {
+      // EVM addresses are case-insensitive hex; Stellar addresses are
+      // base32 and case-sensitive (lowercasing corrupts them).
+      if (isEvmChain(resolvedChainId)) {
+        return token.address.toLowerCase() === preferredConnectedToken.toLowerCase();
+      }
+      return token.address === preferredConnectedToken;
+    })
   ) {
     return preferredConnectedToken;
   }
@@ -3368,6 +3374,7 @@ function PlansTable({
 }) {
   const { activeEnvironment } = useEnvironment();
   const { address, isConnected } = useAccount();
+  const stellar = useStellarWallet(activeEnvironment?.chainId ?? 9_000_001);
   const chainId = useChainId();
   const publicClient = usePublicClient({ chainId: chainId || DEFAULT_CHAIN_ID });
   const { signTypedDataAsync } = useSignTypedData();
@@ -3397,11 +3404,17 @@ function PlansTable({
       if (res.ok) {
         const data = await res.json();
         setPlans(data.plans ?? []);
+      } else {
+        console.error("[PlansTable] Failed to load plans:", res.status, await res.text().catch(() => ""));
+        setPlans([]);
       }
+    } catch (err) {
+      console.error("[PlansTable] Load error:", err);
+      setPlans([]);
     } finally {
       setLoading(false);
     }
-  }, [env, statusFilter]);
+  }, [env, statusFilter, activeEnvironment?.id]);
 
   useEffect(() => {
     load();
@@ -3422,10 +3435,19 @@ function PlansTable({
   }
 
   async function registerOnChain(plan: CatalogPlan) {
-    // Check wallet connection
-    if (!isConnected || !address) {
-      toast.error("Connect your wallet to continue");
-      return;
+    const planChainId = plan.chainId ?? activeEnvironment?.chainId ?? 0;
+    const isEvmPlan = isEvmChain(planChainId);
+
+    if (isEvmPlan) {
+      if (!isConnected || !address) {
+        toast.error("Connect your EVM wallet to continue");
+        return;
+      }
+    } else {
+      if (!stellar.isConnected || !stellar.address) {
+        toast.error("Connect your Stellar wallet to continue");
+        return;
+      }
     }
 
     // Free plans (price = 0) cannot be registered — PlanFactory requires price > 0
@@ -3444,6 +3466,132 @@ function PlansTable({
         const nonceErr = await nonceRes.json().catch(() => ({}));
         throw new Error(nonceErr.error || "Failed to get signing nonce");
       }
+      const noncePayload = (await nonceRes.json().catch(() => ({}))) as {
+        nonce?: string;
+        planFactoryAddress?: string;
+        domain?: {
+          name: string;
+          version: string;
+          chainId: number;
+          verifyingContract: string;
+        };
+        networkPassphrase?: string;
+        sorobanRpcUrl?: string;
+        signingRequired?: boolean;
+        providerAddress?: string;
+        signatureMode?: "create" | "update";
+        needsTokenApproval?: boolean;
+        tokenAddress?: string;
+        error?: string;
+      };
+
+      if (!nonceRes.ok) {
+        if (noncePayload.needsTokenApproval && noncePayload.tokenAddress) {
+          toast.error(
+            `The token ${noncePayload.tokenAddress} is not approved in the PlanFactory contract. ` +
+            "You must call approve_token as the contract admin before registering plans. " +
+            "Use the Stellar CLI or a script to invoke approve_token on the PlanFactory.",
+            { duration: 10000 },
+          );
+          return;
+        }
+        throw new Error(noncePayload.error || "Failed to get signing nonce");
+      }
+
+      // ── Stellar Soroban path ─────────────────────────────────────────────
+      if (!isEvmPlan) {
+        const {
+          planFactoryAddress,
+          networkPassphrase,
+          sorobanRpcUrl,
+          providerAddress,
+          signatureMode,
+        } = noncePayload;
+
+        if (!networkPassphrase || !sorobanRpcUrl) {
+          throw new Error("Stellar network configuration missing from server");
+        }
+
+        const effectiveSignatureMode =
+          signatureMode === "create" ? "create" : plan.onChainPlanId ? "update" : "create";
+        const priceInMicros = resolveMaxOnChainChargeMicros(plan);
+        const billingIntervalSeconds = BigInt(plan.billingInterval);
+
+        if (!planFactoryAddress) {
+          throw new Error("PlanFactory address missing from server");
+        }
+        const client = (await stellarContract.Client.from({
+          contractId: planFactoryAddress,
+          networkPassphrase,
+          rpcUrl: sorobanRpcUrl,
+          publicKey: stellar.address!,
+          signTransaction: stellar.signTransaction,
+        })) as any;
+
+        let onChainPlanId: string;
+        let sentTx;
+
+        if (effectiveSignatureMode === "create") {
+          const tx = await client.create_plan({
+            provider: providerAddress ?? stellar.address!,
+            name: plan.name,
+            tier: plan.tier,
+            price: priceInMicros,
+            billing_interval: billingIntervalSeconds,
+            accepted_token: plan.acceptedToken,
+            metadata_uri: "",
+          });
+          sentTx = await tx.signAndSend();
+          onChainPlanId = String(sentTx.result);
+        } else {
+          if (!plan.onChainPlanId) {
+            throw new Error("Cannot update: no existing on-chain plan ID");
+          }
+          const tx = await client.update_plan({
+            provider: providerAddress ?? stellar.address!,
+            plan_id: BigInt(plan.onChainPlanId),
+            price: priceInMicros,
+            metadata_uri: "",
+          });
+          sentTx = await tx.signAndSend();
+          onChainPlanId = plan.onChainPlanId;
+        }
+
+        const txHash = sentTx.sendTransactionResponse?.hash ?? "";
+
+        // 2. Confirm with backend
+        const confirmRes = await fetch(
+          `/api/catalog/plans/${plan.id}/register-on-chain`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              onChainPlanId,
+              txHash,
+              userAddress: stellar.address,
+            }),
+          },
+        );
+        const confirmData = (await confirmRes.json().catch(() => ({}))) as {
+          error?: string;
+          onChainPlanId?: string;
+          status?: string;
+        };
+        if (!confirmRes.ok) {
+          throw new Error(confirmData.error || "Backend confirmation failed");
+        }
+
+        toast.success(
+          `Plan registered on-chain (${onChainPlanId}) via Stellar`,
+        );
+        load();
+        return;
+      }
+
+      // ── EVM path (unchanged) ─────────────────────────────────────────────
+      if (!noncePayload.nonce || !noncePayload.domain) {
+        throw new Error("Missing EVM nonce/domain from server");
+      }
       const {
         nonce,
         planFactoryAddress,
@@ -3451,18 +3599,9 @@ function PlansTable({
         signingRequired,
         providerAddress,
         signatureMode,
-      } = (await nonceRes.json()) as {
+      } = noncePayload as typeof noncePayload & {
         nonce: string;
-        planFactoryAddress: string;
-        domain: {
-          name: string;
-          version: string;
-          chainId: number;
-          verifyingContract: string;
-        };
-        signingRequired: boolean;
-        providerAddress?: string;
-        signatureMode?: "create" | "update";
+        domain: { name: string; version: string; chainId: number; verifyingContract: string };
       };
       const effectiveSignatureMode =
         signatureMode === "create" ? "create" : plan.onChainPlanId ? "update" : "create";
@@ -3484,7 +3623,7 @@ function PlansTable({
           if (walletRes.ok) {
             const { storedWallet } = await walletRes.json();
             if (
-              storedWallet &&
+              storedWallet && address &&
               address.toLowerCase() !== storedWallet.toLowerCase()
             ) {
               toast.error(
@@ -3765,6 +3904,18 @@ function PlansTable({
         msg.includes("User rejected")
       ) {
         toast.error("Signature or transaction cancelled");
+      } else if (
+        msg.includes("TokenNotApproved") ||
+        msg.includes("Error(Contract, #12)") ||
+        msg.includes("#12") ||
+        (msg.includes("contract error") && msg.includes("12"))
+      ) {
+        toast.error(
+          "The accepted token is not approved in the PlanFactory contract. " +
+          "You must call approve_token as the contract admin before registering plans. " +
+          "Use the Stellar CLI: soroban contract invoke --id <PLAN_FACTORY> --network testnet --source <ADMIN> -- approve_token --admin <ADMIN> --token <TOKEN>",
+          { duration: 12000 },
+        );
       } else {
         toast.error(msg);
       }
@@ -4086,6 +4237,7 @@ function AddOnsTable({
   refresh: number;
   onSelect?: (addon: CatalogAddOn) => void;
 }) {
+  const { activeEnvironment } = useEnvironment();
   const { address } = useAccount();
 
   // ── Entitlements types ────────────────────────────────────────────────────
@@ -4153,11 +4305,17 @@ function AddOnsTable({
       if (res.ok) {
         const data = await res.json();
         setAddOns(data.addOns ?? []);
+      } else {
+        console.error("[AddOnsTable] Failed to load add-ons:", res.status);
+        setAddOns([]);
       }
+    } catch (err) {
+      console.error("[AddOnsTable] Load error:", err);
+      setAddOns([]);
     } finally {
       setLoading(false);
     }
-  }, [env, statusFilter]);
+  }, [env, statusFilter, activeEnvironment?.id]);
 
   useEffect(() => {
     load();
@@ -4987,6 +5145,7 @@ function CreditTypesTable({
   refresh?: number;
   onSelect?: (credit: CatalogCreditType) => void;
 }) {
+  const { activeEnvironment } = useEnvironment();
   const [creditTypes, setCreditTypes] = useState<CatalogCreditType[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<CatalogStatus | "">("");
@@ -5002,11 +5161,17 @@ function CreditTypesTable({
       if (res.ok) {
         const data = await res.json();
         setCreditTypes(data.creditTypes ?? []);
+      } else {
+        console.error("[CreditTypesTable] Failed to load credits:", res.status);
+        setCreditTypes([]);
       }
+    } catch (err) {
+      console.error("[CreditTypesTable] Load error:", err);
+      setCreditTypes([]);
     } finally {
       setLoading(false);
     }
-  }, [env, statusFilter]);
+  }, [env, statusFilter, activeEnvironment?.id]);
 
   useEffect(() => {
     load();

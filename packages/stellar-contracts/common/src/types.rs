@@ -1,4 +1,4 @@
-use soroban_sdk::{Address, BytesN, String, Vec};
+use soroban_sdk::{Address, BytesN, String};
 
 pub const MONTHLY_INTERVAL: u64 = 2_592_000;
 pub const YEARLY_INTERVAL: u64 = 31_536_000;
@@ -75,6 +75,20 @@ pub struct MirroredSubscriptionRecord {
     pub source_token_id: u128,
     pub source_updated_at: u64,
     pub last_updated: u64,
+}
+
+/// Cross-chain GMP payload sent by `SubscriptionRegistry` and applied by
+/// `MirrorRegistry`. Serialized to/from XDR so both contracts share a single
+/// canonical wire format.
+#[derive(Clone, Debug)]
+#[soroban_sdk::contracttype]
+pub struct MirrorPayload {
+    pub subscriber: Address,
+    pub source_token_id: u128,
+    pub plan_id: u128,
+    pub plan_tier: String,
+    pub expiration: u64,
+    pub source_updated_at: u64,
 }
 
 #[derive(Clone, Debug)]

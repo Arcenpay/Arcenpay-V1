@@ -14,12 +14,12 @@ members = [
 
 [workspace.package]
 version = "0.1.0"
-edition = "2024"
+edition = "2021"
 rust-version = "1.85"
 license = "MIT"
 
 [workspace.dependencies]
-soroban-sdk = "27"
+soroban-sdk = { version = "27", features = ["alloc"] }
 arcenpay-common = { path = "common" }
 
 [profile.release]

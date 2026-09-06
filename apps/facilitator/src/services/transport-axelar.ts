@@ -11,15 +11,7 @@ import {
 } from "viem";
 import { createResilientFacilitatorClient, getFacilitatorRpcTransport } from "../rpc-client.js";
 import { privateKeyToAccount } from "viem/accounts";
-import { sepolia, baseSepolia, base } from "viem/chains";
-import { DEFAULT_CHAIN_ID } from "@arcenpay/internal-core";
-
-const CHAIN_MAP: Record<number, any> = {
-  11155111: sepolia,
-  84532: baseSepolia,
-  8453: base,
-  5042002: baseSepolia, // Arc Testnet
-};
+import { DEFAULT_CHAIN_ID, getChain } from "@arcenpay/internal-core";
 
 // Axelar chain name mapping (Axelar uses string identifiers)
 const AXELAR_CHAIN_NAMES: Record<number, string> = {
@@ -118,7 +110,9 @@ export class AxelarTransport {
     this.config = config;
     this.chainId = config.chainId ?? DEFAULT_CHAIN_ID;
 
-    const chain = CHAIN_MAP[this.chainId] || baseSepolia;
+    // Canonical internal-core Chain lookup — see keeper.ts for why a stale
+    // local map here is dangerous (wrong chainId gets embedded in signed txs).
+    const chain = getChain(this.chainId);
     const account = privateKeyToAccount(config.privateKey);
     this.signerAddress = account.address;
 

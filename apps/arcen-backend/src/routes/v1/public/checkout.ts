@@ -13,7 +13,7 @@ const patchSchema = z.object({
 
 export async function getCheckout(c: Context) {
   const sessionId = c.req.param("sessionId");
-  const checkoutSession = await getCheckoutSessionById(sessionId);
+  const checkoutSession = await getCheckoutSessionById(sessionId!);
   if (!checkoutSession) {
     return c.json({ error: "Checkout session not found" }, 404 as any);
   }
@@ -30,6 +30,7 @@ export async function getCheckout(c: Context) {
       amount: checkoutSession.amount,
       acceptedToken: checkoutSession.acceptedToken,
       chainId: checkoutSession.chainId,
+      chainFamily: checkoutSession.chainFamily,
       recipientWallet: checkoutSession.recipientWallet,
       txHash: checkoutSession.txHash,
       verificationError: checkoutSession.verificationError,
@@ -82,13 +83,13 @@ export async function updateCheckout(c: Context) {
     return c.json({ error: "Invalid request", details: parsed.error.flatten().fieldErrors }, 400 as any);
   }
 
-  const existing = await getCheckoutSessionById(sessionId);
+  const existing = await getCheckoutSessionById(sessionId!);
   if (!existing) {
     return c.json({ error: "Checkout session not found" }, 404 as any);
   }
 
   const checkoutSession = await updateCheckoutSessionCustomerDetails({
-    sessionId,
+    sessionId: sessionId!,
     customerEmail: parsed.data.customerEmail || null,
     customerWallet: parsed.data.customerWallet || null,
     customerName: parsed.data.customerName || null,
@@ -106,6 +107,7 @@ export async function updateCheckout(c: Context) {
       amount: checkoutSession.amount,
       acceptedToken: checkoutSession.acceptedToken,
       chainId: checkoutSession.chainId,
+      chainFamily: checkoutSession.chainFamily,
       recipientWallet: checkoutSession.recipientWallet,
       txHash: checkoutSession.txHash,
       verificationError: checkoutSession.verificationError,

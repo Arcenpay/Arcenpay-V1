@@ -19,8 +19,8 @@ export default async function DashboardLayout({
   const session = await getSession();
   if (!session) redirect("/login");
 
-  if (!session.walletAddress) {
-    redirect("/onboarding/wallet");
+  if (!session.walletAddress && !session.stellarWalletAddress) {
+    redirect("/onboarding/chain");
   }
 
   // Check if provider profile exists (OWNER/ADMIN only — others skip)

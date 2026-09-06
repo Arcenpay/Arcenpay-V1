@@ -1,5 +1,6 @@
 import { getChainEnvironment } from "./environment";
 import { getChain, SUPPORTED_CHAIN_IDS } from "./chains";
+import { getChainDescriptor, getChainFamily } from "./chain-family";
 
 export const PRIMARY_RUNTIME_CHAIN_ID = 5042002 as const;
 export const LEGACY_RUNTIME_CHAIN_IDS = [11155111, 84532] as const;
@@ -54,6 +55,10 @@ function legacyRpcEnvKeys(chainId: number): string[] {
       return ["MEAP_RPC_URL_8453", "BASE_MAINNET_RPC_URL", "BASE_RPC_URL"];
     case 5042002:
       return ["MEAP_RPC_URL_5042002", "ARC_RPC_URL", "ARC_SEPOLIA_RPC_URL"];
+    case 677:
+      return ["BOT_MAINNET_RPC_URL"];
+    case 968:
+      return ["BOT_TESTNET_RPC_URL"];
     default:
       return [];
   }
@@ -65,8 +70,62 @@ export function getConfiguredRuntimeChainId(): number {
 
 export function getPrimaryRuntimeChainProfile(): RuntimeChainProfile {
   const chainId = getConfiguredRuntimeChainId();
-  const chain = getChain(chainId);
   const env = getChainEnvironment(chainId);
+
+  // Non-EVM families (Stellar…) have no viem Chain definition — use the
+  // CHAIN_REGISTRY descriptor for explorer/name fields.
+  if (getChainFamily(chainId) !== "evm") {
+    const descriptor = getChainDescriptor(chainId);
+    return {
+      chainId,
+      chainName: descriptor?.name ?? `Chain ${chainId}`,
+      blockExplorerName: descriptor?.blockExplorerUrl ? "Explorer" : "Explorer",
+      blockExplorerUrl: descriptor?.blockExplorerUrl ?? "",
+      rpcUrl: env.services.rpcUrl,
+      subgraphUrl: env.services.subgraphUrl || "",
+      facilitatorUrl: env.services.facilitatorUrl || "",
+      rpcEnvKeys: unique([
+        `ARCENPAY_RPC_URL_${chainId}`,
+        `RPC_URL_${chainId}`,
+        `ARCENPAY_STELLAR_RPC_URL_${chainId}`,
+        `STELLAR_RPC_URL_${chainId}`,
+        `NEXT_PUBLIC_ARCENPAY_RPC_URL_${chainId}`,
+        `NEXT_PUBLIC_RPC_URL_${chainId}`,
+        "ARCENPAY_RPC_URL",
+        "RPC_URL",
+        "STELLAR_RPC_URL",
+      ]),
+      subgraphEnvKeys: unique([
+        `ARCENPAY_SUBGRAPH_URL_${chainId}`,
+        `GRAPH_URL_${chainId}`,
+        `NEXT_PUBLIC_ARCENPAY_SUBGRAPH_URL_${chainId}`,
+        `NEXT_PUBLIC_GRAPH_URL_${chainId}`,
+        "ARCENPAY_SUBGRAPH_URL",
+        "GRAPH_URL",
+      ]),
+      facilitatorEnvKeys: unique([
+        `ARCENPAY_FACILITATOR_URL_${chainId}`,
+        `FACILITATOR_BASE_URL_${chainId}`,
+        `FACILITATOR_URL_${chainId}`,
+        `NEXT_PUBLIC_ARCENPAY_FACILITATOR_URL_${chainId}`,
+        `NEXT_PUBLIC_FACILITATOR_BASE_URL_${chainId}`,
+        `NEXT_PUBLIC_FACILITATOR_URL_${chainId}`,
+        "ARCENPAY_FACILITATOR_URL",
+        "FACILITATOR_BASE_URL",
+        "FACILITATOR_URL",
+        "NEXT_PUBLIC_ARCENPAY_FACILITATOR_URL",
+        "NEXT_PUBLIC_FACILITATOR_BASE_URL",
+        "NEXT_PUBLIC_FACILITATOR_URL",
+      ]),
+      dashboardChainEnvKeys: unique([
+        "ARCENPAY_DEFAULT_CHAIN_ID",
+        "CHAIN_ID",
+        "NEXT_PUBLIC_CHAIN_ID",
+      ]),
+    };
+  }
+
+  const chain = getChain(chainId);
 
   return {
     chainId,
@@ -128,7 +187,11 @@ export function formatRuntimeChainMismatch(input: {
   expectedChainId?: number;
 }): string {
   const expectedChainId = input.expectedChainId ?? getConfiguredRuntimeChainId();
-  const expected = getChain(expectedChainId);
-  const actual = getChain(input.actualChainId);
-  return `${actual.name} (${input.actualChainId}) is active, but the product is configured for ${expected.name} (${expectedChainId}).`;
+  const expectedName =
+    getChainDescriptor(expectedChainId)?.name ??
+    getChain(expectedChainId).name;
+  const actualName =
+    getChainDescriptor(input.actualChainId)?.name ??
+    getChain(input.actualChainId).name;
+  return `${actualName} (${input.actualChainId}) is active, but the product is configured for ${expectedName} (${expectedChainId}).`;
 }

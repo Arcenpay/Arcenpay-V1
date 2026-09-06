@@ -15,28 +15,44 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  ARC_TESTNET_CHAIN_ID,
-  BASE_MAINNET_CHAIN_ID,
   BASE_SEPOLIA_CHAIN_ID,
+  STELLAR_TESTNET_CHAIN_ID,
   getChainLabel,
+  getChainIdsForEnvironment,
   type EnvironmentMode,
 } from "@/lib/default-chain";
+import { getChainFamily } from "@arcenpay/internal-core";
+import { getOnboardingChainFamily } from "@/lib/onboarding-chain-family";
 import { useDashboardSession } from "@/hooks/use-dashboard-session";
 import { OnboardingShell } from "@/components/onboarding/onboarding-shell";
+import type { ChainFamily } from "@arcenpay/internal-core";
 
-const CHAINS: Record<EnvironmentMode, Array<{ chainId: number; label: string }>> = {
-  DEVELOPMENT: [
-    { chainId: BASE_SEPOLIA_CHAIN_ID, label: getChainLabel(BASE_SEPOLIA_CHAIN_ID) },
-    { chainId: ARC_TESTNET_CHAIN_ID, label: getChainLabel(ARC_TESTNET_CHAIN_ID) },
-  ],
-  PRODUCTION: [
-    { chainId: BASE_MAINNET_CHAIN_ID, label: getChainLabel(BASE_MAINNET_CHAIN_ID) },
-  ],
-};
+// Chain picker filtered to only the selected family — EVM users see
+// Base/BOT/Arc/Sepolia; Stellar users see Stellar Testnet/Mainnet/Futurenet.
+function buildChainOptions(mode: EnvironmentMode, family: ChainFamily | null) {
+  return getChainIdsForEnvironment(mode)
+    .filter((chainId) => {
+      if (!family) return true; // fallback: show all
+      return getChainFamily(chainId) === family;
+    })
+    .map((chainId) => ({
+      chainId,
+      label: getChainLabel(chainId),
+    }));
+}
+
+function defaultChainIdForFamily(
+  mode: EnvironmentMode,
+  family: ChainFamily | null,
+): number {
+  if (family === "stellar") return STELLAR_TESTNET_CHAIN_ID;
+  return BASE_SEPOLIA_CHAIN_ID;
+}
 
 export default function EnvironmentOnboardingPage() {
   const router = useRouter();
   const { data, isLoading, refresh } = useDashboardSession();
+  const [selectedFamily, setSelectedFamily] = useState<ChainFamily | null>(null);
   const [name, setName] = useState("");
   const [mode, setMode] = useState<EnvironmentMode>("DEVELOPMENT");
   const [chainId, setChainId] = useState<number>(BASE_SEPOLIA_CHAIN_ID);
@@ -47,13 +63,24 @@ export default function EnvironmentOnboardingPage() {
   const canManage =
     data?.currentTeam?.role === "OWNER" || data?.currentTeam?.role === "ADMIN";
 
-  const chainOptions = useMemo(() => CHAINS[mode], [mode]);
+  useEffect(() => {
+    const family = getOnboardingChainFamily();
+    setSelectedFamily(family);
+    setChainId(defaultChainIdForFamily(mode, family));
+  }, []);
+
+  const chainOptions = useMemo(
+    () => buildChainOptions(mode, selectedFamily),
+    [mode, selectedFamily],
+  );
   const existingEnvironments = data?.environments ?? [];
   const hasExistingEnvironments = existingEnvironments.length > 0;
 
   useEffect(() => {
-    setChainId(chainOptions[0]?.chainId ?? BASE_SEPOLIA_CHAIN_ID);
-  }, [chainOptions]);
+    setChainId(
+      chainOptions[0]?.chainId ?? defaultChainIdForFamily(mode, selectedFamily),
+    );
+  }, [chainOptions, mode, selectedFamily]);
 
   useEffect(() => {
     fetch("/api/environments", { cache: "no-store" })

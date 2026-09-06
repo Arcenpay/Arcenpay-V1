@@ -29,6 +29,8 @@ import {
   ERC7579AutopayModuleABI,
   SubscriptionRegistryABI,
   arcTestnet,
+  botMainnet,
+  botTestnet,
 } from "../sdk";
 import {
   applyVerificationGasFloor,
@@ -41,6 +43,8 @@ const CHAIN_MAP: Record<number, any> = {
   84532: baseSepolia,
   8453: base,
   5042002: arcTestnet,
+  677: botMainnet,
+  968: botTestnet,
 };
 
 type SmartAccountProvider = "pimlico";
@@ -50,6 +54,8 @@ function getSmartAccountChainLabel(chainId: number): string {
   if (chainId === 8453) return "Base";
   if (chainId === 11155111) return "Sepolia";
   if (chainId === 5042002) return "Arc Testnet";
+  if (chainId === 677) return "BOT Chain";
+  if (chainId === 968) return "BOT Chain Testnet";
   return `Chain ${chainId}`;
 }
 

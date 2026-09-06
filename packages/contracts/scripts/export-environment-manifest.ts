@@ -61,6 +61,24 @@ const CHAINS: ChainConfig[] = [
     subgraphEnv: "ARCENPAY_SUBGRAPH_URL_5042002",
     facilitatorEnv: "ARCENPAY_FACILITATOR_URL_5042002",
   },
+  {
+    chainId: 968,
+    chainName: "BOT Chain Testnet",
+    isTestnet: true,
+    deploymentFile: "botTestnet-latest.json",
+    rpcEnv: "BOT_TESTNET_RPC_URL",
+    subgraphEnv: "ARCENPAY_SUBGRAPH_URL_968",
+    facilitatorEnv: "ARCENPAY_FACILITATOR_URL_968",
+  },
+  {
+    chainId: 677,
+    chainName: "BOT Chain",
+    isTestnet: false,
+    deploymentFile: "botMainnet-latest.json",
+    rpcEnv: "BOT_MAINNET_RPC_URL",
+    subgraphEnv: "ARCENPAY_SUBGRAPH_URL_677",
+    facilitatorEnv: "ARCENPAY_FACILITATOR_URL_677",
+  },
 ];
 
 function resolveDeployment(fileName: string): DeploymentShape | null {

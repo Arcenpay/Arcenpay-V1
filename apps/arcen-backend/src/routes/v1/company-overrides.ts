@@ -60,11 +60,11 @@ export async function POST(c: Context) {
 
   const override = await db.companyOverride.upsert({
     where: {
-      companyId_featureKey: { companyId: id, featureKey: body.featureKey },
+      companyId_featureKey: { companyId: id!, featureKey: body.featureKey },
     },
     create: {
       teamId,
-      companyId: id,
+      companyId: id!,
       featureKey: body.featureKey,
       value: body.value,
       reason: body.reason,

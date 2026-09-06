@@ -20,8 +20,18 @@ export type ArcenAgentConfigModel = runtime.Types.Result.DefaultSelection<Prisma
 
 export type AggregateArcenAgentConfig = {
   _count: ArcenAgentConfigCountAggregateOutputType | null
+  _avg: ArcenAgentConfigAvgAggregateOutputType | null
+  _sum: ArcenAgentConfigSumAggregateOutputType | null
   _min: ArcenAgentConfigMinAggregateOutputType | null
   _max: ArcenAgentConfigMaxAggregateOutputType | null
+}
+
+export type ArcenAgentConfigAvgAggregateOutputType = {
+  chainId: number | null
+}
+
+export type ArcenAgentConfigSumAggregateOutputType = {
+  chainId: number | null
 }
 
 export type ArcenAgentConfigMinAggregateOutputType = {
@@ -30,6 +40,8 @@ export type ArcenAgentConfigMinAggregateOutputType = {
   updatedAt: Date | null
   teamId: string | null
   agentWalletAddress: string | null
+  chainId: number | null
+  chainFamily: $Enums.ChainFamily | null
 }
 
 export type ArcenAgentConfigMaxAggregateOutputType = {
@@ -38,6 +50,8 @@ export type ArcenAgentConfigMaxAggregateOutputType = {
   updatedAt: Date | null
   teamId: string | null
   agentWalletAddress: string | null
+  chainId: number | null
+  chainFamily: $Enums.ChainFamily | null
 }
 
 export type ArcenAgentConfigCountAggregateOutputType = {
@@ -48,9 +62,19 @@ export type ArcenAgentConfigCountAggregateOutputType = {
   autoTopUp: number
   dispatch: number
   agentWalletAddress: number
+  chainId: number
+  chainFamily: number
   _all: number
 }
 
+
+export type ArcenAgentConfigAvgAggregateInputType = {
+  chainId?: true
+}
+
+export type ArcenAgentConfigSumAggregateInputType = {
+  chainId?: true
+}
 
 export type ArcenAgentConfigMinAggregateInputType = {
   id?: true
@@ -58,6 +82,8 @@ export type ArcenAgentConfigMinAggregateInputType = {
   updatedAt?: true
   teamId?: true
   agentWalletAddress?: true
+  chainId?: true
+  chainFamily?: true
 }
 
 export type ArcenAgentConfigMaxAggregateInputType = {
@@ -66,6 +92,8 @@ export type ArcenAgentConfigMaxAggregateInputType = {
   updatedAt?: true
   teamId?: true
   agentWalletAddress?: true
+  chainId?: true
+  chainFamily?: true
 }
 
 export type ArcenAgentConfigCountAggregateInputType = {
@@ -76,6 +104,8 @@ export type ArcenAgentConfigCountAggregateInputType = {
   autoTopUp?: true
   dispatch?: true
   agentWalletAddress?: true
+  chainId?: true
+  chainFamily?: true
   _all?: true
 }
 
@@ -117,6 +147,18 @@ export type ArcenAgentConfigAggregateArgs<ExtArgs extends runtime.Types.Extensio
   /**
    * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
    * 
+   * Select which fields to average
+  **/
+  _avg?: ArcenAgentConfigAvgAggregateInputType
+  /**
+   * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+   * 
+   * Select which fields to sum
+  **/
+  _sum?: ArcenAgentConfigSumAggregateInputType
+  /**
+   * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+   * 
    * Select which fields to find the minimum value
   **/
   _min?: ArcenAgentConfigMinAggregateInputType
@@ -147,6 +189,8 @@ export type ArcenAgentConfigGroupByArgs<ExtArgs extends runtime.Types.Extensions
   take?: number
   skip?: number
   _count?: ArcenAgentConfigCountAggregateInputType | true
+  _avg?: ArcenAgentConfigAvgAggregateInputType
+  _sum?: ArcenAgentConfigSumAggregateInputType
   _min?: ArcenAgentConfigMinAggregateInputType
   _max?: ArcenAgentConfigMaxAggregateInputType
 }
@@ -159,7 +203,11 @@ export type ArcenAgentConfigGroupByOutputType = {
   autoTopUp: runtime.JsonValue
   dispatch: runtime.JsonValue
   agentWalletAddress: string | null
+  chainId: number | null
+  chainFamily: $Enums.ChainFamily
   _count: ArcenAgentConfigCountAggregateOutputType | null
+  _avg: ArcenAgentConfigAvgAggregateOutputType | null
+  _sum: ArcenAgentConfigSumAggregateOutputType | null
   _min: ArcenAgentConfigMinAggregateOutputType | null
   _max: ArcenAgentConfigMaxAggregateOutputType | null
 }
@@ -190,6 +238,8 @@ export type ArcenAgentConfigWhereInput = {
   autoTopUp?: Prisma.JsonFilter<"ArcenAgentConfig">
   dispatch?: Prisma.JsonFilter<"ArcenAgentConfig">
   agentWalletAddress?: Prisma.StringNullableFilter<"ArcenAgentConfig"> | string | null
+  chainId?: Prisma.IntNullableFilter<"ArcenAgentConfig"> | number | null
+  chainFamily?: Prisma.EnumChainFamilyFilter<"ArcenAgentConfig"> | $Enums.ChainFamily
   team?: Prisma.XOR<Prisma.TeamScalarRelationFilter, Prisma.TeamWhereInput>
 }
 
@@ -201,6 +251,8 @@ export type ArcenAgentConfigOrderByWithRelationInput = {
   autoTopUp?: Prisma.SortOrder
   dispatch?: Prisma.SortOrder
   agentWalletAddress?: Prisma.SortOrderInput | Prisma.SortOrder
+  chainId?: Prisma.SortOrderInput | Prisma.SortOrder
+  chainFamily?: Prisma.SortOrder
   team?: Prisma.TeamOrderByWithRelationInput
 }
 
@@ -215,6 +267,8 @@ export type ArcenAgentConfigWhereUniqueInput = Prisma.AtLeast<{
   autoTopUp?: Prisma.JsonFilter<"ArcenAgentConfig">
   dispatch?: Prisma.JsonFilter<"ArcenAgentConfig">
   agentWalletAddress?: Prisma.StringNullableFilter<"ArcenAgentConfig"> | string | null
+  chainId?: Prisma.IntNullableFilter<"ArcenAgentConfig"> | number | null
+  chainFamily?: Prisma.EnumChainFamilyFilter<"ArcenAgentConfig"> | $Enums.ChainFamily
   team?: Prisma.XOR<Prisma.TeamScalarRelationFilter, Prisma.TeamWhereInput>
 }, "id" | "teamId">
 
@@ -226,9 +280,13 @@ export type ArcenAgentConfigOrderByWithAggregationInput = {
   autoTopUp?: Prisma.SortOrder
   dispatch?: Prisma.SortOrder
   agentWalletAddress?: Prisma.SortOrderInput | Prisma.SortOrder
+  chainId?: Prisma.SortOrderInput | Prisma.SortOrder
+  chainFamily?: Prisma.SortOrder
   _count?: Prisma.ArcenAgentConfigCountOrderByAggregateInput
+  _avg?: Prisma.ArcenAgentConfigAvgOrderByAggregateInput
   _max?: Prisma.ArcenAgentConfigMaxOrderByAggregateInput
   _min?: Prisma.ArcenAgentConfigMinOrderByAggregateInput
+  _sum?: Prisma.ArcenAgentConfigSumOrderByAggregateInput
 }
 
 export type ArcenAgentConfigScalarWhereWithAggregatesInput = {
@@ -242,6 +300,8 @@ export type ArcenAgentConfigScalarWhereWithAggregatesInput = {
   autoTopUp?: Prisma.JsonWithAggregatesFilter<"ArcenAgentConfig">
   dispatch?: Prisma.JsonWithAggregatesFilter<"ArcenAgentConfig">
   agentWalletAddress?: Prisma.StringNullableWithAggregatesFilter<"ArcenAgentConfig"> | string | null
+  chainId?: Prisma.IntNullableWithAggregatesFilter<"ArcenAgentConfig"> | number | null
+  chainFamily?: Prisma.EnumChainFamilyWithAggregatesFilter<"ArcenAgentConfig"> | $Enums.ChainFamily
 }
 
 export type ArcenAgentConfigCreateInput = {
@@ -251,6 +311,8 @@ export type ArcenAgentConfigCreateInput = {
   autoTopUp?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   dispatch?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   agentWalletAddress?: string | null
+  chainId?: number | null
+  chainFamily?: $Enums.ChainFamily
   team: Prisma.TeamCreateNestedOneWithoutAgentConfigInput
 }
 
@@ -262,6 +324,8 @@ export type ArcenAgentConfigUncheckedCreateInput = {
   autoTopUp?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   dispatch?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   agentWalletAddress?: string | null
+  chainId?: number | null
+  chainFamily?: $Enums.ChainFamily
 }
 
 export type ArcenAgentConfigUpdateInput = {
@@ -271,6 +335,8 @@ export type ArcenAgentConfigUpdateInput = {
   autoTopUp?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   dispatch?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   agentWalletAddress?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  chainId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  chainFamily?: Prisma.EnumChainFamilyFieldUpdateOperationsInput | $Enums.ChainFamily
   team?: Prisma.TeamUpdateOneRequiredWithoutAgentConfigNestedInput
 }
 
@@ -282,6 +348,8 @@ export type ArcenAgentConfigUncheckedUpdateInput = {
   autoTopUp?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   dispatch?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   agentWalletAddress?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  chainId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  chainFamily?: Prisma.EnumChainFamilyFieldUpdateOperationsInput | $Enums.ChainFamily
 }
 
 export type ArcenAgentConfigCreateManyInput = {
@@ -292,6 +360,8 @@ export type ArcenAgentConfigCreateManyInput = {
   autoTopUp?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   dispatch?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   agentWalletAddress?: string | null
+  chainId?: number | null
+  chainFamily?: $Enums.ChainFamily
 }
 
 export type ArcenAgentConfigUpdateManyMutationInput = {
@@ -301,6 +371,8 @@ export type ArcenAgentConfigUpdateManyMutationInput = {
   autoTopUp?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   dispatch?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   agentWalletAddress?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  chainId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  chainFamily?: Prisma.EnumChainFamilyFieldUpdateOperationsInput | $Enums.ChainFamily
 }
 
 export type ArcenAgentConfigUncheckedUpdateManyInput = {
@@ -311,6 +383,8 @@ export type ArcenAgentConfigUncheckedUpdateManyInput = {
   autoTopUp?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   dispatch?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   agentWalletAddress?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  chainId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  chainFamily?: Prisma.EnumChainFamilyFieldUpdateOperationsInput | $Enums.ChainFamily
 }
 
 export type ArcenAgentConfigNullableScalarRelationFilter = {
@@ -326,6 +400,12 @@ export type ArcenAgentConfigCountOrderByAggregateInput = {
   autoTopUp?: Prisma.SortOrder
   dispatch?: Prisma.SortOrder
   agentWalletAddress?: Prisma.SortOrder
+  chainId?: Prisma.SortOrder
+  chainFamily?: Prisma.SortOrder
+}
+
+export type ArcenAgentConfigAvgOrderByAggregateInput = {
+  chainId?: Prisma.SortOrder
 }
 
 export type ArcenAgentConfigMaxOrderByAggregateInput = {
@@ -334,6 +414,8 @@ export type ArcenAgentConfigMaxOrderByAggregateInput = {
   updatedAt?: Prisma.SortOrder
   teamId?: Prisma.SortOrder
   agentWalletAddress?: Prisma.SortOrder
+  chainId?: Prisma.SortOrder
+  chainFamily?: Prisma.SortOrder
 }
 
 export type ArcenAgentConfigMinOrderByAggregateInput = {
@@ -342,6 +424,12 @@ export type ArcenAgentConfigMinOrderByAggregateInput = {
   updatedAt?: Prisma.SortOrder
   teamId?: Prisma.SortOrder
   agentWalletAddress?: Prisma.SortOrder
+  chainId?: Prisma.SortOrder
+  chainFamily?: Prisma.SortOrder
+}
+
+export type ArcenAgentConfigSumOrderByAggregateInput = {
+  chainId?: Prisma.SortOrder
 }
 
 export type ArcenAgentConfigCreateNestedOneWithoutTeamInput = {
@@ -383,6 +471,8 @@ export type ArcenAgentConfigCreateWithoutTeamInput = {
   autoTopUp?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   dispatch?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   agentWalletAddress?: string | null
+  chainId?: number | null
+  chainFamily?: $Enums.ChainFamily
 }
 
 export type ArcenAgentConfigUncheckedCreateWithoutTeamInput = {
@@ -392,6 +482,8 @@ export type ArcenAgentConfigUncheckedCreateWithoutTeamInput = {
   autoTopUp?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   dispatch?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   agentWalletAddress?: string | null
+  chainId?: number | null
+  chainFamily?: $Enums.ChainFamily
 }
 
 export type ArcenAgentConfigCreateOrConnectWithoutTeamInput = {
@@ -417,6 +509,8 @@ export type ArcenAgentConfigUpdateWithoutTeamInput = {
   autoTopUp?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   dispatch?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   agentWalletAddress?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  chainId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  chainFamily?: Prisma.EnumChainFamilyFieldUpdateOperationsInput | $Enums.ChainFamily
 }
 
 export type ArcenAgentConfigUncheckedUpdateWithoutTeamInput = {
@@ -426,6 +520,8 @@ export type ArcenAgentConfigUncheckedUpdateWithoutTeamInput = {
   autoTopUp?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   dispatch?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   agentWalletAddress?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  chainId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  chainFamily?: Prisma.EnumChainFamilyFieldUpdateOperationsInput | $Enums.ChainFamily
 }
 
 
@@ -438,6 +534,8 @@ export type ArcenAgentConfigSelect<ExtArgs extends runtime.Types.Extensions.Inte
   autoTopUp?: boolean
   dispatch?: boolean
   agentWalletAddress?: boolean
+  chainId?: boolean
+  chainFamily?: boolean
   team?: boolean | Prisma.TeamDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["arcenAgentConfig"]>
 
@@ -449,6 +547,8 @@ export type ArcenAgentConfigSelectCreateManyAndReturn<ExtArgs extends runtime.Ty
   autoTopUp?: boolean
   dispatch?: boolean
   agentWalletAddress?: boolean
+  chainId?: boolean
+  chainFamily?: boolean
   team?: boolean | Prisma.TeamDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["arcenAgentConfig"]>
 
@@ -460,6 +560,8 @@ export type ArcenAgentConfigSelectUpdateManyAndReturn<ExtArgs extends runtime.Ty
   autoTopUp?: boolean
   dispatch?: boolean
   agentWalletAddress?: boolean
+  chainId?: boolean
+  chainFamily?: boolean
   team?: boolean | Prisma.TeamDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["arcenAgentConfig"]>
 
@@ -471,9 +573,11 @@ export type ArcenAgentConfigSelectScalar = {
   autoTopUp?: boolean
   dispatch?: boolean
   agentWalletAddress?: boolean
+  chainId?: boolean
+  chainFamily?: boolean
 }
 
-export type ArcenAgentConfigOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "createdAt" | "updatedAt" | "teamId" | "autoTopUp" | "dispatch" | "agentWalletAddress", ExtArgs["result"]["arcenAgentConfig"]>
+export type ArcenAgentConfigOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "createdAt" | "updatedAt" | "teamId" | "autoTopUp" | "dispatch" | "agentWalletAddress" | "chainId" | "chainFamily", ExtArgs["result"]["arcenAgentConfig"]>
 export type ArcenAgentConfigInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   team?: boolean | Prisma.TeamDefaultArgs<ExtArgs>
 }
@@ -497,6 +601,8 @@ export type $ArcenAgentConfigPayload<ExtArgs extends runtime.Types.Extensions.In
     autoTopUp: runtime.JsonValue
     dispatch: runtime.JsonValue
     agentWalletAddress: string | null
+    chainId: number | null
+    chainFamily: $Enums.ChainFamily
   }, ExtArgs["result"]["arcenAgentConfig"]>
   composites: {}
 }
@@ -928,6 +1034,8 @@ export interface ArcenAgentConfigFieldRefs {
   readonly autoTopUp: Prisma.FieldRef<"ArcenAgentConfig", 'Json'>
   readonly dispatch: Prisma.FieldRef<"ArcenAgentConfig", 'Json'>
   readonly agentWalletAddress: Prisma.FieldRef<"ArcenAgentConfig", 'String'>
+  readonly chainId: Prisma.FieldRef<"ArcenAgentConfig", 'Int'>
+  readonly chainFamily: Prisma.FieldRef<"ArcenAgentConfig", 'ChainFamily'>
 }
     
 

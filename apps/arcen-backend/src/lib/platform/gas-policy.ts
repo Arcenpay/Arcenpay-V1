@@ -16,12 +16,14 @@ import { db } from "../../db.js";
 import { getTierLimits } from "../catalog/tier-guard.js";
 import { FACILITATOR_SECRET, FACILITATOR_URL } from "../../config.js";
 import { PlatformTier, Prisma } from "../../generated/client/client.js";
+import { resolveChainFamilyForPrisma } from "./chain-family.js";
 
 // ── Allowed chains for gas sponsorship (L2 only) ─────────────────────────────
 
 const SPONSORED_CHAIN_IDS = new Set<number>([
     84532,   // Base Sepolia
     5042002, // Arc Testnet
+    968,     // BOT Chain Testnet
 ]);
 
 // Chains where sponsorship is explicitly blocked
@@ -29,6 +31,7 @@ const BLOCKED_CHAIN_IDS = new Set<number>([
     1,          // Ethereum mainnet
     11155111,   // Sepolia (L1 testnet)
     8453,       // Base mainnet
+    677,        // BOT Chain Mainnet
 ]);
 
 // ── Anti-abuse limits ────────────────────────────────────────────────────────
@@ -344,6 +347,7 @@ export async function recordGasSpend(params: {
         data: {
             teamId: params.teamId,
             chainId: params.chainId,
+            chainFamily: resolveChainFamilyForPrisma(params.chainId),
             txHash: params.txHash,
             gasUsedWei: params.gasUsedWei,
             gasCostUsd: new Prisma.Decimal(params.gasCostUsd),

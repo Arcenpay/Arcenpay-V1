@@ -21,7 +21,7 @@ export default async function LoginPage({
     if (params.invite) {
       redirect(`/invite?token=${encodeURIComponent(params.invite)}`);
     }
-    redirect(session.walletAddress ? "/" : "/onboarding/wallet");
+    redirect((session.walletAddress || session.stellarWalletAddress) ? "/" : "/onboarding/chain");
   }
 
   return <EmailAuthFlow inviteToken={params.invite ?? null} />;

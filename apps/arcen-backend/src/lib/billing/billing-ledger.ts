@@ -3,6 +3,7 @@ import { toPrismaJson } from "../../utils/prisma-json.js";
 import { toSix } from "./invoices.js";
 import { applyInvoicePayment } from "./billing-balances.js";
 import { normalizeWallet } from "./utils.js";
+import { resolveChainFamilyForPrisma } from "../platform/chain-family.js";
 
 type BillingLedgerDb = Pick<
   typeof db,
@@ -149,7 +150,12 @@ export async function upsertSubscriptionLedgerState(
       walletAddress:
         normalizeWallet(input.walletAddress) ?? company.walletAddress ?? null,
       status: input.status,
-      ...(input.chainId != null ? { chainId: input.chainId } : {}),
+      ...(input.chainId != null
+        ? {
+            chainId: input.chainId,
+            chainFamily: resolveChainFamilyForPrisma(input.chainId),
+          }
+        : {}),
       ...(input.catalogPlanId !== undefined
         ? { catalogPlanId: input.catalogPlanId }
         : {}),
@@ -191,7 +197,8 @@ export async function upsertSubscriptionLedgerState(
       walletAddress:
         normalizeWallet(input.walletAddress) ?? company.walletAddress ?? null,
       status: input.status,
-      ...(input.chainId != null ? { chainId: input.chainId } : {}),
+      chainId: input.chainId ?? 84532,
+      chainFamily: resolveChainFamilyForPrisma(input.chainId ?? 84532),
       catalogPlanId: nextCatalogPlanId,
       onChainPlanId: input.onChainPlanId ?? null,
       onChainTokenId: input.onChainTokenId ?? null,
@@ -260,6 +267,7 @@ export async function recordSuccessfulPayment(
       | "CUSTOM_PAYMENT";
     amount: number;
     currency?: string;
+    chainId?: number;
     payerWallet?: string | null;
     recipientWallet?: string | null;
     acceptedToken?: string | null;
@@ -288,6 +296,8 @@ export async function recordSuccessfulPayment(
     input.environmentId !== undefined
       ? input.environmentId
       : (subscriptionState?.environmentId ?? company?.environmentId ?? null);
+  const resolvedChainId = input.chainId ?? 84532;
+  const resolvedChainFamily = resolveChainFamilyForPrisma(resolvedChainId);
 
   const existing = await resolvePaymentRecord(
     {
@@ -298,28 +308,30 @@ export async function recordSuccessfulPayment(
   );
 
   const payment = existing
-    ? await client.payment.update({
-        where: { id: existing.id },
-        data: {
-          status: "SUCCEEDED",
-          amount: toSix(input.amount),
-          currency: input.currency ?? "USDC",
-          teamId: input.teamId,
-          environmentId: resolvedEnvironmentId,
-          companyId: company?.id ?? null,
-          invoiceId: input.invoiceId ?? null,
-          subscriptionStateId: subscriptionState?.id ?? null,
-          payerWallet: normalizeWallet(input.payerWallet),
-          recipientWallet: normalizeWallet(input.recipientWallet),
-          acceptedToken: normalizeWallet(input.acceptedToken),
-          txHash: input.txHash ?? existing.txHash,
-          externalRef: input.externalRef ?? null,
-          occurredAt: input.occurredAt ?? null,
-          settledAt: input.settledAt ?? input.occurredAt ?? new Date(),
-          failedAt: null,
-          ...(input.metadata ? { metadata: toPrismaJson(input.metadata) } : {}),
-        },
-      })
+      ? await client.payment.update({
+          where: { id: existing.id },
+          data: {
+            status: "SUCCEEDED",
+            amount: toSix(input.amount),
+            currency: input.currency ?? "USDC",
+            chainFamily: resolvedChainFamily,
+            chainId: resolvedChainId,
+            teamId: input.teamId,
+            environmentId: resolvedEnvironmentId,
+            companyId: company?.id ?? null,
+            invoiceId: input.invoiceId ?? null,
+            subscriptionStateId: subscriptionState?.id ?? null,
+            payerWallet: normalizeWallet(input.payerWallet),
+            recipientWallet: normalizeWallet(input.recipientWallet),
+            acceptedToken: normalizeWallet(input.acceptedToken),
+            txHash: input.txHash ?? existing.txHash,
+            externalRef: input.externalRef ?? null,
+            occurredAt: input.occurredAt ?? null,
+            settledAt: input.settledAt ?? input.occurredAt ?? new Date(),
+            failedAt: null,
+            ...(input.metadata ? { metadata: toPrismaJson(input.metadata) } : {}),
+          },
+        })
     : await client.payment.create({
         data: {
           idempotencyKey: input.idempotencyKey,
@@ -332,6 +344,8 @@ export async function recordSuccessfulPayment(
           status: "SUCCEEDED",
           amount: toSix(input.amount),
           currency: input.currency ?? "USDC",
+          chainFamily: resolvedChainFamily,
+          chainId: resolvedChainId,
           payerWallet: normalizeWallet(input.payerWallet),
           recipientWallet: normalizeWallet(input.recipientWallet),
           acceptedToken: normalizeWallet(input.acceptedToken),
@@ -410,6 +424,7 @@ export async function recordFailedPayment(input: {
     | "CUSTOM_PAYMENT";
   amount?: number;
   currency?: string;
+  chainId?: number;
   txHash?: string | null;
   occurredAt?: Date | null;
   errorMessage: string;
@@ -431,6 +446,8 @@ export async function recordFailedPayment(input: {
 
   const occurredAt = input.occurredAt ?? new Date();
   const graceEndsAt = new Date(occurredAt.getTime() + 7 * 24 * 60 * 60 * 1000);
+  const resolvedFailedChain = input.chainId ?? 84532;
+  const resolvedFailedFamily = resolveChainFamilyForPrisma(resolvedFailedChain);
 
   const existing = await resolvePaymentRecord({
     idempotencyKey: input.idempotencyKey,
@@ -447,6 +464,8 @@ export async function recordFailedPayment(input: {
           subscriptionStateId: subscriptionState?.id ?? null,
           amount: toSix(input.amount ?? 0),
           currency: input.currency ?? "USDC",
+          chainFamily: resolvedFailedFamily,
+          chainId: resolvedFailedChain,
           txHash: input.txHash ?? existing.txHash,
           occurredAt,
           failedAt: occurredAt,
@@ -463,6 +482,8 @@ export async function recordFailedPayment(input: {
           status: "FAILED",
           amount: toSix(input.amount ?? 0),
           currency: input.currency ?? "USDC",
+          chainFamily: resolvedFailedFamily,
+          chainId: resolvedFailedChain,
           txHash: input.txHash ?? null,
           occurredAt,
           failedAt: occurredAt,

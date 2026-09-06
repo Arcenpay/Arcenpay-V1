@@ -1,10 +1,34 @@
 import { createPublicClient, fallback, http, type Transport, type PublicClient } from "viem";
-import { DEFAULT_CHAIN_ID, getChain } from "@arcenpay/internal-core";
+import {
+  DEFAULT_CHAIN_ID,
+  getChain,
+  getChainFamily,
+} from "@arcenpay/internal-core";
+
+// EVM-only stub returned for non-EVM chains so that services which lazily hold
+// a viem client (proof orchestrator, usage, settlement, listeners) don't crash
+// at construction time on a Stellar chain. Any method invoked on it is a bug —
+// Stellar paths must use the StellarChainAdapter instead.
+function createNoopClient(): PublicClient {
+  return new Proxy({} as PublicClient, {
+    get: (_target, prop) => {
+      if (typeof prop === "string" && ["then", "catch", "toString", "inspect", Symbol.toPrimitive].includes(prop))
+        return undefined;
+      throw new Error(
+        "EVM client used on a non-EVM (Stellar) chain. Stellar on-chain reads must go through StellarChainAdapter.",
+      );
+    },
+  });
+}
 
 export function getFacilitatorRpcTransport(
   rpcUrl?: string,
   chainId: number = DEFAULT_CHAIN_ID,
 ): Transport {
+  // Stellar/Horizon URLs aren't viem transports. Return a no-op transport so
+  // createResilientFacilitatorClient can still hand back a stub client.
+  if (getChainFamily(chainId) === "stellar") return http("", { timeout: 1000 });
+
   const httpOptions = {
     retryCount: 3,
     retryDelay: 1500,
@@ -21,7 +45,8 @@ export function getFacilitatorRpcTransport(
   }
 
   // Pick ALL chain defaults (not just [0]) so every configured URL participates
-  const chainDefaults = getChain(chainId)?.rpcUrls?.default?.http ?? [];
+  const chain = getChain(chainId);
+  const chainDefaults = chain?.rpcUrls?.default?.http ?? [];
   for (const u of chainDefaults) {
     if (!urls.includes(u)) urls.push(u);
   }
@@ -46,6 +71,7 @@ export function createResilientFacilitatorClient(
   rpcUrl?: string,
   chainId: number = DEFAULT_CHAIN_ID,
 ): PublicClient {
+  if (getChainFamily(chainId) === "stellar") return createNoopClient();
   const chain = getChain(chainId);
   return createPublicClient({
     chain,

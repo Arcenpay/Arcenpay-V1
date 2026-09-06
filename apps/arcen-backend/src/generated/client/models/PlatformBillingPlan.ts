@@ -45,6 +45,7 @@ export type PlatformBillingPlanMinAggregateOutputType = {
   tier: $Enums.PlatformTier | null
   environmentId: string | null
   chainId: number | null
+  chainFamily: $Enums.ChainFamily | null
   onChainPlanId: string | null
   planName: string | null
   priceMicros: number | null
@@ -64,6 +65,7 @@ export type PlatformBillingPlanMaxAggregateOutputType = {
   tier: $Enums.PlatformTier | null
   environmentId: string | null
   chainId: number | null
+  chainFamily: $Enums.ChainFamily | null
   onChainPlanId: string | null
   planName: string | null
   priceMicros: number | null
@@ -83,6 +85,7 @@ export type PlatformBillingPlanCountAggregateOutputType = {
   tier: number
   environmentId: number
   chainId: number
+  chainFamily: number
   onChainPlanId: number
   planName: number
   priceMicros: number
@@ -117,6 +120,7 @@ export type PlatformBillingPlanMinAggregateInputType = {
   tier?: true
   environmentId?: true
   chainId?: true
+  chainFamily?: true
   onChainPlanId?: true
   planName?: true
   priceMicros?: true
@@ -136,6 +140,7 @@ export type PlatformBillingPlanMaxAggregateInputType = {
   tier?: true
   environmentId?: true
   chainId?: true
+  chainFamily?: true
   onChainPlanId?: true
   planName?: true
   priceMicros?: true
@@ -155,6 +160,7 @@ export type PlatformBillingPlanCountAggregateInputType = {
   tier?: true
   environmentId?: true
   chainId?: true
+  chainFamily?: true
   onChainPlanId?: true
   planName?: true
   priceMicros?: true
@@ -262,6 +268,7 @@ export type PlatformBillingPlanGroupByOutputType = {
   tier: $Enums.PlatformTier
   environmentId: string
   chainId: number
+  chainFamily: $Enums.ChainFamily
   onChainPlanId: string | null
   planName: string
   priceMicros: number
@@ -305,6 +312,7 @@ export type PlatformBillingPlanWhereInput = {
   tier?: Prisma.EnumPlatformTierFilter<"PlatformBillingPlan"> | $Enums.PlatformTier
   environmentId?: Prisma.StringFilter<"PlatformBillingPlan"> | string
   chainId?: Prisma.IntFilter<"PlatformBillingPlan"> | number
+  chainFamily?: Prisma.EnumChainFamilyFilter<"PlatformBillingPlan"> | $Enums.ChainFamily
   onChainPlanId?: Prisma.StringNullableFilter<"PlatformBillingPlan"> | string | null
   planName?: Prisma.StringFilter<"PlatformBillingPlan"> | string
   priceMicros?: Prisma.IntFilter<"PlatformBillingPlan"> | number
@@ -326,6 +334,7 @@ export type PlatformBillingPlanOrderByWithRelationInput = {
   tier?: Prisma.SortOrder
   environmentId?: Prisma.SortOrder
   chainId?: Prisma.SortOrder
+  chainFamily?: Prisma.SortOrder
   onChainPlanId?: Prisma.SortOrderInput | Prisma.SortOrder
   planName?: Prisma.SortOrder
   priceMicros?: Prisma.SortOrder
@@ -351,6 +360,7 @@ export type PlatformBillingPlanWhereUniqueInput = Prisma.AtLeast<{
   tier?: Prisma.EnumPlatformTierFilter<"PlatformBillingPlan"> | $Enums.PlatformTier
   environmentId?: Prisma.StringFilter<"PlatformBillingPlan"> | string
   chainId?: Prisma.IntFilter<"PlatformBillingPlan"> | number
+  chainFamily?: Prisma.EnumChainFamilyFilter<"PlatformBillingPlan"> | $Enums.ChainFamily
   onChainPlanId?: Prisma.StringNullableFilter<"PlatformBillingPlan"> | string | null
   planName?: Prisma.StringFilter<"PlatformBillingPlan"> | string
   priceMicros?: Prisma.IntFilter<"PlatformBillingPlan"> | number
@@ -372,6 +382,7 @@ export type PlatformBillingPlanOrderByWithAggregationInput = {
   tier?: Prisma.SortOrder
   environmentId?: Prisma.SortOrder
   chainId?: Prisma.SortOrder
+  chainFamily?: Prisma.SortOrder
   onChainPlanId?: Prisma.SortOrderInput | Prisma.SortOrder
   planName?: Prisma.SortOrder
   priceMicros?: Prisma.SortOrder
@@ -400,6 +411,7 @@ export type PlatformBillingPlanScalarWhereWithAggregatesInput = {
   tier?: Prisma.EnumPlatformTierWithAggregatesFilter<"PlatformBillingPlan"> | $Enums.PlatformTier
   environmentId?: Prisma.StringWithAggregatesFilter<"PlatformBillingPlan"> | string
   chainId?: Prisma.IntWithAggregatesFilter<"PlatformBillingPlan"> | number
+  chainFamily?: Prisma.EnumChainFamilyWithAggregatesFilter<"PlatformBillingPlan"> | $Enums.ChainFamily
   onChainPlanId?: Prisma.StringNullableWithAggregatesFilter<"PlatformBillingPlan"> | string | null
   planName?: Prisma.StringWithAggregatesFilter<"PlatformBillingPlan"> | string
   priceMicros?: Prisma.IntWithAggregatesFilter<"PlatformBillingPlan"> | number
@@ -419,6 +431,7 @@ export type PlatformBillingPlanCreateInput = {
   updatedAt?: Date | string
   tier: $Enums.PlatformTier
   chainId: number
+  chainFamily?: $Enums.ChainFamily
   onChainPlanId?: string | null
   planName: string
   priceMicros: number
@@ -440,6 +453,7 @@ export type PlatformBillingPlanUncheckedCreateInput = {
   tier: $Enums.PlatformTier
   environmentId: string
   chainId: number
+  chainFamily?: $Enums.ChainFamily
   onChainPlanId?: string | null
   planName: string
   priceMicros: number
@@ -459,6 +473,7 @@ export type PlatformBillingPlanUpdateInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   tier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  chainFamily?: Prisma.EnumChainFamilyFieldUpdateOperationsInput | $Enums.ChainFamily
   onChainPlanId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   planName?: Prisma.StringFieldUpdateOperationsInput | string
   priceMicros?: Prisma.IntFieldUpdateOperationsInput | number
@@ -480,6 +495,7 @@ export type PlatformBillingPlanUncheckedUpdateInput = {
   tier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   environmentId?: Prisma.StringFieldUpdateOperationsInput | string
   chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  chainFamily?: Prisma.EnumChainFamilyFieldUpdateOperationsInput | $Enums.ChainFamily
   onChainPlanId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   planName?: Prisma.StringFieldUpdateOperationsInput | string
   priceMicros?: Prisma.IntFieldUpdateOperationsInput | number
@@ -500,6 +516,7 @@ export type PlatformBillingPlanCreateManyInput = {
   tier: $Enums.PlatformTier
   environmentId: string
   chainId: number
+  chainFamily?: $Enums.ChainFamily
   onChainPlanId?: string | null
   planName: string
   priceMicros: number
@@ -519,6 +536,7 @@ export type PlatformBillingPlanUpdateManyMutationInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   tier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  chainFamily?: Prisma.EnumChainFamilyFieldUpdateOperationsInput | $Enums.ChainFamily
   onChainPlanId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   planName?: Prisma.StringFieldUpdateOperationsInput | string
   priceMicros?: Prisma.IntFieldUpdateOperationsInput | number
@@ -539,6 +557,7 @@ export type PlatformBillingPlanUncheckedUpdateManyInput = {
   tier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   environmentId?: Prisma.StringFieldUpdateOperationsInput | string
   chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  chainFamily?: Prisma.EnumChainFamilyFieldUpdateOperationsInput | $Enums.ChainFamily
   onChainPlanId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   planName?: Prisma.StringFieldUpdateOperationsInput | string
   priceMicros?: Prisma.IntFieldUpdateOperationsInput | number
@@ -575,6 +594,7 @@ export type PlatformBillingPlanCountOrderByAggregateInput = {
   tier?: Prisma.SortOrder
   environmentId?: Prisma.SortOrder
   chainId?: Prisma.SortOrder
+  chainFamily?: Prisma.SortOrder
   onChainPlanId?: Prisma.SortOrder
   planName?: Prisma.SortOrder
   priceMicros?: Prisma.SortOrder
@@ -601,6 +621,7 @@ export type PlatformBillingPlanMaxOrderByAggregateInput = {
   tier?: Prisma.SortOrder
   environmentId?: Prisma.SortOrder
   chainId?: Prisma.SortOrder
+  chainFamily?: Prisma.SortOrder
   onChainPlanId?: Prisma.SortOrder
   planName?: Prisma.SortOrder
   priceMicros?: Prisma.SortOrder
@@ -620,6 +641,7 @@ export type PlatformBillingPlanMinOrderByAggregateInput = {
   tier?: Prisma.SortOrder
   environmentId?: Prisma.SortOrder
   chainId?: Prisma.SortOrder
+  chainFamily?: Prisma.SortOrder
   onChainPlanId?: Prisma.SortOrder
   planName?: Prisma.SortOrder
   priceMicros?: Prisma.SortOrder
@@ -686,6 +708,7 @@ export type PlatformBillingPlanCreateWithoutEnvironmentInput = {
   updatedAt?: Date | string
   tier: $Enums.PlatformTier
   chainId: number
+  chainFamily?: $Enums.ChainFamily
   onChainPlanId?: string | null
   planName: string
   priceMicros: number
@@ -705,6 +728,7 @@ export type PlatformBillingPlanUncheckedCreateWithoutEnvironmentInput = {
   updatedAt?: Date | string
   tier: $Enums.PlatformTier
   chainId: number
+  chainFamily?: $Enums.ChainFamily
   onChainPlanId?: string | null
   planName: string
   priceMicros: number
@@ -754,6 +778,7 @@ export type PlatformBillingPlanScalarWhereInput = {
   tier?: Prisma.EnumPlatformTierFilter<"PlatformBillingPlan"> | $Enums.PlatformTier
   environmentId?: Prisma.StringFilter<"PlatformBillingPlan"> | string
   chainId?: Prisma.IntFilter<"PlatformBillingPlan"> | number
+  chainFamily?: Prisma.EnumChainFamilyFilter<"PlatformBillingPlan"> | $Enums.ChainFamily
   onChainPlanId?: Prisma.StringNullableFilter<"PlatformBillingPlan"> | string | null
   planName?: Prisma.StringFilter<"PlatformBillingPlan"> | string
   priceMicros?: Prisma.IntFilter<"PlatformBillingPlan"> | number
@@ -773,6 +798,7 @@ export type PlatformBillingPlanCreateManyEnvironmentInput = {
   updatedAt?: Date | string
   tier: $Enums.PlatformTier
   chainId: number
+  chainFamily?: $Enums.ChainFamily
   onChainPlanId?: string | null
   planName: string
   priceMicros: number
@@ -792,6 +818,7 @@ export type PlatformBillingPlanUpdateWithoutEnvironmentInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   tier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  chainFamily?: Prisma.EnumChainFamilyFieldUpdateOperationsInput | $Enums.ChainFamily
   onChainPlanId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   planName?: Prisma.StringFieldUpdateOperationsInput | string
   priceMicros?: Prisma.IntFieldUpdateOperationsInput | number
@@ -811,6 +838,7 @@ export type PlatformBillingPlanUncheckedUpdateWithoutEnvironmentInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   tier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  chainFamily?: Prisma.EnumChainFamilyFieldUpdateOperationsInput | $Enums.ChainFamily
   onChainPlanId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   planName?: Prisma.StringFieldUpdateOperationsInput | string
   priceMicros?: Prisma.IntFieldUpdateOperationsInput | number
@@ -830,6 +858,7 @@ export type PlatformBillingPlanUncheckedUpdateManyWithoutEnvironmentInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   tier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  chainFamily?: Prisma.EnumChainFamilyFieldUpdateOperationsInput | $Enums.ChainFamily
   onChainPlanId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   planName?: Prisma.StringFieldUpdateOperationsInput | string
   priceMicros?: Prisma.IntFieldUpdateOperationsInput | number
@@ -852,6 +881,7 @@ export type PlatformBillingPlanSelect<ExtArgs extends runtime.Types.Extensions.I
   tier?: boolean
   environmentId?: boolean
   chainId?: boolean
+  chainFamily?: boolean
   onChainPlanId?: boolean
   planName?: boolean
   priceMicros?: boolean
@@ -873,6 +903,7 @@ export type PlatformBillingPlanSelectCreateManyAndReturn<ExtArgs extends runtime
   tier?: boolean
   environmentId?: boolean
   chainId?: boolean
+  chainFamily?: boolean
   onChainPlanId?: boolean
   planName?: boolean
   priceMicros?: boolean
@@ -894,6 +925,7 @@ export type PlatformBillingPlanSelectUpdateManyAndReturn<ExtArgs extends runtime
   tier?: boolean
   environmentId?: boolean
   chainId?: boolean
+  chainFamily?: boolean
   onChainPlanId?: boolean
   planName?: boolean
   priceMicros?: boolean
@@ -915,6 +947,7 @@ export type PlatformBillingPlanSelectScalar = {
   tier?: boolean
   environmentId?: boolean
   chainId?: boolean
+  chainFamily?: boolean
   onChainPlanId?: boolean
   planName?: boolean
   priceMicros?: boolean
@@ -928,7 +961,7 @@ export type PlatformBillingPlanSelectScalar = {
   metadata?: boolean
 }
 
-export type PlatformBillingPlanOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "createdAt" | "updatedAt" | "tier" | "environmentId" | "chainId" | "onChainPlanId" | "planName" | "priceMicros" | "billingIntervalSeconds" | "acceptedToken" | "treasuryWallet" | "bootstrapTxHash" | "syncStatus" | "syncError" | "syncedAt" | "metadata", ExtArgs["result"]["platformBillingPlan"]>
+export type PlatformBillingPlanOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "createdAt" | "updatedAt" | "tier" | "environmentId" | "chainId" | "chainFamily" | "onChainPlanId" | "planName" | "priceMicros" | "billingIntervalSeconds" | "acceptedToken" | "treasuryWallet" | "bootstrapTxHash" | "syncStatus" | "syncError" | "syncedAt" | "metadata", ExtArgs["result"]["platformBillingPlan"]>
 export type PlatformBillingPlanInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   environment?: boolean | Prisma.WorkspaceEnvironmentDefaultArgs<ExtArgs>
 }
@@ -951,6 +984,7 @@ export type $PlatformBillingPlanPayload<ExtArgs extends runtime.Types.Extensions
     tier: $Enums.PlatformTier
     environmentId: string
     chainId: number
+    chainFamily: $Enums.ChainFamily
     onChainPlanId: string | null
     planName: string
     priceMicros: number
@@ -1392,6 +1426,7 @@ export interface PlatformBillingPlanFieldRefs {
   readonly tier: Prisma.FieldRef<"PlatformBillingPlan", 'PlatformTier'>
   readonly environmentId: Prisma.FieldRef<"PlatformBillingPlan", 'String'>
   readonly chainId: Prisma.FieldRef<"PlatformBillingPlan", 'Int'>
+  readonly chainFamily: Prisma.FieldRef<"PlatformBillingPlan", 'ChainFamily'>
   readonly onChainPlanId: Prisma.FieldRef<"PlatformBillingPlan", 'String'>
   readonly planName: Prisma.FieldRef<"PlatformBillingPlan", 'String'>
   readonly priceMicros: Prisma.FieldRef<"PlatformBillingPlan", 'Int'>
