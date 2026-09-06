@@ -1,8 +1,14 @@
 import { ArcenPayProvider } from '@arcenpay/react'
 import Dashboard from './Dashboard'
 
-const PUBLISHABLE_KEY = 'api__bM8SiVSGe6UcNRcOrYN-iEyJjBU_ypMvvOkN_ruNdY'
-const COMPONENT_ID = 'cmsdjtw440004zrv0hvifafj6'
+const PUBLISHABLE_KEY =
+  (import.meta.env.VITE_ARCENPAY_PUBLISHABLE_KEY as string | undefined) ||
+  (import.meta.env.VITE_PUBLISHABLE_KEY as string | undefined) ||
+  '';
+const COMPONENT_ID =
+  (import.meta.env.VITE_ARCENPAY_COMPONENT_ID as string | undefined) ||
+  (import.meta.env.VITE_COMPONENT_ID as string | undefined) ||
+  '';
 
 function App() {
   return (

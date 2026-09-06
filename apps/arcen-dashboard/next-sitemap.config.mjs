@@ -20,9 +20,7 @@ const siteUrl =
   normalizeBaseUrl(process.env.NEXT_PUBLIC_APP_URL) ||
   normalizeBaseUrl(process.env.NEXTAUTH_URL) ||
   normalizeBaseUrl(process.env.VERCEL_URL) ||
-  (process.env.NODE_ENV === "production"
-    ? PROD_FALLBACK_APP_URL
-    : DEV_FALLBACK_APP_URL);
+  PROD_FALLBACK_APP_URL;
 
 /** @type {import("next-sitemap").IConfig} */
 const config = {

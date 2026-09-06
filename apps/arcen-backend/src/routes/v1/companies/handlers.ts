@@ -4,6 +4,7 @@ import { apiError } from "../../../utils/api-response.js";
 import { Prisma } from "../../../generated/client/client.js";
 import { requireAnyAuth, isAnyAuthError } from "../../../lib/auth/require-any-auth.js";
 import { YEARLY_INTERVAL } from "@arcenpay/internal-core";
+import { normalizeWallet } from "../../../lib/billing/utils.js";
 
 function asRecord(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== "object" || Array.isArray(value)) return {};
@@ -173,7 +174,7 @@ export async function createCompany(c: Context) {
     return apiError(c, "id too long", { status: 400, code: "INVALID_INPUT" });
   }
 
-  const walletAddress = body.wallet?.toLowerCase();
+  const walletAddress = normalizeWallet(body.wallet) ?? undefined;
   const email = body.email?.trim().toLowerCase();
 
   if (walletAddress) {

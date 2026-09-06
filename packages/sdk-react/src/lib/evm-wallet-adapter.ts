@@ -7,7 +7,6 @@ import {
   type WalletClient,
   createWalletClient,
   custom,
-  http,
 } from "viem";
 import { getChain } from "../internal/core";
 
@@ -49,13 +48,8 @@ export class EvmWalletAdapter implements WalletAdapter {
 
   private syncFromWagmi() {
     if (!wagmiModule) return;
-    try {
-      const { useAccount, useWalletClient } = wagmiModule;
-      // We can't call hooks here; rely on external sync in React land.
-      // Instead, set up listeners if available.
-    } catch {
-      // ignore
-    }
+    // Wagmi hooks can't be called directly outside React components.
+    // External synchronization is handled via setWagmiState.
   }
 
   setWagmiState(state: { address?: string; isConnected?: boolean; walletClient?: WalletClient }) {

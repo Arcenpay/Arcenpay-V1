@@ -11,6 +11,7 @@ import { db } from "../../db.js";
 import { Prisma } from "../../generated/client/client.js";
 import { getCompanyEnvironmentWhere } from "../../lib/environments/company-scope.js";
 import { assertCanCreateSubscriber } from "../../lib/catalog/tier-guard.js";
+import { normalizeWallet } from "../../lib/billing/utils.js";
 
 export async function GET(c: Context) {
   const ctx = await requireAnyAuth(c);
@@ -131,7 +132,7 @@ export async function POST(c: Context) {
     return c.json({ error: "traits must be a plain object" }, 400 as any);
   }
 
-  const walletAddress = body.wallet?.toLowerCase();
+  const walletAddress = normalizeWallet(body.wallet) ?? undefined;
   const email = body.email?.trim().toLowerCase();
 
   // Enforce subscriber count limit
