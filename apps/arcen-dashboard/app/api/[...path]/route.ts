@@ -1,8 +1,8 @@
 import { NextRequest } from "next/server";
 
 const BACKEND =
-  process.env.NEXT_PUBLIC_BACKEND_URL ||
   process.env.BACKEND_URL ||
+  process.env.NEXT_PUBLIC_BACKEND_URL ||
   (process.env.NODE_ENV === "production" ? "https://api.arcenpay.com" : "http://localhost:3300");
 
 async function handler(request: NextRequest) {
@@ -56,7 +56,9 @@ async function handler(request: NextRequest) {
   const setCookies =
     typeof res.headers.getSetCookie === "function"
       ? res.headers.getSetCookie()
-      : [];
+      : res.headers.get("set-cookie")
+        ? [res.headers.get("set-cookie")!]
+        : [];
 
   res.headers.forEach((value, key) => {
     if (key === "content-encoding" || key === "set-cookie") return; // Let Next.js handle encoding

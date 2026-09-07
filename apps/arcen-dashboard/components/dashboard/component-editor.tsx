@@ -2201,7 +2201,8 @@ const App = () => {
       ? "YOUR_COMPONENT_ID"
       : config.id;
     return `// Node.js / server-side — generate a short-lived access token
-const res = await apiFetch('http://localhost:3000/api/v1/access-tokens', {
+const arcenpayApiUrl = process.env.ARCENPAY_API_URL ?? 'https://api.arcenpay.com';
+const res = await fetch(\`\${arcenpayApiUrl}/api/v1/access-tokens\`, {
   method: 'POST',
   headers: {
     'Authorization': 'Bearer api_your_api_key',

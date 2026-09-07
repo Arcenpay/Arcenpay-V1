@@ -35,7 +35,6 @@ import {
   setOnboardingChainFamily,
 } from "@/lib/onboarding-chain-family";
 import { isPlatformAdminEmail } from "@/lib/admin";
-import { backendApiUrl } from "@/lib/config";
 import type { ChainFamily } from "@arcenpay/internal-core";
 import {
   InputOTP,
@@ -418,7 +417,7 @@ export function EmailAuthFlow({
 
     startTransition(async () => {
       setError(null);
-      const response = await apiFetch(backendApiUrl("/api/v1/auth/email/start"), {
+      const response = await apiFetch("/api/auth/email/start", {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
@@ -457,7 +456,7 @@ export function EmailAuthFlow({
   const submitCode = () => {
     startTransition(async () => {
       setError(null);
-      const response = await apiFetch(backendApiUrl("/api/v1/auth/email/verify"), {
+      const response = await apiFetch("/api/auth/email/verify", {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },

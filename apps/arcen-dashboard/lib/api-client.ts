@@ -1,13 +1,3 @@
-import { BACKEND_URL } from "@/lib/config";
-
-function backendPath(path: string): string {
-  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
-  const versionedPath = normalizedPath.startsWith("/api/v1/")
-    ? normalizedPath
-    : normalizedPath.replace(/^\/api\//, "/api/v1/");
-  return `${BACKEND_URL.replace(/\/$/, "")}${versionedPath}`;
-}
-
 export function apiFetch(
   input: RequestInfo | URL,
   init?: RequestInit,
@@ -18,13 +8,19 @@ export function apiFetch(
       : input instanceof URL
         ? input.toString()
         : input.url;
-  const url = /^https?:\/\//i.test(inputUrl) ? inputUrl : backendPath(inputUrl);
   const nextInit: RequestInit = {
     ...init,
     credentials: init?.credentials ?? "include",
-    mode: "cors",
   };
 
+  // Relative URLs must remain on the dashboard origin. Its /api route is the
+  // backend-for-frontend proxy that can safely persist the .arcenpay.com
+  // session cookie when the API itself runs on a different host (e.g. Railway).
+  if (!/^https?:\/\//i.test(inputUrl)) {
+    return fetch(inputUrl, nextInit);
+  }
+
+  const url = inputUrl;
   if (input instanceof Request) {
     return fetch(new Request(url, input), nextInit);
   }
