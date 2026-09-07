@@ -444,7 +444,9 @@ export const ModelName = {
   ZkTlsProof: 'ZkTlsProof',
   EmbedComponent: 'EmbedComponent',
   ArcenAgentConfig: 'ArcenAgentConfig',
-  ArcenDispatchRequest: 'ArcenDispatchRequest'
+  ArcenDispatchRequest: 'ArcenDispatchRequest',
+  PlatformActivationKey: 'PlatformActivationKey',
+  PlatformActivationRedemption: 'PlatformActivationRedemption'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -460,7 +462,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "user" | "authSession" | "emailAuthCode" | "team" | "workspaceEnvironment" | "teamMember" | "teamInvitation" | "providerProfile" | "subscriberEmail" | "authNonce" | "catalogPlan" | "catalogAddOn" | "catalogCreditType" | "catalogVersion" | "catalogConfig" | "catalogCoupon" | "billingTemplate" | "billingTemplateVersion" | "templateInstall" | "taxProfile" | "invoiceSequence" | "invoice" | "invoiceLine" | "invoiceDelivery" | "creditNote" | "auditEvent" | "billingEvent" | "subscriptionState" | "subscriptionChangeRequest" | "payment" | "paymentAttempt" | "billingAdjustment" | "billingBalance" | "refund" | "billingRecoveryTask" | "webhookDelivery" | "platformTierConfig" | "platformBillingPlan" | "platformBillingAccount" | "platformBillingCustomer" | "gasSpend" | "tierUpgradeHistory" | "supportTicket" | "arcenCompany" | "arcenUser" | "arcenEvent" | "companyAddOnGrant" | "companyCreditGrant" | "creditLedgerEntry" | "paymentLink" | "checkoutSession" | "catalogFeatureFlag" | "flagRule" | "flagRuleCondition" | "companyOverride" | "embedAccessToken" | "arcenApiKey" | "zkTlsProof" | "embedComponent" | "arcenAgentConfig" | "arcenDispatchRequest"
+    modelProps: "user" | "authSession" | "emailAuthCode" | "team" | "workspaceEnvironment" | "teamMember" | "teamInvitation" | "providerProfile" | "subscriberEmail" | "authNonce" | "catalogPlan" | "catalogAddOn" | "catalogCreditType" | "catalogVersion" | "catalogConfig" | "catalogCoupon" | "billingTemplate" | "billingTemplateVersion" | "templateInstall" | "taxProfile" | "invoiceSequence" | "invoice" | "invoiceLine" | "invoiceDelivery" | "creditNote" | "auditEvent" | "billingEvent" | "subscriptionState" | "subscriptionChangeRequest" | "payment" | "paymentAttempt" | "billingAdjustment" | "billingBalance" | "refund" | "billingRecoveryTask" | "webhookDelivery" | "platformTierConfig" | "platformBillingPlan" | "platformBillingAccount" | "platformBillingCustomer" | "gasSpend" | "tierUpgradeHistory" | "supportTicket" | "arcenCompany" | "arcenUser" | "arcenEvent" | "companyAddOnGrant" | "companyCreditGrant" | "creditLedgerEntry" | "paymentLink" | "checkoutSession" | "catalogFeatureFlag" | "flagRule" | "flagRuleCondition" | "companyOverride" | "embedAccessToken" | "arcenApiKey" | "zkTlsProof" | "embedComponent" | "arcenAgentConfig" | "arcenDispatchRequest" | "platformActivationKey" | "platformActivationRedemption"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -4978,6 +4980,154 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    PlatformActivationKey: {
+      payload: Prisma.$PlatformActivationKeyPayload<ExtArgs>
+      fields: Prisma.PlatformActivationKeyFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.PlatformActivationKeyFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PlatformActivationKeyPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.PlatformActivationKeyFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PlatformActivationKeyPayload>
+        }
+        findFirst: {
+          args: Prisma.PlatformActivationKeyFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PlatformActivationKeyPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.PlatformActivationKeyFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PlatformActivationKeyPayload>
+        }
+        findMany: {
+          args: Prisma.PlatformActivationKeyFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PlatformActivationKeyPayload>[]
+        }
+        create: {
+          args: Prisma.PlatformActivationKeyCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PlatformActivationKeyPayload>
+        }
+        createMany: {
+          args: Prisma.PlatformActivationKeyCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.PlatformActivationKeyCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PlatformActivationKeyPayload>[]
+        }
+        delete: {
+          args: Prisma.PlatformActivationKeyDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PlatformActivationKeyPayload>
+        }
+        update: {
+          args: Prisma.PlatformActivationKeyUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PlatformActivationKeyPayload>
+        }
+        deleteMany: {
+          args: Prisma.PlatformActivationKeyDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.PlatformActivationKeyUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.PlatformActivationKeyUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PlatformActivationKeyPayload>[]
+        }
+        upsert: {
+          args: Prisma.PlatformActivationKeyUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PlatformActivationKeyPayload>
+        }
+        aggregate: {
+          args: Prisma.PlatformActivationKeyAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregatePlatformActivationKey>
+        }
+        groupBy: {
+          args: Prisma.PlatformActivationKeyGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.PlatformActivationKeyGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.PlatformActivationKeyCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.PlatformActivationKeyCountAggregateOutputType> | number
+        }
+      }
+    }
+    PlatformActivationRedemption: {
+      payload: Prisma.$PlatformActivationRedemptionPayload<ExtArgs>
+      fields: Prisma.PlatformActivationRedemptionFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.PlatformActivationRedemptionFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PlatformActivationRedemptionPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.PlatformActivationRedemptionFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PlatformActivationRedemptionPayload>
+        }
+        findFirst: {
+          args: Prisma.PlatformActivationRedemptionFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PlatformActivationRedemptionPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.PlatformActivationRedemptionFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PlatformActivationRedemptionPayload>
+        }
+        findMany: {
+          args: Prisma.PlatformActivationRedemptionFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PlatformActivationRedemptionPayload>[]
+        }
+        create: {
+          args: Prisma.PlatformActivationRedemptionCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PlatformActivationRedemptionPayload>
+        }
+        createMany: {
+          args: Prisma.PlatformActivationRedemptionCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.PlatformActivationRedemptionCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PlatformActivationRedemptionPayload>[]
+        }
+        delete: {
+          args: Prisma.PlatformActivationRedemptionDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PlatformActivationRedemptionPayload>
+        }
+        update: {
+          args: Prisma.PlatformActivationRedemptionUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PlatformActivationRedemptionPayload>
+        }
+        deleteMany: {
+          args: Prisma.PlatformActivationRedemptionDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.PlatformActivationRedemptionUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.PlatformActivationRedemptionUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PlatformActivationRedemptionPayload>[]
+        }
+        upsert: {
+          args: Prisma.PlatformActivationRedemptionUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PlatformActivationRedemptionPayload>
+        }
+        aggregate: {
+          args: Prisma.PlatformActivationRedemptionAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregatePlatformActivationRedemption>
+        }
+        groupBy: {
+          args: Prisma.PlatformActivationRedemptionGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.PlatformActivationRedemptionGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.PlatformActivationRedemptionCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.PlatformActivationRedemptionCountAggregateOutputType> | number
+        }
+      }
+    }
   }
 } & {
   other: {
@@ -5071,6 +5221,9 @@ export const TeamScalarFieldEnum = {
   platformTier: 'platformTier',
   tierExpiresAt: 'tierExpiresAt',
   tierSubscriptionId: 'tierSubscriptionId',
+  isPlatformActivated: 'isPlatformActivated',
+  activationKeyId: 'activationKeyId',
+  allowPlatformBilling: 'allowPlatformBilling',
   profileData: 'profileData'
 } as const
 
@@ -6190,6 +6343,47 @@ export const ArcenDispatchRequestScalarFieldEnum = {
 export type ArcenDispatchRequestScalarFieldEnum = (typeof ArcenDispatchRequestScalarFieldEnum)[keyof typeof ArcenDispatchRequestScalarFieldEnum]
 
 
+export const PlatformActivationKeyScalarFieldEnum = {
+  id: 'id',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt',
+  key: 'key',
+  keyHash: 'keyHash',
+  name: 'name',
+  recipientEmail: 'recipientEmail',
+  recipientName: 'recipientName',
+  tier: 'tier',
+  allowPlatformBilling: 'allowPlatformBilling',
+  maxUses: 'maxUses',
+  usedCount: 'usedCount',
+  status: 'status',
+  expiresAt: 'expiresAt',
+  revokedAt: 'revokedAt',
+  revocationReason: 'revocationReason',
+  createdById: 'createdById',
+  notes: 'notes',
+  metadata: 'metadata'
+} as const
+
+export type PlatformActivationKeyScalarFieldEnum = (typeof PlatformActivationKeyScalarFieldEnum)[keyof typeof PlatformActivationKeyScalarFieldEnum]
+
+
+export const PlatformActivationRedemptionScalarFieldEnum = {
+  id: 'id',
+  createdAt: 'createdAt',
+  activationKeyId: 'activationKeyId',
+  teamId: 'teamId',
+  userId: 'userId',
+  userEmail: 'userEmail',
+  walletAddress: 'walletAddress',
+  ipAddress: 'ipAddress',
+  userAgent: 'userAgent',
+  metadata: 'metadata'
+} as const
+
+export type PlatformActivationRedemptionScalarFieldEnum = (typeof PlatformActivationRedemptionScalarFieldEnum)[keyof typeof PlatformActivationRedemptionScalarFieldEnum]
+
+
 export const SortOrder = {
   asc: 'asc',
   desc: 'desc'
@@ -6852,6 +7046,20 @@ export type FloatFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, '
 export type ListFloatFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Float[]'>
     
 
+
+/**
+ * Reference to a field of type 'ActivationKeyStatus'
+ */
+export type EnumActivationKeyStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'ActivationKeyStatus'>
+    
+
+
+/**
+ * Reference to a field of type 'ActivationKeyStatus[]'
+ */
+export type ListEnumActivationKeyStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'ActivationKeyStatus[]'>
+    
+
 /**
  * Batch Payload for updateMany & deleteMany & createMany
  */
@@ -7008,6 +7216,8 @@ export type GlobalOmitConfig = {
   embedComponent?: Prisma.EmbedComponentOmit
   arcenAgentConfig?: Prisma.ArcenAgentConfigOmit
   arcenDispatchRequest?: Prisma.ArcenDispatchRequestOmit
+  platformActivationKey?: Prisma.PlatformActivationKeyOmit
+  platformActivationRedemption?: Prisma.PlatformActivationRedemptionOmit
 }
 
 /* Types for Logging */

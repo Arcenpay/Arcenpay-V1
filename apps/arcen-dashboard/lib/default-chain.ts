@@ -22,15 +22,15 @@ export { STELLAR_MAINNET_CHAIN_ID, STELLAR_TESTNET_CHAIN_ID, STELLAR_FUTURENET_C
 // Wallet support is conditional: EVM ids use wagmi/Reown; Stellar ids require
 // a Stellar wallet (Freighter) — handled in the wallet layer, not here.
 export const TESTNET_CHAIN_IDS = [
+  BOT_TESTNET_CHAIN_ID,
   BASE_SEPOLIA_CHAIN_ID,
   ARC_TESTNET_CHAIN_ID,
-  BOT_TESTNET_CHAIN_ID,
   STELLAR_TESTNET_CHAIN_ID,
   STELLAR_FUTURENET_CHAIN_ID,
 ] as const;
 export const MAINNET_CHAIN_IDS = [
-  BASE_MAINNET_CHAIN_ID,
   BOT_MAINNET_CHAIN_ID,
+  BASE_MAINNET_CHAIN_ID,
   STELLAR_MAINNET_CHAIN_ID,
 ] as const;
 
@@ -83,9 +83,9 @@ export const DEFAULT_CHAIN_ID: SupportedDashboardChainId =
 export const DEFAULT_TESTNET_CHAIN_ID: TestnetChainId =
   TESTNET_SET.has(DEFAULT_CHAIN_ID)
     ? (DEFAULT_CHAIN_ID as TestnetChainId)
-    : BASE_SEPOLIA_CHAIN_ID;
+    : BOT_TESTNET_CHAIN_ID;
 
-export const DEFAULT_MAINNET_CHAIN_ID: MainnetChainId = BASE_MAINNET_CHAIN_ID;
+export const DEFAULT_MAINNET_CHAIN_ID: MainnetChainId = BOT_MAINNET_CHAIN_ID;
 
 export const DEFAULT_PRODUCTION_CHAIN_ID: SupportedDashboardChainId =
   DEFAULT_MAINNET_CHAIN_ID;

@@ -35,6 +35,9 @@ export type TeamMinAggregateOutputType = {
   platformTier: $Enums.PlatformTier | null
   tierExpiresAt: Date | null
   tierSubscriptionId: string | null
+  isPlatformActivated: boolean | null
+  activationKeyId: string | null
+  allowPlatformBilling: boolean | null
 }
 
 export type TeamMaxAggregateOutputType = {
@@ -48,6 +51,9 @@ export type TeamMaxAggregateOutputType = {
   platformTier: $Enums.PlatformTier | null
   tierExpiresAt: Date | null
   tierSubscriptionId: string | null
+  isPlatformActivated: boolean | null
+  activationKeyId: string | null
+  allowPlatformBilling: boolean | null
 }
 
 export type TeamCountAggregateOutputType = {
@@ -61,6 +67,9 @@ export type TeamCountAggregateOutputType = {
   platformTier: number
   tierExpiresAt: number
   tierSubscriptionId: number
+  isPlatformActivated: number
+  activationKeyId: number
+  allowPlatformBilling: number
   profileData: number
   _all: number
 }
@@ -77,6 +86,9 @@ export type TeamMinAggregateInputType = {
   platformTier?: true
   tierExpiresAt?: true
   tierSubscriptionId?: true
+  isPlatformActivated?: true
+  activationKeyId?: true
+  allowPlatformBilling?: true
 }
 
 export type TeamMaxAggregateInputType = {
@@ -90,6 +102,9 @@ export type TeamMaxAggregateInputType = {
   platformTier?: true
   tierExpiresAt?: true
   tierSubscriptionId?: true
+  isPlatformActivated?: true
+  activationKeyId?: true
+  allowPlatformBilling?: true
 }
 
 export type TeamCountAggregateInputType = {
@@ -103,6 +118,9 @@ export type TeamCountAggregateInputType = {
   platformTier?: true
   tierExpiresAt?: true
   tierSubscriptionId?: true
+  isPlatformActivated?: true
+  activationKeyId?: true
+  allowPlatformBilling?: true
   profileData?: true
   _all?: true
 }
@@ -190,6 +208,9 @@ export type TeamGroupByOutputType = {
   platformTier: $Enums.PlatformTier
   tierExpiresAt: Date | null
   tierSubscriptionId: string | null
+  isPlatformActivated: boolean
+  activationKeyId: string | null
+  allowPlatformBilling: boolean
   profileData: runtime.JsonValue | null
   _count: TeamCountAggregateOutputType | null
   _min: TeamMinAggregateOutputType | null
@@ -225,7 +246,12 @@ export type TeamWhereInput = {
   platformTier?: Prisma.EnumPlatformTierFilter<"Team"> | $Enums.PlatformTier
   tierExpiresAt?: Prisma.DateTimeNullableFilter<"Team"> | Date | string | null
   tierSubscriptionId?: Prisma.StringNullableFilter<"Team"> | string | null
+  isPlatformActivated?: Prisma.BoolFilter<"Team"> | boolean
+  activationKeyId?: Prisma.StringNullableFilter<"Team"> | string | null
+  allowPlatformBilling?: Prisma.BoolFilter<"Team"> | boolean
   profileData?: Prisma.JsonNullableFilter<"Team">
+  activationKey?: Prisma.XOR<Prisma.PlatformActivationKeyNullableScalarRelationFilter, Prisma.PlatformActivationKeyWhereInput> | null
+  activationRedemptions?: Prisma.PlatformActivationRedemptionListRelationFilter
   members?: Prisma.TeamMemberListRelationFilter
   providerProfiles?: Prisma.ProviderProfileListRelationFilter
   invitations?: Prisma.TeamInvitationListRelationFilter
@@ -281,7 +307,12 @@ export type TeamOrderByWithRelationInput = {
   platformTier?: Prisma.SortOrder
   tierExpiresAt?: Prisma.SortOrderInput | Prisma.SortOrder
   tierSubscriptionId?: Prisma.SortOrderInput | Prisma.SortOrder
+  isPlatformActivated?: Prisma.SortOrder
+  activationKeyId?: Prisma.SortOrderInput | Prisma.SortOrder
+  allowPlatformBilling?: Prisma.SortOrder
   profileData?: Prisma.SortOrderInput | Prisma.SortOrder
+  activationKey?: Prisma.PlatformActivationKeyOrderByWithRelationInput
+  activationRedemptions?: Prisma.PlatformActivationRedemptionOrderByRelationAggregateInput
   members?: Prisma.TeamMemberOrderByRelationAggregateInput
   providerProfiles?: Prisma.ProviderProfileOrderByRelationAggregateInput
   invitations?: Prisma.TeamInvitationOrderByRelationAggregateInput
@@ -340,7 +371,12 @@ export type TeamWhereUniqueInput = Prisma.AtLeast<{
   platformTier?: Prisma.EnumPlatformTierFilter<"Team"> | $Enums.PlatformTier
   tierExpiresAt?: Prisma.DateTimeNullableFilter<"Team"> | Date | string | null
   tierSubscriptionId?: Prisma.StringNullableFilter<"Team"> | string | null
+  isPlatformActivated?: Prisma.BoolFilter<"Team"> | boolean
+  activationKeyId?: Prisma.StringNullableFilter<"Team"> | string | null
+  allowPlatformBilling?: Prisma.BoolFilter<"Team"> | boolean
   profileData?: Prisma.JsonNullableFilter<"Team">
+  activationKey?: Prisma.XOR<Prisma.PlatformActivationKeyNullableScalarRelationFilter, Prisma.PlatformActivationKeyWhereInput> | null
+  activationRedemptions?: Prisma.PlatformActivationRedemptionListRelationFilter
   members?: Prisma.TeamMemberListRelationFilter
   providerProfiles?: Prisma.ProviderProfileListRelationFilter
   invitations?: Prisma.TeamInvitationListRelationFilter
@@ -396,6 +432,9 @@ export type TeamOrderByWithAggregationInput = {
   platformTier?: Prisma.SortOrder
   tierExpiresAt?: Prisma.SortOrderInput | Prisma.SortOrder
   tierSubscriptionId?: Prisma.SortOrderInput | Prisma.SortOrder
+  isPlatformActivated?: Prisma.SortOrder
+  activationKeyId?: Prisma.SortOrderInput | Prisma.SortOrder
+  allowPlatformBilling?: Prisma.SortOrder
   profileData?: Prisma.SortOrderInput | Prisma.SortOrder
   _count?: Prisma.TeamCountOrderByAggregateInput
   _max?: Prisma.TeamMaxOrderByAggregateInput
@@ -416,6 +455,9 @@ export type TeamScalarWhereWithAggregatesInput = {
   platformTier?: Prisma.EnumPlatformTierWithAggregatesFilter<"Team"> | $Enums.PlatformTier
   tierExpiresAt?: Prisma.DateTimeNullableWithAggregatesFilter<"Team"> | Date | string | null
   tierSubscriptionId?: Prisma.StringNullableWithAggregatesFilter<"Team"> | string | null
+  isPlatformActivated?: Prisma.BoolWithAggregatesFilter<"Team"> | boolean
+  activationKeyId?: Prisma.StringNullableWithAggregatesFilter<"Team"> | string | null
+  allowPlatformBilling?: Prisma.BoolWithAggregatesFilter<"Team"> | boolean
   profileData?: Prisma.JsonNullableWithAggregatesFilter<"Team">
 }
 
@@ -430,7 +472,11 @@ export type TeamCreateInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  isPlatformActivated?: boolean
+  allowPlatformBilling?: boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationKey?: Prisma.PlatformActivationKeyCreateNestedOneWithoutTeamsInput
+  activationRedemptions?: Prisma.PlatformActivationRedemptionCreateNestedManyWithoutTeamInput
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
@@ -486,7 +532,11 @@ export type TeamUncheckedCreateInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  isPlatformActivated?: boolean
+  activationKeyId?: string | null
+  allowPlatformBilling?: boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationRedemptions?: Prisma.PlatformActivationRedemptionUncheckedCreateNestedManyWithoutTeamInput
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileUncheckedCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
@@ -542,7 +592,11 @@ export type TeamUpdateInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isPlatformActivated?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  allowPlatformBilling?: Prisma.BoolFieldUpdateOperationsInput | boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationKey?: Prisma.PlatformActivationKeyUpdateOneWithoutTeamsNestedInput
+  activationRedemptions?: Prisma.PlatformActivationRedemptionUpdateManyWithoutTeamNestedInput
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
@@ -598,7 +652,11 @@ export type TeamUncheckedUpdateInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isPlatformActivated?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  activationKeyId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  allowPlatformBilling?: Prisma.BoolFieldUpdateOperationsInput | boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationRedemptions?: Prisma.PlatformActivationRedemptionUncheckedUpdateManyWithoutTeamNestedInput
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUncheckedUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
@@ -654,6 +712,9 @@ export type TeamCreateManyInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  isPlatformActivated?: boolean
+  activationKeyId?: string | null
+  allowPlatformBilling?: boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
 }
 
@@ -668,6 +729,8 @@ export type TeamUpdateManyMutationInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isPlatformActivated?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  allowPlatformBilling?: Prisma.BoolFieldUpdateOperationsInput | boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
 }
 
@@ -682,6 +745,9 @@ export type TeamUncheckedUpdateManyInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isPlatformActivated?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  activationKeyId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  allowPlatformBilling?: Prisma.BoolFieldUpdateOperationsInput | boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
 }
 
@@ -696,6 +762,9 @@ export type TeamCountOrderByAggregateInput = {
   platformTier?: Prisma.SortOrder
   tierExpiresAt?: Prisma.SortOrder
   tierSubscriptionId?: Prisma.SortOrder
+  isPlatformActivated?: Prisma.SortOrder
+  activationKeyId?: Prisma.SortOrder
+  allowPlatformBilling?: Prisma.SortOrder
   profileData?: Prisma.SortOrder
 }
 
@@ -710,6 +779,9 @@ export type TeamMaxOrderByAggregateInput = {
   platformTier?: Prisma.SortOrder
   tierExpiresAt?: Prisma.SortOrder
   tierSubscriptionId?: Prisma.SortOrder
+  isPlatformActivated?: Prisma.SortOrder
+  activationKeyId?: Prisma.SortOrder
+  allowPlatformBilling?: Prisma.SortOrder
 }
 
 export type TeamMinOrderByAggregateInput = {
@@ -723,11 +795,24 @@ export type TeamMinOrderByAggregateInput = {
   platformTier?: Prisma.SortOrder
   tierExpiresAt?: Prisma.SortOrder
   tierSubscriptionId?: Prisma.SortOrder
+  isPlatformActivated?: Prisma.SortOrder
+  activationKeyId?: Prisma.SortOrder
+  allowPlatformBilling?: Prisma.SortOrder
 }
 
 export type TeamScalarRelationFilter = {
   is?: Prisma.TeamWhereInput
   isNot?: Prisma.TeamWhereInput
+}
+
+export type TeamListRelationFilter = {
+  every?: Prisma.TeamWhereInput
+  some?: Prisma.TeamWhereInput
+  none?: Prisma.TeamWhereInput
+}
+
+export type TeamOrderByRelationAggregateInput = {
+  _count?: Prisma.SortOrder
 }
 
 export type EnumEnvironmentModeFieldUpdateOperationsInput = {
@@ -1326,6 +1411,62 @@ export type TeamUpdateOneRequiredWithoutDispatchRequestsNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.TeamUpdateToOneWithWhereWithoutDispatchRequestsInput, Prisma.TeamUpdateWithoutDispatchRequestsInput>, Prisma.TeamUncheckedUpdateWithoutDispatchRequestsInput>
 }
 
+export type TeamCreateNestedManyWithoutActivationKeyInput = {
+  create?: Prisma.XOR<Prisma.TeamCreateWithoutActivationKeyInput, Prisma.TeamUncheckedCreateWithoutActivationKeyInput> | Prisma.TeamCreateWithoutActivationKeyInput[] | Prisma.TeamUncheckedCreateWithoutActivationKeyInput[]
+  connectOrCreate?: Prisma.TeamCreateOrConnectWithoutActivationKeyInput | Prisma.TeamCreateOrConnectWithoutActivationKeyInput[]
+  createMany?: Prisma.TeamCreateManyActivationKeyInputEnvelope
+  connect?: Prisma.TeamWhereUniqueInput | Prisma.TeamWhereUniqueInput[]
+}
+
+export type TeamUncheckedCreateNestedManyWithoutActivationKeyInput = {
+  create?: Prisma.XOR<Prisma.TeamCreateWithoutActivationKeyInput, Prisma.TeamUncheckedCreateWithoutActivationKeyInput> | Prisma.TeamCreateWithoutActivationKeyInput[] | Prisma.TeamUncheckedCreateWithoutActivationKeyInput[]
+  connectOrCreate?: Prisma.TeamCreateOrConnectWithoutActivationKeyInput | Prisma.TeamCreateOrConnectWithoutActivationKeyInput[]
+  createMany?: Prisma.TeamCreateManyActivationKeyInputEnvelope
+  connect?: Prisma.TeamWhereUniqueInput | Prisma.TeamWhereUniqueInput[]
+}
+
+export type TeamUpdateManyWithoutActivationKeyNestedInput = {
+  create?: Prisma.XOR<Prisma.TeamCreateWithoutActivationKeyInput, Prisma.TeamUncheckedCreateWithoutActivationKeyInput> | Prisma.TeamCreateWithoutActivationKeyInput[] | Prisma.TeamUncheckedCreateWithoutActivationKeyInput[]
+  connectOrCreate?: Prisma.TeamCreateOrConnectWithoutActivationKeyInput | Prisma.TeamCreateOrConnectWithoutActivationKeyInput[]
+  upsert?: Prisma.TeamUpsertWithWhereUniqueWithoutActivationKeyInput | Prisma.TeamUpsertWithWhereUniqueWithoutActivationKeyInput[]
+  createMany?: Prisma.TeamCreateManyActivationKeyInputEnvelope
+  set?: Prisma.TeamWhereUniqueInput | Prisma.TeamWhereUniqueInput[]
+  disconnect?: Prisma.TeamWhereUniqueInput | Prisma.TeamWhereUniqueInput[]
+  delete?: Prisma.TeamWhereUniqueInput | Prisma.TeamWhereUniqueInput[]
+  connect?: Prisma.TeamWhereUniqueInput | Prisma.TeamWhereUniqueInput[]
+  update?: Prisma.TeamUpdateWithWhereUniqueWithoutActivationKeyInput | Prisma.TeamUpdateWithWhereUniqueWithoutActivationKeyInput[]
+  updateMany?: Prisma.TeamUpdateManyWithWhereWithoutActivationKeyInput | Prisma.TeamUpdateManyWithWhereWithoutActivationKeyInput[]
+  deleteMany?: Prisma.TeamScalarWhereInput | Prisma.TeamScalarWhereInput[]
+}
+
+export type TeamUncheckedUpdateManyWithoutActivationKeyNestedInput = {
+  create?: Prisma.XOR<Prisma.TeamCreateWithoutActivationKeyInput, Prisma.TeamUncheckedCreateWithoutActivationKeyInput> | Prisma.TeamCreateWithoutActivationKeyInput[] | Prisma.TeamUncheckedCreateWithoutActivationKeyInput[]
+  connectOrCreate?: Prisma.TeamCreateOrConnectWithoutActivationKeyInput | Prisma.TeamCreateOrConnectWithoutActivationKeyInput[]
+  upsert?: Prisma.TeamUpsertWithWhereUniqueWithoutActivationKeyInput | Prisma.TeamUpsertWithWhereUniqueWithoutActivationKeyInput[]
+  createMany?: Prisma.TeamCreateManyActivationKeyInputEnvelope
+  set?: Prisma.TeamWhereUniqueInput | Prisma.TeamWhereUniqueInput[]
+  disconnect?: Prisma.TeamWhereUniqueInput | Prisma.TeamWhereUniqueInput[]
+  delete?: Prisma.TeamWhereUniqueInput | Prisma.TeamWhereUniqueInput[]
+  connect?: Prisma.TeamWhereUniqueInput | Prisma.TeamWhereUniqueInput[]
+  update?: Prisma.TeamUpdateWithWhereUniqueWithoutActivationKeyInput | Prisma.TeamUpdateWithWhereUniqueWithoutActivationKeyInput[]
+  updateMany?: Prisma.TeamUpdateManyWithWhereWithoutActivationKeyInput | Prisma.TeamUpdateManyWithWhereWithoutActivationKeyInput[]
+  deleteMany?: Prisma.TeamScalarWhereInput | Prisma.TeamScalarWhereInput[]
+}
+
+export type TeamCreateNestedOneWithoutActivationRedemptionsInput = {
+  create?: Prisma.XOR<Prisma.TeamCreateWithoutActivationRedemptionsInput, Prisma.TeamUncheckedCreateWithoutActivationRedemptionsInput>
+  connectOrCreate?: Prisma.TeamCreateOrConnectWithoutActivationRedemptionsInput
+  connect?: Prisma.TeamWhereUniqueInput
+}
+
+export type TeamUpdateOneRequiredWithoutActivationRedemptionsNestedInput = {
+  create?: Prisma.XOR<Prisma.TeamCreateWithoutActivationRedemptionsInput, Prisma.TeamUncheckedCreateWithoutActivationRedemptionsInput>
+  connectOrCreate?: Prisma.TeamCreateOrConnectWithoutActivationRedemptionsInput
+  upsert?: Prisma.TeamUpsertWithoutActivationRedemptionsInput
+  connect?: Prisma.TeamWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.TeamUpdateToOneWithWhereWithoutActivationRedemptionsInput, Prisma.TeamUpdateWithoutActivationRedemptionsInput>, Prisma.TeamUncheckedUpdateWithoutActivationRedemptionsInput>
+}
+
 export type TeamCreateWithoutEnvironmentsInput = {
   id?: string
   createdAt?: Date | string
@@ -1337,7 +1478,11 @@ export type TeamCreateWithoutEnvironmentsInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  isPlatformActivated?: boolean
+  allowPlatformBilling?: boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationKey?: Prisma.PlatformActivationKeyCreateNestedOneWithoutTeamsInput
+  activationRedemptions?: Prisma.PlatformActivationRedemptionCreateNestedManyWithoutTeamInput
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
@@ -1392,7 +1537,11 @@ export type TeamUncheckedCreateWithoutEnvironmentsInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  isPlatformActivated?: boolean
+  activationKeyId?: string | null
+  allowPlatformBilling?: boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationRedemptions?: Prisma.PlatformActivationRedemptionUncheckedCreateNestedManyWithoutTeamInput
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileUncheckedCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
@@ -1463,7 +1612,11 @@ export type TeamUpdateWithoutEnvironmentsInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isPlatformActivated?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  allowPlatformBilling?: Prisma.BoolFieldUpdateOperationsInput | boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationKey?: Prisma.PlatformActivationKeyUpdateOneWithoutTeamsNestedInput
+  activationRedemptions?: Prisma.PlatformActivationRedemptionUpdateManyWithoutTeamNestedInput
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
@@ -1518,7 +1671,11 @@ export type TeamUncheckedUpdateWithoutEnvironmentsInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isPlatformActivated?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  activationKeyId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  allowPlatformBilling?: Prisma.BoolFieldUpdateOperationsInput | boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationRedemptions?: Prisma.PlatformActivationRedemptionUncheckedUpdateManyWithoutTeamNestedInput
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUncheckedUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
@@ -1573,7 +1730,11 @@ export type TeamCreateWithoutMembersInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  isPlatformActivated?: boolean
+  allowPlatformBilling?: boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationKey?: Prisma.PlatformActivationKeyCreateNestedOneWithoutTeamsInput
+  activationRedemptions?: Prisma.PlatformActivationRedemptionCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
   environments?: Prisma.WorkspaceEnvironmentCreateNestedManyWithoutTeamInput
@@ -1628,7 +1789,11 @@ export type TeamUncheckedCreateWithoutMembersInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  isPlatformActivated?: boolean
+  activationKeyId?: string | null
+  allowPlatformBilling?: boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationRedemptions?: Prisma.PlatformActivationRedemptionUncheckedCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileUncheckedCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
   environments?: Prisma.WorkspaceEnvironmentUncheckedCreateNestedManyWithoutTeamInput
@@ -1699,7 +1864,11 @@ export type TeamUpdateWithoutMembersInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isPlatformActivated?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  allowPlatformBilling?: Prisma.BoolFieldUpdateOperationsInput | boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationKey?: Prisma.PlatformActivationKeyUpdateOneWithoutTeamsNestedInput
+  activationRedemptions?: Prisma.PlatformActivationRedemptionUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
   environments?: Prisma.WorkspaceEnvironmentUpdateManyWithoutTeamNestedInput
@@ -1754,7 +1923,11 @@ export type TeamUncheckedUpdateWithoutMembersInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isPlatformActivated?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  activationKeyId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  allowPlatformBilling?: Prisma.BoolFieldUpdateOperationsInput | boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationRedemptions?: Prisma.PlatformActivationRedemptionUncheckedUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUncheckedUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
   environments?: Prisma.WorkspaceEnvironmentUncheckedUpdateManyWithoutTeamNestedInput
@@ -1809,7 +1982,11 @@ export type TeamCreateWithoutInvitationsInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  isPlatformActivated?: boolean
+  allowPlatformBilling?: boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationKey?: Prisma.PlatformActivationKeyCreateNestedOneWithoutTeamsInput
+  activationRedemptions?: Prisma.PlatformActivationRedemptionCreateNestedManyWithoutTeamInput
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileCreateNestedManyWithoutTeamInput
   environments?: Prisma.WorkspaceEnvironmentCreateNestedManyWithoutTeamInput
@@ -1864,7 +2041,11 @@ export type TeamUncheckedCreateWithoutInvitationsInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  isPlatformActivated?: boolean
+  activationKeyId?: string | null
+  allowPlatformBilling?: boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationRedemptions?: Prisma.PlatformActivationRedemptionUncheckedCreateNestedManyWithoutTeamInput
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileUncheckedCreateNestedManyWithoutTeamInput
   environments?: Prisma.WorkspaceEnvironmentUncheckedCreateNestedManyWithoutTeamInput
@@ -1935,7 +2116,11 @@ export type TeamUpdateWithoutInvitationsInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isPlatformActivated?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  allowPlatformBilling?: Prisma.BoolFieldUpdateOperationsInput | boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationKey?: Prisma.PlatformActivationKeyUpdateOneWithoutTeamsNestedInput
+  activationRedemptions?: Prisma.PlatformActivationRedemptionUpdateManyWithoutTeamNestedInput
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUpdateManyWithoutTeamNestedInput
   environments?: Prisma.WorkspaceEnvironmentUpdateManyWithoutTeamNestedInput
@@ -1990,7 +2175,11 @@ export type TeamUncheckedUpdateWithoutInvitationsInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isPlatformActivated?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  activationKeyId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  allowPlatformBilling?: Prisma.BoolFieldUpdateOperationsInput | boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationRedemptions?: Prisma.PlatformActivationRedemptionUncheckedUpdateManyWithoutTeamNestedInput
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUncheckedUpdateManyWithoutTeamNestedInput
   environments?: Prisma.WorkspaceEnvironmentUncheckedUpdateManyWithoutTeamNestedInput
@@ -2045,7 +2234,11 @@ export type TeamCreateWithoutProviderProfilesInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  isPlatformActivated?: boolean
+  allowPlatformBilling?: boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationKey?: Prisma.PlatformActivationKeyCreateNestedOneWithoutTeamsInput
+  activationRedemptions?: Prisma.PlatformActivationRedemptionCreateNestedManyWithoutTeamInput
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
   environments?: Prisma.WorkspaceEnvironmentCreateNestedManyWithoutTeamInput
@@ -2100,7 +2293,11 @@ export type TeamUncheckedCreateWithoutProviderProfilesInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  isPlatformActivated?: boolean
+  activationKeyId?: string | null
+  allowPlatformBilling?: boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationRedemptions?: Prisma.PlatformActivationRedemptionUncheckedCreateNestedManyWithoutTeamInput
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
   environments?: Prisma.WorkspaceEnvironmentUncheckedCreateNestedManyWithoutTeamInput
@@ -2171,7 +2368,11 @@ export type TeamUpdateWithoutProviderProfilesInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isPlatformActivated?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  allowPlatformBilling?: Prisma.BoolFieldUpdateOperationsInput | boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationKey?: Prisma.PlatformActivationKeyUpdateOneWithoutTeamsNestedInput
+  activationRedemptions?: Prisma.PlatformActivationRedemptionUpdateManyWithoutTeamNestedInput
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
   environments?: Prisma.WorkspaceEnvironmentUpdateManyWithoutTeamNestedInput
@@ -2226,7 +2427,11 @@ export type TeamUncheckedUpdateWithoutProviderProfilesInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isPlatformActivated?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  activationKeyId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  allowPlatformBilling?: Prisma.BoolFieldUpdateOperationsInput | boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationRedemptions?: Prisma.PlatformActivationRedemptionUncheckedUpdateManyWithoutTeamNestedInput
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
   environments?: Prisma.WorkspaceEnvironmentUncheckedUpdateManyWithoutTeamNestedInput
@@ -2281,7 +2486,11 @@ export type TeamCreateWithoutCatalogPlansInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  isPlatformActivated?: boolean
+  allowPlatformBilling?: boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationKey?: Prisma.PlatformActivationKeyCreateNestedOneWithoutTeamsInput
+  activationRedemptions?: Prisma.PlatformActivationRedemptionCreateNestedManyWithoutTeamInput
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
@@ -2336,7 +2545,11 @@ export type TeamUncheckedCreateWithoutCatalogPlansInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  isPlatformActivated?: boolean
+  activationKeyId?: string | null
+  allowPlatformBilling?: boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationRedemptions?: Prisma.PlatformActivationRedemptionUncheckedCreateNestedManyWithoutTeamInput
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileUncheckedCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
@@ -2407,7 +2620,11 @@ export type TeamUpdateWithoutCatalogPlansInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isPlatformActivated?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  allowPlatformBilling?: Prisma.BoolFieldUpdateOperationsInput | boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationKey?: Prisma.PlatformActivationKeyUpdateOneWithoutTeamsNestedInput
+  activationRedemptions?: Prisma.PlatformActivationRedemptionUpdateManyWithoutTeamNestedInput
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
@@ -2462,7 +2679,11 @@ export type TeamUncheckedUpdateWithoutCatalogPlansInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isPlatformActivated?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  activationKeyId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  allowPlatformBilling?: Prisma.BoolFieldUpdateOperationsInput | boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationRedemptions?: Prisma.PlatformActivationRedemptionUncheckedUpdateManyWithoutTeamNestedInput
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUncheckedUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
@@ -2517,7 +2738,11 @@ export type TeamCreateWithoutCatalogAddOnsInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  isPlatformActivated?: boolean
+  allowPlatformBilling?: boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationKey?: Prisma.PlatformActivationKeyCreateNestedOneWithoutTeamsInput
+  activationRedemptions?: Prisma.PlatformActivationRedemptionCreateNestedManyWithoutTeamInput
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
@@ -2572,7 +2797,11 @@ export type TeamUncheckedCreateWithoutCatalogAddOnsInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  isPlatformActivated?: boolean
+  activationKeyId?: string | null
+  allowPlatformBilling?: boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationRedemptions?: Prisma.PlatformActivationRedemptionUncheckedCreateNestedManyWithoutTeamInput
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileUncheckedCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
@@ -2643,7 +2872,11 @@ export type TeamUpdateWithoutCatalogAddOnsInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isPlatformActivated?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  allowPlatformBilling?: Prisma.BoolFieldUpdateOperationsInput | boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationKey?: Prisma.PlatformActivationKeyUpdateOneWithoutTeamsNestedInput
+  activationRedemptions?: Prisma.PlatformActivationRedemptionUpdateManyWithoutTeamNestedInput
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
@@ -2698,7 +2931,11 @@ export type TeamUncheckedUpdateWithoutCatalogAddOnsInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isPlatformActivated?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  activationKeyId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  allowPlatformBilling?: Prisma.BoolFieldUpdateOperationsInput | boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationRedemptions?: Prisma.PlatformActivationRedemptionUncheckedUpdateManyWithoutTeamNestedInput
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUncheckedUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
@@ -2753,7 +2990,11 @@ export type TeamCreateWithoutCatalogCreditTypesInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  isPlatformActivated?: boolean
+  allowPlatformBilling?: boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationKey?: Prisma.PlatformActivationKeyCreateNestedOneWithoutTeamsInput
+  activationRedemptions?: Prisma.PlatformActivationRedemptionCreateNestedManyWithoutTeamInput
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
@@ -2808,7 +3049,11 @@ export type TeamUncheckedCreateWithoutCatalogCreditTypesInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  isPlatformActivated?: boolean
+  activationKeyId?: string | null
+  allowPlatformBilling?: boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationRedemptions?: Prisma.PlatformActivationRedemptionUncheckedCreateNestedManyWithoutTeamInput
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileUncheckedCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
@@ -2879,7 +3124,11 @@ export type TeamUpdateWithoutCatalogCreditTypesInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isPlatformActivated?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  allowPlatformBilling?: Prisma.BoolFieldUpdateOperationsInput | boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationKey?: Prisma.PlatformActivationKeyUpdateOneWithoutTeamsNestedInput
+  activationRedemptions?: Prisma.PlatformActivationRedemptionUpdateManyWithoutTeamNestedInput
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
@@ -2934,7 +3183,11 @@ export type TeamUncheckedUpdateWithoutCatalogCreditTypesInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isPlatformActivated?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  activationKeyId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  allowPlatformBilling?: Prisma.BoolFieldUpdateOperationsInput | boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationRedemptions?: Prisma.PlatformActivationRedemptionUncheckedUpdateManyWithoutTeamNestedInput
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUncheckedUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
@@ -2989,7 +3242,11 @@ export type TeamCreateWithoutCatalogVersionsInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  isPlatformActivated?: boolean
+  allowPlatformBilling?: boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationKey?: Prisma.PlatformActivationKeyCreateNestedOneWithoutTeamsInput
+  activationRedemptions?: Prisma.PlatformActivationRedemptionCreateNestedManyWithoutTeamInput
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
@@ -3044,7 +3301,11 @@ export type TeamUncheckedCreateWithoutCatalogVersionsInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  isPlatformActivated?: boolean
+  activationKeyId?: string | null
+  allowPlatformBilling?: boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationRedemptions?: Prisma.PlatformActivationRedemptionUncheckedCreateNestedManyWithoutTeamInput
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileUncheckedCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
@@ -3115,7 +3376,11 @@ export type TeamUpdateWithoutCatalogVersionsInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isPlatformActivated?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  allowPlatformBilling?: Prisma.BoolFieldUpdateOperationsInput | boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationKey?: Prisma.PlatformActivationKeyUpdateOneWithoutTeamsNestedInput
+  activationRedemptions?: Prisma.PlatformActivationRedemptionUpdateManyWithoutTeamNestedInput
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
@@ -3170,7 +3435,11 @@ export type TeamUncheckedUpdateWithoutCatalogVersionsInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isPlatformActivated?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  activationKeyId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  allowPlatformBilling?: Prisma.BoolFieldUpdateOperationsInput | boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationRedemptions?: Prisma.PlatformActivationRedemptionUncheckedUpdateManyWithoutTeamNestedInput
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUncheckedUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
@@ -3225,7 +3494,11 @@ export type TeamCreateWithoutCatalogConfigsInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  isPlatformActivated?: boolean
+  allowPlatformBilling?: boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationKey?: Prisma.PlatformActivationKeyCreateNestedOneWithoutTeamsInput
+  activationRedemptions?: Prisma.PlatformActivationRedemptionCreateNestedManyWithoutTeamInput
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
@@ -3280,7 +3553,11 @@ export type TeamUncheckedCreateWithoutCatalogConfigsInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  isPlatformActivated?: boolean
+  activationKeyId?: string | null
+  allowPlatformBilling?: boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationRedemptions?: Prisma.PlatformActivationRedemptionUncheckedCreateNestedManyWithoutTeamInput
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileUncheckedCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
@@ -3351,7 +3628,11 @@ export type TeamUpdateWithoutCatalogConfigsInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isPlatformActivated?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  allowPlatformBilling?: Prisma.BoolFieldUpdateOperationsInput | boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationKey?: Prisma.PlatformActivationKeyUpdateOneWithoutTeamsNestedInput
+  activationRedemptions?: Prisma.PlatformActivationRedemptionUpdateManyWithoutTeamNestedInput
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
@@ -3406,7 +3687,11 @@ export type TeamUncheckedUpdateWithoutCatalogConfigsInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isPlatformActivated?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  activationKeyId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  allowPlatformBilling?: Prisma.BoolFieldUpdateOperationsInput | boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationRedemptions?: Prisma.PlatformActivationRedemptionUncheckedUpdateManyWithoutTeamNestedInput
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUncheckedUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
@@ -3461,7 +3746,11 @@ export type TeamCreateWithoutBillingTemplatesInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  isPlatformActivated?: boolean
+  allowPlatformBilling?: boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationKey?: Prisma.PlatformActivationKeyCreateNestedOneWithoutTeamsInput
+  activationRedemptions?: Prisma.PlatformActivationRedemptionCreateNestedManyWithoutTeamInput
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
@@ -3516,7 +3805,11 @@ export type TeamUncheckedCreateWithoutBillingTemplatesInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  isPlatformActivated?: boolean
+  activationKeyId?: string | null
+  allowPlatformBilling?: boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationRedemptions?: Prisma.PlatformActivationRedemptionUncheckedCreateNestedManyWithoutTeamInput
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileUncheckedCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
@@ -3587,7 +3880,11 @@ export type TeamUpdateWithoutBillingTemplatesInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isPlatformActivated?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  allowPlatformBilling?: Prisma.BoolFieldUpdateOperationsInput | boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationKey?: Prisma.PlatformActivationKeyUpdateOneWithoutTeamsNestedInput
+  activationRedemptions?: Prisma.PlatformActivationRedemptionUpdateManyWithoutTeamNestedInput
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
@@ -3642,7 +3939,11 @@ export type TeamUncheckedUpdateWithoutBillingTemplatesInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isPlatformActivated?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  activationKeyId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  allowPlatformBilling?: Prisma.BoolFieldUpdateOperationsInput | boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationRedemptions?: Prisma.PlatformActivationRedemptionUncheckedUpdateManyWithoutTeamNestedInput
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUncheckedUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
@@ -3697,7 +3998,11 @@ export type TeamCreateWithoutTemplateInstallsInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  isPlatformActivated?: boolean
+  allowPlatformBilling?: boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationKey?: Prisma.PlatformActivationKeyCreateNestedOneWithoutTeamsInput
+  activationRedemptions?: Prisma.PlatformActivationRedemptionCreateNestedManyWithoutTeamInput
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
@@ -3752,7 +4057,11 @@ export type TeamUncheckedCreateWithoutTemplateInstallsInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  isPlatformActivated?: boolean
+  activationKeyId?: string | null
+  allowPlatformBilling?: boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationRedemptions?: Prisma.PlatformActivationRedemptionUncheckedCreateNestedManyWithoutTeamInput
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileUncheckedCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
@@ -3823,7 +4132,11 @@ export type TeamUpdateWithoutTemplateInstallsInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isPlatformActivated?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  allowPlatformBilling?: Prisma.BoolFieldUpdateOperationsInput | boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationKey?: Prisma.PlatformActivationKeyUpdateOneWithoutTeamsNestedInput
+  activationRedemptions?: Prisma.PlatformActivationRedemptionUpdateManyWithoutTeamNestedInput
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
@@ -3878,7 +4191,11 @@ export type TeamUncheckedUpdateWithoutTemplateInstallsInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isPlatformActivated?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  activationKeyId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  allowPlatformBilling?: Prisma.BoolFieldUpdateOperationsInput | boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationRedemptions?: Prisma.PlatformActivationRedemptionUncheckedUpdateManyWithoutTeamNestedInput
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUncheckedUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
@@ -3933,7 +4250,11 @@ export type TeamCreateWithoutTaxProfileInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  isPlatformActivated?: boolean
+  allowPlatformBilling?: boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationKey?: Prisma.PlatformActivationKeyCreateNestedOneWithoutTeamsInput
+  activationRedemptions?: Prisma.PlatformActivationRedemptionCreateNestedManyWithoutTeamInput
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
@@ -3988,7 +4309,11 @@ export type TeamUncheckedCreateWithoutTaxProfileInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  isPlatformActivated?: boolean
+  activationKeyId?: string | null
+  allowPlatformBilling?: boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationRedemptions?: Prisma.PlatformActivationRedemptionUncheckedCreateNestedManyWithoutTeamInput
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileUncheckedCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
@@ -4059,7 +4384,11 @@ export type TeamUpdateWithoutTaxProfileInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isPlatformActivated?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  allowPlatformBilling?: Prisma.BoolFieldUpdateOperationsInput | boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationKey?: Prisma.PlatformActivationKeyUpdateOneWithoutTeamsNestedInput
+  activationRedemptions?: Prisma.PlatformActivationRedemptionUpdateManyWithoutTeamNestedInput
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
@@ -4114,7 +4443,11 @@ export type TeamUncheckedUpdateWithoutTaxProfileInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isPlatformActivated?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  activationKeyId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  allowPlatformBilling?: Prisma.BoolFieldUpdateOperationsInput | boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationRedemptions?: Prisma.PlatformActivationRedemptionUncheckedUpdateManyWithoutTeamNestedInput
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUncheckedUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
@@ -4169,7 +4502,11 @@ export type TeamCreateWithoutInvoiceSequencesInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  isPlatformActivated?: boolean
+  allowPlatformBilling?: boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationKey?: Prisma.PlatformActivationKeyCreateNestedOneWithoutTeamsInput
+  activationRedemptions?: Prisma.PlatformActivationRedemptionCreateNestedManyWithoutTeamInput
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
@@ -4224,7 +4561,11 @@ export type TeamUncheckedCreateWithoutInvoiceSequencesInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  isPlatformActivated?: boolean
+  activationKeyId?: string | null
+  allowPlatformBilling?: boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationRedemptions?: Prisma.PlatformActivationRedemptionUncheckedCreateNestedManyWithoutTeamInput
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileUncheckedCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
@@ -4295,7 +4636,11 @@ export type TeamUpdateWithoutInvoiceSequencesInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isPlatformActivated?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  allowPlatformBilling?: Prisma.BoolFieldUpdateOperationsInput | boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationKey?: Prisma.PlatformActivationKeyUpdateOneWithoutTeamsNestedInput
+  activationRedemptions?: Prisma.PlatformActivationRedemptionUpdateManyWithoutTeamNestedInput
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
@@ -4350,7 +4695,11 @@ export type TeamUncheckedUpdateWithoutInvoiceSequencesInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isPlatformActivated?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  activationKeyId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  allowPlatformBilling?: Prisma.BoolFieldUpdateOperationsInput | boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationRedemptions?: Prisma.PlatformActivationRedemptionUncheckedUpdateManyWithoutTeamNestedInput
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUncheckedUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
@@ -4405,7 +4754,11 @@ export type TeamCreateWithoutInvoicesInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  isPlatformActivated?: boolean
+  allowPlatformBilling?: boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationKey?: Prisma.PlatformActivationKeyCreateNestedOneWithoutTeamsInput
+  activationRedemptions?: Prisma.PlatformActivationRedemptionCreateNestedManyWithoutTeamInput
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
@@ -4460,7 +4813,11 @@ export type TeamUncheckedCreateWithoutInvoicesInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  isPlatformActivated?: boolean
+  activationKeyId?: string | null
+  allowPlatformBilling?: boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationRedemptions?: Prisma.PlatformActivationRedemptionUncheckedCreateNestedManyWithoutTeamInput
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileUncheckedCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
@@ -4531,7 +4888,11 @@ export type TeamUpdateWithoutInvoicesInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isPlatformActivated?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  allowPlatformBilling?: Prisma.BoolFieldUpdateOperationsInput | boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationKey?: Prisma.PlatformActivationKeyUpdateOneWithoutTeamsNestedInput
+  activationRedemptions?: Prisma.PlatformActivationRedemptionUpdateManyWithoutTeamNestedInput
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
@@ -4586,7 +4947,11 @@ export type TeamUncheckedUpdateWithoutInvoicesInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isPlatformActivated?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  activationKeyId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  allowPlatformBilling?: Prisma.BoolFieldUpdateOperationsInput | boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationRedemptions?: Prisma.PlatformActivationRedemptionUncheckedUpdateManyWithoutTeamNestedInput
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUncheckedUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
@@ -4641,7 +5006,11 @@ export type TeamCreateWithoutAuditEventsInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  isPlatformActivated?: boolean
+  allowPlatformBilling?: boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationKey?: Prisma.PlatformActivationKeyCreateNestedOneWithoutTeamsInput
+  activationRedemptions?: Prisma.PlatformActivationRedemptionCreateNestedManyWithoutTeamInput
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
@@ -4696,7 +5065,11 @@ export type TeamUncheckedCreateWithoutAuditEventsInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  isPlatformActivated?: boolean
+  activationKeyId?: string | null
+  allowPlatformBilling?: boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationRedemptions?: Prisma.PlatformActivationRedemptionUncheckedCreateNestedManyWithoutTeamInput
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileUncheckedCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
@@ -4767,7 +5140,11 @@ export type TeamUpdateWithoutAuditEventsInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isPlatformActivated?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  allowPlatformBilling?: Prisma.BoolFieldUpdateOperationsInput | boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationKey?: Prisma.PlatformActivationKeyUpdateOneWithoutTeamsNestedInput
+  activationRedemptions?: Prisma.PlatformActivationRedemptionUpdateManyWithoutTeamNestedInput
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
@@ -4822,7 +5199,11 @@ export type TeamUncheckedUpdateWithoutAuditEventsInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isPlatformActivated?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  activationKeyId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  allowPlatformBilling?: Prisma.BoolFieldUpdateOperationsInput | boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationRedemptions?: Prisma.PlatformActivationRedemptionUncheckedUpdateManyWithoutTeamNestedInput
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUncheckedUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
@@ -4877,7 +5258,11 @@ export type TeamCreateWithoutBillingEventsInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  isPlatformActivated?: boolean
+  allowPlatformBilling?: boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationKey?: Prisma.PlatformActivationKeyCreateNestedOneWithoutTeamsInput
+  activationRedemptions?: Prisma.PlatformActivationRedemptionCreateNestedManyWithoutTeamInput
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
@@ -4932,7 +5317,11 @@ export type TeamUncheckedCreateWithoutBillingEventsInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  isPlatformActivated?: boolean
+  activationKeyId?: string | null
+  allowPlatformBilling?: boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationRedemptions?: Prisma.PlatformActivationRedemptionUncheckedCreateNestedManyWithoutTeamInput
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileUncheckedCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
@@ -5003,7 +5392,11 @@ export type TeamUpdateWithoutBillingEventsInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isPlatformActivated?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  allowPlatformBilling?: Prisma.BoolFieldUpdateOperationsInput | boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationKey?: Prisma.PlatformActivationKeyUpdateOneWithoutTeamsNestedInput
+  activationRedemptions?: Prisma.PlatformActivationRedemptionUpdateManyWithoutTeamNestedInput
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
@@ -5058,7 +5451,11 @@ export type TeamUncheckedUpdateWithoutBillingEventsInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isPlatformActivated?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  activationKeyId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  allowPlatformBilling?: Prisma.BoolFieldUpdateOperationsInput | boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationRedemptions?: Prisma.PlatformActivationRedemptionUncheckedUpdateManyWithoutTeamNestedInput
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUncheckedUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
@@ -5113,7 +5510,11 @@ export type TeamCreateWithoutSubscriptionStatesInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  isPlatformActivated?: boolean
+  allowPlatformBilling?: boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationKey?: Prisma.PlatformActivationKeyCreateNestedOneWithoutTeamsInput
+  activationRedemptions?: Prisma.PlatformActivationRedemptionCreateNestedManyWithoutTeamInput
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
@@ -5168,7 +5569,11 @@ export type TeamUncheckedCreateWithoutSubscriptionStatesInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  isPlatformActivated?: boolean
+  activationKeyId?: string | null
+  allowPlatformBilling?: boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationRedemptions?: Prisma.PlatformActivationRedemptionUncheckedCreateNestedManyWithoutTeamInput
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileUncheckedCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
@@ -5239,7 +5644,11 @@ export type TeamUpdateWithoutSubscriptionStatesInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isPlatformActivated?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  allowPlatformBilling?: Prisma.BoolFieldUpdateOperationsInput | boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationKey?: Prisma.PlatformActivationKeyUpdateOneWithoutTeamsNestedInput
+  activationRedemptions?: Prisma.PlatformActivationRedemptionUpdateManyWithoutTeamNestedInput
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
@@ -5294,7 +5703,11 @@ export type TeamUncheckedUpdateWithoutSubscriptionStatesInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isPlatformActivated?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  activationKeyId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  allowPlatformBilling?: Prisma.BoolFieldUpdateOperationsInput | boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationRedemptions?: Prisma.PlatformActivationRedemptionUncheckedUpdateManyWithoutTeamNestedInput
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUncheckedUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
@@ -5349,7 +5762,11 @@ export type TeamCreateWithoutSubscriptionChangeRequestsInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  isPlatformActivated?: boolean
+  allowPlatformBilling?: boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationKey?: Prisma.PlatformActivationKeyCreateNestedOneWithoutTeamsInput
+  activationRedemptions?: Prisma.PlatformActivationRedemptionCreateNestedManyWithoutTeamInput
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
@@ -5404,7 +5821,11 @@ export type TeamUncheckedCreateWithoutSubscriptionChangeRequestsInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  isPlatformActivated?: boolean
+  activationKeyId?: string | null
+  allowPlatformBilling?: boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationRedemptions?: Prisma.PlatformActivationRedemptionUncheckedCreateNestedManyWithoutTeamInput
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileUncheckedCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
@@ -5475,7 +5896,11 @@ export type TeamUpdateWithoutSubscriptionChangeRequestsInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isPlatformActivated?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  allowPlatformBilling?: Prisma.BoolFieldUpdateOperationsInput | boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationKey?: Prisma.PlatformActivationKeyUpdateOneWithoutTeamsNestedInput
+  activationRedemptions?: Prisma.PlatformActivationRedemptionUpdateManyWithoutTeamNestedInput
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
@@ -5530,7 +5955,11 @@ export type TeamUncheckedUpdateWithoutSubscriptionChangeRequestsInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isPlatformActivated?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  activationKeyId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  allowPlatformBilling?: Prisma.BoolFieldUpdateOperationsInput | boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationRedemptions?: Prisma.PlatformActivationRedemptionUncheckedUpdateManyWithoutTeamNestedInput
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUncheckedUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
@@ -5585,7 +6014,11 @@ export type TeamCreateWithoutPaymentsInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  isPlatformActivated?: boolean
+  allowPlatformBilling?: boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationKey?: Prisma.PlatformActivationKeyCreateNestedOneWithoutTeamsInput
+  activationRedemptions?: Prisma.PlatformActivationRedemptionCreateNestedManyWithoutTeamInput
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
@@ -5640,7 +6073,11 @@ export type TeamUncheckedCreateWithoutPaymentsInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  isPlatformActivated?: boolean
+  activationKeyId?: string | null
+  allowPlatformBilling?: boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationRedemptions?: Prisma.PlatformActivationRedemptionUncheckedCreateNestedManyWithoutTeamInput
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileUncheckedCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
@@ -5711,7 +6148,11 @@ export type TeamUpdateWithoutPaymentsInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isPlatformActivated?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  allowPlatformBilling?: Prisma.BoolFieldUpdateOperationsInput | boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationKey?: Prisma.PlatformActivationKeyUpdateOneWithoutTeamsNestedInput
+  activationRedemptions?: Prisma.PlatformActivationRedemptionUpdateManyWithoutTeamNestedInput
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
@@ -5766,7 +6207,11 @@ export type TeamUncheckedUpdateWithoutPaymentsInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isPlatformActivated?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  activationKeyId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  allowPlatformBilling?: Prisma.BoolFieldUpdateOperationsInput | boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationRedemptions?: Prisma.PlatformActivationRedemptionUncheckedUpdateManyWithoutTeamNestedInput
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUncheckedUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
@@ -5821,7 +6266,11 @@ export type TeamCreateWithoutBillingAdjustmentsInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  isPlatformActivated?: boolean
+  allowPlatformBilling?: boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationKey?: Prisma.PlatformActivationKeyCreateNestedOneWithoutTeamsInput
+  activationRedemptions?: Prisma.PlatformActivationRedemptionCreateNestedManyWithoutTeamInput
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
@@ -5876,7 +6325,11 @@ export type TeamUncheckedCreateWithoutBillingAdjustmentsInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  isPlatformActivated?: boolean
+  activationKeyId?: string | null
+  allowPlatformBilling?: boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationRedemptions?: Prisma.PlatformActivationRedemptionUncheckedCreateNestedManyWithoutTeamInput
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileUncheckedCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
@@ -5947,7 +6400,11 @@ export type TeamUpdateWithoutBillingAdjustmentsInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isPlatformActivated?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  allowPlatformBilling?: Prisma.BoolFieldUpdateOperationsInput | boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationKey?: Prisma.PlatformActivationKeyUpdateOneWithoutTeamsNestedInput
+  activationRedemptions?: Prisma.PlatformActivationRedemptionUpdateManyWithoutTeamNestedInput
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
@@ -6002,7 +6459,11 @@ export type TeamUncheckedUpdateWithoutBillingAdjustmentsInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isPlatformActivated?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  activationKeyId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  allowPlatformBilling?: Prisma.BoolFieldUpdateOperationsInput | boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationRedemptions?: Prisma.PlatformActivationRedemptionUncheckedUpdateManyWithoutTeamNestedInput
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUncheckedUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
@@ -6057,7 +6518,11 @@ export type TeamCreateWithoutBillingBalancesInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  isPlatformActivated?: boolean
+  allowPlatformBilling?: boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationKey?: Prisma.PlatformActivationKeyCreateNestedOneWithoutTeamsInput
+  activationRedemptions?: Prisma.PlatformActivationRedemptionCreateNestedManyWithoutTeamInput
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
@@ -6112,7 +6577,11 @@ export type TeamUncheckedCreateWithoutBillingBalancesInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  isPlatformActivated?: boolean
+  activationKeyId?: string | null
+  allowPlatformBilling?: boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationRedemptions?: Prisma.PlatformActivationRedemptionUncheckedCreateNestedManyWithoutTeamInput
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileUncheckedCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
@@ -6183,7 +6652,11 @@ export type TeamUpdateWithoutBillingBalancesInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isPlatformActivated?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  allowPlatformBilling?: Prisma.BoolFieldUpdateOperationsInput | boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationKey?: Prisma.PlatformActivationKeyUpdateOneWithoutTeamsNestedInput
+  activationRedemptions?: Prisma.PlatformActivationRedemptionUpdateManyWithoutTeamNestedInput
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
@@ -6238,7 +6711,11 @@ export type TeamUncheckedUpdateWithoutBillingBalancesInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isPlatformActivated?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  activationKeyId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  allowPlatformBilling?: Prisma.BoolFieldUpdateOperationsInput | boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationRedemptions?: Prisma.PlatformActivationRedemptionUncheckedUpdateManyWithoutTeamNestedInput
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUncheckedUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
@@ -6293,7 +6770,11 @@ export type TeamCreateWithoutRefundsInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  isPlatformActivated?: boolean
+  allowPlatformBilling?: boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationKey?: Prisma.PlatformActivationKeyCreateNestedOneWithoutTeamsInput
+  activationRedemptions?: Prisma.PlatformActivationRedemptionCreateNestedManyWithoutTeamInput
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
@@ -6348,7 +6829,11 @@ export type TeamUncheckedCreateWithoutRefundsInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  isPlatformActivated?: boolean
+  activationKeyId?: string | null
+  allowPlatformBilling?: boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationRedemptions?: Prisma.PlatformActivationRedemptionUncheckedCreateNestedManyWithoutTeamInput
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileUncheckedCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
@@ -6419,7 +6904,11 @@ export type TeamUpdateWithoutRefundsInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isPlatformActivated?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  allowPlatformBilling?: Prisma.BoolFieldUpdateOperationsInput | boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationKey?: Prisma.PlatformActivationKeyUpdateOneWithoutTeamsNestedInput
+  activationRedemptions?: Prisma.PlatformActivationRedemptionUpdateManyWithoutTeamNestedInput
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
@@ -6474,7 +6963,11 @@ export type TeamUncheckedUpdateWithoutRefundsInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isPlatformActivated?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  activationKeyId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  allowPlatformBilling?: Prisma.BoolFieldUpdateOperationsInput | boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationRedemptions?: Prisma.PlatformActivationRedemptionUncheckedUpdateManyWithoutTeamNestedInput
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUncheckedUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
@@ -6529,7 +7022,11 @@ export type TeamCreateWithoutBillingRecoveryTasksInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  isPlatformActivated?: boolean
+  allowPlatformBilling?: boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationKey?: Prisma.PlatformActivationKeyCreateNestedOneWithoutTeamsInput
+  activationRedemptions?: Prisma.PlatformActivationRedemptionCreateNestedManyWithoutTeamInput
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
@@ -6584,7 +7081,11 @@ export type TeamUncheckedCreateWithoutBillingRecoveryTasksInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  isPlatformActivated?: boolean
+  activationKeyId?: string | null
+  allowPlatformBilling?: boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationRedemptions?: Prisma.PlatformActivationRedemptionUncheckedCreateNestedManyWithoutTeamInput
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileUncheckedCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
@@ -6655,7 +7156,11 @@ export type TeamUpdateWithoutBillingRecoveryTasksInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isPlatformActivated?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  allowPlatformBilling?: Prisma.BoolFieldUpdateOperationsInput | boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationKey?: Prisma.PlatformActivationKeyUpdateOneWithoutTeamsNestedInput
+  activationRedemptions?: Prisma.PlatformActivationRedemptionUpdateManyWithoutTeamNestedInput
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
@@ -6710,7 +7215,11 @@ export type TeamUncheckedUpdateWithoutBillingRecoveryTasksInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isPlatformActivated?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  activationKeyId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  allowPlatformBilling?: Prisma.BoolFieldUpdateOperationsInput | boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationRedemptions?: Prisma.PlatformActivationRedemptionUncheckedUpdateManyWithoutTeamNestedInput
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUncheckedUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
@@ -6765,7 +7274,11 @@ export type TeamCreateWithoutWebhookDeliveriesInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  isPlatformActivated?: boolean
+  allowPlatformBilling?: boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationKey?: Prisma.PlatformActivationKeyCreateNestedOneWithoutTeamsInput
+  activationRedemptions?: Prisma.PlatformActivationRedemptionCreateNestedManyWithoutTeamInput
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
@@ -6820,7 +7333,11 @@ export type TeamUncheckedCreateWithoutWebhookDeliveriesInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  isPlatformActivated?: boolean
+  activationKeyId?: string | null
+  allowPlatformBilling?: boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationRedemptions?: Prisma.PlatformActivationRedemptionUncheckedCreateNestedManyWithoutTeamInput
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileUncheckedCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
@@ -6891,7 +7408,11 @@ export type TeamUpdateWithoutWebhookDeliveriesInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isPlatformActivated?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  allowPlatformBilling?: Prisma.BoolFieldUpdateOperationsInput | boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationKey?: Prisma.PlatformActivationKeyUpdateOneWithoutTeamsNestedInput
+  activationRedemptions?: Prisma.PlatformActivationRedemptionUpdateManyWithoutTeamNestedInput
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
@@ -6946,7 +7467,11 @@ export type TeamUncheckedUpdateWithoutWebhookDeliveriesInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isPlatformActivated?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  activationKeyId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  allowPlatformBilling?: Prisma.BoolFieldUpdateOperationsInput | boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationRedemptions?: Prisma.PlatformActivationRedemptionUncheckedUpdateManyWithoutTeamNestedInput
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUncheckedUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
@@ -7001,7 +7526,11 @@ export type TeamCreateWithoutPlatformBillingProviderAccountInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  isPlatformActivated?: boolean
+  allowPlatformBilling?: boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationKey?: Prisma.PlatformActivationKeyCreateNestedOneWithoutTeamsInput
+  activationRedemptions?: Prisma.PlatformActivationRedemptionCreateNestedManyWithoutTeamInput
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
@@ -7056,7 +7585,11 @@ export type TeamUncheckedCreateWithoutPlatformBillingProviderAccountInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  isPlatformActivated?: boolean
+  activationKeyId?: string | null
+  allowPlatformBilling?: boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationRedemptions?: Prisma.PlatformActivationRedemptionUncheckedCreateNestedManyWithoutTeamInput
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileUncheckedCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
@@ -7127,7 +7660,11 @@ export type TeamUpdateWithoutPlatformBillingProviderAccountInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isPlatformActivated?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  allowPlatformBilling?: Prisma.BoolFieldUpdateOperationsInput | boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationKey?: Prisma.PlatformActivationKeyUpdateOneWithoutTeamsNestedInput
+  activationRedemptions?: Prisma.PlatformActivationRedemptionUpdateManyWithoutTeamNestedInput
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
@@ -7182,7 +7719,11 @@ export type TeamUncheckedUpdateWithoutPlatformBillingProviderAccountInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isPlatformActivated?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  activationKeyId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  allowPlatformBilling?: Prisma.BoolFieldUpdateOperationsInput | boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationRedemptions?: Prisma.PlatformActivationRedemptionUncheckedUpdateManyWithoutTeamNestedInput
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUncheckedUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
@@ -7237,7 +7778,11 @@ export type TeamCreateWithoutPlatformBillingWorkspaceCustomerInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  isPlatformActivated?: boolean
+  allowPlatformBilling?: boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationKey?: Prisma.PlatformActivationKeyCreateNestedOneWithoutTeamsInput
+  activationRedemptions?: Prisma.PlatformActivationRedemptionCreateNestedManyWithoutTeamInput
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
@@ -7292,7 +7837,11 @@ export type TeamUncheckedCreateWithoutPlatformBillingWorkspaceCustomerInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  isPlatformActivated?: boolean
+  activationKeyId?: string | null
+  allowPlatformBilling?: boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationRedemptions?: Prisma.PlatformActivationRedemptionUncheckedCreateNestedManyWithoutTeamInput
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileUncheckedCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
@@ -7352,7 +7901,11 @@ export type TeamCreateWithoutPlatformBillingProviderCustomersInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  isPlatformActivated?: boolean
+  allowPlatformBilling?: boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationKey?: Prisma.PlatformActivationKeyCreateNestedOneWithoutTeamsInput
+  activationRedemptions?: Prisma.PlatformActivationRedemptionCreateNestedManyWithoutTeamInput
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
@@ -7407,7 +7960,11 @@ export type TeamUncheckedCreateWithoutPlatformBillingProviderCustomersInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  isPlatformActivated?: boolean
+  activationKeyId?: string | null
+  allowPlatformBilling?: boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationRedemptions?: Prisma.PlatformActivationRedemptionUncheckedCreateNestedManyWithoutTeamInput
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileUncheckedCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
@@ -7478,7 +8035,11 @@ export type TeamUpdateWithoutPlatformBillingWorkspaceCustomerInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isPlatformActivated?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  allowPlatformBilling?: Prisma.BoolFieldUpdateOperationsInput | boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationKey?: Prisma.PlatformActivationKeyUpdateOneWithoutTeamsNestedInput
+  activationRedemptions?: Prisma.PlatformActivationRedemptionUpdateManyWithoutTeamNestedInput
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
@@ -7533,7 +8094,11 @@ export type TeamUncheckedUpdateWithoutPlatformBillingWorkspaceCustomerInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isPlatformActivated?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  activationKeyId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  allowPlatformBilling?: Prisma.BoolFieldUpdateOperationsInput | boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationRedemptions?: Prisma.PlatformActivationRedemptionUncheckedUpdateManyWithoutTeamNestedInput
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUncheckedUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
@@ -7599,7 +8164,11 @@ export type TeamUpdateWithoutPlatformBillingProviderCustomersInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isPlatformActivated?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  allowPlatformBilling?: Prisma.BoolFieldUpdateOperationsInput | boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationKey?: Prisma.PlatformActivationKeyUpdateOneWithoutTeamsNestedInput
+  activationRedemptions?: Prisma.PlatformActivationRedemptionUpdateManyWithoutTeamNestedInput
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
@@ -7654,7 +8223,11 @@ export type TeamUncheckedUpdateWithoutPlatformBillingProviderCustomersInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isPlatformActivated?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  activationKeyId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  allowPlatformBilling?: Prisma.BoolFieldUpdateOperationsInput | boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationRedemptions?: Prisma.PlatformActivationRedemptionUncheckedUpdateManyWithoutTeamNestedInput
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUncheckedUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
@@ -7709,7 +8282,11 @@ export type TeamCreateWithoutGasSpendsInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  isPlatformActivated?: boolean
+  allowPlatformBilling?: boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationKey?: Prisma.PlatformActivationKeyCreateNestedOneWithoutTeamsInput
+  activationRedemptions?: Prisma.PlatformActivationRedemptionCreateNestedManyWithoutTeamInput
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
@@ -7764,7 +8341,11 @@ export type TeamUncheckedCreateWithoutGasSpendsInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  isPlatformActivated?: boolean
+  activationKeyId?: string | null
+  allowPlatformBilling?: boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationRedemptions?: Prisma.PlatformActivationRedemptionUncheckedCreateNestedManyWithoutTeamInput
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileUncheckedCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
@@ -7835,7 +8416,11 @@ export type TeamUpdateWithoutGasSpendsInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isPlatformActivated?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  allowPlatformBilling?: Prisma.BoolFieldUpdateOperationsInput | boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationKey?: Prisma.PlatformActivationKeyUpdateOneWithoutTeamsNestedInput
+  activationRedemptions?: Prisma.PlatformActivationRedemptionUpdateManyWithoutTeamNestedInput
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
@@ -7890,7 +8475,11 @@ export type TeamUncheckedUpdateWithoutGasSpendsInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isPlatformActivated?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  activationKeyId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  allowPlatformBilling?: Prisma.BoolFieldUpdateOperationsInput | boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationRedemptions?: Prisma.PlatformActivationRedemptionUncheckedUpdateManyWithoutTeamNestedInput
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUncheckedUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
@@ -7945,7 +8534,11 @@ export type TeamCreateWithoutTierHistoryInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  isPlatformActivated?: boolean
+  allowPlatformBilling?: boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationKey?: Prisma.PlatformActivationKeyCreateNestedOneWithoutTeamsInput
+  activationRedemptions?: Prisma.PlatformActivationRedemptionCreateNestedManyWithoutTeamInput
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
@@ -8000,7 +8593,11 @@ export type TeamUncheckedCreateWithoutTierHistoryInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  isPlatformActivated?: boolean
+  activationKeyId?: string | null
+  allowPlatformBilling?: boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationRedemptions?: Prisma.PlatformActivationRedemptionUncheckedCreateNestedManyWithoutTeamInput
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileUncheckedCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
@@ -8071,7 +8668,11 @@ export type TeamUpdateWithoutTierHistoryInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isPlatformActivated?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  allowPlatformBilling?: Prisma.BoolFieldUpdateOperationsInput | boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationKey?: Prisma.PlatformActivationKeyUpdateOneWithoutTeamsNestedInput
+  activationRedemptions?: Prisma.PlatformActivationRedemptionUpdateManyWithoutTeamNestedInput
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
@@ -8126,7 +8727,11 @@ export type TeamUncheckedUpdateWithoutTierHistoryInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isPlatformActivated?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  activationKeyId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  allowPlatformBilling?: Prisma.BoolFieldUpdateOperationsInput | boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationRedemptions?: Prisma.PlatformActivationRedemptionUncheckedUpdateManyWithoutTeamNestedInput
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUncheckedUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
@@ -8181,7 +8786,11 @@ export type TeamCreateWithoutSupportTicketsInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  isPlatformActivated?: boolean
+  allowPlatformBilling?: boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationKey?: Prisma.PlatformActivationKeyCreateNestedOneWithoutTeamsInput
+  activationRedemptions?: Prisma.PlatformActivationRedemptionCreateNestedManyWithoutTeamInput
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
@@ -8236,7 +8845,11 @@ export type TeamUncheckedCreateWithoutSupportTicketsInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  isPlatformActivated?: boolean
+  activationKeyId?: string | null
+  allowPlatformBilling?: boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationRedemptions?: Prisma.PlatformActivationRedemptionUncheckedCreateNestedManyWithoutTeamInput
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileUncheckedCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
@@ -8307,7 +8920,11 @@ export type TeamUpdateWithoutSupportTicketsInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isPlatformActivated?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  allowPlatformBilling?: Prisma.BoolFieldUpdateOperationsInput | boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationKey?: Prisma.PlatformActivationKeyUpdateOneWithoutTeamsNestedInput
+  activationRedemptions?: Prisma.PlatformActivationRedemptionUpdateManyWithoutTeamNestedInput
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
@@ -8362,7 +8979,11 @@ export type TeamUncheckedUpdateWithoutSupportTicketsInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isPlatformActivated?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  activationKeyId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  allowPlatformBilling?: Prisma.BoolFieldUpdateOperationsInput | boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationRedemptions?: Prisma.PlatformActivationRedemptionUncheckedUpdateManyWithoutTeamNestedInput
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUncheckedUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
@@ -8417,7 +9038,11 @@ export type TeamCreateWithoutArcenCompaniesInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  isPlatformActivated?: boolean
+  allowPlatformBilling?: boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationKey?: Prisma.PlatformActivationKeyCreateNestedOneWithoutTeamsInput
+  activationRedemptions?: Prisma.PlatformActivationRedemptionCreateNestedManyWithoutTeamInput
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
@@ -8472,7 +9097,11 @@ export type TeamUncheckedCreateWithoutArcenCompaniesInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  isPlatformActivated?: boolean
+  activationKeyId?: string | null
+  allowPlatformBilling?: boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationRedemptions?: Prisma.PlatformActivationRedemptionUncheckedCreateNestedManyWithoutTeamInput
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileUncheckedCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
@@ -8543,7 +9172,11 @@ export type TeamUpdateWithoutArcenCompaniesInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isPlatformActivated?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  allowPlatformBilling?: Prisma.BoolFieldUpdateOperationsInput | boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationKey?: Prisma.PlatformActivationKeyUpdateOneWithoutTeamsNestedInput
+  activationRedemptions?: Prisma.PlatformActivationRedemptionUpdateManyWithoutTeamNestedInput
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
@@ -8598,7 +9231,11 @@ export type TeamUncheckedUpdateWithoutArcenCompaniesInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isPlatformActivated?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  activationKeyId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  allowPlatformBilling?: Prisma.BoolFieldUpdateOperationsInput | boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationRedemptions?: Prisma.PlatformActivationRedemptionUncheckedUpdateManyWithoutTeamNestedInput
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUncheckedUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
@@ -8653,7 +9290,11 @@ export type TeamCreateWithoutAddOnGrantsInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  isPlatformActivated?: boolean
+  allowPlatformBilling?: boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationKey?: Prisma.PlatformActivationKeyCreateNestedOneWithoutTeamsInput
+  activationRedemptions?: Prisma.PlatformActivationRedemptionCreateNestedManyWithoutTeamInput
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
@@ -8708,7 +9349,11 @@ export type TeamUncheckedCreateWithoutAddOnGrantsInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  isPlatformActivated?: boolean
+  activationKeyId?: string | null
+  allowPlatformBilling?: boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationRedemptions?: Prisma.PlatformActivationRedemptionUncheckedCreateNestedManyWithoutTeamInput
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileUncheckedCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
@@ -8779,7 +9424,11 @@ export type TeamUpdateWithoutAddOnGrantsInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isPlatformActivated?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  allowPlatformBilling?: Prisma.BoolFieldUpdateOperationsInput | boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationKey?: Prisma.PlatformActivationKeyUpdateOneWithoutTeamsNestedInput
+  activationRedemptions?: Prisma.PlatformActivationRedemptionUpdateManyWithoutTeamNestedInput
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
@@ -8834,7 +9483,11 @@ export type TeamUncheckedUpdateWithoutAddOnGrantsInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isPlatformActivated?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  activationKeyId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  allowPlatformBilling?: Prisma.BoolFieldUpdateOperationsInput | boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationRedemptions?: Prisma.PlatformActivationRedemptionUncheckedUpdateManyWithoutTeamNestedInput
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUncheckedUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
@@ -8889,7 +9542,11 @@ export type TeamCreateWithoutCreditGrantsInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  isPlatformActivated?: boolean
+  allowPlatformBilling?: boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationKey?: Prisma.PlatformActivationKeyCreateNestedOneWithoutTeamsInput
+  activationRedemptions?: Prisma.PlatformActivationRedemptionCreateNestedManyWithoutTeamInput
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
@@ -8944,7 +9601,11 @@ export type TeamUncheckedCreateWithoutCreditGrantsInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  isPlatformActivated?: boolean
+  activationKeyId?: string | null
+  allowPlatformBilling?: boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationRedemptions?: Prisma.PlatformActivationRedemptionUncheckedCreateNestedManyWithoutTeamInput
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileUncheckedCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
@@ -9015,7 +9676,11 @@ export type TeamUpdateWithoutCreditGrantsInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isPlatformActivated?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  allowPlatformBilling?: Prisma.BoolFieldUpdateOperationsInput | boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationKey?: Prisma.PlatformActivationKeyUpdateOneWithoutTeamsNestedInput
+  activationRedemptions?: Prisma.PlatformActivationRedemptionUpdateManyWithoutTeamNestedInput
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
@@ -9070,7 +9735,11 @@ export type TeamUncheckedUpdateWithoutCreditGrantsInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isPlatformActivated?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  activationKeyId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  allowPlatformBilling?: Prisma.BoolFieldUpdateOperationsInput | boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationRedemptions?: Prisma.PlatformActivationRedemptionUncheckedUpdateManyWithoutTeamNestedInput
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUncheckedUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
@@ -9125,7 +9794,11 @@ export type TeamCreateWithoutCreditLedgerEntriesInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  isPlatformActivated?: boolean
+  allowPlatformBilling?: boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationKey?: Prisma.PlatformActivationKeyCreateNestedOneWithoutTeamsInput
+  activationRedemptions?: Prisma.PlatformActivationRedemptionCreateNestedManyWithoutTeamInput
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
@@ -9180,7 +9853,11 @@ export type TeamUncheckedCreateWithoutCreditLedgerEntriesInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  isPlatformActivated?: boolean
+  activationKeyId?: string | null
+  allowPlatformBilling?: boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationRedemptions?: Prisma.PlatformActivationRedemptionUncheckedCreateNestedManyWithoutTeamInput
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileUncheckedCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
@@ -9251,7 +9928,11 @@ export type TeamUpdateWithoutCreditLedgerEntriesInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isPlatformActivated?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  allowPlatformBilling?: Prisma.BoolFieldUpdateOperationsInput | boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationKey?: Prisma.PlatformActivationKeyUpdateOneWithoutTeamsNestedInput
+  activationRedemptions?: Prisma.PlatformActivationRedemptionUpdateManyWithoutTeamNestedInput
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
@@ -9306,7 +9987,11 @@ export type TeamUncheckedUpdateWithoutCreditLedgerEntriesInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isPlatformActivated?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  activationKeyId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  allowPlatformBilling?: Prisma.BoolFieldUpdateOperationsInput | boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationRedemptions?: Prisma.PlatformActivationRedemptionUncheckedUpdateManyWithoutTeamNestedInput
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUncheckedUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
@@ -9361,7 +10046,11 @@ export type TeamCreateWithoutPaymentLinksInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  isPlatformActivated?: boolean
+  allowPlatformBilling?: boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationKey?: Prisma.PlatformActivationKeyCreateNestedOneWithoutTeamsInput
+  activationRedemptions?: Prisma.PlatformActivationRedemptionCreateNestedManyWithoutTeamInput
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
@@ -9416,7 +10105,11 @@ export type TeamUncheckedCreateWithoutPaymentLinksInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  isPlatformActivated?: boolean
+  activationKeyId?: string | null
+  allowPlatformBilling?: boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationRedemptions?: Prisma.PlatformActivationRedemptionUncheckedCreateNestedManyWithoutTeamInput
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileUncheckedCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
@@ -9487,7 +10180,11 @@ export type TeamUpdateWithoutPaymentLinksInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isPlatformActivated?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  allowPlatformBilling?: Prisma.BoolFieldUpdateOperationsInput | boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationKey?: Prisma.PlatformActivationKeyUpdateOneWithoutTeamsNestedInput
+  activationRedemptions?: Prisma.PlatformActivationRedemptionUpdateManyWithoutTeamNestedInput
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
@@ -9542,7 +10239,11 @@ export type TeamUncheckedUpdateWithoutPaymentLinksInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isPlatformActivated?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  activationKeyId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  allowPlatformBilling?: Prisma.BoolFieldUpdateOperationsInput | boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationRedemptions?: Prisma.PlatformActivationRedemptionUncheckedUpdateManyWithoutTeamNestedInput
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUncheckedUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
@@ -9597,7 +10298,11 @@ export type TeamCreateWithoutCheckoutSessionsInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  isPlatformActivated?: boolean
+  allowPlatformBilling?: boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationKey?: Prisma.PlatformActivationKeyCreateNestedOneWithoutTeamsInput
+  activationRedemptions?: Prisma.PlatformActivationRedemptionCreateNestedManyWithoutTeamInput
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
@@ -9652,7 +10357,11 @@ export type TeamUncheckedCreateWithoutCheckoutSessionsInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  isPlatformActivated?: boolean
+  activationKeyId?: string | null
+  allowPlatformBilling?: boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationRedemptions?: Prisma.PlatformActivationRedemptionUncheckedCreateNestedManyWithoutTeamInput
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileUncheckedCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
@@ -9723,7 +10432,11 @@ export type TeamUpdateWithoutCheckoutSessionsInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isPlatformActivated?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  allowPlatformBilling?: Prisma.BoolFieldUpdateOperationsInput | boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationKey?: Prisma.PlatformActivationKeyUpdateOneWithoutTeamsNestedInput
+  activationRedemptions?: Prisma.PlatformActivationRedemptionUpdateManyWithoutTeamNestedInput
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
@@ -9778,7 +10491,11 @@ export type TeamUncheckedUpdateWithoutCheckoutSessionsInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isPlatformActivated?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  activationKeyId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  allowPlatformBilling?: Prisma.BoolFieldUpdateOperationsInput | boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationRedemptions?: Prisma.PlatformActivationRedemptionUncheckedUpdateManyWithoutTeamNestedInput
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUncheckedUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
@@ -9833,7 +10550,11 @@ export type TeamCreateWithoutFeatureFlagsInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  isPlatformActivated?: boolean
+  allowPlatformBilling?: boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationKey?: Prisma.PlatformActivationKeyCreateNestedOneWithoutTeamsInput
+  activationRedemptions?: Prisma.PlatformActivationRedemptionCreateNestedManyWithoutTeamInput
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
@@ -9888,7 +10609,11 @@ export type TeamUncheckedCreateWithoutFeatureFlagsInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  isPlatformActivated?: boolean
+  activationKeyId?: string | null
+  allowPlatformBilling?: boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationRedemptions?: Prisma.PlatformActivationRedemptionUncheckedCreateNestedManyWithoutTeamInput
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileUncheckedCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
@@ -9959,7 +10684,11 @@ export type TeamUpdateWithoutFeatureFlagsInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isPlatformActivated?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  allowPlatformBilling?: Prisma.BoolFieldUpdateOperationsInput | boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationKey?: Prisma.PlatformActivationKeyUpdateOneWithoutTeamsNestedInput
+  activationRedemptions?: Prisma.PlatformActivationRedemptionUpdateManyWithoutTeamNestedInput
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
@@ -10014,7 +10743,11 @@ export type TeamUncheckedUpdateWithoutFeatureFlagsInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isPlatformActivated?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  activationKeyId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  allowPlatformBilling?: Prisma.BoolFieldUpdateOperationsInput | boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationRedemptions?: Prisma.PlatformActivationRedemptionUncheckedUpdateManyWithoutTeamNestedInput
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUncheckedUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
@@ -10069,7 +10802,11 @@ export type TeamCreateWithoutEmbedAccessTokensInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  isPlatformActivated?: boolean
+  allowPlatformBilling?: boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationKey?: Prisma.PlatformActivationKeyCreateNestedOneWithoutTeamsInput
+  activationRedemptions?: Prisma.PlatformActivationRedemptionCreateNestedManyWithoutTeamInput
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
@@ -10124,7 +10861,11 @@ export type TeamUncheckedCreateWithoutEmbedAccessTokensInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  isPlatformActivated?: boolean
+  activationKeyId?: string | null
+  allowPlatformBilling?: boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationRedemptions?: Prisma.PlatformActivationRedemptionUncheckedCreateNestedManyWithoutTeamInput
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileUncheckedCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
@@ -10195,7 +10936,11 @@ export type TeamUpdateWithoutEmbedAccessTokensInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isPlatformActivated?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  allowPlatformBilling?: Prisma.BoolFieldUpdateOperationsInput | boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationKey?: Prisma.PlatformActivationKeyUpdateOneWithoutTeamsNestedInput
+  activationRedemptions?: Prisma.PlatformActivationRedemptionUpdateManyWithoutTeamNestedInput
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
@@ -10250,7 +10995,11 @@ export type TeamUncheckedUpdateWithoutEmbedAccessTokensInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isPlatformActivated?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  activationKeyId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  allowPlatformBilling?: Prisma.BoolFieldUpdateOperationsInput | boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationRedemptions?: Prisma.PlatformActivationRedemptionUncheckedUpdateManyWithoutTeamNestedInput
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUncheckedUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
@@ -10305,7 +11054,11 @@ export type TeamCreateWithoutArcenApiKeysInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  isPlatformActivated?: boolean
+  allowPlatformBilling?: boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationKey?: Prisma.PlatformActivationKeyCreateNestedOneWithoutTeamsInput
+  activationRedemptions?: Prisma.PlatformActivationRedemptionCreateNestedManyWithoutTeamInput
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
@@ -10360,7 +11113,11 @@ export type TeamUncheckedCreateWithoutArcenApiKeysInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  isPlatformActivated?: boolean
+  activationKeyId?: string | null
+  allowPlatformBilling?: boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationRedemptions?: Prisma.PlatformActivationRedemptionUncheckedCreateNestedManyWithoutTeamInput
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileUncheckedCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
@@ -10431,7 +11188,11 @@ export type TeamUpdateWithoutArcenApiKeysInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isPlatformActivated?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  allowPlatformBilling?: Prisma.BoolFieldUpdateOperationsInput | boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationKey?: Prisma.PlatformActivationKeyUpdateOneWithoutTeamsNestedInput
+  activationRedemptions?: Prisma.PlatformActivationRedemptionUpdateManyWithoutTeamNestedInput
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
@@ -10486,7 +11247,11 @@ export type TeamUncheckedUpdateWithoutArcenApiKeysInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isPlatformActivated?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  activationKeyId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  allowPlatformBilling?: Prisma.BoolFieldUpdateOperationsInput | boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationRedemptions?: Prisma.PlatformActivationRedemptionUncheckedUpdateManyWithoutTeamNestedInput
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUncheckedUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
@@ -10541,7 +11306,11 @@ export type TeamCreateWithoutEmbedComponentsInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  isPlatformActivated?: boolean
+  allowPlatformBilling?: boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationKey?: Prisma.PlatformActivationKeyCreateNestedOneWithoutTeamsInput
+  activationRedemptions?: Prisma.PlatformActivationRedemptionCreateNestedManyWithoutTeamInput
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
@@ -10596,7 +11365,11 @@ export type TeamUncheckedCreateWithoutEmbedComponentsInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  isPlatformActivated?: boolean
+  activationKeyId?: string | null
+  allowPlatformBilling?: boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationRedemptions?: Prisma.PlatformActivationRedemptionUncheckedCreateNestedManyWithoutTeamInput
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileUncheckedCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
@@ -10667,7 +11440,11 @@ export type TeamUpdateWithoutEmbedComponentsInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isPlatformActivated?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  allowPlatformBilling?: Prisma.BoolFieldUpdateOperationsInput | boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationKey?: Prisma.PlatformActivationKeyUpdateOneWithoutTeamsNestedInput
+  activationRedemptions?: Prisma.PlatformActivationRedemptionUpdateManyWithoutTeamNestedInput
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
@@ -10722,7 +11499,11 @@ export type TeamUncheckedUpdateWithoutEmbedComponentsInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isPlatformActivated?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  activationKeyId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  allowPlatformBilling?: Prisma.BoolFieldUpdateOperationsInput | boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationRedemptions?: Prisma.PlatformActivationRedemptionUncheckedUpdateManyWithoutTeamNestedInput
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUncheckedUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
@@ -10777,7 +11558,11 @@ export type TeamCreateWithoutAgentConfigInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  isPlatformActivated?: boolean
+  allowPlatformBilling?: boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationKey?: Prisma.PlatformActivationKeyCreateNestedOneWithoutTeamsInput
+  activationRedemptions?: Prisma.PlatformActivationRedemptionCreateNestedManyWithoutTeamInput
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
@@ -10832,7 +11617,11 @@ export type TeamUncheckedCreateWithoutAgentConfigInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  isPlatformActivated?: boolean
+  activationKeyId?: string | null
+  allowPlatformBilling?: boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationRedemptions?: Prisma.PlatformActivationRedemptionUncheckedCreateNestedManyWithoutTeamInput
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileUncheckedCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
@@ -10903,7 +11692,11 @@ export type TeamUpdateWithoutAgentConfigInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isPlatformActivated?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  allowPlatformBilling?: Prisma.BoolFieldUpdateOperationsInput | boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationKey?: Prisma.PlatformActivationKeyUpdateOneWithoutTeamsNestedInput
+  activationRedemptions?: Prisma.PlatformActivationRedemptionUpdateManyWithoutTeamNestedInput
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
@@ -10958,7 +11751,11 @@ export type TeamUncheckedUpdateWithoutAgentConfigInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isPlatformActivated?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  activationKeyId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  allowPlatformBilling?: Prisma.BoolFieldUpdateOperationsInput | boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationRedemptions?: Prisma.PlatformActivationRedemptionUncheckedUpdateManyWithoutTeamNestedInput
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUncheckedUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
@@ -11013,7 +11810,11 @@ export type TeamCreateWithoutDispatchRequestsInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  isPlatformActivated?: boolean
+  allowPlatformBilling?: boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationKey?: Prisma.PlatformActivationKeyCreateNestedOneWithoutTeamsInput
+  activationRedemptions?: Prisma.PlatformActivationRedemptionCreateNestedManyWithoutTeamInput
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
@@ -11068,7 +11869,11 @@ export type TeamUncheckedCreateWithoutDispatchRequestsInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
+  isPlatformActivated?: boolean
+  activationKeyId?: string | null
+  allowPlatformBilling?: boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationRedemptions?: Prisma.PlatformActivationRedemptionUncheckedCreateNestedManyWithoutTeamInput
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
   providerProfiles?: Prisma.ProviderProfileUncheckedCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
@@ -11139,7 +11944,11 @@ export type TeamUpdateWithoutDispatchRequestsInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isPlatformActivated?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  allowPlatformBilling?: Prisma.BoolFieldUpdateOperationsInput | boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationKey?: Prisma.PlatformActivationKeyUpdateOneWithoutTeamsNestedInput
+  activationRedemptions?: Prisma.PlatformActivationRedemptionUpdateManyWithoutTeamNestedInput
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
@@ -11194,7 +12003,11 @@ export type TeamUncheckedUpdateWithoutDispatchRequestsInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isPlatformActivated?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  activationKeyId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  allowPlatformBilling?: Prisma.BoolFieldUpdateOperationsInput | boolean
   profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationRedemptions?: Prisma.PlatformActivationRedemptionUncheckedUpdateManyWithoutTeamNestedInput
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
   providerProfiles?: Prisma.ProviderProfileUncheckedUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
@@ -11238,12 +12051,579 @@ export type TeamUncheckedUpdateWithoutDispatchRequestsInput = {
   agentConfig?: Prisma.ArcenAgentConfigUncheckedUpdateOneWithoutTeamNestedInput
 }
 
+export type TeamCreateWithoutActivationKeyInput = {
+  id?: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  name: string
+  slug: string
+  environmentMode?: $Enums.EnvironmentMode
+  invoicePrefix?: string | null
+  platformTier?: $Enums.PlatformTier
+  tierExpiresAt?: Date | string | null
+  tierSubscriptionId?: string | null
+  isPlatformActivated?: boolean
+  allowPlatformBilling?: boolean
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationRedemptions?: Prisma.PlatformActivationRedemptionCreateNestedManyWithoutTeamInput
+  members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
+  providerProfiles?: Prisma.ProviderProfileCreateNestedManyWithoutTeamInput
+  invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
+  environments?: Prisma.WorkspaceEnvironmentCreateNestedManyWithoutTeamInput
+  catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutTeamInput
+  catalogAddOns?: Prisma.CatalogAddOnCreateNestedManyWithoutTeamInput
+  catalogCreditTypes?: Prisma.CatalogCreditTypeCreateNestedManyWithoutTeamInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryCreateNestedManyWithoutTeamInput
+  catalogVersions?: Prisma.CatalogVersionCreateNestedManyWithoutTeamInput
+  catalogConfigs?: Prisma.CatalogConfigCreateNestedManyWithoutTeamInput
+  billingTemplates?: Prisma.BillingTemplateCreateNestedManyWithoutTeamInput
+  templateInstalls?: Prisma.TemplateInstallCreateNestedManyWithoutTeamInput
+  invoices?: Prisma.InvoiceCreateNestedManyWithoutTeamInput
+  payments?: Prisma.PaymentCreateNestedManyWithoutTeamInput
+  paymentLinks?: Prisma.PaymentLinkCreateNestedManyWithoutTeamInput
+  checkoutSessions?: Prisma.CheckoutSessionCreateNestedManyWithoutTeamInput
+  billingBalances?: Prisma.BillingBalanceCreateNestedManyWithoutTeamInput
+  refunds?: Prisma.RefundCreateNestedManyWithoutTeamInput
+  billingAdjustments?: Prisma.BillingAdjustmentCreateNestedManyWithoutTeamInput
+  subscriptionStates?: Prisma.SubscriptionStateCreateNestedManyWithoutTeamInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestCreateNestedManyWithoutTeamInput
+  billingRecoveryTasks?: Prisma.BillingRecoveryTaskCreateNestedManyWithoutTeamInput
+  taxProfile?: Prisma.TaxProfileCreateNestedOneWithoutTeamInput
+  invoiceSequences?: Prisma.InvoiceSequenceCreateNestedManyWithoutTeamInput
+  auditEvents?: Prisma.AuditEventCreateNestedManyWithoutTeamInput
+  billingEvents?: Prisma.BillingEventCreateNestedManyWithoutTeamInput
+  webhookDeliveries?: Prisma.WebhookDeliveryCreateNestedManyWithoutTeamInput
+  gasSpends?: Prisma.GasSpendCreateNestedManyWithoutTeamInput
+  tierHistory?: Prisma.TierUpgradeHistoryCreateNestedManyWithoutTeamInput
+  supportTickets?: Prisma.SupportTicketCreateNestedManyWithoutTeamInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountCreateNestedManyWithoutProviderTeamInput
+  platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerCreateNestedManyWithoutProviderTeamInput
+  platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerCreateNestedOneWithoutWorkspaceTeamInput
+  arcenCompanies?: Prisma.ArcenCompanyCreateNestedManyWithoutTeamInput
+  addOnGrants?: Prisma.CompanyAddOnGrantCreateNestedManyWithoutTeamInput
+  creditGrants?: Prisma.CompanyCreditGrantCreateNestedManyWithoutTeamInput
+  featureFlags?: Prisma.CatalogFeatureFlagCreateNestedManyWithoutTeamInput
+  arcenApiKeys?: Prisma.ArcenApiKeyCreateNestedManyWithoutTeamInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenCreateNestedManyWithoutTeamInput
+  embedComponents?: Prisma.EmbedComponentCreateNestedManyWithoutTeamInput
+  agentConfig?: Prisma.ArcenAgentConfigCreateNestedOneWithoutTeamInput
+  dispatchRequests?: Prisma.ArcenDispatchRequestCreateNestedManyWithoutTeamInput
+}
+
+export type TeamUncheckedCreateWithoutActivationKeyInput = {
+  id?: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  name: string
+  slug: string
+  environmentMode?: $Enums.EnvironmentMode
+  invoicePrefix?: string | null
+  platformTier?: $Enums.PlatformTier
+  tierExpiresAt?: Date | string | null
+  tierSubscriptionId?: string | null
+  isPlatformActivated?: boolean
+  allowPlatformBilling?: boolean
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationRedemptions?: Prisma.PlatformActivationRedemptionUncheckedCreateNestedManyWithoutTeamInput
+  members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
+  providerProfiles?: Prisma.ProviderProfileUncheckedCreateNestedManyWithoutTeamInput
+  invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
+  environments?: Prisma.WorkspaceEnvironmentUncheckedCreateNestedManyWithoutTeamInput
+  catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutTeamInput
+  catalogAddOns?: Prisma.CatalogAddOnUncheckedCreateNestedManyWithoutTeamInput
+  catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedCreateNestedManyWithoutTeamInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedCreateNestedManyWithoutTeamInput
+  catalogVersions?: Prisma.CatalogVersionUncheckedCreateNestedManyWithoutTeamInput
+  catalogConfigs?: Prisma.CatalogConfigUncheckedCreateNestedManyWithoutTeamInput
+  billingTemplates?: Prisma.BillingTemplateUncheckedCreateNestedManyWithoutTeamInput
+  templateInstalls?: Prisma.TemplateInstallUncheckedCreateNestedManyWithoutTeamInput
+  invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutTeamInput
+  payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutTeamInput
+  paymentLinks?: Prisma.PaymentLinkUncheckedCreateNestedManyWithoutTeamInput
+  checkoutSessions?: Prisma.CheckoutSessionUncheckedCreateNestedManyWithoutTeamInput
+  billingBalances?: Prisma.BillingBalanceUncheckedCreateNestedManyWithoutTeamInput
+  refunds?: Prisma.RefundUncheckedCreateNestedManyWithoutTeamInput
+  billingAdjustments?: Prisma.BillingAdjustmentUncheckedCreateNestedManyWithoutTeamInput
+  subscriptionStates?: Prisma.SubscriptionStateUncheckedCreateNestedManyWithoutTeamInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedCreateNestedManyWithoutTeamInput
+  billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedCreateNestedManyWithoutTeamInput
+  taxProfile?: Prisma.TaxProfileUncheckedCreateNestedOneWithoutTeamInput
+  invoiceSequences?: Prisma.InvoiceSequenceUncheckedCreateNestedManyWithoutTeamInput
+  auditEvents?: Prisma.AuditEventUncheckedCreateNestedManyWithoutTeamInput
+  billingEvents?: Prisma.BillingEventUncheckedCreateNestedManyWithoutTeamInput
+  webhookDeliveries?: Prisma.WebhookDeliveryUncheckedCreateNestedManyWithoutTeamInput
+  gasSpends?: Prisma.GasSpendUncheckedCreateNestedManyWithoutTeamInput
+  tierHistory?: Prisma.TierUpgradeHistoryUncheckedCreateNestedManyWithoutTeamInput
+  supportTickets?: Prisma.SupportTicketUncheckedCreateNestedManyWithoutTeamInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedManyWithoutProviderTeamInput
+  platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerUncheckedCreateNestedManyWithoutProviderTeamInput
+  platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerUncheckedCreateNestedOneWithoutWorkspaceTeamInput
+  arcenCompanies?: Prisma.ArcenCompanyUncheckedCreateNestedManyWithoutTeamInput
+  addOnGrants?: Prisma.CompanyAddOnGrantUncheckedCreateNestedManyWithoutTeamInput
+  creditGrants?: Prisma.CompanyCreditGrantUncheckedCreateNestedManyWithoutTeamInput
+  featureFlags?: Prisma.CatalogFeatureFlagUncheckedCreateNestedManyWithoutTeamInput
+  arcenApiKeys?: Prisma.ArcenApiKeyUncheckedCreateNestedManyWithoutTeamInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedCreateNestedManyWithoutTeamInput
+  embedComponents?: Prisma.EmbedComponentUncheckedCreateNestedManyWithoutTeamInput
+  agentConfig?: Prisma.ArcenAgentConfigUncheckedCreateNestedOneWithoutTeamInput
+  dispatchRequests?: Prisma.ArcenDispatchRequestUncheckedCreateNestedManyWithoutTeamInput
+}
+
+export type TeamCreateOrConnectWithoutActivationKeyInput = {
+  where: Prisma.TeamWhereUniqueInput
+  create: Prisma.XOR<Prisma.TeamCreateWithoutActivationKeyInput, Prisma.TeamUncheckedCreateWithoutActivationKeyInput>
+}
+
+export type TeamCreateManyActivationKeyInputEnvelope = {
+  data: Prisma.TeamCreateManyActivationKeyInput | Prisma.TeamCreateManyActivationKeyInput[]
+  skipDuplicates?: boolean
+}
+
+export type TeamUpsertWithWhereUniqueWithoutActivationKeyInput = {
+  where: Prisma.TeamWhereUniqueInput
+  update: Prisma.XOR<Prisma.TeamUpdateWithoutActivationKeyInput, Prisma.TeamUncheckedUpdateWithoutActivationKeyInput>
+  create: Prisma.XOR<Prisma.TeamCreateWithoutActivationKeyInput, Prisma.TeamUncheckedCreateWithoutActivationKeyInput>
+}
+
+export type TeamUpdateWithWhereUniqueWithoutActivationKeyInput = {
+  where: Prisma.TeamWhereUniqueInput
+  data: Prisma.XOR<Prisma.TeamUpdateWithoutActivationKeyInput, Prisma.TeamUncheckedUpdateWithoutActivationKeyInput>
+}
+
+export type TeamUpdateManyWithWhereWithoutActivationKeyInput = {
+  where: Prisma.TeamScalarWhereInput
+  data: Prisma.XOR<Prisma.TeamUpdateManyMutationInput, Prisma.TeamUncheckedUpdateManyWithoutActivationKeyInput>
+}
+
+export type TeamScalarWhereInput = {
+  AND?: Prisma.TeamScalarWhereInput | Prisma.TeamScalarWhereInput[]
+  OR?: Prisma.TeamScalarWhereInput[]
+  NOT?: Prisma.TeamScalarWhereInput | Prisma.TeamScalarWhereInput[]
+  id?: Prisma.StringFilter<"Team"> | string
+  createdAt?: Prisma.DateTimeFilter<"Team"> | Date | string
+  updatedAt?: Prisma.DateTimeFilter<"Team"> | Date | string
+  name?: Prisma.StringFilter<"Team"> | string
+  slug?: Prisma.StringFilter<"Team"> | string
+  environmentMode?: Prisma.EnumEnvironmentModeFilter<"Team"> | $Enums.EnvironmentMode
+  invoicePrefix?: Prisma.StringNullableFilter<"Team"> | string | null
+  platformTier?: Prisma.EnumPlatformTierFilter<"Team"> | $Enums.PlatformTier
+  tierExpiresAt?: Prisma.DateTimeNullableFilter<"Team"> | Date | string | null
+  tierSubscriptionId?: Prisma.StringNullableFilter<"Team"> | string | null
+  isPlatformActivated?: Prisma.BoolFilter<"Team"> | boolean
+  activationKeyId?: Prisma.StringNullableFilter<"Team"> | string | null
+  allowPlatformBilling?: Prisma.BoolFilter<"Team"> | boolean
+  profileData?: Prisma.JsonNullableFilter<"Team">
+}
+
+export type TeamCreateWithoutActivationRedemptionsInput = {
+  id?: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  name: string
+  slug: string
+  environmentMode?: $Enums.EnvironmentMode
+  invoicePrefix?: string | null
+  platformTier?: $Enums.PlatformTier
+  tierExpiresAt?: Date | string | null
+  tierSubscriptionId?: string | null
+  isPlatformActivated?: boolean
+  allowPlatformBilling?: boolean
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationKey?: Prisma.PlatformActivationKeyCreateNestedOneWithoutTeamsInput
+  members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
+  providerProfiles?: Prisma.ProviderProfileCreateNestedManyWithoutTeamInput
+  invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
+  environments?: Prisma.WorkspaceEnvironmentCreateNestedManyWithoutTeamInput
+  catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutTeamInput
+  catalogAddOns?: Prisma.CatalogAddOnCreateNestedManyWithoutTeamInput
+  catalogCreditTypes?: Prisma.CatalogCreditTypeCreateNestedManyWithoutTeamInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryCreateNestedManyWithoutTeamInput
+  catalogVersions?: Prisma.CatalogVersionCreateNestedManyWithoutTeamInput
+  catalogConfigs?: Prisma.CatalogConfigCreateNestedManyWithoutTeamInput
+  billingTemplates?: Prisma.BillingTemplateCreateNestedManyWithoutTeamInput
+  templateInstalls?: Prisma.TemplateInstallCreateNestedManyWithoutTeamInput
+  invoices?: Prisma.InvoiceCreateNestedManyWithoutTeamInput
+  payments?: Prisma.PaymentCreateNestedManyWithoutTeamInput
+  paymentLinks?: Prisma.PaymentLinkCreateNestedManyWithoutTeamInput
+  checkoutSessions?: Prisma.CheckoutSessionCreateNestedManyWithoutTeamInput
+  billingBalances?: Prisma.BillingBalanceCreateNestedManyWithoutTeamInput
+  refunds?: Prisma.RefundCreateNestedManyWithoutTeamInput
+  billingAdjustments?: Prisma.BillingAdjustmentCreateNestedManyWithoutTeamInput
+  subscriptionStates?: Prisma.SubscriptionStateCreateNestedManyWithoutTeamInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestCreateNestedManyWithoutTeamInput
+  billingRecoveryTasks?: Prisma.BillingRecoveryTaskCreateNestedManyWithoutTeamInput
+  taxProfile?: Prisma.TaxProfileCreateNestedOneWithoutTeamInput
+  invoiceSequences?: Prisma.InvoiceSequenceCreateNestedManyWithoutTeamInput
+  auditEvents?: Prisma.AuditEventCreateNestedManyWithoutTeamInput
+  billingEvents?: Prisma.BillingEventCreateNestedManyWithoutTeamInput
+  webhookDeliveries?: Prisma.WebhookDeliveryCreateNestedManyWithoutTeamInput
+  gasSpends?: Prisma.GasSpendCreateNestedManyWithoutTeamInput
+  tierHistory?: Prisma.TierUpgradeHistoryCreateNestedManyWithoutTeamInput
+  supportTickets?: Prisma.SupportTicketCreateNestedManyWithoutTeamInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountCreateNestedManyWithoutProviderTeamInput
+  platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerCreateNestedManyWithoutProviderTeamInput
+  platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerCreateNestedOneWithoutWorkspaceTeamInput
+  arcenCompanies?: Prisma.ArcenCompanyCreateNestedManyWithoutTeamInput
+  addOnGrants?: Prisma.CompanyAddOnGrantCreateNestedManyWithoutTeamInput
+  creditGrants?: Prisma.CompanyCreditGrantCreateNestedManyWithoutTeamInput
+  featureFlags?: Prisma.CatalogFeatureFlagCreateNestedManyWithoutTeamInput
+  arcenApiKeys?: Prisma.ArcenApiKeyCreateNestedManyWithoutTeamInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenCreateNestedManyWithoutTeamInput
+  embedComponents?: Prisma.EmbedComponentCreateNestedManyWithoutTeamInput
+  agentConfig?: Prisma.ArcenAgentConfigCreateNestedOneWithoutTeamInput
+  dispatchRequests?: Prisma.ArcenDispatchRequestCreateNestedManyWithoutTeamInput
+}
+
+export type TeamUncheckedCreateWithoutActivationRedemptionsInput = {
+  id?: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  name: string
+  slug: string
+  environmentMode?: $Enums.EnvironmentMode
+  invoicePrefix?: string | null
+  platformTier?: $Enums.PlatformTier
+  tierExpiresAt?: Date | string | null
+  tierSubscriptionId?: string | null
+  isPlatformActivated?: boolean
+  activationKeyId?: string | null
+  allowPlatformBilling?: boolean
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
+  providerProfiles?: Prisma.ProviderProfileUncheckedCreateNestedManyWithoutTeamInput
+  invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
+  environments?: Prisma.WorkspaceEnvironmentUncheckedCreateNestedManyWithoutTeamInput
+  catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutTeamInput
+  catalogAddOns?: Prisma.CatalogAddOnUncheckedCreateNestedManyWithoutTeamInput
+  catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedCreateNestedManyWithoutTeamInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedCreateNestedManyWithoutTeamInput
+  catalogVersions?: Prisma.CatalogVersionUncheckedCreateNestedManyWithoutTeamInput
+  catalogConfigs?: Prisma.CatalogConfigUncheckedCreateNestedManyWithoutTeamInput
+  billingTemplates?: Prisma.BillingTemplateUncheckedCreateNestedManyWithoutTeamInput
+  templateInstalls?: Prisma.TemplateInstallUncheckedCreateNestedManyWithoutTeamInput
+  invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutTeamInput
+  payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutTeamInput
+  paymentLinks?: Prisma.PaymentLinkUncheckedCreateNestedManyWithoutTeamInput
+  checkoutSessions?: Prisma.CheckoutSessionUncheckedCreateNestedManyWithoutTeamInput
+  billingBalances?: Prisma.BillingBalanceUncheckedCreateNestedManyWithoutTeamInput
+  refunds?: Prisma.RefundUncheckedCreateNestedManyWithoutTeamInput
+  billingAdjustments?: Prisma.BillingAdjustmentUncheckedCreateNestedManyWithoutTeamInput
+  subscriptionStates?: Prisma.SubscriptionStateUncheckedCreateNestedManyWithoutTeamInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedCreateNestedManyWithoutTeamInput
+  billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedCreateNestedManyWithoutTeamInput
+  taxProfile?: Prisma.TaxProfileUncheckedCreateNestedOneWithoutTeamInput
+  invoiceSequences?: Prisma.InvoiceSequenceUncheckedCreateNestedManyWithoutTeamInput
+  auditEvents?: Prisma.AuditEventUncheckedCreateNestedManyWithoutTeamInput
+  billingEvents?: Prisma.BillingEventUncheckedCreateNestedManyWithoutTeamInput
+  webhookDeliveries?: Prisma.WebhookDeliveryUncheckedCreateNestedManyWithoutTeamInput
+  gasSpends?: Prisma.GasSpendUncheckedCreateNestedManyWithoutTeamInput
+  tierHistory?: Prisma.TierUpgradeHistoryUncheckedCreateNestedManyWithoutTeamInput
+  supportTickets?: Prisma.SupportTicketUncheckedCreateNestedManyWithoutTeamInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedManyWithoutProviderTeamInput
+  platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerUncheckedCreateNestedManyWithoutProviderTeamInput
+  platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerUncheckedCreateNestedOneWithoutWorkspaceTeamInput
+  arcenCompanies?: Prisma.ArcenCompanyUncheckedCreateNestedManyWithoutTeamInput
+  addOnGrants?: Prisma.CompanyAddOnGrantUncheckedCreateNestedManyWithoutTeamInput
+  creditGrants?: Prisma.CompanyCreditGrantUncheckedCreateNestedManyWithoutTeamInput
+  featureFlags?: Prisma.CatalogFeatureFlagUncheckedCreateNestedManyWithoutTeamInput
+  arcenApiKeys?: Prisma.ArcenApiKeyUncheckedCreateNestedManyWithoutTeamInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedCreateNestedManyWithoutTeamInput
+  embedComponents?: Prisma.EmbedComponentUncheckedCreateNestedManyWithoutTeamInput
+  agentConfig?: Prisma.ArcenAgentConfigUncheckedCreateNestedOneWithoutTeamInput
+  dispatchRequests?: Prisma.ArcenDispatchRequestUncheckedCreateNestedManyWithoutTeamInput
+}
+
+export type TeamCreateOrConnectWithoutActivationRedemptionsInput = {
+  where: Prisma.TeamWhereUniqueInput
+  create: Prisma.XOR<Prisma.TeamCreateWithoutActivationRedemptionsInput, Prisma.TeamUncheckedCreateWithoutActivationRedemptionsInput>
+}
+
+export type TeamUpsertWithoutActivationRedemptionsInput = {
+  update: Prisma.XOR<Prisma.TeamUpdateWithoutActivationRedemptionsInput, Prisma.TeamUncheckedUpdateWithoutActivationRedemptionsInput>
+  create: Prisma.XOR<Prisma.TeamCreateWithoutActivationRedemptionsInput, Prisma.TeamUncheckedCreateWithoutActivationRedemptionsInput>
+  where?: Prisma.TeamWhereInput
+}
+
+export type TeamUpdateToOneWithWhereWithoutActivationRedemptionsInput = {
+  where?: Prisma.TeamWhereInput
+  data: Prisma.XOR<Prisma.TeamUpdateWithoutActivationRedemptionsInput, Prisma.TeamUncheckedUpdateWithoutActivationRedemptionsInput>
+}
+
+export type TeamUpdateWithoutActivationRedemptionsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  slug?: Prisma.StringFieldUpdateOperationsInput | string
+  environmentMode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
+  invoicePrefix?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
+  tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isPlatformActivated?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  allowPlatformBilling?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationKey?: Prisma.PlatformActivationKeyUpdateOneWithoutTeamsNestedInput
+  members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
+  providerProfiles?: Prisma.ProviderProfileUpdateManyWithoutTeamNestedInput
+  invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
+  environments?: Prisma.WorkspaceEnvironmentUpdateManyWithoutTeamNestedInput
+  catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutTeamNestedInput
+  catalogAddOns?: Prisma.CatalogAddOnUpdateManyWithoutTeamNestedInput
+  catalogCreditTypes?: Prisma.CatalogCreditTypeUpdateManyWithoutTeamNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUpdateManyWithoutTeamNestedInput
+  catalogVersions?: Prisma.CatalogVersionUpdateManyWithoutTeamNestedInput
+  catalogConfigs?: Prisma.CatalogConfigUpdateManyWithoutTeamNestedInput
+  billingTemplates?: Prisma.BillingTemplateUpdateManyWithoutTeamNestedInput
+  templateInstalls?: Prisma.TemplateInstallUpdateManyWithoutTeamNestedInput
+  invoices?: Prisma.InvoiceUpdateManyWithoutTeamNestedInput
+  payments?: Prisma.PaymentUpdateManyWithoutTeamNestedInput
+  paymentLinks?: Prisma.PaymentLinkUpdateManyWithoutTeamNestedInput
+  checkoutSessions?: Prisma.CheckoutSessionUpdateManyWithoutTeamNestedInput
+  billingBalances?: Prisma.BillingBalanceUpdateManyWithoutTeamNestedInput
+  refunds?: Prisma.RefundUpdateManyWithoutTeamNestedInput
+  billingAdjustments?: Prisma.BillingAdjustmentUpdateManyWithoutTeamNestedInput
+  subscriptionStates?: Prisma.SubscriptionStateUpdateManyWithoutTeamNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUpdateManyWithoutTeamNestedInput
+  billingRecoveryTasks?: Prisma.BillingRecoveryTaskUpdateManyWithoutTeamNestedInput
+  taxProfile?: Prisma.TaxProfileUpdateOneWithoutTeamNestedInput
+  invoiceSequences?: Prisma.InvoiceSequenceUpdateManyWithoutTeamNestedInput
+  auditEvents?: Prisma.AuditEventUpdateManyWithoutTeamNestedInput
+  billingEvents?: Prisma.BillingEventUpdateManyWithoutTeamNestedInput
+  webhookDeliveries?: Prisma.WebhookDeliveryUpdateManyWithoutTeamNestedInput
+  gasSpends?: Prisma.GasSpendUpdateManyWithoutTeamNestedInput
+  tierHistory?: Prisma.TierUpgradeHistoryUpdateManyWithoutTeamNestedInput
+  supportTickets?: Prisma.SupportTicketUpdateManyWithoutTeamNestedInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUpdateManyWithoutProviderTeamNestedInput
+  platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerUpdateManyWithoutProviderTeamNestedInput
+  platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerUpdateOneWithoutWorkspaceTeamNestedInput
+  arcenCompanies?: Prisma.ArcenCompanyUpdateManyWithoutTeamNestedInput
+  addOnGrants?: Prisma.CompanyAddOnGrantUpdateManyWithoutTeamNestedInput
+  creditGrants?: Prisma.CompanyCreditGrantUpdateManyWithoutTeamNestedInput
+  featureFlags?: Prisma.CatalogFeatureFlagUpdateManyWithoutTeamNestedInput
+  arcenApiKeys?: Prisma.ArcenApiKeyUpdateManyWithoutTeamNestedInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUpdateManyWithoutTeamNestedInput
+  embedComponents?: Prisma.EmbedComponentUpdateManyWithoutTeamNestedInput
+  agentConfig?: Prisma.ArcenAgentConfigUpdateOneWithoutTeamNestedInput
+  dispatchRequests?: Prisma.ArcenDispatchRequestUpdateManyWithoutTeamNestedInput
+}
+
+export type TeamUncheckedUpdateWithoutActivationRedemptionsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  slug?: Prisma.StringFieldUpdateOperationsInput | string
+  environmentMode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
+  invoicePrefix?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
+  tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isPlatformActivated?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  activationKeyId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  allowPlatformBilling?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
+  providerProfiles?: Prisma.ProviderProfileUncheckedUpdateManyWithoutTeamNestedInput
+  invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
+  environments?: Prisma.WorkspaceEnvironmentUncheckedUpdateManyWithoutTeamNestedInput
+  catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutTeamNestedInput
+  catalogAddOns?: Prisma.CatalogAddOnUncheckedUpdateManyWithoutTeamNestedInput
+  catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedUpdateManyWithoutTeamNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedUpdateManyWithoutTeamNestedInput
+  catalogVersions?: Prisma.CatalogVersionUncheckedUpdateManyWithoutTeamNestedInput
+  catalogConfigs?: Prisma.CatalogConfigUncheckedUpdateManyWithoutTeamNestedInput
+  billingTemplates?: Prisma.BillingTemplateUncheckedUpdateManyWithoutTeamNestedInput
+  templateInstalls?: Prisma.TemplateInstallUncheckedUpdateManyWithoutTeamNestedInput
+  invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutTeamNestedInput
+  payments?: Prisma.PaymentUncheckedUpdateManyWithoutTeamNestedInput
+  paymentLinks?: Prisma.PaymentLinkUncheckedUpdateManyWithoutTeamNestedInput
+  checkoutSessions?: Prisma.CheckoutSessionUncheckedUpdateManyWithoutTeamNestedInput
+  billingBalances?: Prisma.BillingBalanceUncheckedUpdateManyWithoutTeamNestedInput
+  refunds?: Prisma.RefundUncheckedUpdateManyWithoutTeamNestedInput
+  billingAdjustments?: Prisma.BillingAdjustmentUncheckedUpdateManyWithoutTeamNestedInput
+  subscriptionStates?: Prisma.SubscriptionStateUncheckedUpdateManyWithoutTeamNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedUpdateManyWithoutTeamNestedInput
+  billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedUpdateManyWithoutTeamNestedInput
+  taxProfile?: Prisma.TaxProfileUncheckedUpdateOneWithoutTeamNestedInput
+  invoiceSequences?: Prisma.InvoiceSequenceUncheckedUpdateManyWithoutTeamNestedInput
+  auditEvents?: Prisma.AuditEventUncheckedUpdateManyWithoutTeamNestedInput
+  billingEvents?: Prisma.BillingEventUncheckedUpdateManyWithoutTeamNestedInput
+  webhookDeliveries?: Prisma.WebhookDeliveryUncheckedUpdateManyWithoutTeamNestedInput
+  gasSpends?: Prisma.GasSpendUncheckedUpdateManyWithoutTeamNestedInput
+  tierHistory?: Prisma.TierUpgradeHistoryUncheckedUpdateManyWithoutTeamNestedInput
+  supportTickets?: Prisma.SupportTicketUncheckedUpdateManyWithoutTeamNestedInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedUpdateManyWithoutProviderTeamNestedInput
+  platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerUncheckedUpdateManyWithoutProviderTeamNestedInput
+  platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerUncheckedUpdateOneWithoutWorkspaceTeamNestedInput
+  arcenCompanies?: Prisma.ArcenCompanyUncheckedUpdateManyWithoutTeamNestedInput
+  addOnGrants?: Prisma.CompanyAddOnGrantUncheckedUpdateManyWithoutTeamNestedInput
+  creditGrants?: Prisma.CompanyCreditGrantUncheckedUpdateManyWithoutTeamNestedInput
+  featureFlags?: Prisma.CatalogFeatureFlagUncheckedUpdateManyWithoutTeamNestedInput
+  arcenApiKeys?: Prisma.ArcenApiKeyUncheckedUpdateManyWithoutTeamNestedInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedUpdateManyWithoutTeamNestedInput
+  embedComponents?: Prisma.EmbedComponentUncheckedUpdateManyWithoutTeamNestedInput
+  agentConfig?: Prisma.ArcenAgentConfigUncheckedUpdateOneWithoutTeamNestedInput
+  dispatchRequests?: Prisma.ArcenDispatchRequestUncheckedUpdateManyWithoutTeamNestedInput
+}
+
+export type TeamCreateManyActivationKeyInput = {
+  id?: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  name: string
+  slug: string
+  environmentMode?: $Enums.EnvironmentMode
+  invoicePrefix?: string | null
+  platformTier?: $Enums.PlatformTier
+  tierExpiresAt?: Date | string | null
+  tierSubscriptionId?: string | null
+  isPlatformActivated?: boolean
+  allowPlatformBilling?: boolean
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+}
+
+export type TeamUpdateWithoutActivationKeyInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  slug?: Prisma.StringFieldUpdateOperationsInput | string
+  environmentMode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
+  invoicePrefix?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
+  tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isPlatformActivated?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  allowPlatformBilling?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationRedemptions?: Prisma.PlatformActivationRedemptionUpdateManyWithoutTeamNestedInput
+  members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
+  providerProfiles?: Prisma.ProviderProfileUpdateManyWithoutTeamNestedInput
+  invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
+  environments?: Prisma.WorkspaceEnvironmentUpdateManyWithoutTeamNestedInput
+  catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutTeamNestedInput
+  catalogAddOns?: Prisma.CatalogAddOnUpdateManyWithoutTeamNestedInput
+  catalogCreditTypes?: Prisma.CatalogCreditTypeUpdateManyWithoutTeamNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUpdateManyWithoutTeamNestedInput
+  catalogVersions?: Prisma.CatalogVersionUpdateManyWithoutTeamNestedInput
+  catalogConfigs?: Prisma.CatalogConfigUpdateManyWithoutTeamNestedInput
+  billingTemplates?: Prisma.BillingTemplateUpdateManyWithoutTeamNestedInput
+  templateInstalls?: Prisma.TemplateInstallUpdateManyWithoutTeamNestedInput
+  invoices?: Prisma.InvoiceUpdateManyWithoutTeamNestedInput
+  payments?: Prisma.PaymentUpdateManyWithoutTeamNestedInput
+  paymentLinks?: Prisma.PaymentLinkUpdateManyWithoutTeamNestedInput
+  checkoutSessions?: Prisma.CheckoutSessionUpdateManyWithoutTeamNestedInput
+  billingBalances?: Prisma.BillingBalanceUpdateManyWithoutTeamNestedInput
+  refunds?: Prisma.RefundUpdateManyWithoutTeamNestedInput
+  billingAdjustments?: Prisma.BillingAdjustmentUpdateManyWithoutTeamNestedInput
+  subscriptionStates?: Prisma.SubscriptionStateUpdateManyWithoutTeamNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUpdateManyWithoutTeamNestedInput
+  billingRecoveryTasks?: Prisma.BillingRecoveryTaskUpdateManyWithoutTeamNestedInput
+  taxProfile?: Prisma.TaxProfileUpdateOneWithoutTeamNestedInput
+  invoiceSequences?: Prisma.InvoiceSequenceUpdateManyWithoutTeamNestedInput
+  auditEvents?: Prisma.AuditEventUpdateManyWithoutTeamNestedInput
+  billingEvents?: Prisma.BillingEventUpdateManyWithoutTeamNestedInput
+  webhookDeliveries?: Prisma.WebhookDeliveryUpdateManyWithoutTeamNestedInput
+  gasSpends?: Prisma.GasSpendUpdateManyWithoutTeamNestedInput
+  tierHistory?: Prisma.TierUpgradeHistoryUpdateManyWithoutTeamNestedInput
+  supportTickets?: Prisma.SupportTicketUpdateManyWithoutTeamNestedInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUpdateManyWithoutProviderTeamNestedInput
+  platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerUpdateManyWithoutProviderTeamNestedInput
+  platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerUpdateOneWithoutWorkspaceTeamNestedInput
+  arcenCompanies?: Prisma.ArcenCompanyUpdateManyWithoutTeamNestedInput
+  addOnGrants?: Prisma.CompanyAddOnGrantUpdateManyWithoutTeamNestedInput
+  creditGrants?: Prisma.CompanyCreditGrantUpdateManyWithoutTeamNestedInput
+  featureFlags?: Prisma.CatalogFeatureFlagUpdateManyWithoutTeamNestedInput
+  arcenApiKeys?: Prisma.ArcenApiKeyUpdateManyWithoutTeamNestedInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUpdateManyWithoutTeamNestedInput
+  embedComponents?: Prisma.EmbedComponentUpdateManyWithoutTeamNestedInput
+  agentConfig?: Prisma.ArcenAgentConfigUpdateOneWithoutTeamNestedInput
+  dispatchRequests?: Prisma.ArcenDispatchRequestUpdateManyWithoutTeamNestedInput
+}
+
+export type TeamUncheckedUpdateWithoutActivationKeyInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  slug?: Prisma.StringFieldUpdateOperationsInput | string
+  environmentMode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
+  invoicePrefix?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
+  tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isPlatformActivated?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  allowPlatformBilling?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationRedemptions?: Prisma.PlatformActivationRedemptionUncheckedUpdateManyWithoutTeamNestedInput
+  members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
+  providerProfiles?: Prisma.ProviderProfileUncheckedUpdateManyWithoutTeamNestedInput
+  invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
+  environments?: Prisma.WorkspaceEnvironmentUncheckedUpdateManyWithoutTeamNestedInput
+  catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutTeamNestedInput
+  catalogAddOns?: Prisma.CatalogAddOnUncheckedUpdateManyWithoutTeamNestedInput
+  catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedUpdateManyWithoutTeamNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedUpdateManyWithoutTeamNestedInput
+  catalogVersions?: Prisma.CatalogVersionUncheckedUpdateManyWithoutTeamNestedInput
+  catalogConfigs?: Prisma.CatalogConfigUncheckedUpdateManyWithoutTeamNestedInput
+  billingTemplates?: Prisma.BillingTemplateUncheckedUpdateManyWithoutTeamNestedInput
+  templateInstalls?: Prisma.TemplateInstallUncheckedUpdateManyWithoutTeamNestedInput
+  invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutTeamNestedInput
+  payments?: Prisma.PaymentUncheckedUpdateManyWithoutTeamNestedInput
+  paymentLinks?: Prisma.PaymentLinkUncheckedUpdateManyWithoutTeamNestedInput
+  checkoutSessions?: Prisma.CheckoutSessionUncheckedUpdateManyWithoutTeamNestedInput
+  billingBalances?: Prisma.BillingBalanceUncheckedUpdateManyWithoutTeamNestedInput
+  refunds?: Prisma.RefundUncheckedUpdateManyWithoutTeamNestedInput
+  billingAdjustments?: Prisma.BillingAdjustmentUncheckedUpdateManyWithoutTeamNestedInput
+  subscriptionStates?: Prisma.SubscriptionStateUncheckedUpdateManyWithoutTeamNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedUpdateManyWithoutTeamNestedInput
+  billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedUpdateManyWithoutTeamNestedInput
+  taxProfile?: Prisma.TaxProfileUncheckedUpdateOneWithoutTeamNestedInput
+  invoiceSequences?: Prisma.InvoiceSequenceUncheckedUpdateManyWithoutTeamNestedInput
+  auditEvents?: Prisma.AuditEventUncheckedUpdateManyWithoutTeamNestedInput
+  billingEvents?: Prisma.BillingEventUncheckedUpdateManyWithoutTeamNestedInput
+  webhookDeliveries?: Prisma.WebhookDeliveryUncheckedUpdateManyWithoutTeamNestedInput
+  gasSpends?: Prisma.GasSpendUncheckedUpdateManyWithoutTeamNestedInput
+  tierHistory?: Prisma.TierUpgradeHistoryUncheckedUpdateManyWithoutTeamNestedInput
+  supportTickets?: Prisma.SupportTicketUncheckedUpdateManyWithoutTeamNestedInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedUpdateManyWithoutProviderTeamNestedInput
+  platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerUncheckedUpdateManyWithoutProviderTeamNestedInput
+  platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerUncheckedUpdateOneWithoutWorkspaceTeamNestedInput
+  arcenCompanies?: Prisma.ArcenCompanyUncheckedUpdateManyWithoutTeamNestedInput
+  addOnGrants?: Prisma.CompanyAddOnGrantUncheckedUpdateManyWithoutTeamNestedInput
+  creditGrants?: Prisma.CompanyCreditGrantUncheckedUpdateManyWithoutTeamNestedInput
+  featureFlags?: Prisma.CatalogFeatureFlagUncheckedUpdateManyWithoutTeamNestedInput
+  arcenApiKeys?: Prisma.ArcenApiKeyUncheckedUpdateManyWithoutTeamNestedInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedUpdateManyWithoutTeamNestedInput
+  embedComponents?: Prisma.EmbedComponentUncheckedUpdateManyWithoutTeamNestedInput
+  agentConfig?: Prisma.ArcenAgentConfigUncheckedUpdateOneWithoutTeamNestedInput
+  dispatchRequests?: Prisma.ArcenDispatchRequestUncheckedUpdateManyWithoutTeamNestedInput
+}
+
+export type TeamUncheckedUpdateManyWithoutActivationKeyInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  slug?: Prisma.StringFieldUpdateOperationsInput | string
+  environmentMode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
+  invoicePrefix?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
+  tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isPlatformActivated?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  allowPlatformBilling?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+}
+
 
 /**
  * Count Type TeamCountOutputType
  */
 
 export type TeamCountOutputType = {
+  activationRedemptions: number
   members: number
   providerProfiles: number
   invitations: number
@@ -11286,6 +12666,7 @@ export type TeamCountOutputType = {
 }
 
 export type TeamCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  activationRedemptions?: boolean | TeamCountOutputTypeCountActivationRedemptionsArgs
   members?: boolean | TeamCountOutputTypeCountMembersArgs
   providerProfiles?: boolean | TeamCountOutputTypeCountProviderProfilesArgs
   invitations?: boolean | TeamCountOutputTypeCountInvitationsArgs
@@ -11335,6 +12716,13 @@ export type TeamCountOutputTypeDefaultArgs<ExtArgs extends runtime.Types.Extensi
    * Select specific fields to fetch from the TeamCountOutputType
    */
   select?: Prisma.TeamCountOutputTypeSelect<ExtArgs> | null
+}
+
+/**
+ * TeamCountOutputType without action
+ */
+export type TeamCountOutputTypeCountActivationRedemptionsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.PlatformActivationRedemptionWhereInput
 }
 
 /**
@@ -11622,7 +13010,12 @@ export type TeamSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = r
   platformTier?: boolean
   tierExpiresAt?: boolean
   tierSubscriptionId?: boolean
+  isPlatformActivated?: boolean
+  activationKeyId?: boolean
+  allowPlatformBilling?: boolean
   profileData?: boolean
+  activationKey?: boolean | Prisma.Team$activationKeyArgs<ExtArgs>
+  activationRedemptions?: boolean | Prisma.Team$activationRedemptionsArgs<ExtArgs>
   members?: boolean | Prisma.Team$membersArgs<ExtArgs>
   providerProfiles?: boolean | Prisma.Team$providerProfilesArgs<ExtArgs>
   invitations?: boolean | Prisma.Team$invitationsArgs<ExtArgs>
@@ -11679,7 +13072,11 @@ export type TeamSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensio
   platformTier?: boolean
   tierExpiresAt?: boolean
   tierSubscriptionId?: boolean
+  isPlatformActivated?: boolean
+  activationKeyId?: boolean
+  allowPlatformBilling?: boolean
   profileData?: boolean
+  activationKey?: boolean | Prisma.Team$activationKeyArgs<ExtArgs>
 }, ExtArgs["result"]["team"]>
 
 export type TeamSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -11693,7 +13090,11 @@ export type TeamSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensio
   platformTier?: boolean
   tierExpiresAt?: boolean
   tierSubscriptionId?: boolean
+  isPlatformActivated?: boolean
+  activationKeyId?: boolean
+  allowPlatformBilling?: boolean
   profileData?: boolean
+  activationKey?: boolean | Prisma.Team$activationKeyArgs<ExtArgs>
 }, ExtArgs["result"]["team"]>
 
 export type TeamSelectScalar = {
@@ -11707,11 +13108,16 @@ export type TeamSelectScalar = {
   platformTier?: boolean
   tierExpiresAt?: boolean
   tierSubscriptionId?: boolean
+  isPlatformActivated?: boolean
+  activationKeyId?: boolean
+  allowPlatformBilling?: boolean
   profileData?: boolean
 }
 
-export type TeamOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "createdAt" | "updatedAt" | "name" | "slug" | "environmentMode" | "invoicePrefix" | "platformTier" | "tierExpiresAt" | "tierSubscriptionId" | "profileData", ExtArgs["result"]["team"]>
+export type TeamOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "createdAt" | "updatedAt" | "name" | "slug" | "environmentMode" | "invoicePrefix" | "platformTier" | "tierExpiresAt" | "tierSubscriptionId" | "isPlatformActivated" | "activationKeyId" | "allowPlatformBilling" | "profileData", ExtArgs["result"]["team"]>
 export type TeamInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  activationKey?: boolean | Prisma.Team$activationKeyArgs<ExtArgs>
+  activationRedemptions?: boolean | Prisma.Team$activationRedemptionsArgs<ExtArgs>
   members?: boolean | Prisma.Team$membersArgs<ExtArgs>
   providerProfiles?: boolean | Prisma.Team$providerProfilesArgs<ExtArgs>
   invitations?: boolean | Prisma.Team$invitationsArgs<ExtArgs>
@@ -11756,12 +13162,18 @@ export type TeamInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = 
   dispatchRequests?: boolean | Prisma.Team$dispatchRequestsArgs<ExtArgs>
   _count?: boolean | Prisma.TeamCountOutputTypeDefaultArgs<ExtArgs>
 }
-export type TeamIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {}
-export type TeamIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {}
+export type TeamIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  activationKey?: boolean | Prisma.Team$activationKeyArgs<ExtArgs>
+}
+export type TeamIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  activationKey?: boolean | Prisma.Team$activationKeyArgs<ExtArgs>
+}
 
 export type $TeamPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "Team"
   objects: {
+    activationKey: Prisma.$PlatformActivationKeyPayload<ExtArgs> | null
+    activationRedemptions: Prisma.$PlatformActivationRedemptionPayload<ExtArgs>[]
     members: Prisma.$TeamMemberPayload<ExtArgs>[]
     providerProfiles: Prisma.$ProviderProfilePayload<ExtArgs>[]
     invitations: Prisma.$TeamInvitationPayload<ExtArgs>[]
@@ -11816,6 +13228,9 @@ export type $TeamPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs =
     platformTier: $Enums.PlatformTier
     tierExpiresAt: Date | null
     tierSubscriptionId: string | null
+    isPlatformActivated: boolean
+    activationKeyId: string | null
+    allowPlatformBilling: boolean
     profileData: runtime.JsonValue | null
   }, ExtArgs["result"]["team"]>
   composites: {}
@@ -12211,6 +13626,8 @@ readonly fields: TeamFieldRefs;
  */
 export interface Prisma__TeamClient<T, Null = never, ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
   readonly [Symbol.toStringTag]: "PrismaPromise"
+  activationKey<T extends Prisma.Team$activationKeyArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Team$activationKeyArgs<ExtArgs>>): Prisma.Prisma__PlatformActivationKeyClient<runtime.Types.Result.GetResult<Prisma.$PlatformActivationKeyPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+  activationRedemptions<T extends Prisma.Team$activationRedemptionsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Team$activationRedemptionsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$PlatformActivationRedemptionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   members<T extends Prisma.Team$membersArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Team$membersArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$TeamMemberPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   providerProfiles<T extends Prisma.Team$providerProfilesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Team$providerProfilesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ProviderProfilePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   invitations<T extends Prisma.Team$invitationsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Team$invitationsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$TeamInvitationPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
@@ -12292,6 +13709,9 @@ export interface TeamFieldRefs {
   readonly platformTier: Prisma.FieldRef<"Team", 'PlatformTier'>
   readonly tierExpiresAt: Prisma.FieldRef<"Team", 'DateTime'>
   readonly tierSubscriptionId: Prisma.FieldRef<"Team", 'String'>
+  readonly isPlatformActivated: Prisma.FieldRef<"Team", 'Boolean'>
+  readonly activationKeyId: Prisma.FieldRef<"Team", 'String'>
+  readonly allowPlatformBilling: Prisma.FieldRef<"Team", 'Boolean'>
   readonly profileData: Prisma.FieldRef<"Team", 'Json'>
 }
     
@@ -12542,6 +13962,10 @@ export type TeamCreateManyAndReturnArgs<ExtArgs extends runtime.Types.Extensions
    */
   data: Prisma.TeamCreateManyInput | Prisma.TeamCreateManyInput[]
   skipDuplicates?: boolean
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.TeamIncludeCreateManyAndReturn<ExtArgs> | null
 }
 
 /**
@@ -12612,6 +14036,10 @@ export type TeamUpdateManyAndReturnArgs<ExtArgs extends runtime.Types.Extensions
    * Limit how many Teams to update.
    */
   limit?: number
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.TeamIncludeUpdateManyAndReturn<ExtArgs> | null
 }
 
 /**
@@ -12678,6 +14106,49 @@ export type TeamDeleteManyArgs<ExtArgs extends runtime.Types.Extensions.Internal
    * Limit how many Teams to delete.
    */
   limit?: number
+}
+
+/**
+ * Team.activationKey
+ */
+export type Team$activationKeyArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the PlatformActivationKey
+   */
+  select?: Prisma.PlatformActivationKeySelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the PlatformActivationKey
+   */
+  omit?: Prisma.PlatformActivationKeyOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.PlatformActivationKeyInclude<ExtArgs> | null
+  where?: Prisma.PlatformActivationKeyWhereInput
+}
+
+/**
+ * Team.activationRedemptions
+ */
+export type Team$activationRedemptionsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the PlatformActivationRedemption
+   */
+  select?: Prisma.PlatformActivationRedemptionSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the PlatformActivationRedemption
+   */
+  omit?: Prisma.PlatformActivationRedemptionOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.PlatformActivationRedemptionInclude<ExtArgs> | null
+  where?: Prisma.PlatformActivationRedemptionWhereInput
+  orderBy?: Prisma.PlatformActivationRedemptionOrderByWithRelationInput | Prisma.PlatformActivationRedemptionOrderByWithRelationInput[]
+  cursor?: Prisma.PlatformActivationRedemptionWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.PlatformActivationRedemptionScalarFieldEnum | Prisma.PlatformActivationRedemptionScalarFieldEnum[]
 }
 
 /**

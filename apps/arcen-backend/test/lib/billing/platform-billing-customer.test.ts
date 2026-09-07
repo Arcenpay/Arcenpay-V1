@@ -122,4 +122,91 @@ describe("platform billing customer", () => {
       },
     });
   });
+
+  it("preserves PRO tier for a workspace holding an active unexpired activation key even if subscription is Free", async () => {
+    const futureExpiry = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+    mockDb.platformBillingCustomer.findUnique.mockResolvedValue({
+      workspaceTeamId: "workspace-premium",
+      providerTeamId: "platform-team",
+    });
+    mockDb.subscriptionState.findUnique.mockResolvedValue({
+      id: "sub-free-1",
+      status: "ACTIVE",
+      catalogPlanId: "plan-free",
+      currentPeriodEnd: futureExpiry,
+    });
+    mockDb.catalogPlan.findUnique.mockResolvedValue({ metadata: { platformTier: "FREE" } });
+    mockDb.team.findUnique.mockResolvedValue({
+      platformTier: "FREE",
+      tierSubscriptionId: null,
+      tierExpiresAt: null,
+      activationKeyId: "key-1",
+      activationKey: {
+        id: "key-1",
+        tier: "PRO",
+        status: "ACTIVE",
+        expiresAt: futureExpiry,
+      },
+    });
+
+    const result = await projectPlatformBillingEntitlement({
+      providerTeamId: "platform-team",
+      companyId: "company-premium",
+    });
+
+    expect(result.projected).toBe(true);
+    expect(result.tier).toBe("PRO");
+    expect(mockDb.team.update).toHaveBeenCalledWith({
+      where: { id: "workspace-premium" },
+      data: {
+        platformTier: "PRO",
+        tierSubscriptionId: "sub-free-1",
+        tierExpiresAt: futureExpiry,
+      },
+    });
+  });
+
+  it("downgrades to FREE when a premium activation key has expired and subscription is Free", async () => {
+    const pastExpiry = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    mockDb.platformBillingCustomer.findUnique.mockResolvedValue({
+      workspaceTeamId: "workspace-expired",
+      providerTeamId: "platform-team",
+    });
+    mockDb.subscriptionState.findUnique.mockResolvedValue({
+      id: "sub-free-2",
+      status: "ACTIVE",
+      catalogPlanId: "plan-free",
+      currentPeriodEnd: null,
+    });
+    mockDb.catalogPlan.findUnique.mockResolvedValue({ metadata: { platformTier: "FREE" } });
+    mockDb.team.findUnique.mockResolvedValue({
+      platformTier: "PRO",
+      tierSubscriptionId: "sub-free-2",
+      tierExpiresAt: pastExpiry,
+      activationKeyId: "key-expired",
+      activationKey: {
+        id: "key-expired",
+        tier: "PRO",
+        status: "ACTIVE",
+        expiresAt: pastExpiry,
+      },
+    });
+
+    const result = await projectPlatformBillingEntitlement({
+      providerTeamId: "platform-team",
+      companyId: "company-expired",
+    });
+
+    expect(result.projected).toBe(true);
+    expect(result.tier).toBe("FREE");
+    expect(mockDb.team.update).toHaveBeenCalledWith({
+      where: { id: "workspace-expired" },
+      data: {
+        platformTier: "FREE",
+        tierSubscriptionId: null,
+        tierExpiresAt: null,
+      },
+    });
+  });
 });
+

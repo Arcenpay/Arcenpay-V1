@@ -1534,7 +1534,7 @@ export function AgentSection() {
       <div className="px-6 pt-6 pb-0 border-b border-border">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500/20 to-blue-500/20 border border-border flex items-center justify-center">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500/20 to-sky-500/20 border border-border flex items-center justify-center">
               <Bot className="w-4 h-4 text-foreground" />
             </div>
             <div>

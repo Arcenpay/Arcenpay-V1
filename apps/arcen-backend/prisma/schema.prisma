@@ -262,6 +262,13 @@ enum PlatformTier {
   PRO
 }
 
+enum ActivationKeyStatus {
+  ACTIVE
+  REVOKED
+  EXPIRED
+  EXHAUSTED
+}
+
 // Chain family — the protocol family a chainId belongs to. Drives
 // address encoding, RPC client construction, event sourcing, and wallet
 // connection. Default EVM keeps existing rows (which all use real EVM
@@ -350,6 +357,13 @@ model Team {
   platformTier       PlatformTier @default(FREE)
   tierExpiresAt      DateTime?
   tierSubscriptionId String? // On-chain subscription tokenId for self-billing
+
+  // Platform Activation Key integration
+  isPlatformActivated   Boolean                        @default(false)
+  activationKeyId       String?
+  activationKey         PlatformActivationKey?         @relation(fields: [activationKeyId], references: [id], onDelete: SetNull)
+  allowPlatformBilling  Boolean                        @default(true) // Whether tenant is allowed to run self-service on-chain billing
+  activationRedemptions PlatformActivationRedemption[]
 
   members          TeamMember[]
   providerProfiles ProviderProfile[]
@@ -1918,3 +1932,56 @@ model ArcenDispatchRequest {
   @@index([teamId, status])
   @@index([teamId, createdAt])
 }
+
+// ── Platform Activation Keys & Licenses ─────────────────────────────────────
+
+model PlatformActivationKey {
+  id                   String               @id @default(cuid())
+  createdAt            DateTime             @default(now())
+  updatedAt            DateTime             @updatedAt
+  key                  String               @unique // Formatted key: ARCN-XXXX-XXXX-XXXX
+  keyHash              String               @unique // SHA-256 hex of the key
+  name                 String               // Recipient/organization name
+  recipientEmail       String?
+  recipientName        String?
+  tier                 PlatformTier         @default(PRO)
+  allowPlatformBilling Boolean              @default(false) // Whether tenant can perform self-service billing
+  maxUses              Int                  @default(1)
+  usedCount            Int                  @default(0)
+  status               ActivationKeyStatus  @default(ACTIVE)
+  expiresAt            DateTime?
+  revokedAt            DateTime?
+  revocationReason     String?
+  createdById          String?
+  notes                String?
+  metadata             Json?
+
+  redemptions          PlatformActivationRedemption[]
+  teams                Team[]
+
+  @@index([status])
+  @@index([keyHash])
+  @@index([tier])
+  @@index([createdAt])
+}
+
+model PlatformActivationRedemption {
+  id              String                @id @default(cuid())
+  createdAt       DateTime              @default(now())
+  activationKeyId String
+  teamId          String
+  userId          String?
+  userEmail       String?
+  walletAddress   String?
+  ipAddress       String?
+  userAgent       String?
+  metadata        Json?
+
+  activationKey   PlatformActivationKey @relation(fields: [activationKeyId], references: [id], onDelete: Cascade)
+  team            Team                  @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@index([activationKeyId])
+  @@index([teamId])
+  @@index([createdAt])
+}
+

@@ -481,3 +481,52 @@ export const WALLETCONNECT_PROJECT_ID: string = (() => {
   const val = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID;
   return requireInProd("NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID", val) || "";
 })();
+
+// ── Platform Activation & Admin ───────────────────────────────────────────────
+
+/**
+ * Secret key for authenticating requests to Platform Admin routes (/api/v1/admin/*).
+ * In production, this must be set to a strong secret.
+ */
+export const PLATFORM_ADMIN_SECRET: string = (() => {
+  const val = getEnvValue(["PLATFORM_ADMIN_SECRET", "ADMIN_SECRET", "NEXT_PUBLIC_PLATFORM_ADMIN_SECRET"]);
+  return val || (isProd ? requireInProd("PLATFORM_ADMIN_SECRET", val) : "arcenpay_admin_secret_dev");
+})();
+
+/**
+ * Whether the platform requires an activation key for workspace access.
+ * Defaults to true if PLATFORM_REQUIRE_ACTIVATION_KEY is 'true'.
+ */
+export const PLATFORM_REQUIRE_ACTIVATION_KEY: boolean = (() => {
+  const val = getEnvValue(["PLATFORM_REQUIRE_ACTIVATION_KEY", "NEXT_PUBLIC_PLATFORM_REQUIRE_ACTIVATION_KEY"]);
+  if (val === "false") return false;
+  if (val === "true") return true;
+  return isProd;
+})();
+
+/**
+ * Authorized platform administrator emails.
+ * Configured via PLATFORM_ADMIN_EMAILS or ADMIN_EMAILS environment variable (comma-separated).
+ * Defaults to admin@arcenpay.com and support@arcenpay.com if not specified.
+ */
+export const PLATFORM_ADMIN_EMAILS: Set<string> = (() => {
+  const envEmails = (getEnvValue(["PLATFORM_ADMIN_EMAILS", "ADMIN_EMAILS", "NEXT_PUBLIC_PLATFORM_ADMIN_EMAILS"]) || "")
+    .split(",")
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean);
+  return new Set<string>([
+    "admin@arcenpay.com",
+    "support@arcenpay.com",
+    ...envEmails,
+  ]);
+})();
+
+/**
+ * Check if a given email is an authorized platform administrator.
+ */
+export function isPlatformAdminEmail(email?: string | null): boolean {
+  if (!email) return false;
+  return PLATFORM_ADMIN_EMAILS.has(email.trim().toLowerCase());
+}
+
+

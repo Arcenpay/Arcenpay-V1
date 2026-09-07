@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getSession, callBackend } from "@/lib/auth.server";
 import { createPageMetadata } from "@/lib/seo";
+import { isPlatformAdminEmail } from "@/lib/admin";
 
 export const metadata: Metadata = createPageMetadata({
   title: "Dashboard",
@@ -23,29 +24,33 @@ export default async function DashboardLayout({
     redirect("/onboarding/chain");
   }
 
-  // Check if provider profile exists (OWNER/ADMIN only — others skip)
-  const isAdmin = session.currentTeamRole === "OWNER" || session.currentTeamRole === "ADMIN";
-  if (session.currentTeamId && isAdmin) {
+  // 1. Activation Gate:
+  // Brand new workspaces that have never activated must provide an activation key first.
+  // Existing workspaces whose keys expired or were revoked are permitted into the
+  // dashboard in Read-Only mode so they can view their historical billing data.
+  const isPlatformAdmin = session.isPlatformAdmin || isPlatformAdminEmail(session.email);
+  const isActivated = isPlatformAdmin || session.isPlatformActivated || session.currentTeam?.isPlatformActivated;
+  const keyStatus = session.activationKeyStatus || session.currentTeam?.activationKeyStatus;
+  const isExpiredOrRevoked = keyStatus === "EXPIRED" || keyStatus === "REVOKED";
+
+  if (!isPlatformAdmin && !isActivated && !isExpiredOrRevoked) {
+    redirect("/onboarding/activation");
+  }
+
+  // 2. Provider Profile Check (OWNER/ADMIN only):
+  const isAdminRole = session.currentTeamRole === "OWNER" || session.currentTeamRole === "ADMIN";
+  if (session.currentTeamId && isAdminRole) {
     const profileRes = await callBackend<{
       providerName?: string | null;
-      contactEmail?: string | null;
       legalName?: string | null;
     }>("/api/v1/provider/profile");
-    // `callBackend` returns null when the backend is temporarily unavailable.
-    // Treating that transport failure as an empty profile sends completed
-    // workspaces back into onboarding. Only an explicit profile response can
-    // prove that onboarding is incomplete.
-    // Signup creates a contact-email placeholder so billing can identify the
-    // workspace. That placeholder is not completed provider onboarding.
     const hasProfile = !!(profileRes?.providerName || profileRes?.legalName);
     if (profileRes && !hasProfile) {
       redirect("/onboarding/provider-profile");
     }
   }
 
-  // The session endpoint normally resolves the first environment and repairs
-  // stale session state. Keep the layout resilient if the session response
-  // contains the environment list but not its active pointer yet.
+  // 3. Environment Check:
   const hasEnvironment = !!session.activeEnvironment || session.environments.length > 0;
   if (!hasEnvironment) {
     if (session.currentTeamRole === "OWNER" || session.currentTeamRole === "ADMIN") {

@@ -44,7 +44,7 @@ export default function ChainFamilyPage() {
                 className="relative flex shrink-0"
                 style={{ width: 70, height: 44 }}
               >
-                <div className="w-7 h-7 rounded-full bg-white dark:bg-white p-[2px] absolute left-[42px] top-0 z-0 ring-2 ring-background overflow-hidden flex items-center justify-center">
+                <div className="w-7 h-7 rounded-full bg-white dark:bg-white p-[2px] absolute left-0 top-0 z-30 ring-2 ring-background overflow-hidden flex items-center justify-center">
                   <Image
                     src="/botchain.jpg"
                     alt="BOT Chain"
@@ -55,22 +55,22 @@ export default function ChainFamilyPage() {
                   />
                 </div>
                 <NetworkIcon
-                  name="ethereum"
-                  variant="branded"
-                  size={28}
-                  className="rounded-full bg-white dark:bg-white p-[2px] absolute left-[28px] top-0 z-10 ring-2 ring-background"
-                />
-                <NetworkIcon
-                  name="Arc"
+                  name="base"
                   variant="branded"
                   size={28}
                   className="rounded-full bg-white dark:bg-white p-[2px] absolute left-[14px] top-0 z-20 ring-2 ring-background"
                 />
                 <NetworkIcon
-                  name="base"
+                  name="Arc"
                   variant="branded"
                   size={28}
-                  className="rounded-full bg-white dark:bg-white p-[2px] absolute left-0 top-0 z-30 ring-2 ring-background"
+                  className="rounded-full bg-white dark:bg-white p-[2px] absolute left-[28px] top-0 z-10 ring-2 ring-background"
+                />
+                <NetworkIcon
+                  name="ethereum"
+                  variant="branded"
+                  size={28}
+                  className="rounded-full bg-white dark:bg-white p-[2px] absolute left-[42px] top-0 z-0 ring-2 ring-background"
                 />
               </div>
               <div className="flex-1 min-w-0">
@@ -78,11 +78,11 @@ export default function ChainFamilyPage() {
                   EVM Networks
                 </h3>
                 <p className="text-sm text-muted-foreground mt-1.5 leading-relaxed">
-                  Base, Arc, BOT, Ethereum — connect with MetaMask, Rainbow, or any
+                  BOT Chain, Base, Arc, Ethereum — connect with MetaMask, Rainbow, or any
                   WalletConnect-compatible wallet.
                 </p>
                 <div className="flex flex-wrap gap-1.5 mt-3">
-                  {["Base", "BOT Chain", "Arc Testnet", "Sepolia", "Ethereum"].map((c) => (
+                  {["BOT Chain", "Base", "Arc Testnet", "Sepolia", "Ethereum"].map((c) => (
                     <span
                       key={c}
                       className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground font-medium"

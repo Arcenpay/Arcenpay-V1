@@ -4,11 +4,24 @@ import { useEffect, useMemo, useState, useTransition } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useAccount, useChainId, useSignMessage } from "wagmi";
-import { ArrowLeft, CheckCircle2, Loader2, Mail, Wallet, Shield, AlertTriangle, ExternalLink, ArrowRight, Star } from "lucide-react";
+import {
+  ArrowLeft,
+  CheckCircle2,
+  Loader2,
+  Mail,
+  Wallet,
+  Shield,
+  AlertTriangle,
+  ExternalLink,
+  ArrowRight,
+  KeyRound,
+  LogOut,
+} from "lucide-react";
 import { NetworkIcon } from "@web3icons/react/dynamic";
-import { CanvasRevealEffect } from "@/components/ui/canvas-reveal-effect";
+import { AuthMarketingPanel } from "./auth-marketing-panel";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { toast } from "sonner";
 import { buildSIWEMessage } from "@/lib/auth";
 import {
   DEFAULT_WALLET_CHAIN_LABEL,
@@ -20,6 +33,7 @@ import {
   getOnboardingChainFamily,
   setOnboardingChainFamily,
 } from "@/lib/onboarding-chain-family";
+import { isPlatformAdminEmail } from "@/lib/admin";
 import type { ChainFamily } from "@arcenpay/internal-core";
 import {
   InputOTP,
@@ -29,9 +43,10 @@ import {
 
 type EmailAuthFlowProps = {
   inviteToken?: string | null;
+  initialStep?: Step;
 };
 
-type Step = "chain" | "wallet" | "email" | "code" | "sign";
+type Step = "chain" | "wallet" | "email" | "code" | "sign" | "activate";
 
 function shortAddress(address: string) {
   return `${address.slice(0, 6)}...${address.slice(-4)}`;
@@ -50,31 +65,7 @@ function formatTimer(targetIso: string | null): string {
   return `${String(mins).padStart(2, "0")}:${String(remainder).padStart(2, "0")}`;
 }
 
-const TESTIMONIALS = [
-  {
-    quote: "ArcenPay helped us move 10x faster with our billing infrastructure. While others are bogged down with payment integrations, we're shipping new features.",
-    name: "Sophie Hall",
-    role: "Founder, Catalog",
-    company: "Web3 Design Agency",
-    initials: "SH",
-  },
-  {
-    quote: "The subscription NFT integration was seamless. We went from concept to production billing in under a week. Our users love the transparent on-chain receipts.",
-    name: "Marcus Chen",
-    role: "CTO, BlockForge",
-    company: "DeFi Infrastructure",
-    initials: "MC",
-  },
-  {
-    quote: "Finally a billing layer that actually understands Web3. The ZK proof settlement cut our gas costs by 60% and our users never have to leave the app.",
-    name: "Aisha Patel",
-    role: "Head of Product, Nexus",
-    company: "Gaming Studio",
-    initials: "AP",
-  },
-];
-
-export function EmailAuthFlow({ inviteToken }: EmailAuthFlowProps) {
+export function EmailAuthFlow({ inviteToken, initialStep }: EmailAuthFlowProps) {
   const router = useRouter();
   const { address, isConnected } = useAccount();
   const chainId = useChainId();
@@ -82,7 +73,7 @@ export function EmailAuthFlow({ inviteToken }: EmailAuthFlowProps) {
   const { isOnRequiredNetwork, isSwitchingChain, openConnectModal, reconnectWallet, switchToRequiredNetwork } =
     useDashboardWallet();
   const stellarWallet = useStellarWallet();
-  const [step, setStep] = useState<Step>("chain");
+  const [step, setStep] = useState<Step>(initialStep ?? "chain");
   const [chainFamily, setChainFamily] = useState<ChainFamily | null>(
     () => getOnboardingChainFamily(),
   );
@@ -103,20 +94,128 @@ export function EmailAuthFlow({ inviteToken }: EmailAuthFlowProps) {
   const [isLinkingWallet, setIsLinkingWallet] = useState(false);
   const [isPending, startTransition] = useTransition();
 
-  /* Rotating testimonials */
-  const [activeTestimonial, setActiveTestimonial] = useState(0);
-  const [isFading, setIsFading] = useState(false);
+  /* Activation key states */
+  const [activationKey, setActivationKey] = useState("");
+  const [verifyingKey, setVerifyingKey] = useState(false);
+  const [redeemingKey, setRedeemingKey] = useState(false);
+  const [isPlatformAdminUser, setIsPlatformAdminUser] = useState(false);
+  const [keyVerification, setKeyVerification] = useState<{
+    valid: boolean;
+    reason?: string;
+    key?: {
+      id: string;
+      key: string;
+      name: string;
+      tier: "FREE" | "PLUS" | "PRO";
+      allowPlatformBilling: boolean;
+      maxUses: number;
+      usedCount: number;
+    };
+  } | null>(null);
 
   useEffect(() => {
-    const interval = window.setInterval(() => {
-      setIsFading(true);
-      window.setTimeout(() => {
-        setActiveTestimonial((prev) => (prev + 1) % TESTIMONIALS.length);
-        setIsFading(false);
-      }, 400);
-    }, 6000);
-    return () => window.clearInterval(interval);
-  }, []);
+    if (step === "activate") {
+      fetch("/api/auth/session")
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          if (data?.user?.email && !email) {
+            setEmail(data.user.email);
+          }
+          if (
+            data?.user?.isPlatformAdmin === true ||
+            isPlatformAdminEmail(data?.user?.email)
+          ) {
+            setIsPlatformAdminUser(true);
+          }
+        })
+        .catch(() => {});
+    }
+  }, [step, email]);
+
+  const handleActivationKeyChange = (val: string) => {
+    let clean = val.toUpperCase().replace(/[^A-Z0-9]/g, "");
+    if (!clean.startsWith("ARCN") && clean.length > 0) {
+      if ("ARCN".startsWith(clean)) {
+        // typing prefix
+      } else {
+        clean = "ARCN" + clean;
+      }
+    }
+
+    const parts: string[] = [];
+    if (clean.length > 0) parts.push(clean.slice(0, 4));
+    if (clean.length > 4) parts.push(clean.slice(4, 8));
+    if (clean.length > 8) parts.push(clean.slice(8, 12));
+    if (clean.length > 12) parts.push(clean.slice(12, 16));
+
+    const formatted = parts.join("-");
+    setActivationKey(formatted);
+    setKeyVerification(null);
+  };
+
+  useEffect(() => {
+    if (activationKey.length === 19) {
+      void verifyActivationKey(activationKey);
+    }
+  }, [activationKey]);
+
+  const verifyActivationKey = async (keyToVerify: string) => {
+    setVerifyingKey(true);
+    try {
+      const res = await fetch("/api/activation/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key: keyToVerify }),
+      });
+      const data = await res.json();
+      if (data.ok && data.valid && data.key) {
+        setKeyVerification(data);
+      } else {
+        setKeyVerification({ valid: false, reason: data.reason || data.error });
+      }
+    } catch {
+      setKeyVerification({ valid: false, reason: "Unable to verify key with server" });
+    } finally {
+      setVerifyingKey(false);
+    }
+  };
+
+  const handleRedeemKey = async () => {
+    if (!activationKey.trim()) {
+      toast.error("Please enter a valid activation key");
+      return;
+    }
+
+    setRedeemingKey(true);
+    try {
+      const res = await fetch("/api/activation/redeem", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key: activationKey.trim() }),
+      });
+      const data = await res.json();
+      if (data.ok) {
+        toast.success("Workspace activated");
+        router.push("/onboarding/provider-profile");
+      } else {
+        toast.error(data.error || "Failed to redeem activation key");
+        if (data.reason) {
+          setKeyVerification({ valid: false, reason: data.reason });
+        }
+      }
+    } catch {
+      toast.error("Network error during activation");
+    } finally {
+      setRedeemingKey(false);
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+    } catch {}
+    window.location.href = "/login";
+  };
 
   useEffect(() => {
     if (!retryAt) return;
@@ -131,6 +230,27 @@ export function EmailAuthFlow({ inviteToken }: EmailAuthFlowProps) {
     if (!retryAt) return true;
     return new Date(retryAt).getTime() <= Date.now();
   }, [retryAt, timerLabel]);
+
+  const navigatePostAuth = async () => {
+    try {
+      const sessionRes = await fetch("/api/auth/session");
+      if (sessionRes.ok) {
+        const data = await sessionRes.json();
+        const isAdmin =
+          data?.user?.isPlatformAdmin === true ||
+          isPlatformAdminEmail(data?.user?.email);
+        const isActivated =
+          isAdmin || data?.currentTeam?.isPlatformActivated === true;
+        const keyStatus = data?.currentTeam?.activationKeyStatus;
+        const isExpiredOrRevoked = keyStatus === "EXPIRED" || keyStatus === "REVOKED";
+        if (isActivated || isExpiredOrRevoked) {
+          window.location.href = "/";
+          return;
+        }
+      }
+    } catch {}
+    setStep("activate");
+  };
 
   const linkWalletForSession = async (): Promise<boolean> => {
     // Stellar path
@@ -170,7 +290,7 @@ export function EmailAuthFlow({ inviteToken }: EmailAuthFlowProps) {
             throw new Error(`This wallet is already linked (${linkPayload.maskedOwnerEmail}).`);
           throw new Error(linkPayload.error || "Could not link this wallet.");
         }
-        window.location.href = "/";
+        await navigatePostAuth();
         return true;
       } catch (err) {
         const msg = err instanceof Error ? err.message : "Could not link wallet.";
@@ -241,11 +361,7 @@ export function EmailAuthFlow({ inviteToken }: EmailAuthFlowProps) {
         throw new Error(linkPayload.error || "Could not link this wallet.");
       }
 
-      // Hard reload ensures the server re-reads the session cookie and the
-      // freshly-linked walletAddress from the DB. A soft router.push can
-      // race with router.refresh and serve stale session state, bouncing
-      // the user back to the login/chain-selection page.
-      window.location.href = "/";
+      await navigatePostAuth();
       return true;
     } catch (linkError) {
       const message =
@@ -345,8 +461,6 @@ export function EmailAuthFlow({ inviteToken }: EmailAuthFlowProps) {
     });
   };
 
-  const testimonial = TESTIMONIALS[activeTestimonial];
-
   return (
     <div className="min-h-screen flex flex-col lg:flex-row font-sans">
       {/* Left Side — Form */}
@@ -375,6 +489,7 @@ export function EmailAuthFlow({ inviteToken }: EmailAuthFlowProps) {
                 {step === "email" && "Continue with email"}
                 {step === "code" && "Enter verification code"}
                 {step === "sign" && "Sign to finish"}
+                {step === "activate" && "Activate workspace"}
               </h1>
               <p className="text-sm sm:text-base text-muted-foreground mt-2 sm:mt-3 leading-relaxed">
                 {step === "chain" &&
@@ -389,6 +504,8 @@ export function EmailAuthFlow({ inviteToken }: EmailAuthFlowProps) {
                   `We sent a code to ${email}. Enter it below to continue.`}
                 {step === "sign" &&
                   "One signature remains to link this wallet to your account."}
+                {step === "activate" &&
+                  "Enter your platform activation key to verify your license and continue setup."}
               </p>
             </div>
 
@@ -843,70 +960,156 @@ export function EmailAuthFlow({ inviteToken }: EmailAuthFlowProps) {
                 </button>
               </div>
             ) : null}
+
+            {step === "activate" ? (
+              <div className="space-y-6">
+                {isPlatformAdminUser && (
+                  <div className="p-3 rounded-lg border border-blue-200 dark:border-blue-900/60 bg-blue-50/50 dark:bg-blue-950/20 flex items-center justify-between text-xs text-blue-950 dark:text-blue-200">
+                    <span>Platform Admin access active</span>
+                    <a
+                      href="/admin"
+                      className="font-medium text-blue-600 dark:text-blue-400 hover:underline"
+                    >
+                      Admin Console &rarr;
+                    </a>
+                  </div>
+                )}
+
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  {chainFamily === "stellar" ? (
+                    <>
+                      <NetworkIcon name="stellar" variant="branded" size={14} className="rounded-full" />
+                      <span className="font-mono">{stellarWallet.address ? stellarShortAddress(stellarWallet.address) : "Connected"}</span>
+                    </>
+                  ) : (
+                    <>
+                      <Wallet className="h-4 w-4" />
+                      <span className="font-mono">{address ? shortAddress(address) : "Connected"}</span>
+                    </>
+                  )}
+                  {email ? <span>· {email}</span> : null}
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-sm font-medium text-foreground">
+                      Activation key
+                    </label>
+                    {verifyingKey ? (
+                      <span className="text-xs text-muted-foreground flex items-center gap-1">
+                        <Loader2 className="w-3 h-3 animate-spin" /> checking...
+                      </span>
+                    ) : null}
+                  </div>
+                  <div className="relative">
+                    <KeyRound className="w-4 h-4 text-muted-foreground absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                    <Input
+                      value={activationKey}
+                      onChange={(e) => handleActivationKeyChange(e.target.value)}
+                      placeholder="ARCN-XXXX-XXXX-XXXX"
+                      className="pl-10 font-mono tracking-wider uppercase text-sm h-12"
+                      maxLength={19}
+                      autoFocus
+                    />
+                  </div>
+                </div>
+
+                {keyVerification ? (
+                  <div
+                    className={`p-3 rounded-lg border text-xs ${
+                      keyVerification.valid
+                        ? "border-emerald-500/30 bg-emerald-500/5 text-emerald-950 dark:text-emerald-300"
+                        : "border-red-500/30 bg-red-500/5 text-red-950 dark:text-red-300"
+                    }`}
+                  >
+                    {keyVerification.valid && keyVerification.key ? (
+                      <div className="space-y-1">
+                        <div className="font-medium flex items-center gap-1.5">
+                          <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                          <span>Valid License: <strong>{keyVerification.key.name}</strong></span>
+                        </div>
+                        <div className="text-muted-foreground text-[11px] flex gap-3 pt-1">
+                          <span>
+                            Tier: <strong className="text-foreground">{keyVerification.key.tier}</strong>
+                          </span>
+                          <span>
+                            Billing: <strong className="text-foreground">{keyVerification.key.allowPlatformBilling ? "Self-Serve" : "Managed"}</strong>
+                          </span>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-1.5">
+                        <div className="font-medium flex items-center gap-1.5">
+                          <AlertTriangle className="w-4 h-4 text-red-600 dark:text-red-400" />
+                          <span>Invalid activation key</span>
+                        </div>
+                        <p className="text-[11px] opacity-90">
+                          {keyVerification.reason === "KEY_NOT_FOUND" && "Key code not found. Please double-check for typos."}
+                          {keyVerification.reason === "KEY_REVOKED" && "This activation key has been revoked."}
+                          {keyVerification.reason === "KEY_EXPIRED" && "This activation key has expired."}
+                          {keyVerification.reason === "KEY_EXHAUSTED" && "This activation key has reached its maximum redemption limit."}
+                          {!["KEY_NOT_FOUND", "KEY_REVOKED", "KEY_EXPIRED", "KEY_EXHAUSTED"].includes(keyVerification.reason || "") &&
+                            (keyVerification.reason || "Unable to verify key.")}
+                        </p>
+                        <div className="text-[11px] pt-1 border-t border-red-500/20">
+                          <span>Need help? </span>
+                          <a
+                            href="https://www.arcenpay.com/contact"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="font-medium underline hover:opacity-80 inline-flex items-center gap-0.5"
+                          >
+                            Contact support <ExternalLink className="w-2.5 h-2.5 ml-0.5" />
+                          </a>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : null}
+
+                <Button
+                  type="button"
+                  onClick={handleRedeemKey}
+                  disabled={redeemingKey || !activationKey.trim() || activationKey.length < 19 || (keyVerification !== null && !keyVerification.valid)}
+                  className="h-12 w-full bg-brand hover:bg-brand-dark text-primary-foreground"
+                >
+                  {redeemingKey ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Activating workspace...
+                    </>
+                  ) : (
+                    "Activate and continue"
+                  )}
+                </Button>
+
+                <div className="flex items-center justify-between gap-3 text-xs pt-2">
+                  <a
+                    href="https://www.arcenpay.com/contact"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-muted-foreground hover:underline inline-flex items-center gap-1"
+                  >
+                    Don't have a key? Contact us <ExternalLink className="w-3 h-3" />
+                  </a>
+
+                  <button
+                    type="button"
+                    onClick={handleLogout}
+                    className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 transition-colors"
+                  >
+                    <LogOut className="w-3.5 h-3.5" />
+                    Log out
+                  </button>
+                </div>
+              </div>
+            ) : null}
           </div>
         </div>
       </div>
 
       {/* Right Side — Canvas Reveal Effect + Auto-rotating Testimonials */}
-      <div className="hidden lg:flex lg:w-1/2 text-gray-900 relative overflow-hidden">
-        {/* Dot-matrix reveal background */}
-        <div className="absolute inset-0">
-          <CanvasRevealEffect
-            opacities={[0.3, 0.3, 0.3, 0.5, 0.5, 0.5, 0.8, 0.8, 0.8, 1]}
-            colors={[[0, 0, 253], [147, 51, 234], [6, 182, 212]]} // brand #0000FD, purple-600, cyan-500
-            dotSize={3}
-            showGradient={true}
-            containerClassName="h-full w-full"
-          />
-        </div>
-        
-        {/* Content */}
-        <div className="relative z-10 flex flex-col justify-end p-12">
-          {/* Stars */}
-          <div className="flex items-center gap-1 mb-6">
-            {[1,2,3,4,5].map((i) => (
-              <Star key={i} className="w-4 h-4 fill-gray-900 text-gray-900" />
-            ))}
-          </div>
-
-          {/* Auto-rotating testimonial with fade */}
-          <div className={`transition-opacity duration-400 ${isFading ? "opacity-0" : "opacity-100"}`}>
-            <blockquote className="text-2xl font-medium leading-relaxed mb-8 max-w-md">
-              {testimonial.quote}
-            </blockquote>
-
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-full bg-brand flex items-center justify-center">
-                <span className="text-sm font-semibold text-primary-foreground">{testimonial.initials}</span>
-              </div>
-              <div>
-                <p className="font-semibold">{testimonial.name}</p>
-                <p className="text-sm text-gray-900/60">{testimonial.role}</p>
-                <p className="text-sm text-gray-900/40">{testimonial.company}</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Pagination dots */}
-          <div className="flex items-center gap-2 mt-8">
-            {TESTIMONIALS.map((_, idx) => (
-              <button
-                key={idx}
-                onClick={() => {
-                  setIsFading(true);
-                  window.setTimeout(() => {
-                    setActiveTestimonial(idx);
-                    setIsFading(false);
-                  }, 400);
-                }}
-                className={`h-1.5 rounded-full transition-all duration-300 ${
-                  idx === activeTestimonial ? "w-6 bg-gray-900" : "w-1.5 bg-gray-900/30"
-                }`}
-              />
-            ))}
-          </div>
-        </div>
-      </div>
+      <AuthMarketingPanel />
     </div>
   );
 }

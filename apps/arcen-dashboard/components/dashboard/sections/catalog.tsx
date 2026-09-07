@@ -8235,7 +8235,7 @@ function PlanDetailView({
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           {/* Left: icon + name + meta */}
           <div className="flex items-center gap-4">
-            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-violet-500 to-blue-600 flex items-center justify-center shrink-0">
+            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-600 to-sky-500 flex items-center justify-center shrink-0">
               <Package className="w-5 h-5 text-white" />
             </div>
             <div>
@@ -9173,7 +9173,7 @@ function AddOnDetailView({
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           {/* Left: icon + name + meta */}
           <div className="flex items-center gap-4">
-            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-500 to-blue-600 flex items-center justify-center shrink-0">
+            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-600 to-sky-500 flex items-center justify-center shrink-0">
               <Package className="w-5 h-5 text-white" />
             </div>
             <div>
@@ -10668,7 +10668,7 @@ export function CatalogSection() {
                     >
                       <td className="py-4 px-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500/20 to-blue-500/10 border border-border flex items-center justify-center"></div>
+                          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500/20 to-sky-500/10 border border-border flex items-center justify-center"></div>
                           <div>
                             <p className="text-sm font-medium text-foreground">
                               {addon.name}

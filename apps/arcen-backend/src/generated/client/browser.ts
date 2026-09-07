@@ -322,3 +322,13 @@ export type ArcenAgentConfig = Prisma.ArcenAgentConfigModel
  * 
  */
 export type ArcenDispatchRequest = Prisma.ArcenDispatchRequestModel
+/**
+ * Model PlatformActivationKey
+ * 
+ */
+export type PlatformActivationKey = Prisma.PlatformActivationKeyModel
+/**
+ * Model PlatformActivationRedemption
+ * 
+ */
+export type PlatformActivationRedemption = Prisma.PlatformActivationRedemptionModel

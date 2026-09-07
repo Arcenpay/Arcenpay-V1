@@ -136,7 +136,7 @@ export function OverviewSection() {
   const [revenueRange, setRevenueRange] = useState<TimeRange>("30d");
   const [loadingOverview, setLoadingOverview] = useState(true);
   const [loadingRevenue, setLoadingRevenue] = useState(true);
-  const [setupDismissed, setSetupDismissed] = useState(false);
+  const [setupDismissed, setSetupDismissed] = useState<boolean | null>(null);
 
   const effectiveChainId = activeEnvironment?.chainId ?? resolveEnvironmentChainId(envMode);
   const environmentKey = activeEnvironment?.id ?? envMode;
@@ -267,19 +267,22 @@ export function OverviewSection() {
   const hasWallet = !!sessionData?.user.walletAddress || !!sessionData?.user.stellarWalletAddress;
   const hasEnvironment = !!activeEnvironment;
   const hasPlans = Number(metrics.activePlans) > 0;
-  const hasSubscribers = Number(metrics.activeSubscribers) > 0;
 
   const setupSteps = [
     { label: "Connect wallet", done: hasWallet, icon: Wallet, href: "/onboarding/chain" },
     { label: "Create environment", done: hasEnvironment, icon: Globe, href: "/environments/new" },
     { label: "Create a plan", done: hasPlans, icon: CreditCard, href: "/?section=catalog-plans" },
-    { label: "Get first subscriber", done: hasSubscribers, icon: Users, href: "/?section=components" },
   ];
 
   const completedSteps = setupSteps.filter((s) => s.done).length;
   const progressPercent = (completedSteps / setupSteps.length) * 100;
   const setupIncomplete = completedSteps < setupSteps.length;
-  const showSetupBanner = setupIncomplete && !setupDismissed;
+  const showSetupBanner =
+    mounted &&
+    !loadingOverview &&
+    !envLoading &&
+    setupDismissed === false &&
+    setupIncomplete;
 
   const handleDismissSetup = () => {
     localStorage.setItem("arcenpay:overview:setup-dismissed", "true");
@@ -357,8 +360,6 @@ export function OverviewSection() {
                         "Set up a Development or Production environment with a chain and token."}
                       {next.label === "Create a plan" &&
                         "Build your first subscription plan with pricing and entitlements."}
-                      {next.label === "Get first subscriber" &&
-                        "Embed the checkout component and get your first paid signup."}
                     </p>
                     <a
                       href={next.href}

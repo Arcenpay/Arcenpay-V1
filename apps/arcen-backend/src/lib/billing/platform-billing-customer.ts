@@ -129,6 +129,10 @@ export async function projectPlatformBillingEntitlement(
   input: { providerTeamId: string; companyId: string },
   client: PlatformBillingDb = db,
 ): Promise<{ projected: boolean; tier: PlatformTier | null; workspaceTeamId: string | null }> {
+  if (!client?.platformBillingCustomer?.findUnique) {
+    return { projected: false, tier: null, workspaceTeamId: null };
+  }
+
   const mapping = await client.platformBillingCustomer.findUnique({
     where: { companyId: input.companyId },
     select: { workspaceTeamId: true, providerTeamId: true },
@@ -156,19 +160,49 @@ export async function projectPlatformBillingEntitlement(
     : null;
   const workspace = await client.team.findUnique({
     where: { id: mapping.workspaceTeamId },
-    select: { platformTier: true, tierSubscriptionId: true, tierExpiresAt: true },
+    select: {
+      platformTier: true,
+      tierSubscriptionId: true,
+      tierExpiresAt: true,
+      activationKeyId: true,
+      activationKey: {
+        select: { id: true, tier: true, status: true, expiresAt: true },
+      },
+    },
   });
   if (!workspace) return { projected: false, tier: null, workspaceTeamId: mapping.workspaceTeamId };
 
-  const tier = subscription.status === "CANCELLED"
-    ? "FREE"
-    : subscription.status === "ACTIVE"
-      ? readPlatformTier(plan?.metadata)
-      : workspace.platformTier as PlatformTier;
+  const now = new Date();
+  const hasActiveKey = Boolean(
+    workspace.activationKey &&
+      workspace.activationKey.status === "ACTIVE" &&
+      (!workspace.activationKey.expiresAt || workspace.activationKey.expiresAt > now),
+  );
+
+  let tier: PlatformTier | null = null;
+  if (subscription.status === "CANCELLED") {
+    tier = "FREE";
+  } else if (subscription.status === "ACTIVE") {
+    const planTier = readPlatformTier(plan?.metadata);
+    // If the subscription plan tier is FREE, but team has an active premium activation key, preserve the key's tier!
+    if ((!planTier || planTier === "FREE") && hasActiveKey && workspace.activationKey?.tier) {
+      tier = workspace.activationKey.tier;
+    } else {
+      tier = planTier ?? (workspace.platformTier as PlatformTier);
+    }
+  } else {
+    tier = workspace.platformTier as PlatformTier;
+  }
   if (!tier) return { projected: false, tier: null, workspaceTeamId: mapping.workspaceTeamId };
 
   const tierSubscriptionId = tier === "FREE" ? null : subscription.id;
-  const tierExpiresAt = tier === "FREE" ? null : subscription.currentPeriodEnd;
+  const tierExpiresAt =
+    tier === "FREE"
+      ? null
+      : hasActiveKey && workspace.activationKey?.expiresAt
+        ? workspace.activationKey.expiresAt
+        : (subscription.currentPeriodEnd ?? workspace.tierExpiresAt ?? null);
+
   if (
     workspace.platformTier === tier &&
     workspace.tierSubscriptionId === tierSubscriptionId &&

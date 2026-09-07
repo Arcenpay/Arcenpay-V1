@@ -111,7 +111,9 @@ export const ModelName = {
   ZkTlsProof: 'ZkTlsProof',
   EmbedComponent: 'EmbedComponent',
   ArcenAgentConfig: 'ArcenAgentConfig',
-  ArcenDispatchRequest: 'ArcenDispatchRequest'
+  ArcenDispatchRequest: 'ArcenDispatchRequest',
+  PlatformActivationKey: 'PlatformActivationKey',
+  PlatformActivationRedemption: 'PlatformActivationRedemption'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -184,6 +186,9 @@ export const TeamScalarFieldEnum = {
   platformTier: 'platformTier',
   tierExpiresAt: 'tierExpiresAt',
   tierSubscriptionId: 'tierSubscriptionId',
+  isPlatformActivated: 'isPlatformActivated',
+  activationKeyId: 'activationKeyId',
+  allowPlatformBilling: 'allowPlatformBilling',
   profileData: 'profileData'
 } as const
 
@@ -1301,6 +1306,47 @@ export const ArcenDispatchRequestScalarFieldEnum = {
 } as const
 
 export type ArcenDispatchRequestScalarFieldEnum = (typeof ArcenDispatchRequestScalarFieldEnum)[keyof typeof ArcenDispatchRequestScalarFieldEnum]
+
+
+export const PlatformActivationKeyScalarFieldEnum = {
+  id: 'id',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt',
+  key: 'key',
+  keyHash: 'keyHash',
+  name: 'name',
+  recipientEmail: 'recipientEmail',
+  recipientName: 'recipientName',
+  tier: 'tier',
+  allowPlatformBilling: 'allowPlatformBilling',
+  maxUses: 'maxUses',
+  usedCount: 'usedCount',
+  status: 'status',
+  expiresAt: 'expiresAt',
+  revokedAt: 'revokedAt',
+  revocationReason: 'revocationReason',
+  createdById: 'createdById',
+  notes: 'notes',
+  metadata: 'metadata'
+} as const
+
+export type PlatformActivationKeyScalarFieldEnum = (typeof PlatformActivationKeyScalarFieldEnum)[keyof typeof PlatformActivationKeyScalarFieldEnum]
+
+
+export const PlatformActivationRedemptionScalarFieldEnum = {
+  id: 'id',
+  createdAt: 'createdAt',
+  activationKeyId: 'activationKeyId',
+  teamId: 'teamId',
+  userId: 'userId',
+  userEmail: 'userEmail',
+  walletAddress: 'walletAddress',
+  ipAddress: 'ipAddress',
+  userAgent: 'userAgent',
+  metadata: 'metadata'
+} as const
+
+export type PlatformActivationRedemptionScalarFieldEnum = (typeof PlatformActivationRedemptionScalarFieldEnum)[keyof typeof PlatformActivationRedemptionScalarFieldEnum]
 
 
 export const SortOrder = {

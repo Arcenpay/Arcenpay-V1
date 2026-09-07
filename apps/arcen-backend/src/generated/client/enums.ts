@@ -364,6 +364,16 @@ export const PlatformTier = {
 export type PlatformTier = (typeof PlatformTier)[keyof typeof PlatformTier]
 
 
+export const ActivationKeyStatus = {
+  ACTIVE: 'ACTIVE',
+  REVOKED: 'REVOKED',
+  EXPIRED: 'EXPIRED',
+  EXHAUSTED: 'EXHAUSTED'
+} as const
+
+export type ActivationKeyStatus = (typeof ActivationKeyStatus)[keyof typeof ActivationKeyStatus]
+
+
 export const ChainFamily = {
   EVM: 'EVM',
   STELLAR: 'STELLAR'

@@ -24,11 +24,13 @@ import {
   Clock,
   RefreshCw,
   CreditCard,
+  ShieldCheck,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { toast } from "sonner";
 import { ArcenEmbed } from "@arcenpay/react";
 import { usePlatformBillingEmbed } from "@/hooks/use-platform-billing-embed";
+import { useDashboardSession } from "@/hooks/use-dashboard-session";
 
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -217,6 +219,7 @@ function UsageMeter({
 // ── Main Component ────────────────────────────────────────────────────────────
 
 export function BillingSection() {
+  const { data: sessionData } = useDashboardSession();
   const [currentTier, setCurrentTier] = useState<CurrentTier>(null);
   const [gasBudget, setGasBudget] = useState<GasBudget | null>(null);
   const [gasHistory, setGasHistory] = useState<GasHistoryEntry[]>([]);
@@ -377,10 +380,21 @@ export function BillingSection() {
             </CardTitle>
           </div>
           <CardDescription>
-            {currentTier?.expiresAt
-              ? `Renews ${new Date(currentTier.expiresAt).toLocaleDateString()}`
-              : "No expiration"}
-            {subscription?.currentPeriodEnd && (
+            {currentTier?.expiresAt ? (
+              <span className="font-medium text-foreground/80">
+                License valid until {new Date(currentTier.expiresAt).toLocaleDateString()}
+                {(() => {
+                  const ms = new Date(currentTier.expiresAt).getTime() - Date.now();
+                  const days = Math.ceil(ms / (1000 * 60 * 60 * 24));
+                  return days > 0 ? ` (${days} day${days === 1 ? "" : "s"} remaining)` : " (Expired)";
+                })()}
+              </span>
+            ) : currentTier?.tier === "FREE" ? (
+              "Free Tier · Perpetual"
+            ) : (
+              "Active Platform Subscription"
+            )}
+            {subscription?.currentPeriodEnd && !currentTier?.expiresAt && (
               <span className="ml-2 text-muted-foreground/60">
                 · Period ends {new Date(subscription.currentPeriodEnd).toLocaleDateString()}
               </span>
@@ -507,7 +521,69 @@ export function BillingSection() {
 
       <div>
         <h3 className="text-lg font-semibold mb-4">Subscription & Plans</h3>
-        {embedLoading ? (
+
+        {currentTier?.tier && currentTier.tier !== "FREE" && currentTier?.expiresAt && (
+          <div className="mb-4 p-4 rounded-xl border border-primary/20 bg-primary/5 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-primary/10 text-primary">
+                <Crown className="w-5 h-5" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <p className="text-sm font-semibold text-foreground">
+                    Active Premium License ({currentTier.tier === "PRO" ? "Enterprise" : "Pro"})
+                  </p>
+                  <Badge variant="outline" className="text-[10px] bg-primary/10 text-primary border-primary/20 font-semibold">
+                    {(() => {
+                      const ms = new Date(currentTier.expiresAt).getTime() - Date.now();
+                      const days = Math.ceil(ms / (1000 * 60 * 60 * 24));
+                      return days > 0 ? `${days} days remaining` : "Expired";
+                    })()}
+                  </Badge>
+                </div>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Your workspace is unlocked with full {currentTier.tier === "PRO" ? "Enterprise" : "Pro"} privileges until{" "}
+                  {new Date(currentTier.expiresAt).toLocaleDateString()}.
+                </p>
+              </div>
+            </div>
+            <Badge variant="outline" className="font-mono text-xs bg-muted/50">
+              PREMIUM LICENSE
+            </Badge>
+          </div>
+        )}
+
+        {sessionData?.currentTeam?.allowPlatformBilling === false ? (
+          <Card className="border-border bg-card/60">
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="p-2 rounded-lg bg-primary/10 text-primary">
+                    <ShieldCheck className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-base font-semibold">Managed by Platform License</CardTitle>
+                    <CardDescription className="text-xs">
+                      This workspace operates under an administrator-managed activation license.
+                    </CardDescription>
+                  </div>
+                </div>
+                <Badge variant="outline" className="text-xs bg-muted/60 font-mono">
+                  {sessionData?.currentTeam?.platformTier ?? currentTier?.tier ?? "MANAGED"}
+                </Badge>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-2 text-xs text-muted-foreground pt-0">
+              <p>
+                Self-service billing and plan modifications are disabled for this workspace by platform policy.
+                Your current tier entitlements are active and maintained directly through your organization&apos;s activation key.
+              </p>
+              <p>
+                To adjust quota limits, change tiers, or enable self-service billing, please contact your platform administrator.
+              </p>
+            </CardContent>
+          </Card>
+        ) : embedLoading ? (
           <Card>
             <CardContent className="flex flex-col items-center justify-center py-12 space-y-3">
               <RefreshCw className="w-6 h-6 animate-spin text-primary" />
@@ -520,7 +596,7 @@ export function BillingSection() {
               <CreditCard className="w-10 h-10 text-muted-foreground/40" />
               <p className="text-sm font-medium">Setting up your platform billing</p>
               <p className="max-w-md text-sm text-muted-foreground">
-                Your workspace is automatically enrolled in the FREE ArcenPay plan. This page will be ready as soon as that setup finishes.
+                Your workspace platform billing is being initialized. This page will be ready as soon as that setup finishes.
               </p>
               <Button variant="outline" size="sm" onClick={refreshEmbed}>
                 <RefreshCw className="w-3.5 h-3.5 mr-1.5" />

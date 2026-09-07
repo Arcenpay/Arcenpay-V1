@@ -6,16 +6,34 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { BACKEND_URL } from "@/lib/config";
+import { isPlatformAdminEmail } from "@/lib/admin";
 
 export type DashboardSession = {
   sessionId: string;
   userId: string;
   clerkUserId: string;
   email: string | null;
+  isPlatformAdmin?: boolean;
   currentTeamId: string | null;
   walletAddress: string | null;
   stellarWalletAddress: string | null;
   currentTeamRole: string | null;
+  isPlatformActivated?: boolean;
+  activationKeyStatus?: "ACTIVE" | "EXPIRED" | "REVOKED" | "UNACTIVATED";
+  platformTier?: string;
+  allowPlatformBilling?: boolean;
+  activationKeyId?: string | null;
+  currentTeam?: {
+    id: string;
+    name: string;
+    slug: string;
+    role: string | null;
+    platformTier?: string;
+    isPlatformActivated?: boolean;
+    activationKeyStatus?: "ACTIVE" | "EXPIRED" | "REVOKED" | "UNACTIVATED";
+    allowPlatformBilling?: boolean;
+    activationKeyId?: string | null;
+  } | null;
   activeEnvironment: {
     id: string;
     name: string;
@@ -41,10 +59,18 @@ type BackendSessionResponse = {
     email?: string | null;
     walletAddress?: string | null;
     stellarWalletAddress?: string | null;
+    isPlatformAdmin?: boolean;
   };
   currentTeam?: {
     id?: string;
+    name?: string;
+    slug?: string;
     role?: string;
+    platformTier?: string;
+    isPlatformActivated?: boolean;
+    activationKeyStatus?: "ACTIVE" | "EXPIRED" | "REVOKED" | "UNACTIVATED";
+    allowPlatformBilling?: boolean;
+    activationKeyId?: string | null;
   } | null;
   activeEnvironment?: {
     id: string;
@@ -99,15 +125,42 @@ export async function getSession(): Promise<DashboardSession | null> {
   const data = await callBackend<BackendSessionResponse>("/api/v1/auth/session");
   if (!data?.user?.id) return null;
 
+  const isPlatformAdmin =
+    data.user.isPlatformAdmin === true ||
+    isPlatformAdminEmail(data.user.email);
+
   return {
     sessionId: "",
     userId: data.user.id,
     clerkUserId: data.user.id,
     email: data.user.email ?? null,
+    isPlatformAdmin,
     currentTeamId: data.currentTeam?.id ?? null,
     walletAddress: data.user.walletAddress ?? null,
     stellarWalletAddress: data.user.stellarWalletAddress ?? null,
     currentTeamRole: data.currentTeam?.role ?? null,
+    isPlatformActivated: isPlatformAdmin ? true : (data.currentTeam?.isPlatformActivated ?? false),
+    activationKeyStatus: isPlatformAdmin
+      ? "ACTIVE"
+      : data.currentTeam?.activationKeyStatus ?? (data.currentTeam?.isPlatformActivated ? "ACTIVE" : "UNACTIVATED"),
+    platformTier: data.currentTeam?.platformTier ?? "FREE",
+    allowPlatformBilling: data.currentTeam?.allowPlatformBilling ?? true,
+    activationKeyId: data.currentTeam?.activationKeyId ?? null,
+    currentTeam: data.currentTeam
+      ? {
+          id: data.currentTeam.id ?? "",
+          name: data.currentTeam.name ?? "",
+          slug: data.currentTeam.slug ?? "",
+          role: data.currentTeam.role ?? null,
+          platformTier: data.currentTeam.platformTier,
+          isPlatformActivated: isPlatformAdmin ? true : data.currentTeam.isPlatformActivated,
+          activationKeyStatus: isPlatformAdmin
+            ? "ACTIVE"
+            : data.currentTeam.activationKeyStatus ?? (data.currentTeam.isPlatformActivated ? "ACTIVE" : "UNACTIVATED"),
+          allowPlatformBilling: data.currentTeam.allowPlatformBilling,
+          activationKeyId: data.currentTeam.activationKeyId,
+        }
+      : null,
     activeEnvironment: data.activeEnvironment ?? null,
     environments: Array.isArray(data.environments) ? data.environments : [],
     expiresAt: new Date(),
@@ -117,6 +170,13 @@ export async function getSession(): Promise<DashboardSession | null> {
 export async function requirePageSession(next = "/login"): Promise<DashboardSession> {
   const session = await getSession();
   if (!session) redirect(next);
+  return session;
+}
+
+export async function requireAdminSession(next = "/login?redirect=/admin"): Promise<DashboardSession> {
+  const session = await getSession();
+  if (!session) redirect(next);
+  if (!session.isPlatformAdmin) redirect("/");
   return session;
 }
 

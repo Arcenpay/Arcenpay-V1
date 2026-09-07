@@ -25,7 +25,29 @@ import { getOnboardingChainFamily } from "@/lib/onboarding-chain-family";
 import { getChainFamily } from "@arcenpay/internal-core";
 import { toast } from "sonner";
 import { OnboardingShell } from "@/components/onboarding/onboarding-shell";
+import { isPlatformAdminEmail } from "@/lib/admin";
 import type { ChainFamily } from "@arcenpay/internal-core";
+
+const routeAfterWalletLink = async () => {
+  try {
+    const res = await fetch("/api/auth/session");
+    if (res.ok) {
+      const data = await res.json();
+      const isAdmin =
+        data?.user?.isPlatformAdmin === true ||
+        isPlatformAdminEmail(data?.user?.email);
+      const isActivated =
+        isAdmin || data?.currentTeam?.isPlatformActivated === true;
+      const keyStatus = data?.currentTeam?.activationKeyStatus;
+      const isExpiredOrRevoked = keyStatus === "EXPIRED" || keyStatus === "REVOKED";
+      if (isActivated || isExpiredOrRevoked) {
+        window.location.href = "/";
+        return;
+      }
+    }
+  } catch {}
+  window.location.href = "/onboarding/activation";
+};
 
 // ── EVM wallet section (same as before) ────────────────────────────────────
 
@@ -81,8 +103,7 @@ function EvmWalletConnect() {
         throw new Error(err.error || "Failed to link wallet");
       }
       toast.success("Wallet linked successfully");
-      router.push("/onboarding/provider-profile");
-      router.refresh();
+      await routeAfterWalletLink();
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Something went wrong";
       toast.error(msg.includes("rejected") || msg.includes("denied") ? "Signature cancelled" : msg);
@@ -147,7 +168,7 @@ function EvmWalletConnect() {
           <div className="h-px bg-border" />
           <div className="flex justify-end gap-3">
             <Button variant="ghost" onClick={() => router.back()}>Back</Button>
-            <Button onClick={() => router.push("/onboarding/provider-profile")} className="min-w-[140px] bg-brand hover:bg-brand-dark text-primary-foreground">
+            <Button onClick={() => void routeAfterWalletLink()} className="min-w-[140px] bg-brand hover:bg-brand-dark text-primary-foreground">
               Continue<ArrowRight className="ml-1.5 w-4 h-4" />
             </Button>
           </div>
@@ -339,8 +360,7 @@ export default function ConnectWalletPage() {
   }
 
   const handleStellarLinked = (_addr: string) => {
-    router.push("/onboarding/provider-profile");
-    router.refresh();
+    void routeAfterWalletLink();
   };
 
   return (

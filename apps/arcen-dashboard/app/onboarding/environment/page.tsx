@@ -15,7 +15,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  BASE_SEPOLIA_CHAIN_ID,
+  BOT_TESTNET_CHAIN_ID,
+  BOT_MAINNET_CHAIN_ID,
   STELLAR_TESTNET_CHAIN_ID,
   getChainLabel,
   getChainIdsForEnvironment,
@@ -28,7 +29,7 @@ import { OnboardingShell } from "@/components/onboarding/onboarding-shell";
 import type { ChainFamily } from "@arcenpay/internal-core";
 
 // Chain picker filtered to only the selected family — EVM users see
-// Base/BOT/Arc/Sepolia; Stellar users see Stellar Testnet/Mainnet/Futurenet.
+// BOT/Base/Arc/Sepolia; Stellar users see Stellar Testnet/Mainnet/Futurenet.
 function buildChainOptions(mode: EnvironmentMode, family: ChainFamily | null) {
   return getChainIdsForEnvironment(mode)
     .filter((chainId) => {
@@ -46,7 +47,7 @@ function defaultChainIdForFamily(
   family: ChainFamily | null,
 ): number {
   if (family === "stellar") return STELLAR_TESTNET_CHAIN_ID;
-  return BASE_SEPOLIA_CHAIN_ID;
+  return mode === "PRODUCTION" ? BOT_MAINNET_CHAIN_ID : BOT_TESTNET_CHAIN_ID;
 }
 
 export default function EnvironmentOnboardingPage() {
@@ -55,7 +56,7 @@ export default function EnvironmentOnboardingPage() {
   const [selectedFamily, setSelectedFamily] = useState<ChainFamily | null>(null);
   const [name, setName] = useState("");
   const [mode, setMode] = useState<EnvironmentMode>("DEVELOPMENT");
-  const [chainId, setChainId] = useState<number>(BASE_SEPOLIA_CHAIN_ID);
+  const [chainId, setChainId] = useState<number>(BOT_TESTNET_CHAIN_ID);
   const [productionEnabled, setProductionEnabled] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);

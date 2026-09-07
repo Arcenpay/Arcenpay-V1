@@ -35,6 +35,7 @@ import {
   LogOut,
   UserRound,
   Search,
+  ShieldCheck,
 } from "lucide-react";
 import { CommandPalette } from "./command-palette";
 import { useDashboardSession } from "@/hooks/use-dashboard-session";
@@ -45,6 +46,7 @@ import { isStellarChainId } from "@arcenpay/internal-core";
 import { useStellarWallet } from "@/hooks/use-stellar-wallet";
 import { useTheme } from "next-themes";
 import { useRouter } from "next/navigation";
+import { isPlatformAdminEmail } from "@/lib/admin";
 
 interface SidebarProps {
   activeSection: Section;
@@ -167,6 +169,9 @@ export function Sidebar({
     : isEvmConnected;
 
   // Accordion: only one group open at a time, default all closed
+  const isPlatformAdmin =
+    sessionData?.user?.isPlatformAdmin === true ||
+    isPlatformAdminEmail(sessionData?.user?.email);
   const [expandedGroup, setExpandedGroup] = useState<string | null>(null);
   const [showAccountMenu, setShowAccountMenu] = useState(false);
   const [isSwitchingTeam, setIsSwitchingTeam] = useState(false);
@@ -406,25 +411,39 @@ export function Sidebar({
         {/* Bottom section */}
         <div className="px-3 pb-3 space-y-1">
           {/* Promo card */}
-          <div className="rounded-xl bg-[var(--sidebar)] border border-sidebar-border p-3.5 mb-2 text-sidebar-foreground shadow-sm">
-            <div className="flex items-center gap-2 mb-2">
-              
-              <span className="text-[13px] font-medium text-sidebar-foreground">
-                Annual plan savings
-              </span>
+          {sessionData?.currentTeam?.allowPlatformBilling !== false && (
+            <div className="rounded-xl bg-[var(--sidebar)] border border-sidebar-border p-3.5 mb-2 text-sidebar-foreground shadow-sm">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-[13px] font-medium text-sidebar-foreground">
+                  Annual plan savings
+                </span>
+              </div>
+              <p className="text-[12px] text-sidebar-foreground/60 leading-relaxed mb-2">
+                Save 20% with annual billing on eligible plans.
+              </p>
+              <button
+                onClick={() => onSectionChange("billing")}
+                className="text-[13px] font-medium text-blue-700 hover:opacity-80 transition-opacity "
+              >
+                Upgrade
+              </button>
             </div>
-            <p className="text-[12px] text-sidebar-foreground/60 leading-relaxed mb-2">
-              Save 20% with annual billing on eligible plans.
-            </p>
-            <button
-              onClick={() => onSectionChange("billing")}
-              className="text-[13px] font-medium text-blue-700 hover:opacity-80 transition-opacity "
-            >
-              Upgrade
-            </button>
-          </div>
+          )}
 
-          {/* Support links */}
+          {/* Admin Console (Platform Administrators Only) */}
+          {isPlatformAdmin && (
+            <a
+              href="/admin"
+              className="flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium text-sidebar-foreground/50 hover:text-sidebar-foreground/80 hover:bg-[var(--sidebar-hover)] transition-all duration-150"
+            >
+              <ShieldCheck className="w-4 h-4 shrink-0 text-primary" strokeWidth={1.5} />
+              <span>Admin Console</span>
+              <ArrowUpRight
+                className="ml-auto w-3.5 h-3.5 opacity-40"
+                strokeWidth={1.5}
+              />
+            </a>
+          )}
           <a
             href="#"
             onClick={(e) => {
@@ -591,6 +610,18 @@ export function Sidebar({
                         Settings
                       </span>
                     </button>
+                    {isPlatformAdmin && (
+                      <a
+                        href="/admin"
+                        className="flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm text-muted-foreground transition-colors hover:bg-secondary/50 hover:text-foreground"
+                      >
+                        <span className="flex items-center gap-2">
+                          <ShieldCheck className="h-4 w-4" strokeWidth={1.5} />
+                          Platform Admin
+                        </span>
+                        <ArrowUpRight className="h-3.5 w-3.5 opacity-40" />
+                      </a>
+                    )}
                   </div>
                   <div className="mt-2 border-t border-border pt-2">
                     <button

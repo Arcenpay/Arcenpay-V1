@@ -31,7 +31,7 @@ async function main() {
   if (!owner && apply) {
     const createdUser = await db.user.create({
       data: {
-        email: "aditya@arcenpay.com",
+        email: process.env.PLATFORM_OWNER_EMAIL || "admin@arcenpay.com",
         emailVerified: true,
         walletAddress: PLATFORM_OWNER_WALLET,
         teams: {

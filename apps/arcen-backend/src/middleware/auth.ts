@@ -1,7 +1,7 @@
 import { createHmac, createHash } from "node:crypto";
 import type { Context, Next } from "hono";
 import { db, withPrismaReconnect } from "../db.js";
-import { SIWE_JWT_SECRET } from "../config.js";
+import { SIWE_JWT_SECRET, PLATFORM_ADMIN_SECRET, isPlatformAdminEmail } from "../config.js";
 
 const AUTH_COOKIE_NAME = "arcen_session";
 const AUTH_SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
@@ -189,6 +189,43 @@ export function requirePermission(permission: Permission) {
       return c.json({ ok: false, error: "Forbidden", code: "FORBIDDEN" }, 403 as any);
     }
 
+    // Write operations require an active platform key (Read-only mode enforcement)
+    // Platform administrators are ALWAYS unlocked and exempt!
+    const isWrite = permission.endsWith(":write") || permission.endsWith(":send") || permission.endsWith(":install");
+    if (isWrite && !isPlatformAdminEmail(session.email)) {
+      const teamRecord = await withPrismaReconnect((client) =>
+        client.team.findUnique({
+          where: { id: team.teamId },
+          select: {
+            isPlatformActivated: true,
+            activationKeyId: true,
+            activationKey: { select: { status: true, expiresAt: true } },
+          },
+        })
+      );
+      const isRevoked = teamRecord?.activationKey?.status === "REVOKED";
+      const isExpired =
+        teamRecord?.activationKey?.status === "EXPIRED" ||
+        Boolean(teamRecord?.activationKey?.expiresAt && new Date(teamRecord.activationKey.expiresAt) < new Date());
+      const isActivated =
+        Boolean(teamRecord?.isPlatformActivated) &&
+        !isRevoked &&
+        !isExpired &&
+        Boolean(teamRecord?.activationKeyId);
+
+      if (!isActivated) {
+        return c.json(
+          {
+            ok: false,
+            error: "This workspace is in read-only mode. An active Platform Activation Key is required to perform modifications.",
+            code: "ACTIVATION_REQUIRED",
+            reason: isRevoked ? "KEY_REVOKED" : isExpired ? "KEY_EXPIRED" : "UNACTIVATED",
+          },
+          403 as any
+        );
+      }
+    }
+
     c.set("session", session);
     c.set("team", team);
     await next();
@@ -254,3 +291,77 @@ export function requireApiKeyAuth() {
     await next();
   };
 }
+
+export function requireAdminAuth() {
+  return async (c: Context, next: Next) => {
+    // 1. Check if an active user session is present
+    const session = await resolveSession(c);
+
+    if (session) {
+      // If a user session is active, the user MUST be an authorized platform admin
+      if (!isPlatformAdminEmail(session.email)) {
+        return c.json(
+          {
+            ok: false,
+            error: "Forbidden. Platform administrator privileges required.",
+            code: "ADMIN_FORBIDDEN",
+          },
+          403 as any
+        );
+      }
+
+      // User email is verified platform admin!
+      const headerSecret = c.req.header("x-admin-secret");
+      const bearer = getBearerToken(c);
+      const cookie = c.req.header("cookie");
+      const hasValidSecret =
+        (headerSecret && headerSecret === PLATFORM_ADMIN_SECRET) ||
+        (bearer && bearer === PLATFORM_ADMIN_SECRET) ||
+        (cookie && cookie.includes(`arcen_admin_secret=${PLATFORM_ADMIN_SECRET}`));
+
+      if (hasValidSecret || process.env.NODE_ENV !== "production") {
+        c.set("adminAuthorized", true);
+        c.set("adminUserId", session.userId);
+        c.set("adminEmail", session.email);
+        await next();
+        return;
+      }
+    }
+
+    // 2. Direct API / CLI scripts check (no user session attached):
+    // Requires exact PLATFORM_ADMIN_SECRET via header, bearer token, or cookie.
+    const headerSecret = c.req.header("x-admin-secret");
+    if (headerSecret && headerSecret === PLATFORM_ADMIN_SECRET) {
+      c.set("adminAuthorized", true);
+      await next();
+      return;
+    }
+
+    const bearer = getBearerToken(c);
+    if (bearer && bearer === PLATFORM_ADMIN_SECRET) {
+      c.set("adminAuthorized", true);
+      await next();
+      return;
+    }
+
+    const cookie = c.req.header("cookie");
+    if (cookie) {
+      const match = cookie.match(/arcen_admin_secret=([^;]+)/);
+      if (match && match[1].trim() === PLATFORM_ADMIN_SECRET) {
+        c.set("adminAuthorized", true);
+        await next();
+        return;
+      }
+    }
+
+    return c.json(
+      {
+        ok: false,
+        error: "Unauthorized. Admin authentication required.",
+        code: "ADMIN_UNAUTHORIZED",
+      },
+      401 as any
+    );
+  };
+}
+

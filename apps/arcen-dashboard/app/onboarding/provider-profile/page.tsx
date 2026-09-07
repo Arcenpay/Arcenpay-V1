@@ -18,8 +18,10 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { OnboardingShell } from "@/components/onboarding/onboarding-shell";
+import { isPlatformAdminEmail } from "@/lib/admin";
 
 export default function ProviderProfilePage() {
   const router = useRouter();
@@ -46,26 +48,44 @@ export default function ProviderProfilePage() {
   const [showBilling, setShowBilling] = useState(false);
 
   useEffect(() => {
-    fetch("/api/provider/profile")
+    fetch("/api/auth/session")
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
-        if (data) {
-          setProviderName(data.providerName || "");
-          setWebsite(data.website || "");
-          setContactEmail(data.contactEmail || "");
-          setLegalName(data.legalName || "");
-          setBillingEmail(data.billingEmail || "");
-          setSupportEmail(data.supportEmail || "");
-          setSupportPhone(data.supportPhone || "");
-          setSupportUrl(data.supportUrl || "");
-          setAddressLine1(data.addressLine1 || "");
-          setAddressLine2(data.addressLine2 || "");
-          setCity(data.city || "");
-          setStateProvince(data.state || "");
-          setPostalCode(data.postalCode || "");
-          setCountry(data.country || "");
-          setTaxId(data.taxId || "");
-          setGstin(data.gstin || "");
+        const isAdmin =
+          data?.user?.isPlatformAdmin === true ||
+          isPlatformAdminEmail(data?.user?.email);
+        const isActivated =
+          isAdmin || data?.currentTeam?.isPlatformActivated === true;
+        const keyStatus = data?.currentTeam?.activationKeyStatus;
+        const isExpiredOrRevoked = keyStatus === "EXPIRED" || keyStatus === "REVOKED";
+        if (!isActivated && !isExpiredOrRevoked) {
+          router.replace("/onboarding/activation");
+        }
+      })
+      .catch(() => {});
+  }, [router]);
+
+  useEffect(() => {
+    fetch("/api/provider/profile")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((profileData) => {
+        if (profileData) {
+          setProviderName(profileData.providerName || "");
+          setWebsite(profileData.website || "");
+          setContactEmail(profileData.contactEmail || "");
+          setLegalName(profileData.legalName || "");
+          setBillingEmail(profileData.billingEmail || "");
+          setSupportEmail(profileData.supportEmail || "");
+          setSupportPhone(profileData.supportPhone || "");
+          setSupportUrl(profileData.supportUrl || "");
+          setAddressLine1(profileData.addressLine1 || "");
+          setAddressLine2(profileData.addressLine2 || "");
+          setCity(profileData.city || "");
+          setStateProvince(profileData.state || "");
+          setPostalCode(profileData.postalCode || "");
+          setCountry(profileData.country || "");
+          setTaxId(profileData.taxId || "");
+          setGstin(profileData.gstin || "");
         }
       })
       .catch(() => {})

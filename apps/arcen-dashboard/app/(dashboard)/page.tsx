@@ -29,6 +29,9 @@ import { WebhooksSection } from "@/components/dashboard/sections/webhooks";
 import { SectionErrorBoundary } from "@/components/dashboard/section-error-boundary";
 import { SubgraphLagBanner } from "@/components/dashboard/subgraph-lag-banner";
 import { EnvironmentProvider } from "@/contexts/environment-context";
+import { ActivationProvider } from "@/contexts/activation-context";
+import { ActivationReadOnlyBanner } from "@/components/dashboard/activation-read-only-banner";
+import { ActivationModal } from "@/components/dashboard/activation-modal";
 import { DASHBOARD_DOCS_URL } from "@/lib/docs-url";
 
 export type Section =
@@ -224,29 +227,33 @@ export default function Dashboard() {
 
   return (
     <EnvironmentProvider>
-      <div className="flex min-h-screen bg-background antialiased">
-        <Sidebar
-          activeSection={activeSection}
-          onSectionChange={handleSectionChange}
-          mobileOpen={mobileSidebarOpen}
-          onMobileOpenChange={setMobileSidebarOpen}
-        />
-        <div className="flex-1 flex flex-col min-w-0 lg:ml-[260px]">
-          <Header
+      <ActivationProvider>
+        <div className="flex min-h-screen bg-background antialiased">
+          <Sidebar
             activeSection={activeSection}
-            onMobileMenuToggle={() => setMobileSidebarOpen((v) => !v)}
+            onSectionChange={handleSectionChange}
+            mobileOpen={mobileSidebarOpen}
+            onMobileOpenChange={setMobileSidebarOpen}
           />
-          <SubgraphLagBanner />
-          <main className="flex-1 p-3 sm:p-4 lg:p-6 overflow-y-auto overflow-x-hidden min-w-0">
-            <div
-              key={activeSection}
-              className="animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-full"
-            >
-              {renderSection()}
-            </div>
-          </main>
+          <div className="flex-1 flex flex-col min-w-0 lg:ml-[260px]">
+            <Header
+              activeSection={activeSection}
+              onMobileMenuToggle={() => setMobileSidebarOpen((v) => !v)}
+            />
+            <ActivationReadOnlyBanner />
+            <SubgraphLagBanner />
+            <main className="flex-1 p-3 sm:p-4 lg:p-6 overflow-y-auto overflow-x-hidden min-w-0">
+              <div
+                key={activeSection}
+                className="animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-full"
+              >
+                {renderSection()}
+              </div>
+            </main>
+          </div>
+          <ActivationModal />
         </div>
-      </div>
+      </ActivationProvider>
     </EnvironmentProvider>
   );
 }

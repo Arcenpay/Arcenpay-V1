@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useChainId, useSignMessage } from "wagmi";
 import { ArrowLeft, Building2, CheckCircle2, Loader2, Shield, Wallet } from "lucide-react";
@@ -17,6 +18,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  BOT_TESTNET_CHAIN_ID,
+  BOT_MAINNET_CHAIN_ID,
   BASE_SEPOLIA_CHAIN_ID,
   STELLAR_TESTNET_CHAIN_ID,
   getChainLabel,
@@ -36,7 +39,7 @@ interface ChainOption {
 }
 
 const CHAIN_FAMILIES: Array<{ value: ChainFamily; label: string }> = [
-  { value: "evm", label: "EVM (Base, BOT, Arc, Ethereum)" },
+  { value: "evm", label: "EVM (BOT Chain, Base, Arc, Ethereum)" },
   { value: "stellar", label: "Stellar (Soroban)" },
 ];
 
@@ -51,7 +54,9 @@ function buildChainOptions(mode: EnvironmentMode, family: ChainFamily): ChainOpt
 
 function firstChainForFamily(mode: EnvironmentMode, family: ChainFamily): number {
   const opts = buildChainOptions(mode, family);
-  return opts[0]?.chainId ?? (family === "stellar" ? STELLAR_TESTNET_CHAIN_ID : BASE_SEPOLIA_CHAIN_ID);
+  if (opts.length > 0) return opts[0].chainId;
+  if (family === "stellar") return STELLAR_TESTNET_CHAIN_ID;
+  return mode === "PRODUCTION" ? BOT_MAINNET_CHAIN_ID : BOT_TESTNET_CHAIN_ID;
 }
 
 export default function NewEnvironmentPage() {
@@ -363,8 +368,17 @@ export default function NewEnvironmentPage() {
                 <SelectContent className="bg-popover border-border text-popover-foreground">
                   <SelectItem value="evm">
                     <span className="flex items-center gap-2">
-                      <NetworkIcon name="ethereum" variant="branded" size={18} className="rounded-full bg-white dark:bg-white p-px" />
-                      EVM (Base, Ethereum, Arc)
+                      <span className="w-[18px] h-[18px] rounded-full overflow-hidden inline-flex items-center justify-center bg-white dark:bg-white p-px ring-1 ring-border shrink-0">
+                        <Image
+                          src="/botchain.jpg"
+                          alt="BOT Chain"
+                          width={18}
+                          height={18}
+                          className="rounded-full object-cover shrink-0"
+                          unoptimized
+                        />
+                      </span>
+                      EVM (BOT Chain, Base, Arc, Ethereum)
                     </span>
                   </SelectItem>
                   <SelectItem value="stellar">

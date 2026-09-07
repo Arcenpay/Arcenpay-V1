@@ -91,7 +91,7 @@ Produces:
 | PRO | ArcenPay Enterprise Plan | DRAFT | $499/mo |
 
 And creates:
-- `Team` ("aditya's Workspace") with OWNER role for `0x38f62...`
+- `Team` ("Platform Workspace") with OWNER role for `0x38f62...`
 - `WorkspaceEnvironment` ("Arcenpay", Arc Testnet)
 - `PlatformBillingAccount` (default)
 - `EmbedComponent` ("ArcenPay Platform Billing")

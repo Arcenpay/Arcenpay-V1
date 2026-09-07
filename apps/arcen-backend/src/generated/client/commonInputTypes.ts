@@ -1014,6 +1014,23 @@ export type FloatNullableWithAggregatesFilter<$PrismaModel = never> = {
   _max?: Prisma.NestedFloatNullableFilter<$PrismaModel>
 }
 
+export type EnumActivationKeyStatusFilter<$PrismaModel = never> = {
+  equals?: $Enums.ActivationKeyStatus | Prisma.EnumActivationKeyStatusFieldRefInput<$PrismaModel>
+  in?: $Enums.ActivationKeyStatus[] | Prisma.ListEnumActivationKeyStatusFieldRefInput<$PrismaModel>
+  notIn?: $Enums.ActivationKeyStatus[] | Prisma.ListEnumActivationKeyStatusFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumActivationKeyStatusFilter<$PrismaModel> | $Enums.ActivationKeyStatus
+}
+
+export type EnumActivationKeyStatusWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.ActivationKeyStatus | Prisma.EnumActivationKeyStatusFieldRefInput<$PrismaModel>
+  in?: $Enums.ActivationKeyStatus[] | Prisma.ListEnumActivationKeyStatusFieldRefInput<$PrismaModel>
+  notIn?: $Enums.ActivationKeyStatus[] | Prisma.ListEnumActivationKeyStatusFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumActivationKeyStatusWithAggregatesFilter<$PrismaModel> | $Enums.ActivationKeyStatus
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumActivationKeyStatusFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumActivationKeyStatusFilter<$PrismaModel>
+}
+
 export type NestedStringFilter<$PrismaModel = never> = {
   equals?: string | Prisma.StringFieldRefInput<$PrismaModel>
   in?: string[] | Prisma.ListStringFieldRefInput<$PrismaModel>
@@ -1960,6 +1977,23 @@ export type NestedFloatNullableWithAggregatesFilter<$PrismaModel = never> = {
   _sum?: Prisma.NestedFloatNullableFilter<$PrismaModel>
   _min?: Prisma.NestedFloatNullableFilter<$PrismaModel>
   _max?: Prisma.NestedFloatNullableFilter<$PrismaModel>
+}
+
+export type NestedEnumActivationKeyStatusFilter<$PrismaModel = never> = {
+  equals?: $Enums.ActivationKeyStatus | Prisma.EnumActivationKeyStatusFieldRefInput<$PrismaModel>
+  in?: $Enums.ActivationKeyStatus[] | Prisma.ListEnumActivationKeyStatusFieldRefInput<$PrismaModel>
+  notIn?: $Enums.ActivationKeyStatus[] | Prisma.ListEnumActivationKeyStatusFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumActivationKeyStatusFilter<$PrismaModel> | $Enums.ActivationKeyStatus
+}
+
+export type NestedEnumActivationKeyStatusWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.ActivationKeyStatus | Prisma.EnumActivationKeyStatusFieldRefInput<$PrismaModel>
+  in?: $Enums.ActivationKeyStatus[] | Prisma.ListEnumActivationKeyStatusFieldRefInput<$PrismaModel>
+  notIn?: $Enums.ActivationKeyStatus[] | Prisma.ListEnumActivationKeyStatusFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumActivationKeyStatusWithAggregatesFilter<$PrismaModel> | $Enums.ActivationKeyStatus
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumActivationKeyStatusFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumActivationKeyStatusFilter<$PrismaModel>
 }
 
 

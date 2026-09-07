@@ -8,12 +8,18 @@ export type DashboardSessionPayload = {
     email: string | null;
     walletAddress: string | null;
     stellarWalletAddress: string | null;
+    isPlatformAdmin?: boolean;
   };
   currentTeam: {
     id: string;
     name: string;
     slug: string;
     role: string;
+    platformTier?: string;
+    isPlatformActivated?: boolean;
+    activationKeyStatus?: "ACTIVE" | "EXPIRED" | "REVOKED" | "UNACTIVATED";
+    allowPlatformBilling?: boolean;
+    activationKeyId?: string | null;
   } | null;
   activeEnvironment: {
     id: string;

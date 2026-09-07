@@ -296,6 +296,49 @@ export async function getPlatformBillingStatus(workspaceTeamId: string) {
       subscription.status !== "ACTIVE",
   );
 
+  const workspaceTeam = await db.team.findUnique({
+    where: { id: workspaceTeamId },
+    select: {
+      platformTier: true,
+      tierExpiresAt: true,
+      activationKey: {
+        select: {
+          id: true,
+          tier: true,
+          status: true,
+          expiresAt: true,
+        },
+      },
+    },
+  });
+
+  const now = new Date();
+  const hasActiveKey = Boolean(
+    workspaceTeam?.activationKey &&
+      workspaceTeam.activationKey.status === "ACTIVE" &&
+      (!workspaceTeam.activationKey.expiresAt || workspaceTeam.activationKey.expiresAt > now),
+  );
+  const targetTier = hasActiveKey
+    ? (workspaceTeam?.activationKey?.tier ?? "FREE")
+    : workspaceTeam?.platformTier === "PRO" || workspaceTeam?.platformTier === "PLUS"
+      ? (!workspaceTeam.tierExpiresAt || workspaceTeam.tierExpiresAt > now ? workspaceTeam.platformTier : "FREE")
+      : "FREE";
+
+  const targetPlan = plans.find((plan) =>
+    targetTier === "PRO"
+      ? plan.tier === "enterprise" || plan.name.toLowerCase().includes("enterprise")
+      : targetTier === "PLUS"
+        ? plan.tier === "pro" || plan.name.toLowerCase().includes("pro")
+        : plan.tier === "starter" || plan.name.toLowerCase().includes("free"),
+  ) ?? canonicalFreePlan;
+
+  const needsTierPlanRepair = Boolean(
+    validCustomer &&
+      subscription &&
+      targetPlan &&
+      subscription.catalogPlanId !== targetPlan.id,
+  );
+
   return {
     configured: true as const,
     // A stale first-party Free pointer is treated as not fully enrolled so
@@ -304,7 +347,8 @@ export async function getPlatformBillingStatus(workspaceTeamId: string) {
       validCustomer &&
         subscription &&
         !needsFreePlanRepair &&
-        !needsFreeStatusRepair,
+        !needsFreeStatusRepair &&
+        !needsTierPlanRepair,
     ),
     providerTeamId: account.providerTeamId,
     environmentId: account.environmentId,
@@ -340,7 +384,24 @@ export async function enrollWorkspaceInPlatformBilling(input: {
   if (!providerTeam) throw new Error("Platform billing provider team was not found.");
 
   const [workspace, customer] = await Promise.all([
-    db.team.findUnique({ where: { id: input.workspaceTeamId }, select: { id: true, name: true } }),
+    db.team.findUnique({
+      where: { id: input.workspaceTeamId },
+      select: {
+        id: true,
+        name: true,
+        platformTier: true,
+        tierExpiresAt: true,
+        activationKeyId: true,
+        activationKey: {
+          select: {
+            id: true,
+            tier: true,
+            status: true,
+            expiresAt: true,
+          },
+        },
+      },
+    }),
     ensurePlatformBillingCustomer({
       workspaceTeamId: input.workspaceTeamId,
       environmentId: input.workspaceEnvironmentId,
@@ -383,68 +444,100 @@ export async function enrollWorkspaceInPlatformBilling(input: {
     },
   });
 
+  const now = new Date();
+  const hasActiveKey = Boolean(
+    workspace.activationKey &&
+      workspace.activationKey.status === "ACTIVE" &&
+      (!workspace.activationKey.expiresAt || workspace.activationKey.expiresAt > now),
+  );
+  const effectiveTier: "FREE" | "PLUS" | "PRO" = hasActiveKey
+    ? (workspace.activationKey?.tier ?? "FREE")
+    : workspace.platformTier === "PRO" || workspace.platformTier === "PLUS"
+      ? (!workspace.tierExpiresAt || workspace.tierExpiresAt > now ? workspace.platformTier : "FREE")
+      : "FREE";
+
+  const targetPlan =
+    effectiveTier === "PRO" ? proPlan : effectiveTier === "PLUS" ? plusPlan : freePlan;
+
+  const targetPeriodEnd =
+    effectiveTier !== "FREE"
+      ? (workspace.activationKey?.expiresAt ?? workspace.tierExpiresAt ?? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000))
+      : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+
   const existing = await db.subscriptionState.findUnique({
     where: { companyId: company.id },
-    select: { id: true, status: true, catalogPlanId: true },
+    select: {
+      id: true,
+      status: true,
+      catalogPlanId: true,
+      metadata: true,
+      onChainTokenId: true,
+      currentPeriodEnd: true,
+    },
   });
-  let state = existing
-    ? await db.subscriptionState.findUniqueOrThrow({ where: { id: existing.id } })
-    : await upsertSubscriptionLedgerState({
-        teamId: account.providerTeamId,
-        companyId: company.id,
-        environmentId: account.environmentId,
-        status: "ACTIVE",
-        catalogPlanId: freePlan.id,
-        currentPeriodStart: new Date(),
-        currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-        lastEvent: "platform.billing.enrolled",
-        lastEventAt: new Date(),
-        metadata: {
-          source: "platform-billing-enrollment",
-          tier: "FREE",
-          isPlatformSubscription: true,
-        },
-      });
-  if (!state) throw new Error("Failed to create platform billing subscription state.");
 
-  // Older enrollments could point at a stale Free catalog row without the
-  // first-party feature metadata. Keep only the first-party workspace
-  // subscription on the canonical Free plan created above.
-  const currentPlan = existing?.catalogPlanId
-    ? await db.catalogPlan.findUnique({
-        where: { id: existing.catalogPlanId },
-        select: { tier: true },
-      })
-    : null;
-  const stateMetadata =
-    state.metadata && typeof state.metadata === "object" && !Array.isArray(state.metadata)
-      ? (state.metadata as Record<string, unknown>)
-      : {};
-  const isFirstPartyFreeState =
-    !currentPlan ||
-    currentPlan.tier === "starter" ||
-    stateMetadata.tier === "FREE";
-  if (existing && isFirstPartyFreeState) {
-    if (existing.catalogPlanId !== freePlan.id || existing.status !== "ACTIVE") {
-      state = await db.subscriptionState.update({
-        where: { id: state.id },
-        data: {
-          status: "ACTIVE",
-          catalogPlanId: freePlan.id,
-          cancelAtPeriodEnd: false,
-          cancelledAt: null,
-          pastDueAt: null,
-          graceEndsAt: null,
-          metadata: toPrismaJson({
-            ...stateMetadata,
-            source: "platform-billing-enrollment",
-            tier: "FREE",
-            isPlatformSubscription: true,
-          }),
-        },
-      });
+  let state: any;
+  if (!existing) {
+    state = await upsertSubscriptionLedgerState({
+      teamId: account.providerTeamId,
+      companyId: company.id,
+      environmentId: account.environmentId,
+      status: "ACTIVE",
+      catalogPlanId: targetPlan.id,
+      currentPeriodStart: new Date(),
+      currentPeriodEnd: targetPeriodEnd,
+      lastEvent: "platform.billing.enrolled",
+      lastEventAt: new Date(),
+      metadata: {
+        source: "platform-billing-enrollment",
+        tier: effectiveTier,
+        isPlatformSubscription: true,
+        activationKeyId: workspace.activationKeyId ?? undefined,
+        isPremiumLicense: effectiveTier !== "FREE",
+        expiresAt: effectiveTier !== "FREE" && targetPeriodEnd ? targetPeriodEnd.toISOString() : undefined,
+      },
+    });
+  } else {
+    state = existing;
+    const stateMetadata =
+      existing.metadata && typeof existing.metadata === "object" && !Array.isArray(existing.metadata)
+        ? (existing.metadata as Record<string, unknown>)
+        : {};
+    // For first-party platform subscriptions (without on-chain minted token),
+    // sync the subscription state to the workspace's active tier and period end.
+    if (!existing.onChainTokenId) {
+      const needsPlanUpdate = existing.catalogPlanId !== targetPlan.id;
+      const needsStatusUpdate = existing.status !== "ACTIVE";
+      const needsPeriodUpdate = Boolean(
+        targetPeriodEnd &&
+          (!existing.currentPeriodEnd || existing.currentPeriodEnd.getTime() !== targetPeriodEnd.getTime()),
+      );
+      if (needsPlanUpdate || needsStatusUpdate || needsPeriodUpdate) {
+        state = await db.subscriptionState.update({
+          where: { id: existing.id },
+          data: {
+            status: "ACTIVE",
+            catalogPlanId: targetPlan.id,
+            currentPeriodEnd: targetPeriodEnd,
+            cancelAtPeriodEnd: false,
+            cancelledAt: null,
+            pastDueAt: null,
+            graceEndsAt: null,
+            metadata: toPrismaJson({
+              ...stateMetadata,
+              source: "platform-billing-enrollment",
+              tier: effectiveTier,
+              isPlatformSubscription: true,
+              activationKeyId: workspace.activationKeyId ?? undefined,
+              isPremiumLicense: effectiveTier !== "FREE",
+              expiresAt: effectiveTier !== "FREE" && targetPeriodEnd ? targetPeriodEnd.toISOString() : undefined,
+            }),
+          },
+        });
+      }
     }
   }
+  if (!state) throw new Error("Failed to create platform billing subscription state.");
 
   // Keep the company projection and subscription ledger on the exact same
   // catalog plan. The embed uses both fields in different rendering paths.

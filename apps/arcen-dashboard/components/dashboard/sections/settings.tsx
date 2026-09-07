@@ -47,6 +47,7 @@ import {
   UserPlus,
   Trash2,
   Mail,
+  ShieldCheck,
 } from "lucide-react";
 import { ProtocolKeysPanel } from "@/components/dashboard/sections/api-keys";
 import {
@@ -76,6 +77,7 @@ import {
 } from "@/hooks/use-dashboard-wallet";
 import { useEnvironment } from "@/contexts/environment-context";
 import { isStellarChainId } from "@arcenpay/internal-core";
+import { isPlatformAdminEmail } from "@/lib/admin";
 
 const NOTIFICATION_DEFAULTS = CANONICAL_WEBHOOK_EVENTS.map((event) => ({
   ...event,
@@ -126,6 +128,9 @@ export function SettingsSection() {
   } = useEnvironment();
   const { isConnected, address: connectedAddress } = useAccount();
   const { data: sessionData } = useDashboardSession();
+  const isPlatformAdmin =
+    sessionData?.user?.isPlatformAdmin === true ||
+    isPlatformAdminEmail(sessionData?.user?.email);
   const chainId = useChainId();
   const configuredChainId = activeEnvironment?.chainId ?? resolveEnvironmentChainId(envMode);
   const stellar = useStellarWallet(configuredChainId);
@@ -955,6 +960,53 @@ export function SettingsSection() {
                       <p className="text-xs text-muted-foreground mt-1">
                         Switch instantly from the workspace menu in the header.
                       </p>
+                    </div>
+                  </div>
+
+                  {/* Platform License Status */}
+                  <div className="rounded-xl border border-border bg-secondary/20 p-4 space-y-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-2.5">
+                        <div className="p-1.5 rounded-lg bg-primary/10 text-primary">
+                          <ShieldCheck className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-foreground">Platform License</p>
+                          <p className="text-xs text-muted-foreground">
+                            Tenant activation status and platform entitlement mode.
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {sessionData?.currentTeam?.isPlatformActivated ? (
+                          <Badge className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20">
+                            Activated
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="text-amber-600 dark:text-amber-400 border-amber-500/20">
+                            Unactivated
+                          </Badge>
+                        )}
+                        <Badge variant="secondary" className="font-mono text-xs">
+                          {sessionData?.currentTeam?.platformTier ?? "FREE"}
+                        </Badge>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs text-muted-foreground pt-1">
+                      <div>
+                        <span className="font-medium text-foreground">Self-Service Billing: </span>
+                        {sessionData?.currentTeam?.allowPlatformBilling ? "Enabled" : "Managed / Locked"}
+                      </div>
+                      {isPlatformAdmin ? (
+                        <div className="text-left sm:text-right">
+                          <a
+                            href="/admin"
+                            className="text-primary hover:underline inline-flex items-center gap-1"
+                          >
+                            Platform Admin Console <ExternalLink className="w-3 h-3" />
+                          </a>
+                        </div>
+                      ) : null}
                     </div>
                   </div>
 

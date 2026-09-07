@@ -74,7 +74,7 @@ function EventTypeBadge({ type, name }: { type: string; name?: string | null }) 
   }
   if (type === "identify") {
     return (
-      <Badge className="bg-purple-100 text-foreground dark:bg-purple-950 dark:text-foreground text-xs">
+      <Badge className="bg-sky-100 text-foreground dark:bg-sky-950 dark:text-foreground text-xs">
         <User className="h-3 w-3 mr-1" /> identify
       </Badge>
     );
