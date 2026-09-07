@@ -160,7 +160,9 @@ async function main() {
     ["apps/facilitator/dist/server.js"],
     {
       PORT: facilitatorPort,
-      BACKEND_URL: process.env.BACKEND_URL || localBackendUrl,
+      INTERNAL_BACKEND_URL: localBackendUrl,
+      INTERNAL_API_BASE_URL: localBackendUrl,
+      BACKEND_URL: localBackendUrl,
     }
   );
 

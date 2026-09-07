@@ -65,7 +65,10 @@ export class BalanceMonitor {
     console.log(
       `[BalanceMonitor] Starting (poll every ${this.opts.pollIntervalMs! / 1000}s)`,
     );
-    this.tick();
+    // Give the local backend 5s to finish route registration on cold start
+    setTimeout(() => {
+      this.tick().catch(() => {});
+    }, 5000);
     this.interval = setInterval(() => this.tick(), this.opts.pollIntervalMs);
   }
 
@@ -96,12 +99,18 @@ export class BalanceMonitor {
       if (this.opts.facilitatorSecret) {
         headers.Authorization = `Bearer ${this.opts.facilitatorSecret}`;
       }
-      const res = await fetch(
-        `${this.opts.apiBaseUrl}/api/v1/internal/agent/configs`,
-        { headers },
-      );
+      const raw = (this.opts.apiBaseUrl || "http://127.0.0.1:3300").trim().replace(/\/+$/, "");
+      const cleanBase = raw.endsWith("/api/v1")
+        ? raw.slice(0, -"/api/v1".length).replace(/\/$/, "")
+        : raw.endsWith("/api")
+        ? raw.slice(0, -"/api".length).replace(/\/$/, "")
+        : raw;
+      const url = `${cleanBase}/api/v1/internal/agent/configs`;
+      const res = await fetch(url, { headers });
       if (!res.ok) {
-        console.warn(`[BalanceMonitor] Failed to fetch configs: ${res.status}`);
+        if (res.status !== 404) {
+          console.warn(`[BalanceMonitor] Failed to fetch configs from ${url}: ${res.status}`);
+        }
         return [];
       }
       const data = await res.json();

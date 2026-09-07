@@ -43,6 +43,7 @@ function sleep(ms: number): Promise<void> {
 function buildPrismaState(): { client: PrismaClient; pool: Pool } {
   const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
+    max: Number(process.env.DB_POOL_MAX || 10),
     connectionTimeoutMillis: 10_000,
     idleTimeoutMillis: 30_000,
     keepAlive: true,

@@ -188,13 +188,20 @@ const PROOF_SIGNER_PRIVATE_KEY =
   process.env.PROOF_SIGNER_PRIVATE_KEY || process.env.PRIVATE_KEY;
 const REDIS_PREFIX = process.env.REDIS_PREFIX || "arcenpay";
 const FACILITATOR_SECRET = (process.env.FACILITATOR_SECRET || "").trim();
-const BACKEND_URL = (
+const rawBackendUrl = (
+  process.env.INTERNAL_API_BASE_URL ||
+  process.env.INTERNAL_BACKEND_URL ||
   process.env.BACKEND_URL ||
   process.env.NEXT_PUBLIC_BACKEND_URL ||
-  ""
-).replace(/\/$/, "");
-const DASHBOARD_URL = (process.env.DASHBOARD_URL || "").replace(/\/$/, "");
-const INTERNAL_API_BASE_URL = BACKEND_URL || DASHBOARD_URL;
+  "http://127.0.0.1:3300"
+).trim().replace(/\/$/, "");
+const BACKEND_URL = rawBackendUrl.endsWith("/api/v1")
+  ? rawBackendUrl.slice(0, -"/api/v1".length).replace(/\/$/, "")
+  : rawBackendUrl.endsWith("/api")
+  ? rawBackendUrl.slice(0, -"/api".length).replace(/\/$/, "")
+  : rawBackendUrl;
+const DASHBOARD_URL = (process.env.DASHBOARD_URL || "").trim().replace(/\/$/, "");
+const INTERNAL_API_BASE_URL = BACKEND_URL;
 const BACKEND_API_PREFIX = "/api/v1";
 const DASHBOARD_PLAN_RESOLVER_PATH = `${BACKEND_API_PREFIX}/internal/catalog/resolve-plan`;
 const LIT_ENABLED = process.env.ENABLE_LIT_PROTOCOL === "true";
@@ -1606,9 +1613,9 @@ function startBillingMaintenanceScheduler() {
     return;
   }
 
-  if (!DASHBOARD_URL) {
+  if (!INTERNAL_API_BASE_URL) {
     console.warn(
-      "[Facilitator] Billing maintenance automation enabled, but DASHBOARD_URL is not configured.",
+      "[Facilitator] Billing maintenance automation enabled, but INTERNAL_API_BASE_URL is not configured.",
     );
     return;
   }
@@ -2922,7 +2929,7 @@ const balanceMonitor = new BalanceMonitor({
   facilitatorSecret: FACILITATOR_SECRET || undefined,
   publicClient: chainClient,
   sessionVaultAddress: CONTRACTS.sessionVault,
-  pollIntervalMs: 30000,
+  pollIntervalMs: Number(process.env.BALANCE_MONITOR_INTERVAL_MS || 60000),
   onDispatch: async (record, provider) => {
     // Store the pending approval in memory for the agent SDK to poll
     storePendingApproval({
