@@ -33,6 +33,8 @@ import { ActivationProvider } from "@/contexts/activation-context";
 import { ActivationReadOnlyBanner } from "@/components/dashboard/activation-read-only-banner";
 import { ActivationModal } from "@/components/dashboard/activation-modal";
 import { DASHBOARD_DOCS_URL } from "@/lib/docs-url";
+import { apiFetch } from "@/lib/api-client";
+import { isPlatformAdminEmail } from "@/lib/admin";
 
 export type Section =
   | "overview"
@@ -91,6 +93,49 @@ export default function Dashboard() {
       : "overview";
   });
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [authReady, setAuthReady] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    void apiFetch("/api/auth/session", { cache: "no-store" })
+      .then(async (response) => {
+        if (!response.ok) {
+          window.location.replace("/login");
+          return;
+        }
+        const session = await response.json();
+        if (cancelled) return;
+
+        if (!session?.user?.walletAddress && !session?.user?.stellarWalletAddress) {
+          window.location.replace("/onboarding/chain");
+          return;
+        }
+
+        const isAdmin =
+          session.user.isPlatformAdmin === true ||
+          isPlatformAdminEmail(session.user.email);
+        const keyStatus = session.currentTeam?.activationKeyStatus;
+        const activated = isAdmin || session.currentTeam?.isPlatformActivated === true;
+        if (!activated && keyStatus !== "EXPIRED" && keyStatus !== "REVOKED") {
+          window.location.replace("/onboarding/activation");
+          return;
+        }
+
+        setAuthReady(true);
+      })
+      .catch(() => {
+        window.location.replace("/login");
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  if (!authReady) {
+    return <div className="min-h-screen bg-background" aria-busy="true" />;
+  }
 
   const handleSectionChange = (section: Section) => {
     const params = new URLSearchParams(window.location.search);

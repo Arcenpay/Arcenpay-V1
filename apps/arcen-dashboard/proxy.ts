@@ -1,18 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { AUTH_COOKIE_NAME } from "@/lib/auth-constants";
 
-const PUBLIC_PATHS = [
-  /^\/login(?:\/.*)?$/,
-  /^\/sign-in(?:\/.*)?$/,
-  /^\/sign-up(?:\/.*)?$/,
-  /^\/invite(?:\/.*)?$/,
-  /^\/api\/.*/,
-];
-
-function isPublicRoute(pathname: string): boolean {
-  return PUBLIC_PATHS.some((pattern) => pattern.test(pathname));
-}
-
 function clearLegacyHostOnlySessionCookie(response: NextResponse): NextResponse {
   if (process.env.NODE_ENV === "production") {
     // Older dashboard releases wrote arcen_session without a Domain attribute.
@@ -26,32 +14,11 @@ function clearLegacyHostOnlySessionCookie(response: NextResponse): NextResponse 
 
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  const hasSessionCookie = Boolean(
-    request.cookies.get(AUTH_COOKIE_NAME)?.value,
-  );
+  if (pathname.startsWith("/api/")) return NextResponse.next();
 
-  if (isPublicRoute(pathname)) {
-    return clearLegacyHostOnlySessionCookie(NextResponse.next());
-  }
-
-  if (!hasSessionCookie) {
-    if (pathname.startsWith("/api/")) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const loginUrl = new URL("/login", request.url);
-    const next = `${pathname}${request.nextUrl.search}`;
-    if (next && next !== "/") {
-      loginUrl.searchParams.set("next", next);
-    }
-    console.warn("[DEBUG-auth-20260907] dashboard redirect", {
-      pathname,
-      hasSessionCookie: false,
-      redirectTo: loginUrl.pathname,
-    });
-    return clearLegacyHostOnlySessionCookie(NextResponse.redirect(loginUrl));
-  }
-
+  // Browser sessions are authenticated directly by api.arcenpay.com. Do not
+  // redirect here based on a dashboard-origin cookie: the backend API is the
+  // authorization boundary and the client-side guard verifies it directly.
   return clearLegacyHostOnlySessionCookie(NextResponse.next());
 }
 
