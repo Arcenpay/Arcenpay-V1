@@ -35,6 +35,9 @@ const nextConfig = {
       "@reclaimprotocol/js-sdk": "./lib/stubs/reclaim-sdk-stub.js",
     },
   },
+  experimental: {
+    cpus: 2,
+  },
   webpack: (config) => {
     config.resolve.alias = {
       ...(config.resolve.alias || {}),
@@ -55,17 +58,22 @@ const nextConfig = {
   },
 };
 
+const hasSentryAuth = Boolean(process.env.SENTRY_AUTH_TOKEN);
+
 export default withSentryConfig(nextConfig, {
   org: process.env.SENTRY_ORG,
   project: process.env.SENTRY_PROJECT,
   authToken: process.env.SENTRY_AUTH_TOKEN,
-  silent: !process.env.CI,
-  widenClientFileUpload: true,
+  silent: true,
+  widenClientFileUpload: hasSentryAuth,
   tunnelRoute: "/monitoring",
+  sourcemaps: {
+    disable: !hasSentryAuth,
+  },
   webpack: {
-    automaticVercelMonitors: true,
+    automaticVercelMonitors: hasSentryAuth,
     reactComponentAnnotation: {
-      enabled: true,
+      enabled: hasSentryAuth,
     },
     treeshake: {
       removeDebugLogging: true,
