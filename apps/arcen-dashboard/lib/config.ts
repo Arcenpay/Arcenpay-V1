@@ -83,7 +83,12 @@ function requireInProd(name: string, value: string | undefined): string {
 
 export const BACKEND_URL: string = (() => {
   const val = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.BACKEND_URL;
-  return requireInProd("BACKEND_URL", val) || "http://localhost:3300";
+  if (val) return val;
+  // Hard-coded production fallback — env var is preferred but this ensures
+  // the deployed dashboard always reaches the real backend even if the Vercel
+  // env var is missing or wasn't baked into the build.
+  if (process.env.NODE_ENV === "production") return "https://api.arcenpay.com";
+  return "http://localhost:3300";
 })();
 
 // ── Subgraph ──────────────────────────────────────────────────────────────────

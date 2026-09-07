@@ -1,6 +1,9 @@
 import { NextRequest } from "next/server";
 
-const BACKEND = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.BACKEND_URL || "http://localhost:3300";
+const BACKEND =
+  process.env.NEXT_PUBLIC_BACKEND_URL ||
+  process.env.BACKEND_URL ||
+  (process.env.NODE_ENV === "production" ? "https://api.arcenpay.com" : "http://localhost:3300");
 
 async function handler(request: NextRequest) {
   const url = new URL(request.url);
