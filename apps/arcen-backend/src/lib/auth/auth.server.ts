@@ -33,6 +33,9 @@ function buildCookieOptions(expiresAt: Date) {
     httpOnly: true,
     sameSite: (isProd ? "none" : "lax") as "none" | "lax",
     secure: isProd,
+    ...(isProd
+      ? { domain: process.env.AUTH_COOKIE_DOMAIN || ".arcenpay.com" }
+      : {}),
     path: "/",
     expires: expiresAt,
   };
@@ -42,7 +45,9 @@ async function readSessionToken(c: Context): Promise<string | null> {
   return getCookie(c, AUTH_COOKIE_NAME)?.trim() || null;
 }
 
-export async function getSessionFromCtx(c: Context): Promise<DashboardSession | null> {
+export async function getSessionFromCtx(
+  c: Context,
+): Promise<DashboardSession | null> {
   const token = await readSessionToken(c);
   if (!token) return null;
 
@@ -116,7 +121,10 @@ export function getSession(): never {
   );
 }
 
-export async function requirePageSession(c: Context, next = "/login"): Promise<DashboardSession> {
+export async function requirePageSession(
+  c: Context,
+  next = "/login",
+): Promise<DashboardSession> {
   const session = await getSessionFromCtx(c);
   if (!session) {
     throw new Error(`Redirect: ${next}`);
@@ -124,7 +132,10 @@ export async function requirePageSession(c: Context, next = "/login"): Promise<D
   return session;
 }
 
-export async function createSession(c: Context, userId: string): Promise<DashboardSession> {
+export async function createSession(
+  c: Context,
+  userId: string,
+): Promise<DashboardSession> {
   const token = randomBytes(32).toString("base64url");
   const expiresAt = new Date(Date.now() + AUTH_SESSION_TTL_MS);
 
@@ -158,7 +169,7 @@ export async function createSession(c: Context, userId: string): Promise<Dashboa
 
   const currentTeamId = user.currentTeamId;
   const activeEnvironmentId = currentTeamId
-    ? (
+    ? ((
         await withPrismaReconnect((client) =>
           client.workspaceEnvironment.findFirst({
             where: { teamId: currentTeamId },
@@ -166,7 +177,7 @@ export async function createSession(c: Context, userId: string): Promise<Dashboa
             select: { id: true },
           }),
         )
-      )?.id ?? null
+      )?.id ?? null)
     : null;
 
   if (activeEnvironmentId) {
@@ -193,7 +204,10 @@ export async function createSession(c: Context, userId: string): Promise<Dashboa
   };
 }
 
-export async function refreshSession(c: Context, sessionId: string): Promise<void> {
+export async function refreshSession(
+  c: Context,
+  sessionId: string,
+): Promise<void> {
   const now = new Date();
   const expiresAt = new Date(now.getTime() + AUTH_SESSION_TTL_MS);
   await withPrismaReconnect((client) =>

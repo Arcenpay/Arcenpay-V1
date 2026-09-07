@@ -21,7 +21,8 @@ function isEnabled(value: string | undefined, defaultValue = false): boolean {
 }
 
 const SUBGRAPH_REQUIRED = isEnabled(
-  process.env.ARCENPAY_REQUIRE_SUBGRAPH ?? process.env.NEXT_PUBLIC_ARCENPAY_REQUIRE_SUBGRAPH,
+  process.env.ARCENPAY_REQUIRE_SUBGRAPH ??
+    process.env.NEXT_PUBLIC_ARCENPAY_REQUIRE_SUBGRAPH,
 );
 
 const isProd =
@@ -90,6 +91,11 @@ export const BACKEND_URL: string = (() => {
   if (process.env.NODE_ENV === "production") return "https://api.arcenpay.com";
   return "http://localhost:3300";
 })();
+
+export function backendApiUrl(path: string): string {
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+  return `${BACKEND_URL.replace(/\/$/, "")}${normalizedPath}`;
+}
 
 // ── Subgraph ──────────────────────────────────────────────────────────────────
 

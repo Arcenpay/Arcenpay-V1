@@ -34,6 +34,7 @@ import {
   setOnboardingChainFamily,
 } from "@/lib/onboarding-chain-family";
 import { isPlatformAdminEmail } from "@/lib/admin";
+import { backendApiUrl } from "@/lib/config";
 import type { ChainFamily } from "@arcenpay/internal-core";
 import {
   InputOTP,
@@ -65,17 +66,25 @@ function formatTimer(targetIso: string | null): string {
   return `${String(mins).padStart(2, "0")}:${String(remainder).padStart(2, "0")}`;
 }
 
-export function EmailAuthFlow({ inviteToken, initialStep }: EmailAuthFlowProps) {
+export function EmailAuthFlow({
+  inviteToken,
+  initialStep,
+}: EmailAuthFlowProps) {
   const router = useRouter();
   const { address, isConnected } = useAccount();
   const chainId = useChainId();
   const { signMessageAsync } = useSignMessage();
-  const { isOnRequiredNetwork, isSwitchingChain, openConnectModal, reconnectWallet, switchToRequiredNetwork } =
-    useDashboardWallet();
+  const {
+    isOnRequiredNetwork,
+    isSwitchingChain,
+    openConnectModal,
+    reconnectWallet,
+    switchToRequiredNetwork,
+  } = useDashboardWallet();
   const stellarWallet = useStellarWallet();
   const [step, setStep] = useState<Step>(initialStep ?? "chain");
-  const [chainFamily, setChainFamily] = useState<ChainFamily | null>(
-    () => getOnboardingChainFamily(),
+  const [chainFamily, setChainFamily] = useState<ChainFamily | null>(() =>
+    getOnboardingChainFamily(),
   );
 
   const selectChainFamily = (family: ChainFamily) => {
@@ -174,7 +183,10 @@ export function EmailAuthFlow({ inviteToken, initialStep }: EmailAuthFlowProps) 
         setKeyVerification({ valid: false, reason: data.reason || data.error });
       }
     } catch {
-      setKeyVerification({ valid: false, reason: "Unable to verify key with server" });
+      setKeyVerification({
+        valid: false,
+        reason: "Unable to verify key with server",
+      });
     } finally {
       setVerifyingKey(false);
     }
@@ -242,7 +254,8 @@ export function EmailAuthFlow({ inviteToken, initialStep }: EmailAuthFlowProps) 
         const isActivated =
           isAdmin || data?.currentTeam?.isPlatformActivated === true;
         const keyStatus = data?.currentTeam?.activationKeyStatus;
-        const isExpiredOrRevoked = keyStatus === "EXPIRED" || keyStatus === "REVOKED";
+        const isExpiredOrRevoked =
+          keyStatus === "EXPIRED" || keyStatus === "REVOKED";
         if (isActivated || isExpiredOrRevoked) {
           window.location.href = "/";
           return;
@@ -264,11 +277,13 @@ export function EmailAuthFlow({ inviteToken, initialStep }: EmailAuthFlowProps) 
       setError(null);
       try {
         const nonceResponse = await fetch("/api/auth/nonce");
-        if (!nonceResponse.ok) throw new Error("Could not start wallet verification.");
+        if (!nonceResponse.ok)
+          throw new Error("Could not start wallet verification.");
         const noncePayload = await nonceResponse.json();
         const nonce = noncePayload?.nonce as string | undefined;
         const issuedAt = noncePayload?.issuedAt as string | undefined;
-        if (!nonce || !issuedAt) throw new Error("Wallet verification challenge is invalid.");
+        if (!nonce || !issuedAt)
+          throw new Error("Wallet verification challenge is invalid.");
 
         const message = `ArcenPay Stellar Sign-In\n\nAddress: ${stellarWallet.address}\nNonce: ${nonce}\nIssued At: ${issuedAt}\nDomain: ${window.location.host}`;
         const { signedMessage } = await stellarWallet.signMessage(message);
@@ -287,16 +302,23 @@ export function EmailAuthFlow({ inviteToken, initialStep }: EmailAuthFlowProps) 
         const linkPayload = await linkResponse.json().catch(() => ({}));
         if (!linkResponse.ok) {
           if (linkResponse.status === 409 && linkPayload.maskedOwnerEmail)
-            throw new Error(`This wallet is already linked (${linkPayload.maskedOwnerEmail}).`);
+            throw new Error(
+              `This wallet is already linked (${linkPayload.maskedOwnerEmail}).`,
+            );
           throw new Error(linkPayload.error || "Could not link this wallet.");
         }
         await navigatePostAuth();
         return true;
       } catch (err) {
-        const msg = err instanceof Error ? err.message : "Could not link wallet.";
-        setError(msg.toLowerCase().includes("rejected") ? "Signature cancelled." : msg);
+        const msg =
+          err instanceof Error ? err.message : "Could not link wallet.";
+        setError(
+          msg.toLowerCase().includes("rejected") ? "Signature cancelled." : msg,
+        );
         return false;
-      } finally { setIsLinkingWallet(false); }
+      } finally {
+        setIsLinkingWallet(false);
+      }
     }
 
     // EVM path (existing)
@@ -365,7 +387,9 @@ export function EmailAuthFlow({ inviteToken, initialStep }: EmailAuthFlowProps) 
       return true;
     } catch (linkError) {
       const message =
-        linkError instanceof Error ? linkError.message : "Could not link this wallet.";
+        linkError instanceof Error
+          ? linkError.message
+          : "Could not link this wallet.";
       if (message.toLowerCase().includes("rejected")) {
         setError("Signature cancelled. Click Sign wallet to finish login.");
       } else {
@@ -378,10 +402,12 @@ export function EmailAuthFlow({ inviteToken, initialStep }: EmailAuthFlowProps) 
   };
 
   const submitEmail = () => {
-    const walletAddr = chainFamily === "stellar" ? stellarWallet.address : address;
-    const walletConnected = chainFamily === "stellar"
-      ? stellarWallet.isConnected && stellarWallet.address
-      : isConnected && address;
+    const walletAddr =
+      chainFamily === "stellar" ? stellarWallet.address : address;
+    const walletConnected =
+      chainFamily === "stellar"
+        ? stellarWallet.isConnected && stellarWallet.address
+        : isConnected && address;
 
     if (!walletConnected) {
       setError("Connect your wallet first.");
@@ -391,8 +417,9 @@ export function EmailAuthFlow({ inviteToken, initialStep }: EmailAuthFlowProps) 
 
     startTransition(async () => {
       setError(null);
-      const response = await fetch("/api/auth/email/start", {
+      const response = await fetch(backendApiUrl("/api/v1/auth/email/start"), {
         method: "POST",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           email,
@@ -429,13 +456,17 @@ export function EmailAuthFlow({ inviteToken, initialStep }: EmailAuthFlowProps) 
   const submitCode = () => {
     startTransition(async () => {
       setError(null);
-      const response = await fetch("/api/auth/email/verify", {
+      const response = await fetch(backendApiUrl("/api/v1/auth/email/verify"), {
         method: "POST",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           email,
           code,
-          walletAddress: chainFamily === "stellar" ? stellarWallet.address : (address || undefined),
+          walletAddress:
+            chainFamily === "stellar"
+              ? stellarWallet.address
+              : address || undefined,
           ...(inviteToken ? { inviteToken } : {}),
         }),
       });
@@ -484,8 +515,12 @@ export function EmailAuthFlow({ inviteToken, initialStep }: EmailAuthFlowProps) 
             <div className="mb-6 sm:mb-8">
               <h1 className="text-2xl sm:text-[28px] font-semibold text-foreground tracking-tight">
                 {step === "chain" && "Choose your blockchain"}
-                {step === "wallet" && chainFamily === "stellar" && "Connect Stellar wallet"}
-                {step === "wallet" && chainFamily !== "stellar" && "Connect your wallet"}
+                {step === "wallet" &&
+                  chainFamily === "stellar" &&
+                  "Connect Stellar wallet"}
+                {step === "wallet" &&
+                  chainFamily !== "stellar" &&
+                  "Connect your wallet"}
                 {step === "email" && "Continue with email"}
                 {step === "code" && "Enter verification code"}
                 {step === "sign" && "Sign to finish"}
@@ -494,9 +529,11 @@ export function EmailAuthFlow({ inviteToken, initialStep }: EmailAuthFlowProps) 
               <p className="text-sm sm:text-base text-muted-foreground mt-2 sm:mt-3 leading-relaxed">
                 {step === "chain" &&
                   "Select your blockchain ecosystem first. You'll connect the appropriate wallet next."}
-                {step === "wallet" && chainFamily !== "stellar" &&
+                {step === "wallet" &&
+                  chainFamily !== "stellar" &&
                   `Connect a wallet on ${SUPPORTED_WALLET_CHAIN_LABEL}. After email verification, we'll request one signature and complete setup.`}
-                {step === "wallet" && chainFamily === "stellar" &&
+                {step === "wallet" &&
+                  chainFamily === "stellar" &&
                   "Connect a Stellar wallet. After email verification, we'll request one signature and complete setup."}
                 {step === "email" &&
                   "Once your wallet is connected, we'll send a 6-digit code to your email."}
@@ -511,14 +548,13 @@ export function EmailAuthFlow({ inviteToken, initialStep }: EmailAuthFlowProps) 
 
             {inviteToken ? (
               <div className="mb-6 text-sm text-muted-foreground">
-                Workspace invite detected. Use the invited email after connecting your wallet.
+                Workspace invite detected. Use the invited email after
+                connecting your wallet.
               </div>
             ) : null}
 
             {error ? (
-              <div className="mb-6 text-sm text-red-600">
-                {error}
-              </div>
+              <div className="mb-6 text-sm text-red-600">{error}</div>
             ) : null}
 
             {step === "chain" ? (
@@ -528,7 +564,10 @@ export function EmailAuthFlow({ inviteToken, initialStep }: EmailAuthFlowProps) 
                   onClick={() => selectChainFamily("evm")}
                   className="w-full flex items-center gap-4 p-5 rounded-xl border-2 border-border hover:border-brand/40 hover:bg-accent/5 transition-all text-left group"
                 >
-                  <div className="relative flex shrink-0" style={{ width: 70, height: 44 }}>
+                  <div
+                    className="relative flex shrink-0"
+                    style={{ width: 70, height: 44 }}
+                  >
                     <div className="w-7 h-7 rounded-full bg-white dark:bg-white p-[2px] absolute left-[42px] top-0 z-0 ring-2 ring-background overflow-hidden flex items-center justify-center">
                       <Image
                         src="/botchain.jpg"
@@ -539,14 +578,32 @@ export function EmailAuthFlow({ inviteToken, initialStep }: EmailAuthFlowProps) 
                         unoptimized
                       />
                     </div>
-                    <NetworkIcon name="ethereum" variant="branded" size={28} className="rounded-full bg-white dark:bg-white p-[2px] absolute left-[28px] top-0 z-10 ring-2 ring-background" />
-                    <NetworkIcon name="Arc" variant="branded" size={28} className="rounded-full bg-white dark:bg-white p-[2px] absolute left-[14px] top-0 z-20 ring-2 ring-background" />
-                    <NetworkIcon name="base" variant="branded" size={28} className="rounded-full bg-white dark:bg-white p-[2px] absolute left-0 top-0 z-30 ring-2 ring-background" />
+                    <NetworkIcon
+                      name="ethereum"
+                      variant="branded"
+                      size={28}
+                      className="rounded-full bg-white dark:bg-white p-[2px] absolute left-[28px] top-0 z-10 ring-2 ring-background"
+                    />
+                    <NetworkIcon
+                      name="Arc"
+                      variant="branded"
+                      size={28}
+                      className="rounded-full bg-white dark:bg-white p-[2px] absolute left-[14px] top-0 z-20 ring-2 ring-background"
+                    />
+                    <NetworkIcon
+                      name="base"
+                      variant="branded"
+                      size={28}
+                      className="rounded-full bg-white dark:bg-white p-[2px] absolute left-0 top-0 z-30 ring-2 ring-background"
+                    />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h3 className="text-sm font-semibold text-foreground group-hover:text-brand transition-colors">EVM Networks</h3>
+                    <h3 className="text-sm font-semibold text-foreground group-hover:text-brand transition-colors">
+                      EVM Networks
+                    </h3>
                     <p className="text-xs text-muted-foreground mt-1">
-                      Base, Arc, BOT, Ethereum — MetaMask, Rainbow, WalletConnect
+                      Base, Arc, BOT, Ethereum — MetaMask, Rainbow,
+                      WalletConnect
                     </p>
                   </div>
                   <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-brand transition-colors shrink-0" />
@@ -561,7 +618,9 @@ export function EmailAuthFlow({ inviteToken, initialStep }: EmailAuthFlowProps) 
                     <NetworkIcon name="stellar" variant="branded" size={30} />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h3 className="text-sm font-semibold text-foreground group-hover:text-brand transition-colors">Stellar Networks</h3>
+                    <h3 className="text-sm font-semibold text-foreground group-hover:text-brand transition-colors">
+                      Stellar Networks
+                    </h3>
                     <p className="text-xs text-muted-foreground mt-1">
                       Stellar Testnet &amp; Mainnet — Freighter, xBull, LOBSTR
                     </p>
@@ -572,12 +631,19 @@ export function EmailAuthFlow({ inviteToken, initialStep }: EmailAuthFlowProps) 
             ) : step === "wallet" && chainFamily === "stellar" ? (
               <div className="space-y-5">
                 <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
-                  <NetworkIcon name="stellar" variant="branded" size={20} className="rounded-full" />
+                  <NetworkIcon
+                    name="stellar"
+                    variant="branded"
+                    size={20}
+                    className="rounded-full"
+                  />
                   <span>Select a Stellar wallet to connect</span>
                 </div>
 
                 {stellarWallet.error && (
-                  <div className="p-3 rounded-lg bg-red-50 text-red-700 text-sm">{stellarWallet.error}</div>
+                  <div className="p-3 rounded-lg bg-red-50 text-red-700 text-sm">
+                    {stellarWallet.error}
+                  </div>
                 )}
 
                 {stellarWallet.address ? (
@@ -586,15 +652,22 @@ export function EmailAuthFlow({ inviteToken, initialStep }: EmailAuthFlowProps) 
                       <div className="flex items-center gap-3">
                         <CheckCircle2 className="w-5 h-5 text-brand shrink-0" />
                         <div>
-                          <p className="text-sm font-medium text-foreground">Connected</p>
-                          <code className="text-xs font-mono text-muted-foreground">{stellarShortAddress(stellarWallet.address)}</code>
+                          <p className="text-sm font-medium text-foreground">
+                            Connected
+                          </p>
+                          <code className="text-xs font-mono text-muted-foreground">
+                            {stellarShortAddress(stellarWallet.address)}
+                          </code>
                         </div>
                       </div>
                     </div>
                     <Button
                       type="button"
                       className="h-12 w-full bg-brand hover:bg-brand-dark text-primary-foreground"
-                      onClick={() => { setError(null); setStep("email"); }}
+                      onClick={() => {
+                        setError(null);
+                        setStep("email");
+                      }}
                     >
                       Continue
                     </Button>
@@ -607,9 +680,20 @@ export function EmailAuthFlow({ inviteToken, initialStep }: EmailAuthFlowProps) 
                     disabled={stellarWallet.isLoading || !stellarWallet.ready}
                   >
                     {!stellarWallet.ready || stellarWallet.isLoading ? (
-                      <><Loader2 className="h-4 w-4 animate-spin" />Initializing wallet kit...</>
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Initializing wallet kit...
+                      </>
                     ) : (
-                      <><NetworkIcon name="stellar" variant="branded" size={18} className="rounded-full" />Connect Stellar wallet</>
+                      <>
+                        <NetworkIcon
+                          name="stellar"
+                          variant="branded"
+                          size={18}
+                          className="rounded-full"
+                        />
+                        Connect Stellar wallet
+                      </>
                     )}
                   </button>
                 )}
@@ -618,8 +702,13 @@ export function EmailAuthFlow({ inviteToken, initialStep }: EmailAuthFlowProps) 
                   <button
                     type="button"
                     className="text-muted-foreground hover:text-foreground underline underline-offset-2"
-                    onClick={() => { setChainFamily(null); setStep("chain"); }}
-                  >Back</button>
+                    onClick={() => {
+                      setChainFamily(null);
+                      setStep("chain");
+                    }}
+                  >
+                    Back
+                  </button>
                 </div>
               </div>
             ) : step === "wallet" ? (
@@ -629,11 +718,17 @@ export function EmailAuthFlow({ inviteToken, initialStep }: EmailAuthFlowProps) 
                   <div className="flex items-center gap-3">
                     <Wallet className="h-5 w-5 text-muted-foreground" />
                     <div>
-                      <p className="text-sm font-medium text-foreground">Wallet status</p>
+                      <p className="text-sm font-medium text-foreground">
+                        Wallet status
+                      </p>
                       {isConnected && address ? (
-                        <p className="text-sm font-mono text-foreground">{shortAddress(address)}</p>
+                        <p className="text-sm font-mono text-foreground">
+                          {shortAddress(address)}
+                        </p>
                       ) : (
-                        <p className="text-sm text-muted-foreground">Not connected</p>
+                        <p className="text-sm text-muted-foreground">
+                          Not connected
+                        </p>
                       )}
                     </div>
                   </div>
@@ -646,7 +741,9 @@ export function EmailAuthFlow({ inviteToken, initialStep }: EmailAuthFlowProps) 
                   type="button"
                   variant={isConnected ? "outline" : "default"}
                   className="h-12 w-full bg-brand hover:bg-brand-dark text-primary-foreground"
-                  onClick={() => void (isConnected ? reconnectWallet() : openConnectModal())}
+                  onClick={() =>
+                    void (isConnected ? reconnectWallet() : openConnectModal())
+                  }
                 >
                   <Wallet className="mr-2 h-4 w-4" />
                   {isConnected ? "Change wallet" : "Connect wallet"}
@@ -686,7 +783,10 @@ export function EmailAuthFlow({ inviteToken, initialStep }: EmailAuthFlowProps) 
                 <button
                   type="button"
                   className="w-full text-xs text-muted-foreground hover:text-foreground underline underline-offset-2 mt-3"
-                  onClick={() => { setChainFamily(null); setStep("chain"); }}
+                  onClick={() => {
+                    setChainFamily(null);
+                    setStep("chain");
+                  }}
                 >
                   Back to chain selection
                 </button>
@@ -697,11 +797,26 @@ export function EmailAuthFlow({ inviteToken, initialStep }: EmailAuthFlowProps) 
               <div className="space-y-6">
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   {chainFamily === "stellar" ? (
-                    <><NetworkIcon name="stellar" variant="branded" size={14} className="rounded-full" />
-                    <span className="font-mono">{stellarWallet.address ? stellarShortAddress(stellarWallet.address) : "Not connected"}</span></>
+                    <>
+                      <NetworkIcon
+                        name="stellar"
+                        variant="branded"
+                        size={14}
+                        className="rounded-full"
+                      />
+                      <span className="font-mono">
+                        {stellarWallet.address
+                          ? stellarShortAddress(stellarWallet.address)
+                          : "Not connected"}
+                      </span>
+                    </>
                   ) : (
-                    <><Wallet className="h-4 w-4" />
-                    <span className="font-mono">{address ? shortAddress(address) : "Not connected"}</span></>
+                    <>
+                      <Wallet className="h-4 w-4" />
+                      <span className="font-mono">
+                        {address ? shortAddress(address) : "Not connected"}
+                      </span>
+                    </>
                   )}
                 </div>
 
@@ -741,7 +856,8 @@ export function EmailAuthFlow({ inviteToken, initialStep }: EmailAuthFlowProps) 
 
                 {debugCode ? (
                   <div className="text-sm text-muted-foreground">
-                    Dev code: <span className="font-mono font-semibold">{debugCode}</span>
+                    Dev code:{" "}
+                    <span className="font-mono font-semibold">{debugCode}</span>
                   </div>
                 ) : null}
 
@@ -763,11 +879,26 @@ export function EmailAuthFlow({ inviteToken, initialStep }: EmailAuthFlowProps) 
               <div className="space-y-6">
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   {chainFamily === "stellar" ? (
-                    <><NetworkIcon name="stellar" variant="branded" size={14} className="rounded-full" />
-                    <span className="font-mono">{stellarWallet.address ? stellarShortAddress(stellarWallet.address) : "Not connected"}</span></>
+                    <>
+                      <NetworkIcon
+                        name="stellar"
+                        variant="branded"
+                        size={14}
+                        className="rounded-full"
+                      />
+                      <span className="font-mono">
+                        {stellarWallet.address
+                          ? stellarShortAddress(stellarWallet.address)
+                          : "Not connected"}
+                      </span>
+                    </>
                   ) : (
-                    <><Wallet className="h-4 w-4" />
-                    <span className="font-mono">{address ? shortAddress(address) : "Not connected"}</span></>
+                    <>
+                      <Wallet className="h-4 w-4" />
+                      <span className="font-mono">
+                        {address ? shortAddress(address) : "Not connected"}
+                      </span>
+                    </>
                   )}
                 </div>
 
@@ -794,12 +925,14 @@ export function EmailAuthFlow({ inviteToken, initialStep }: EmailAuthFlowProps) 
                   </InputOTP>
                   {expiresAt ? (
                     <p className="text-xs text-muted-foreground">
-                      Code expires at {new Date(expiresAt).toLocaleTimeString()}.
+                      Code expires at {new Date(expiresAt).toLocaleTimeString()}
+                      .
                     </p>
                   ) : null}
                   {debugCode ? (
                     <p className="text-xs text-muted-foreground">
-                      Dev fallback code: <span className="font-mono">{debugCode}</span>
+                      Dev fallback code:{" "}
+                      <span className="font-mono">{debugCode}</span>
                     </p>
                   ) : null}
                 </div>
@@ -850,11 +983,26 @@ export function EmailAuthFlow({ inviteToken, initialStep }: EmailAuthFlowProps) 
               <div className="space-y-6">
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   {chainFamily === "stellar" ? (
-                    <><NetworkIcon name="stellar" variant="branded" size={14} className="rounded-full" />
-                    <span className="font-mono">{stellarWallet.address ? stellarShortAddress(stellarWallet.address) : "Not connected"}</span></>
+                    <>
+                      <NetworkIcon
+                        name="stellar"
+                        variant="branded"
+                        size={14}
+                        className="rounded-full"
+                      />
+                      <span className="font-mono">
+                        {stellarWallet.address
+                          ? stellarShortAddress(stellarWallet.address)
+                          : "Not connected"}
+                      </span>
+                    </>
                   ) : (
-                    <><Wallet className="h-4 w-4" />
-                    <span className="font-mono">{address ? shortAddress(address) : "Not connected"}</span></>
+                    <>
+                      <Wallet className="h-4 w-4" />
+                      <span className="font-mono">
+                        {address ? shortAddress(address) : "Not connected"}
+                      </span>
+                    </>
                   )}
                 </div>
 
@@ -865,8 +1013,12 @@ export function EmailAuthFlow({ inviteToken, initialStep }: EmailAuthFlowProps) 
                         <div className="flex items-center gap-3">
                           <CheckCircle2 className="w-5 h-5 text-brand shrink-0" />
                           <div>
-                            <p className="text-sm font-medium text-foreground">Stellar wallet connected</p>
-                            <code className="text-xs font-mono text-muted-foreground">{stellarShortAddress(stellarWallet.address)}</code>
+                            <p className="text-sm font-medium text-foreground">
+                              Stellar wallet connected
+                            </p>
+                            <code className="text-xs font-mono text-muted-foreground">
+                              {stellarShortAddress(stellarWallet.address)}
+                            </code>
                           </div>
                         </div>
                       </div>
@@ -875,17 +1027,32 @@ export function EmailAuthFlow({ inviteToken, initialStep }: EmailAuthFlowProps) 
                         type="button"
                         className="h-12 w-full bg-brand hover:bg-brand-dark text-primary-foreground"
                         onClick={() => void stellarWallet.connect()}
-                        disabled={stellarWallet.isLoading || !stellarWallet.ready}
+                        disabled={
+                          stellarWallet.isLoading || !stellarWallet.ready
+                        }
                       >
                         {!stellarWallet.ready || stellarWallet.isLoading ? (
-                          <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Initializing wallet kit...</>
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Initializing wallet kit...
+                          </>
                         ) : (
-                          <><NetworkIcon name="stellar" variant="branded" size={18} className="rounded-full mr-2" />Connect Stellar wallet</>
+                          <>
+                            <NetworkIcon
+                              name="stellar"
+                              variant="branded"
+                              size={18}
+                              className="rounded-full mr-2"
+                            />
+                            Connect Stellar wallet
+                          </>
                         )}
                       </Button>
                     )}
                     {stellarWallet.error ? (
-                      <div className="text-sm text-red-600">{stellarWallet.error}</div>
+                      <div className="text-sm text-red-600">
+                        {stellarWallet.error}
+                      </div>
                     ) : null}
                   </>
                 ) : (
@@ -894,7 +1061,11 @@ export function EmailAuthFlow({ inviteToken, initialStep }: EmailAuthFlowProps) 
                       type="button"
                       variant={isConnected ? "outline" : "default"}
                       className="h-12 w-full"
-                      onClick={() => void (isConnected ? reconnectWallet() : openConnectModal())}
+                      onClick={() =>
+                        void (isConnected
+                          ? reconnectWallet()
+                          : openConnectModal())
+                      }
                     >
                       <Wallet className="mr-2 h-4 w-4" />
                       {isConnected ? "Change wallet" : "Connect wallet"}
@@ -978,13 +1149,24 @@ export function EmailAuthFlow({ inviteToken, initialStep }: EmailAuthFlowProps) 
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   {chainFamily === "stellar" ? (
                     <>
-                      <NetworkIcon name="stellar" variant="branded" size={14} className="rounded-full" />
-                      <span className="font-mono">{stellarWallet.address ? stellarShortAddress(stellarWallet.address) : "Connected"}</span>
+                      <NetworkIcon
+                        name="stellar"
+                        variant="branded"
+                        size={14}
+                        className="rounded-full"
+                      />
+                      <span className="font-mono">
+                        {stellarWallet.address
+                          ? stellarShortAddress(stellarWallet.address)
+                          : "Connected"}
+                      </span>
                     </>
                   ) : (
                     <>
                       <Wallet className="h-4 w-4" />
-                      <span className="font-mono">{address ? shortAddress(address) : "Connected"}</span>
+                      <span className="font-mono">
+                        {address ? shortAddress(address) : "Connected"}
+                      </span>
                     </>
                   )}
                   {email ? <span>· {email}</span> : null}
@@ -1005,7 +1187,9 @@ export function EmailAuthFlow({ inviteToken, initialStep }: EmailAuthFlowProps) 
                     <KeyRound className="w-4 h-4 text-muted-foreground absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                     <Input
                       value={activationKey}
-                      onChange={(e) => handleActivationKeyChange(e.target.value)}
+                      onChange={(e) =>
+                        handleActivationKeyChange(e.target.value)
+                      }
                       placeholder="ARCN-XXXX-XXXX-XXXX"
                       className="pl-10 font-mono tracking-wider uppercase text-sm h-12"
                       maxLength={19}
@@ -1026,14 +1210,25 @@ export function EmailAuthFlow({ inviteToken, initialStep }: EmailAuthFlowProps) 
                       <div className="space-y-1">
                         <div className="font-medium flex items-center gap-1.5">
                           <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                          <span>Valid License: <strong>{keyVerification.key.name}</strong></span>
+                          <span>
+                            Valid License:{" "}
+                            <strong>{keyVerification.key.name}</strong>
+                          </span>
                         </div>
                         <div className="text-muted-foreground text-[11px] flex gap-3 pt-1">
                           <span>
-                            Tier: <strong className="text-foreground">{keyVerification.key.tier}</strong>
+                            Tier:{" "}
+                            <strong className="text-foreground">
+                              {keyVerification.key.tier}
+                            </strong>
                           </span>
                           <span>
-                            Billing: <strong className="text-foreground">{keyVerification.key.allowPlatformBilling ? "Self-Serve" : "Managed"}</strong>
+                            Billing:{" "}
+                            <strong className="text-foreground">
+                              {keyVerification.key.allowPlatformBilling
+                                ? "Self-Serve"
+                                : "Managed"}
+                            </strong>
                           </span>
                         </div>
                       </div>
@@ -1044,11 +1239,20 @@ export function EmailAuthFlow({ inviteToken, initialStep }: EmailAuthFlowProps) 
                           <span>Invalid activation key</span>
                         </div>
                         <p className="text-[11px] opacity-90">
-                          {keyVerification.reason === "KEY_NOT_FOUND" && "Key code not found. Please double-check for typos."}
-                          {keyVerification.reason === "KEY_REVOKED" && "This activation key has been revoked."}
-                          {keyVerification.reason === "KEY_EXPIRED" && "This activation key has expired."}
-                          {keyVerification.reason === "KEY_EXHAUSTED" && "This activation key has reached its maximum redemption limit."}
-                          {!["KEY_NOT_FOUND", "KEY_REVOKED", "KEY_EXPIRED", "KEY_EXHAUSTED"].includes(keyVerification.reason || "") &&
+                          {keyVerification.reason === "KEY_NOT_FOUND" &&
+                            "Key code not found. Please double-check for typos."}
+                          {keyVerification.reason === "KEY_REVOKED" &&
+                            "This activation key has been revoked."}
+                          {keyVerification.reason === "KEY_EXPIRED" &&
+                            "This activation key has expired."}
+                          {keyVerification.reason === "KEY_EXHAUSTED" &&
+                            "This activation key has reached its maximum redemption limit."}
+                          {![
+                            "KEY_NOT_FOUND",
+                            "KEY_REVOKED",
+                            "KEY_EXPIRED",
+                            "KEY_EXHAUSTED",
+                          ].includes(keyVerification.reason || "") &&
                             (keyVerification.reason || "Unable to verify key.")}
                         </p>
                         <div className="text-[11px] pt-1 border-t border-red-500/20">
@@ -1059,7 +1263,8 @@ export function EmailAuthFlow({ inviteToken, initialStep }: EmailAuthFlowProps) 
                             rel="noopener noreferrer"
                             className="font-medium underline hover:opacity-80 inline-flex items-center gap-0.5"
                           >
-                            Contact support <ExternalLink className="w-2.5 h-2.5 ml-0.5" />
+                            Contact support{" "}
+                            <ExternalLink className="w-2.5 h-2.5 ml-0.5" />
                           </a>
                         </div>
                       </div>
@@ -1070,7 +1275,12 @@ export function EmailAuthFlow({ inviteToken, initialStep }: EmailAuthFlowProps) 
                 <Button
                   type="button"
                   onClick={handleRedeemKey}
-                  disabled={redeemingKey || !activationKey.trim() || activationKey.length < 19 || (keyVerification !== null && !keyVerification.valid)}
+                  disabled={
+                    redeemingKey ||
+                    !activationKey.trim() ||
+                    activationKey.length < 19 ||
+                    (keyVerification !== null && !keyVerification.valid)
+                  }
                   className="h-12 w-full bg-brand hover:bg-brand-dark text-primary-foreground"
                 >
                   {redeemingKey ? (
@@ -1090,7 +1300,8 @@ export function EmailAuthFlow({ inviteToken, initialStep }: EmailAuthFlowProps) 
                     rel="noopener noreferrer"
                     className="text-muted-foreground hover:underline inline-flex items-center gap-1"
                   >
-                    Don't have a key? Contact us <ExternalLink className="w-3 h-3" />
+                    Don't have a key? Contact us{" "}
+                    <ExternalLink className="w-3 h-3" />
                   </a>
 
                   <button

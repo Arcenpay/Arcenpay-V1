@@ -9,7 +9,7 @@ import arcjet, {
 const hasArcjetKey = Boolean(
   process.env.ARCJET_KEY &&
   process.env.ARCJET_KEY.trim() !== "" &&
-  !process.env.ARCJET_KEY.includes("placeholder")
+  !process.env.ARCJET_KEY.includes("placeholder"),
 );
 
 const isProduction = process.env.NODE_ENV === "production";
@@ -35,6 +35,12 @@ const aj = arcjet({
       ],
 });
 
+const authAj = arcjet({
+  key: process.env.ARCJET_KEY || "ajkey_placeholder",
+  characteristics: ["ip.src"],
+  rules: isLive ? [shield({ mode: "LIVE" })] : [shield({ mode: "DRY_RUN" })],
+});
+
 export { shield, detectBot, fixedWindow, sensitiveInfo, tokenBucket };
 
 // ─── Route-specific Arcjet clients ───────────────────────────────────────
@@ -45,7 +51,7 @@ export { aj };
 const rateLimitMode = isLive ? "LIVE" : "DRY_RUN";
 
 /** Auth nonce: 20 req/min per IP */
-export const authNonceProtect = aj.withRule(
+export const authNonceProtect = authAj.withRule(
   fixedWindow({
     mode: rateLimitMode,
     characteristics: ["ip.src"],
@@ -55,7 +61,7 @@ export const authNonceProtect = aj.withRule(
 );
 
 /** Auth email start: 5 req/10min per IP + per email */
-export const authEmailStartProtect = aj
+export const authEmailStartProtect = authAj
   .withRule(
     fixedWindow({
       mode: rateLimitMode,
@@ -74,7 +80,7 @@ export const authEmailStartProtect = aj
   );
 
 /** Auth email verify: 10 attempts per 10 minutes per IP */
-export const authEmailVerifyProtect = aj.withRule(
+export const authEmailVerifyProtect = authAj.withRule(
   fixedWindow({
     mode: rateLimitMode,
     characteristics: ["ip.src"],
