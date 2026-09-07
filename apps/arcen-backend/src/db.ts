@@ -41,8 +41,22 @@ function sleep(ms: number): Promise<void> {
 }
 
 function buildPrismaState(): { client: PrismaClient; pool: Pool } {
+  let connectionString = process.env.DATABASE_URL || "";
+  const isCloudOrSsl =
+    connectionString.includes("sslmode=") ||
+    connectionString.includes("aivencloud.com") ||
+    connectionString.includes("railway.app") ||
+    connectionString.includes("supabase.co") ||
+    connectionString.includes("neon.tech") ||
+    process.env.NODE_ENV === "production";
+
+  if (isCloudOrSsl && connectionString.includes("sslmode=require") && !connectionString.includes("uselibpqcompat=true")) {
+    connectionString += (connectionString.includes("?") ? "&" : "?") + "uselibpqcompat=true";
+  }
+
   const pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
+    connectionString,
+    ssl: isCloudOrSsl ? { rejectUnauthorized: false } : undefined,
     max: Number(process.env.DB_POOL_MAX || 10),
     connectionTimeoutMillis: 10_000,
     idleTimeoutMillis: 30_000,
