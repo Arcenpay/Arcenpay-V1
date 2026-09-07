@@ -612,9 +612,37 @@ const corsOrigins = (
   .map((origin) => origin.trim())
   .filter(Boolean);
 
+function isTrustedOrigin(origin?: string): boolean {
+  if (!origin) return true;
+  try {
+    const { hostname } = new URL(origin);
+    const lower = hostname.toLowerCase();
+    return (
+      lower === "arcenpay.com" ||
+      lower.endsWith(".arcenpay.com") ||
+      lower === "arcenpay.xyz" ||
+      lower.endsWith(".arcenpay.xyz") ||
+      lower.endsWith(".vercel.app") ||
+      lower.endsWith(".railway.app") ||
+      lower === "localhost" ||
+      lower === "127.0.0.1" ||
+      corsOrigins.includes(origin) ||
+      corsOrigins.includes("*")
+    );
+  } catch {
+    return false;
+  }
+}
+
 app.use(
   cors({
-    origin: corsOrigins.includes("*") ? "*" : corsOrigins,
+    origin: (origin, callback) => {
+      if (isTrustedOrigin(origin)) {
+        return callback(null, true);
+      }
+      return callback(null, false);
+    },
+    credentials: true,
   }),
 );
 app.use(express.json({ limit: "50kb" })); // 50KB body limit (PRD §11.2)
@@ -626,12 +654,24 @@ app.use(async (req, res, next) => {
     return next();
   }
 
-  const decision = await aj.protect(req);
-  if (decision.isDenied()) {
-    if (decision.reason.isBot()) {
-      return res.status(403).json({ error: "Forbidden" });
+  // Skip Arcjet if ARCJET_KEY is missing or invalid in production to avoid blocking legitimate users
+  if (
+    !process.env.ARCJET_KEY ||
+    process.env.ARCJET_KEY.includes("placeholder")
+  ) {
+    return next();
+  }
+
+  try {
+    const decision = await aj.protect(req);
+    if (decision.isDenied()) {
+      if (decision.reason.isBot()) {
+        return res.status(403).json({ error: "Forbidden" });
+      }
+      return res.status(429).json({ error: "Too many requests" });
     }
-    return res.status(429).json({ error: "Too many requests" });
+  } catch (err) {
+    console.warn("[Facilitator] Arcjet protect failed, allowing request:", err);
   }
   next();
 });

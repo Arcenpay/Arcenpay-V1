@@ -6,12 +6,19 @@ import arcjet, {
   tokenBucket,
 } from "@arcjet/node";
 
+const hasArcjetKey = Boolean(
+  process.env.ARCJET_KEY &&
+  process.env.ARCJET_KEY.trim() !== "" &&
+  !process.env.ARCJET_KEY.includes("placeholder")
+);
+
 const isProduction = process.env.NODE_ENV === "production";
+const isLive = isProduction && hasArcjetKey;
 
 const aj = arcjet({
-  key: process.env.ARCJET_KEY!,
+  key: process.env.ARCJET_KEY || "ajkey_placeholder",
   characteristics: ["ip.src"],
-  rules: isProduction
+  rules: isLive
     ? [
         shield({ mode: "LIVE" }),
         detectBot({
@@ -35,7 +42,7 @@ export { shield, detectBot, fixedWindow, sensitiveInfo, tokenBucket };
 /** Generic API protection — shield + bot detection only. */
 export { aj };
 
-const rateLimitMode = isProduction ? "LIVE" : "DRY_RUN";
+const rateLimitMode = isLive ? "LIVE" : "DRY_RUN";
 
 /** Auth nonce: 20 req/min per IP */
 export const authNonceProtect = aj.withRule(

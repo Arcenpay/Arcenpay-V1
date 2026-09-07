@@ -2,7 +2,12 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
 import { prettyJSON } from "hono/pretty-json";
-import { resolveCorsOrigin } from "./middleware/cors.js";
+import {
+  resolveCorsOrigin,
+  ALLOWED_METHODS,
+  ALLOWED_HEADERS,
+  EXPOSE_HEADERS,
+} from "./middleware/cors.js";
 import { appRouter } from "./routes/index.js";
 
 export function createApp() {
@@ -14,19 +19,10 @@ export function createApp() {
     cors({
       origin: (origin) => resolveCorsOrigin(origin),
       credentials: true,
-      allowMethods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-      allowHeaders: [
-        "Content-Type",
-        "Authorization",
-        "X-API-Key",
-        "X-Requested-With",
-        "X-Embed-Token",
-      ],
-      exposeHeaders: [
-        "x-ratelimit-limit",
-        "x-ratelimit-remaining",
-        "x-ratelimit-reset",
-      ],
+      allowMethods: [...ALLOWED_METHODS],
+      allowHeaders: [...ALLOWED_HEADERS],
+      exposeHeaders: [...EXPOSE_HEADERS],
+      maxAge: 86400,
     }),
   );
 

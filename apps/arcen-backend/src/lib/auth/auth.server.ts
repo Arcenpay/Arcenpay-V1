@@ -28,10 +28,11 @@ function hashAuthValue(value: string): string {
 }
 
 function buildCookieOptions(expiresAt: Date) {
+  const isProd = process.env.NODE_ENV === "production";
   return {
     httpOnly: true,
-    sameSite: "lax" as const,
-    secure: process.env.NODE_ENV === "production",
+    sameSite: (isProd ? "none" : "lax") as "none" | "lax",
+    secure: isProd,
     path: "/",
     expires: expiresAt,
   };

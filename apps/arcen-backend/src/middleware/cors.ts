@@ -6,27 +6,46 @@
  * sync.
  */
 
-const ALLOWED_METHODS = [
+export const ALLOWED_METHODS = [
   "GET",
   "POST",
   "PUT",
   "PATCH",
   "DELETE",
   "OPTIONS",
+  "HEAD",
 ] as const;
 
-const ALLOWED_HEADERS = [
+export const ALLOWED_HEADERS = [
   "Content-Type",
   "Authorization",
   "X-API-Key",
   "X-Requested-With",
   "X-Embed-Token",
+  "X-Admin-Secret",
+  "X-Environment-Id",
+  "X-Team-Id",
+  "X-Wallet-Address",
+  "X-Stellar-Wallet-Address",
+  "X-Chain-Id",
+  "X-Arcen-Company-Keys",
+  "X-Arcen-User-Keys",
+  "X-Payment",
+  "Accept",
+  "Accept-Language",
+  "Cookie",
+  "Origin",
+  "User-Agent",
+  "Referer",
+  "sentry-trace",
+  "baggage",
 ] as const;
 
-const EXPOSE_HEADERS = [
+export const EXPOSE_HEADERS = [
   "x-ratelimit-limit",
   "x-ratelimit-remaining",
   "x-ratelimit-reset",
+  "set-cookie",
 ] as const;
 
 function normalizeOrigin(value?: string | null): string | null {
@@ -62,6 +81,20 @@ function isTunnelHost(hostname: string): boolean {
     hostname.endsWith(".ngrok.io") ||
     hostname.endsWith(".devtunnels.ms") ||
     hostname.endsWith(".trycloudflare.com")
+  );
+}
+
+function isTrustedPlatformOrigin(hostname: string): boolean {
+  const lower = hostname.toLowerCase();
+  return (
+    lower === "arcenpay.com" ||
+    lower.endsWith(".arcenpay.com") ||
+    lower === "arcenpay.xyz" ||
+    lower.endsWith(".arcenpay.xyz") ||
+    lower.endsWith(".vercel.app") ||
+    lower.endsWith(".railway.app") ||
+    isLocalHost(lower) ||
+    isTunnelHost(lower)
   );
 }
 
@@ -103,6 +136,7 @@ function parseOrigins(): string[] {
   const fallbackOrigins = [
     process.env.DASHBOARD_URL,
     process.env.NEXT_PUBLIC_APP_URL,
+    process.env.APP_URL,
   ]
     .map((origin) => normalizeOrigin(origin))
     .filter((origin): origin is string => Boolean(origin));
@@ -131,6 +165,15 @@ export function resolveCorsOrigin(origin?: string | null): string | null {
   const normalizedOrigin = normalizeOrigin(origin);
   if (!normalizedOrigin) return null;
 
+  try {
+    const { hostname } = new URL(normalizedOrigin);
+    if (isTrustedPlatformOrigin(hostname)) {
+      return normalizedOrigin;
+    }
+  } catch {
+    // ignore
+  }
+
   const configuredOrigins = parseOrigins();
   if (
     configuredOrigins.some((allowedOrigin) =>
@@ -147,8 +190,15 @@ export function resolveCorsOrigin(origin?: string | null): string | null {
   return null;
 }
 
-export function corsHeaders(origin?: string | null): Record<string, string> {
+export function corsHeaders(origin?: string | null, requestHeaders?: string | null): Record<string, string> {
   const allowOrigin = resolveCorsOrigin(origin);
+
+  let allowedHeaders = ALLOWED_HEADERS.join(", ");
+  if (requestHeaders) {
+    const requested = requestHeaders.split(/\s*,\s*/).filter(Boolean);
+    const merged = Array.from(new Set([...ALLOWED_HEADERS, ...requested]));
+    allowedHeaders = merged.join(", ");
+  }
 
   return {
     ...(allowOrigin
@@ -158,9 +208,9 @@ export function corsHeaders(origin?: string | null): Record<string, string> {
         }
       : {}),
     "Access-Control-Allow-Methods": ALLOWED_METHODS.join(", "),
-    "Access-Control-Allow-Headers": ALLOWED_HEADERS.join(", "),
+    "Access-Control-Allow-Headers": allowedHeaders,
     "Access-Control-Expose-Headers": EXPOSE_HEADERS.join(", "),
     "Access-Control-Max-Age": "86400",
-    Vary: "Origin",
+    Vary: "Origin, Access-Control-Request-Headers",
   };
 }
