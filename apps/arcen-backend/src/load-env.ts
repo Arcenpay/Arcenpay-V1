@@ -31,12 +31,9 @@ if (!globalThis.__ARCENPAY_BACKEND_ENV_LOADED__) {
     : path.resolve(process.cwd(), "apps/arcen-backend");
   for (const envPath of envPaths) {
     if (fs.existsSync(envPath)) {
-      // Load shared workspace defaults first, then let the app-local env win.
-      // Otherwise a stale root signer/contract override silently masks the
-      // backend's deployment-specific configuration.
-      const isAppLocal = envPath === path.resolve(appDir, ".env") ||
-        envPath === path.resolve(appDir, ".env.local");
-      dotenv.config({ path: envPath, override: isAppLocal });
+      // Load shared workspace defaults first, then let app-local env supply defaults.
+      // Hosting environment variables (such as Railway-injected PORT) are preserved.
+      dotenv.config({ path: envPath, override: false });
     }
   }
   globalThis.__ARCENPAY_BACKEND_ENV_LOADED__ = true;

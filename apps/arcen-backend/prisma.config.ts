@@ -25,6 +25,6 @@ for (const envPath of [
 
 export default defineConfig({
   datasource: {
-    url: process.env.DATABASE_URL!,
+    url: process.env.DATABASE_URL || "postgresql://localhost:5432/placeholder",
   },
 });

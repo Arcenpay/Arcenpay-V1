@@ -29,7 +29,7 @@
     "dist"
   ],
   "scripts": {
-    "build": "tsup src/index.ts --clean --format cjs,esm --dts --dts-resolve",
+    "build": "tsup src/index.ts --format cjs,esm --dts --dts-resolve",
     "dev": "tsup src/index.ts --clean --format cjs,esm --dts --watch",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
