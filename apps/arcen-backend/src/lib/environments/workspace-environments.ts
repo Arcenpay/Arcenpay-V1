@@ -64,7 +64,6 @@ export async function findResolvedActiveEnvironment(
   const environments = await db.workspaceEnvironment.findMany({
     where: { teamId },
     orderBy: [{ createdAt: "asc" }],
-    take: 2,
   });
 
   if (environments.length === 0) {
