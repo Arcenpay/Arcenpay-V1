@@ -8,6 +8,7 @@ import { isPlatformAdminEmail } from "@/lib/admin";
 export type ActivationStatus = "ACTIVE" | "EXPIRED" | "REVOKED" | "UNACTIVATED";
 
 interface ActivationContextValue {
+  isLoading: boolean;
   isReadOnly: boolean;
   status: ActivationStatus;
   isModalOpen: boolean;
@@ -21,7 +22,7 @@ interface ActivationContextValue {
 const ActivationContext = createContext<ActivationContextValue | null>(null);
 
 export function ActivationProvider({ children }: { children: React.ReactNode }) {
-  const { data: session, refresh } = useDashboardSession();
+  const { data: session, isLoading, refresh } = useDashboardSession();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [promptReason, setPromptReason] = useState<string | null>(null);
   const router = useRouter();
@@ -33,10 +34,14 @@ export function ActivationProvider({ children }: { children: React.ReactNode }) 
 
   // Check if team is activated
   const isTeamActivated = session?.currentTeam?.isPlatformActivated === true;
-  const isReadOnly = !isPlatformAdmin && !isTeamActivated;
+
+  // IMPORTANT: While loading, NEVER treat as read-only to avoid jarring flash of banner on reload!
+  const isReadOnly = !isLoading && !isPlatformAdmin && !isTeamActivated;
 
   const rawStatus = session?.currentTeam?.activationKeyStatus;
-  const status: ActivationStatus = isPlatformAdmin
+  const status: ActivationStatus = isLoading
+    ? "ACTIVE"
+    : isPlatformAdmin
     ? "ACTIVE"
     : rawStatus
     ? (rawStatus as ActivationStatus)
@@ -145,6 +150,7 @@ export function ActivationProvider({ children }: { children: React.ReactNode }) 
   return (
     <ActivationContext.Provider
       value={{
+        isLoading,
         isReadOnly,
         status,
         isModalOpen,
@@ -164,6 +170,7 @@ export function useActivationGuard() {
   const ctx = useContext(ActivationContext);
   if (!ctx) {
     return {
+      isLoading: false,
       isReadOnly: false,
       status: "ACTIVE" as ActivationStatus,
       isModalOpen: false,

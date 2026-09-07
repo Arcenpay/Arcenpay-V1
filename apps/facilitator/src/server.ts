@@ -5008,7 +5008,7 @@ void (async () => {
       console.error("[Facilitator] BalanceMonitor failed to start:", err);
     }
 
-    app.listen(PORT, () => {
+    app.listen(Number(PORT), "0.0.0.0", () => {
       logStartupBanner();
     });
   } catch (err) {

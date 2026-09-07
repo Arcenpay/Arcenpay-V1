@@ -516,6 +516,7 @@ export const PLATFORM_ADMIN_EMAILS: Set<string> = (() => {
     .filter(Boolean);
   return new Set<string>([
     "admin@arcenpay.com",
+    "aditya@arcenpay.com",
     "support@arcenpay.com",
     ...envEmails,
   ]);

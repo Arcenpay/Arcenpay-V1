@@ -17,6 +17,7 @@ const envAdmins = (
 export const PLATFORM_ADMIN_EMAILS: string[] = [
   ...new Set([
     "admin@arcenpay.com",
+    "aditya@arcenpay.com",
     "support@arcenpay.com",
     ...envAdmins,
   ]),

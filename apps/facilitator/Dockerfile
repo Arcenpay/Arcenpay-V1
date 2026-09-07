@@ -14,12 +14,9 @@ COPY apps/facilitator ./apps/facilitator
 RUN npm ci
 
 # Build required workspaces in dependency order
-RUN npm run -w @meap/core build \
-  && npm run -w @meap/node build \
-  && npm run -w @meap/facilitator build
-
-# Keep runtime deps only
-RUN npm prune --omit=dev
+RUN npm run build --workspace=@arcenpay/internal-core \
+  && npm run build --workspace=@arcenpay/node \
+  && npm run build --workspace=@arcenpay/facilitator
 
 FROM node:20-alpine AS runner
 
@@ -27,8 +24,8 @@ WORKDIR /repo
 ENV NODE_ENV=production
 
 # Create non-root user for security
-RUN addgroup --system --gid 1001 meap && \
-    adduser --system --uid 1001 facilitator --ingroup meap
+RUN addgroup --system --gid 1001 arcen && \
+    adduser --system --uid 1001 facilitator --ingroup arcen
 
 COPY --from=builder /repo/package*.json ./
 COPY --from=builder /repo/node_modules ./node_modules

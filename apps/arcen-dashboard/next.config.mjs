@@ -10,7 +10,11 @@ const outputFileTracingRoot = path.join(
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   outputFileTracingRoot,
-  transpilePackages: ["@arcenpay/react"],
+  transpilePackages: [
+    "@arcenpay/react",
+    "@arcenpay/internal-core",
+    "@arcenpay/shared-types",
+  ],
   typescript: {
     ignoreBuildErrors: false,
   },

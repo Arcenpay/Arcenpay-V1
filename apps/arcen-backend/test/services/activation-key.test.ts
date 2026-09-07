@@ -404,8 +404,9 @@ describe("ActivationKeyService", () => {
 });
 
 describe("Platform Administrator Security", () => {
-  it("authorizes admin@arcenpay.com and support@arcenpay.com as default platform administrators", () => {
+  it("authorizes admin@arcenpay.com, aditya@arcenpay.com, and support@arcenpay.com as default platform administrators", () => {
     expect(isPlatformAdminEmail("admin@arcenpay.com")).toBe(true);
+    expect(isPlatformAdminEmail("aditya@arcenpay.com")).toBe(true);
     expect(isPlatformAdminEmail("support@arcenpay.com")).toBe(true);
   });
 

@@ -5,9 +5,9 @@ import { KeyRound, ShieldAlert, Clock, Lock, ArrowRight, ExternalLink } from "lu
 import { Button } from "@/components/ui/button";
 
 export function ActivationReadOnlyBanner() {
-  const { isReadOnly, status, openModal } = useActivationGuard();
+  const { isReadOnly, isLoading, status, openModal } = useActivationGuard();
 
-  if (!isReadOnly) return null;
+  if (isLoading || !isReadOnly) return null;
 
   const isExpired = status === "EXPIRED";
   const isRevoked = status === "REVOKED";

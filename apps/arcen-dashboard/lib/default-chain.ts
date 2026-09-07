@@ -28,10 +28,10 @@ export const TESTNET_CHAIN_IDS = [
   STELLAR_TESTNET_CHAIN_ID,
   STELLAR_FUTURENET_CHAIN_ID,
 ] as const;
+// Production environments are strictly restricted to BOT Chain Mainnet,
+// as BOT Chain is the only network with verified production contract deployments.
 export const MAINNET_CHAIN_IDS = [
   BOT_MAINNET_CHAIN_ID,
-  BASE_MAINNET_CHAIN_ID,
-  STELLAR_MAINNET_CHAIN_ID,
 ] as const;
 
 const ALL_SUPPORTED = [...TESTNET_CHAIN_IDS, ...MAINNET_CHAIN_IDS] as const;

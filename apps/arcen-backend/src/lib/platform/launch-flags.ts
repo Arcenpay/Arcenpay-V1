@@ -26,8 +26,9 @@ export const SUBGRAPH_REQUIRED = isEnabled(
     process.env.NEXT_PUBLIC_ARCENPAY_REQUIRE_SUBGRAPH,
 );
 
-// Mainnet environments remain opt-in until production contracts, RPC,
-// facilitator, token, and treasury configuration have been verified.
+// Production environments are enabled for BOT Chain Mainnet deployments.
+// Can be explicitly overridden via ARCENPAY_ENABLE_PRODUCTION_ENVIRONMENTS.
 export const PRODUCTION_ENVIRONMENTS_ENABLED = isEnabled(
   process.env.ARCENPAY_ENABLE_PRODUCTION_ENVIRONMENTS,
+  true,
 );

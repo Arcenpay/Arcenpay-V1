@@ -53,10 +53,11 @@ function buildChainOptions(mode: EnvironmentMode, family: ChainFamily): ChainOpt
 }
 
 function firstChainForFamily(mode: EnvironmentMode, family: ChainFamily): number {
+  if (mode === "PRODUCTION") return BOT_MAINNET_CHAIN_ID;
   const opts = buildChainOptions(mode, family);
   if (opts.length > 0) return opts[0].chainId;
   if (family === "stellar") return STELLAR_TESTNET_CHAIN_ID;
-  return mode === "PRODUCTION" ? BOT_MAINNET_CHAIN_ID : BOT_TESTNET_CHAIN_ID;
+  return BOT_TESTNET_CHAIN_ID;
 }
 
 export default function NewEnvironmentPage() {
@@ -337,7 +338,13 @@ export default function NewEnvironmentPage() {
               </Label>
               <Select
                 value={mode}
-                onValueChange={(value) => setMode(value as EnvironmentMode)}
+                onValueChange={(value) => {
+                  const newMode = value as EnvironmentMode;
+                  setMode(newMode);
+                  if (newMode === "PRODUCTION") {
+                    setChainFamily("evm");
+                  }
+                }}
               >
                 <SelectTrigger id="environment-type" className="bg-background border-input text-foreground h-11 focus:ring-brand">
                   <SelectValue />
@@ -381,10 +388,10 @@ export default function NewEnvironmentPage() {
                       EVM (BOT Chain, Base, Arc, Ethereum)
                     </span>
                   </SelectItem>
-                  <SelectItem value="stellar">
+                  <SelectItem value="stellar" disabled={mode === "PRODUCTION"}>
                     <span className="flex items-center gap-2">
                       <NetworkIcon name="stellar" variant="branded" size={18} className="rounded-full bg-white dark:bg-white p-px" />
-                      Stellar (Soroban)
+                      Stellar (Soroban){mode === "PRODUCTION" ? " — Mainnet coming soon" : ""}
                     </span>
                   </SelectItem>
                 </SelectContent>

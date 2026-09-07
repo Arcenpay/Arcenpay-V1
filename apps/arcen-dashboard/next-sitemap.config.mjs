@@ -1,4 +1,4 @@
-const PROD_FALLBACK_APP_URL = "https://app.arcenpay.xyz";
+const PROD_FALLBACK_APP_URL = "https://app.arcenpay.com";
 const DEV_FALLBACK_APP_URL = "http://localhost:3000";
 const INDEXABLE_ROUTES = new Set(["/login"]);
 

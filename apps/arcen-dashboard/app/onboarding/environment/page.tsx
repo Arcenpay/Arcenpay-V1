@@ -33,7 +33,8 @@ import type { ChainFamily } from "@arcenpay/internal-core";
 function buildChainOptions(mode: EnvironmentMode, family: ChainFamily | null) {
   return getChainIdsForEnvironment(mode)
     .filter((chainId) => {
-      if (!family) return true; // fallback: show all
+      if (mode === "PRODUCTION") return true;
+      if (!family) return true;
       return getChainFamily(chainId) === family;
     })
     .map((chainId) => ({
@@ -46,8 +47,9 @@ function defaultChainIdForFamily(
   mode: EnvironmentMode,
   family: ChainFamily | null,
 ): number {
+  if (mode === "PRODUCTION") return BOT_MAINNET_CHAIN_ID;
   if (family === "stellar") return STELLAR_TESTNET_CHAIN_ID;
-  return mode === "PRODUCTION" ? BOT_MAINNET_CHAIN_ID : BOT_TESTNET_CHAIN_ID;
+  return BOT_TESTNET_CHAIN_ID;
 }
 
 export default function EnvironmentOnboardingPage() {

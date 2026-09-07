@@ -16,13 +16,13 @@ export const projectId =
 export const networks = [botMainnet, botTestnet, arcTestnet, base, baseSepolia] as const;
 
 export const defaultNetwork =
-  DEFAULT_CHAIN_ID === BOT_MAINNET_CHAIN_ID
+  (DEFAULT_CHAIN_ID as number) === BOT_MAINNET_CHAIN_ID
     ? botMainnet
-    : DEFAULT_CHAIN_ID === BOT_TESTNET_CHAIN_ID
+    : (DEFAULT_CHAIN_ID as number) === BOT_TESTNET_CHAIN_ID
       ? botTestnet
-      : DEFAULT_CHAIN_ID === BASE_MAINNET_CHAIN_ID
+      : (DEFAULT_CHAIN_ID as number) === BASE_MAINNET_CHAIN_ID
         ? base
-        : DEFAULT_CHAIN_ID === BASE_SEPOLIA_CHAIN_ID
+        : (DEFAULT_CHAIN_ID as number) === BASE_SEPOLIA_CHAIN_ID
           ? baseSepolia
           : botTestnet;
 

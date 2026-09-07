@@ -19,6 +19,7 @@ const app = createApp();
 serve({
   fetch: app.fetch,
   port: PORT,
+  hostname: "0.0.0.0",
 }, (info) => {
   logger.info(`ArcenPay Backend API running on port ${info.port}`, {
     env: process.env.NODE_ENV ?? "development",
