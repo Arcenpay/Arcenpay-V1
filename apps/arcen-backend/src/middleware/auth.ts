@@ -1,5 +1,6 @@
 import { createHmac, createHash } from "node:crypto";
 import type { Context, Next } from "hono";
+import { getCookie } from "hono/cookie";
 import { db, withPrismaReconnect } from "../db.js";
 import { SIWE_JWT_SECRET, PLATFORM_ADMIN_SECRET, isPlatformAdminEmail } from "../config.js";
 
@@ -13,6 +14,7 @@ export interface AuthSession {
   currentTeamId: string | null;
   activeEnvironmentId: string | null;
   walletAddress: string | null;
+  stellarWalletAddress: string | null;
   expiresAt: Date;
 }
 
@@ -28,10 +30,8 @@ function getBearerToken(c: Context): string | null {
 }
 
 function getSessionCookie(c: Context): string | null {
-  const cookie = c.req.header("cookie");
-  if (!cookie) return null;
-  const match = cookie.match(new RegExp(`${AUTH_COOKIE_NAME}=([^;]+)`));
-  return match ? match[1].trim() : null;
+  const token = getCookie(c, AUTH_COOKIE_NAME);
+  return token?.trim() || null;
 }
 
 export async function resolveSession(c: Context): Promise<AuthSession | null> {
@@ -51,6 +51,7 @@ export async function resolveSession(c: Context): Promise<AuthSession | null> {
             email: true,
             currentTeamId: true,
             walletAddress: true,
+            stellarWalletAddress: true,
           },
         },
       },
@@ -78,6 +79,7 @@ export async function resolveSession(c: Context): Promise<AuthSession | null> {
       currentTeamId: record.user.currentTeamId ?? null,
       activeEnvironmentId: record.activeEnvironmentId ?? null,
       walletAddress: record.user.walletAddress ?? null,
+      stellarWalletAddress: record.user.stellarWalletAddress ?? null,
       expiresAt,
     };
   }
@@ -89,6 +91,7 @@ export async function resolveSession(c: Context): Promise<AuthSession | null> {
     currentTeamId: record.user.currentTeamId ?? null,
     activeEnvironmentId: record.activeEnvironmentId ?? null,
     walletAddress: record.user.walletAddress ?? null,
+    stellarWalletAddress: record.user.stellarWalletAddress ?? null,
     expiresAt: record.expiresAt,
   };
 }
@@ -98,13 +101,14 @@ export interface TeamContext {
   teamRole: string;
   userId: string;
   walletAddress?: string;
+  stellarWalletAddress?: string;
 }
 
 export async function resolveTeamContext(session: AuthSession): Promise<TeamContext | null> {
   const user = await withPrismaReconnect((client) =>
     client.user.findUnique({
       where: { id: session.userId },
-      select: { id: true, walletAddress: true, currentTeamId: true },
+      select: { id: true, walletAddress: true, stellarWalletAddress: true, currentTeamId: true },
     }),
   );
   if (!user) return null;
@@ -127,6 +131,7 @@ export async function resolveTeamContext(session: AuthSession): Promise<TeamCont
     teamRole: membership.role as string,
     userId: user.id,
     walletAddress: user.walletAddress ?? undefined,
+    stellarWalletAddress: user.stellarWalletAddress ?? undefined,
   };
 }
 
