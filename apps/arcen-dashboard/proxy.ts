@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { AUTH_COOKIE_NAME, AUTH_SESSION_TTL_MS } from "@/lib/auth-constants";
+import { AUTH_COOKIE_NAME } from "@/lib/auth-constants";
 
 const PUBLIC_PATHS = [
   /^\/login(?:\/.*)?$/,
@@ -15,7 +15,9 @@ function isPublicRoute(pathname: string): boolean {
 
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  const hasSessionCookie = Boolean(request.cookies.get(AUTH_COOKIE_NAME)?.value);
+  const hasSessionCookie = Boolean(
+    request.cookies.get(AUTH_COOKIE_NAME)?.value,
+  );
 
   if (isPublicRoute(pathname)) {
     return NextResponse.next();
@@ -34,18 +36,7 @@ export function proxy(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
-  const response = NextResponse.next();
-  const current = request.cookies.get(AUTH_COOKIE_NAME)?.value;
-  if (current) {
-    response.cookies.set(AUTH_COOKIE_NAME, current, {
-      httpOnly: true,
-      sameSite: "lax",
-      secure: process.env.NODE_ENV === "production",
-      path: "/",
-      maxAge: Math.floor(AUTH_SESSION_TTL_MS / 1000),
-    });
-  }
-  return response;
+  return NextResponse.next();
 }
 
 export const config = {
