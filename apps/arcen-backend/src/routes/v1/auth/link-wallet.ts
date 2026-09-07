@@ -26,26 +26,36 @@ function isStellarChainId(chainId: number) {
 }
 
 function requestOrigin(c: Context): { host: string; protocol: string } {
-  const forwardedHost = c.req.header("x-forwarded-host");
-  const forwardedProto = c.req.header("x-forwarded-proto");
-  if (forwardedHost) {
-    return {
-      host: forwardedHost,
-      protocol: forwardedProto || "https",
-    };
-  }
-
   const origin = c.req.header("origin");
   if (origin) {
     try {
       const parsedOrigin = new URL(origin);
-      return {
-        host: parsedOrigin.host,
-        protocol: parsedOrigin.protocol.slice(0, -1),
-      };
+      const hostname = parsedOrigin.hostname.toLowerCase();
+      const isTrustedOrigin =
+        hostname === "arcenpay.com" ||
+        hostname.endsWith(".arcenpay.com") ||
+        hostname === "arcenpay.xyz" ||
+        hostname.endsWith(".arcenpay.xyz") ||
+        hostname === "localhost" ||
+        hostname === "127.0.0.1";
+      if (isTrustedOrigin) {
+        return {
+          host: parsedOrigin.host,
+          protocol: parsedOrigin.protocol.slice(0, -1),
+        };
+      }
     } catch {
       // Fall through to the request host for malformed origins.
     }
+  }
+
+  const forwardedHost = c.req.header("x-forwarded-host");
+  const forwardedProto = c.req.header("x-forwarded-proto");
+  if (forwardedHost) {
+    return {
+      host: forwardedHost.split(",", 1)[0].trim(),
+      protocol: forwardedProto?.split(",", 1)[0].trim() || "https",
+    };
   }
 
   return {
