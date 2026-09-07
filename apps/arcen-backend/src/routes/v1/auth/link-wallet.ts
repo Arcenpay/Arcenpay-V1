@@ -6,7 +6,11 @@ import { buildSIWEMessage } from "../../../lib/auth/auth.js";
 import { consumeNonce } from "../../../lib/auth/nonce.server.js";
 import { getSessionFromCtx } from "../../../lib/auth/auth.server.js";
 import { maskEmail } from "../../../lib/auth/auth-flow.js";
-import { isSupportedDashboardChainId, getChainLabel, TESTNET_CHAIN_IDS } from "../../../lib/platform/default-chain.js";
+import {
+  isSupportedDashboardChainId,
+  getChainLabel,
+  TESTNET_CHAIN_IDS,
+} from "../../../lib/platform/default-chain.js";
 import { getChainFamily } from "@arcenpay/internal-core";
 
 const Schema = z.object({
@@ -21,22 +25,57 @@ function isStellarChainId(chainId: number) {
   return getChainFamily(chainId) === "stellar";
 }
 
+function requestOrigin(c: Context): { host: string; protocol: string } {
+  const forwardedHost = c.req.header("x-forwarded-host");
+  const forwardedProto = c.req.header("x-forwarded-proto");
+  if (forwardedHost) {
+    return {
+      host: forwardedHost,
+      protocol: forwardedProto || "https",
+    };
+  }
+
+  const origin = c.req.header("origin");
+  if (origin) {
+    try {
+      const parsedOrigin = new URL(origin);
+      return {
+        host: parsedOrigin.host,
+        protocol: parsedOrigin.protocol.slice(0, -1),
+      };
+    } catch {
+      // Fall through to the request host for malformed origins.
+    }
+  }
+
+  return {
+    host: c.req.header("host") || "arcenpay.xyz",
+    protocol: "https",
+  };
+}
+
 export async function linkWallet(c: Context) {
   try {
     const session = await getSessionFromCtx(c);
     if (!session) {
-      return c.json({ ok: false, error: "Unauthorized", code: "UNAUTHORIZED" }, 401 as any);
+      return c.json(
+        { ok: false, error: "Unauthorized", code: "UNAUTHORIZED" },
+        401 as any,
+      );
     }
 
     const body = await c.req.json().catch(() => ({}));
     const parsed = Schema.safeParse(body);
     if (!parsed.success) {
-      return c.json({
+      return c.json(
+        {
           ok: false,
           error: "Invalid request",
           code: "BAD_REQUEST",
           details: parsed.error.flatten().fieldErrors,
-        }, 400 as any);
+        },
+        400 as any,
+      );
     }
 
     const { message, signature, address, chainId, nonce } = parsed.data;
@@ -46,16 +85,22 @@ export async function linkWallet(c: Context) {
     // Support Stellar chain ID (synthetic: 9_000_000+)
     if (!isSupportedDashboardChainId(chainId) && !isStellarChainId(chainId)) {
       const labels = TESTNET_CHAIN_IDS.map(getChainLabel).join(" or ");
-      return c.json({
+      return c.json(
+        {
           ok: false,
           error: `Unsupported network. Connect to ${labels} to link your wallet.`,
           code: "BAD_REQUEST",
-        }, 400 as any);
+        },
+        400 as any,
+      );
     }
 
     const nonceRecord = await consumeNonce(nonce);
     if (!nonceRecord) {
-      return c.json({ ok: false, error: "Invalid or expired nonce", code: "UNAUTHORIZED" }, 401 as any);
+      return c.json(
+        { ok: false, error: "Invalid or expired nonce", code: "UNAUTHORIZED" },
+        401 as any,
+      );
     }
 
     // ── Stellar path ──────────────────────────────────────────────────────
@@ -67,11 +112,14 @@ export async function linkWallet(c: Context) {
       //
       // Reconstruct expected message from the same format the frontend builds:
       //   `ArcenPay Stellar Sign-In\n\nAddress: ${addr}\nNonce: ${n}\nIssued At: ${d}\nDomain: ${host}`
-      const host = c.req.header("x-forwarded-host") || c.req.header("host") || "arcenpay.xyz";
+      const { host } = requestOrigin(c);
       const expectedMessage = `ArcenPay Stellar Sign-In\n\nAddress: ${normalizedAddress}\nNonce: ${nonce}\nIssued At: ${nonceRecord.issuedAt}\nDomain: ${host}`;
 
       if (message !== expectedMessage) {
-        return c.json({ ok: false, error: "Message mismatch", code: "UNAUTHORIZED" }, 401 as any);
+        return c.json(
+          { ok: false, error: "Message mismatch", code: "UNAUTHORIZED" },
+          401 as any,
+        );
       }
 
       const { Keypair } = await import("@stellar/stellar-sdk");
@@ -85,21 +133,29 @@ export async function linkWallet(c: Context) {
         signatureValid = false;
       }
       if (!signatureValid) {
-        return c.json({ ok: false, error: "Invalid signature", code: "UNAUTHORIZED" }, 401 as any);
+        return c.json(
+          { ok: false, error: "Invalid signature", code: "UNAUTHORIZED" },
+          401 as any,
+        );
       }
 
       const walletOwner = await db.user.findUnique({
-        where: isStellar ? { stellarWalletAddress: normalizedAddress } : { walletAddress: normalizedAddress },
+        where: isStellar
+          ? { stellarWalletAddress: normalizedAddress }
+          : { walletAddress: normalizedAddress },
         select: { id: true, email: true },
       });
 
       if (walletOwner && walletOwner.id !== session.userId) {
-        return c.json({
+        return c.json(
+          {
             ok: false,
             error: "This wallet is already linked to another account",
             code: "CONFLICT",
             maskedOwnerEmail: maskEmail(walletOwner.email ?? ""),
-          }, 409 as any);
+          },
+          409 as any,
+        );
       }
 
       await db.user.update({
@@ -113,11 +169,7 @@ export async function linkWallet(c: Context) {
     }
 
     // ── EVM path (SIWE) ───────────────────────────────────────────────────
-    const host =
-      c.req.header("x-forwarded-host") || c.req.header("host") || "arcenpay.xyz";
-    const isLocal = host.includes("localhost") || host.includes("127.0.0.1");
-    const proto =
-      c.req.header("x-forwarded-proto") || (isLocal ? "http" : "https");
+    const { host, protocol: proto } = requestOrigin(c);
     const expectedMessage = buildSIWEMessage({
       address,
       chainId,
@@ -128,7 +180,10 @@ export async function linkWallet(c: Context) {
     });
 
     if (message !== expectedMessage) {
-      return c.json({ ok: false, error: "SIWE message mismatch", code: "UNAUTHORIZED" }, 401 as any);
+      return c.json(
+        { ok: false, error: "SIWE message mismatch", code: "UNAUTHORIZED" },
+        401 as any,
+      );
     }
 
     const isValid = await verifyMessage({
@@ -137,7 +192,10 @@ export async function linkWallet(c: Context) {
       signature: signature as `0x${string}`,
     });
     if (!isValid) {
-      return c.json({ ok: false, error: "Invalid signature", code: "UNAUTHORIZED" }, 401 as any);
+      return c.json(
+        { ok: false, error: "Invalid signature", code: "UNAUTHORIZED" },
+        401 as any,
+      );
     }
 
     const walletOwner = await db.user.findUnique({
@@ -146,12 +204,15 @@ export async function linkWallet(c: Context) {
     });
 
     if (walletOwner && walletOwner.id !== session.userId) {
-      return c.json({
+      return c.json(
+        {
           ok: false,
           error: "This wallet is already linked to another account",
           code: "CONFLICT",
           maskedOwnerEmail: maskEmail(walletOwner.email ?? ""),
-        }, 409 as any);
+        },
+        409 as any,
+      );
     }
 
     await db.user.update({
@@ -162,6 +223,9 @@ export async function linkWallet(c: Context) {
     return c.json({ ok: true, address: normalizedAddress });
   } catch (err) {
     console.error("[api/auth/link-wallet]", err);
-    return c.json({ ok: false, error: "Internal server error", code: "INTERNAL_ERROR" }, 500 as any);
+    return c.json(
+      { ok: false, error: "Internal server error", code: "INTERNAL_ERROR" },
+      500 as any,
+    );
   }
 }
