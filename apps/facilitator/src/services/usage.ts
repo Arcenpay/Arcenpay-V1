@@ -6,7 +6,10 @@
 import { createHash } from "crypto";
 import fs from "fs";
 import path from "path";
-import { pathToFileURL } from "url";
+import { fileURLToPath, pathToFileURL } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 import { createWalletClient } from "viem";
 import { createResilientFacilitatorClient, getFacilitatorRpcTransport } from "../rpc-client.js";
 import { privateKeyToAccount } from "viem/accounts";

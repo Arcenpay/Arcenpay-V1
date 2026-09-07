@@ -4,8 +4,7 @@
 //  with deterministic retry, idempotency, and nullifier tracking.
 // ============================================================
 
-import { createHash } from "crypto";
-import { UsageService, type UsageServiceConfig } from "./usage";
+import { UsageService, type UsageServiceConfig } from "./usage.js";
 
 // ============================================================
 //  Types

@@ -20,6 +20,7 @@ import {
   getStellarNetworkPassphrase,
   getStellarSorobanRpcUrl,
 } from "@arcenpay/internal-core";
+import { Keypair } from "@stellar/stellar-sdk";
 
 type SessionState = {
   agent: `0x${string}`;
@@ -144,7 +145,6 @@ export class SettlementWriterService {
 
     if (this.isStellar) {
       // Stellar: keypair from S… secret; submit via Soroban client.
-      const { Keypair } = require("@stellar/stellar-sdk");
       this.stellarKeypair = Keypair.fromSecret(config.privateKey);
       this.signerAddress = this.stellarKeypair.publicKey();
       this.providerAddress =

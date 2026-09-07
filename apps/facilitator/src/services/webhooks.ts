@@ -5,7 +5,7 @@
 // ============================================================
 
 import { createHmac, timingSafeEqual } from "crypto";
-import type { SubscriptionEventData } from "./events";
+import type { SubscriptionEventData } from "./events.js";
 
 function resolveWebhookEventName(event: SubscriptionEventData): string {
   switch (event.type) {

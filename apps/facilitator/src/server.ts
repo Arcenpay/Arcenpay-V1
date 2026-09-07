@@ -10,6 +10,9 @@ import dotenv from "dotenv";
 import fs from "fs";
 import path from "path";
 import { randomUUID } from "node:crypto";
+import { createRequire } from "node:module";
+
+const require = createRequire(import.meta.url);
 
 // Multi-chain deployments run one facilitator PROCESS per chainId (see
 // architecture note in @arcenpay/internal-core chains.ts). Set
@@ -3277,11 +3280,22 @@ app.get("/health", async (_req, res) => {
 
 app.get("/info", (_req, res) => {
   const networkLabel =
-    getChainFamily(CHAIN_ID) === "stellar"
+    process.env.X402_NETWORK ||
+    (getChainFamily(CHAIN_ID) === "stellar"
       ? CHAIN_ID === 9_000_000
         ? "stellar-mainnet"
         : "stellar-testnet"
-      : process.env.X402_NETWORK || "base-sepolia";
+      : CHAIN_ID === 677
+        ? "bot-mainnet"
+        : CHAIN_ID === 968
+          ? "bot-testnet"
+          : CHAIN_ID === 5042002
+            ? "arc-testnet"
+            : CHAIN_ID === 8453
+              ? "base-mainnet"
+              : CHAIN_ID === 11155111
+                ? "ethereum-sepolia"
+                : "base-sepolia");
   res.json({
     protocol: "ArcenPay + ZKVUB",
     version: "0.1.0",
@@ -3354,12 +3368,9 @@ app.use(
     // picks the correct family branch (EVM EIP-712 vs Stellar ed25519) and
     // the right SessionVault balance-check contract.
     chainId: CHAIN_ID,
-    // Only pass an explicit network for EVM chains. For Stellar, omit it so
-    // the middleware does not try to map a synthetic chainId to an EVM
-    // network name (CHAIN_ID_TO_NETWORK has no Stellar entries).
-    ...(getChainFamily(CHAIN_ID) === "evm"
-      ? { network: process.env.X402_NETWORK || "base-sepolia" }
-      : {}),
+    // Pass explicit network override only if configured; otherwise x402Middleware
+    // automatically infers the correct network matching CHAIN_ID.
+    ...(process.env.X402_NETWORK ? { network: process.env.X402_NETWORK } : {}),
     failOpenOnBalanceCheck: process.env.X402_FAIL_OPEN_BALANCE_CHECK === "true",
     ...(settlementWriter
       ? {
