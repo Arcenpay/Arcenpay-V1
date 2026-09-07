@@ -1,4 +1,5 @@
 "use client";
+import { apiFetch } from "@/lib/api-client";
 
 import { useState, useEffect, useCallback } from "react";
 import { cn } from "@/lib/utils";
@@ -855,7 +856,7 @@ function CreateFeatureSheet({
     setError("");
 
     try {
-      const res = await fetch("/api/v1/features", {
+      const res = await apiFetch("/api/v1/features", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -1126,7 +1127,7 @@ function EditFeatureSheet({
     setError("");
 
     try {
-      const res = await fetch(`/api/v1/features/${feature.id}`, {
+      const res = await apiFetch(`/api/v1/features/${feature.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -1297,7 +1298,7 @@ export function FeaturesSection() {
   const fetchFeatures = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/v1/features");
+      const res = await apiFetch("/api/v1/features");
       if (res.ok) {
         const data = (await res.json()) as { features: Feature[] };
         setFeatures(data.features ?? []);
@@ -1319,7 +1320,7 @@ export function FeaturesSection() {
 
   const handleDelete = async (id: string) => {
     try {
-      const res = await fetch(`/api/v1/features/${id}`, { method: "DELETE" });
+      const res = await apiFetch(`/api/v1/features/${id}`, { method: "DELETE" });
       if (!res.ok) {
         const data = (await res.json().catch(() => ({}))) as { error?: string };
         throw new Error(data.error ?? "Could not delete feature");

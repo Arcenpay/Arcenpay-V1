@@ -1,4 +1,5 @@
 "use client";
+import { apiFetch } from "@/lib/api-client";
 
 import React, { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
@@ -345,7 +346,7 @@ async function fetchSmartAccountConfig(chainId: number): Promise<{
   try {
     for (const route of candidateRoutes) {
       for (const query of candidateQueries) {
-        const res = await fetch(`${route}?${query}`);
+        const res = await apiFetch(`${route}?${query}`);
         if (!res.ok) {
           const detail = await res
             .json()
@@ -564,7 +565,7 @@ function CreatePlanDialog({
     }
     setLoading(true);
     try {
-      const res = await fetch("/api/catalog/plans", {
+      const res = await apiFetch("/api/catalog/plans", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -1453,7 +1454,7 @@ function CreateAddOnDialog({
     }
     setLoading(true);
     try {
-      const res = await fetch("/api/catalog/add-ons", {
+      const res = await apiFetch("/api/catalog/add-ons", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -2189,7 +2190,7 @@ function CreateCreditTypeDialog({
     setLoading(true);
     try {
       const unitName = form.unitNameSingle.trim();
-      const res = await fetch("/api/catalog/credits", {
+      const res = await apiFetch("/api/catalog/credits", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -2745,7 +2746,7 @@ function EditAddOnDialog({
     }
     setLoading(true);
     try {
-      const res = await fetch("/api/catalog/add-ons", {
+      const res = await apiFetch("/api/catalog/add-ons", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -3069,7 +3070,7 @@ function EditCreditTypeDialog({
     }
     setLoading(true);
     try {
-      const res = await fetch("/api/catalog/credits", {
+      const res = await apiFetch("/api/catalog/credits", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -3400,7 +3401,7 @@ function PlansTable({
     try {
       const params = new URLSearchParams({ environmentMode: env });
       if (statusFilter) params.set("status", statusFilter);
-      const res = await fetch(`/api/catalog/plans?${params}`);
+      const res = await apiFetch(`/api/catalog/plans?${params}`);
       if (res.ok) {
         const data = await res.json();
         setPlans(data.plans ?? []);
@@ -3423,7 +3424,7 @@ function PlansTable({
   async function updateStatus(id: string, status: CatalogStatus) {
     setUpdating(id);
     try {
-      const res = await fetch("/api/catalog/plans", {
+      const res = await apiFetch("/api/catalog/plans", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id, status }),
@@ -3461,7 +3462,7 @@ function PlansTable({
     setSyncingPlanId(plan.id);
     try {
       // 1. Fetch nonce and contract info
-      const nonceRes = await fetch(`/api/catalog/plans/${plan.id}/sign-nonce`);
+      const nonceRes = await apiFetch(`/api/catalog/plans/${plan.id}/sign-nonce`);
       if (!nonceRes.ok) {
         const nonceErr = await nonceRes.json().catch(() => ({}));
         throw new Error(nonceErr.error || "Failed to get signing nonce");
@@ -3560,7 +3561,7 @@ function PlansTable({
         const txHash = sentTx.sendTransactionResponse?.hash ?? "";
 
         // 2. Confirm with backend
-        const confirmRes = await fetch(
+        const confirmRes = await apiFetch(
           `/api/catalog/plans/${plan.id}/register-on-chain`,
           {
             method: "POST",
@@ -3619,7 +3620,7 @@ function PlansTable({
       if (signingRequired) {
         // Verify the connected wallet matches the stored provider wallet
         try {
-          const walletRes = await fetch("/api/auth/wallet-status");
+          const walletRes = await apiFetch("/api/auth/wallet-status");
           if (walletRes.ok) {
             const { storedWallet } = await walletRes.json();
             if (
@@ -3704,7 +3705,7 @@ function PlansTable({
         : undefined;
 
       // 4. Submit to API with signature
-      const res = await fetch(
+      const res = await apiFetch(
         `/api/catalog/plans/${plan.id}/register-on-chain`,
         {
           method: "POST",
@@ -3860,7 +3861,7 @@ function PlansTable({
           }
         }
 
-        const confirmRes = await fetch(
+        const confirmRes = await apiFetch(
           `/api/catalog/plans/${plan.id}/chain-confirm`,
           {
             method: "POST",
@@ -3945,7 +3946,7 @@ function PlansTable({
 
     setDeletingPlanId(plan.id);
     try {
-      const res = await fetch("/api/catalog/plans", {
+      const res = await apiFetch("/api/catalog/plans", {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id: plan.id }),
@@ -4301,7 +4302,7 @@ function AddOnsTable({
     try {
       const params = new URLSearchParams({ environmentMode: env });
       if (statusFilter) params.set("status", statusFilter);
-      const res = await fetch(`/api/catalog/add-ons?${params}`);
+      const res = await apiFetch(`/api/catalog/add-ons?${params}`);
       if (res.ok) {
         const data = await res.json();
         setAddOns(data.addOns ?? []);
@@ -4324,7 +4325,7 @@ function AddOnsTable({
   const loadEntitlements = useCallback(async (addonId: string) => {
     setEntLoading(true);
     try {
-      const res = await fetch(`/api/catalog/add-ons/${addonId}/entitlements`);
+      const res = await apiFetch(`/api/catalog/add-ons/${addonId}/entitlements`);
       if (res.ok) {
         const data = await res.json();
         const ents: Entitlement[] = data.entitlements ?? [];
@@ -4347,7 +4348,7 @@ function AddOnsTable({
     if (addOns.length === 0) return;
     Promise.all(
       addOns.map((addon) =>
-        fetch(`/api/catalog/add-ons/${addon.id}/entitlements`)
+        apiFetch(`/api/catalog/add-ons/${addon.id}/entitlements`)
           .then((r) => (r.ok ? r.json() : null))
           .then((data) => ({
             id: addon.id,
@@ -4371,7 +4372,7 @@ function AddOnsTable({
   useEffect(() => {
     if (!addEntOpen || !address) return;
     setFlagsLoading(true);
-    fetch(`/api/entitlements/provider/${address}/flags`)
+    apiFetch(`/api/entitlements/provider/${address}/flags`)
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
         if (data?.flags) setFeatureFlags(data.flags as FeatureFlag[]);
@@ -4397,7 +4398,7 @@ function AddOnsTable({
   const deleteEntitlement = async (addonId: string, featureKey: string) => {
     setDeletingKey(featureKey);
     try {
-      const res = await fetch(
+      const res = await apiFetch(
         `/api/catalog/add-ons/${addonId}/entitlements?featureKey=${featureKey}`,
         { method: "DELETE" },
       );
@@ -4422,7 +4423,7 @@ function AddOnsTable({
     );
     setTogglingKey(featureKey);
     try {
-      await fetch(`/api/catalog/add-ons/${addonId}/entitlements`, {
+      await apiFetch(`/api/catalog/add-ons/${addonId}/entitlements`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ featureKey, enabled }),
@@ -4462,7 +4463,7 @@ function AddOnsTable({
       let val: boolean | number | null = null;
       if (addEntForm.type === "BOOLEAN") val = addEntForm.enabled;
       else if (addEntForm.type === "NUMERIC") val = Number(addEntForm.value);
-      const res = await fetch(
+      const res = await apiFetch(
         `/api/catalog/add-ons/${entAddon.id}/entitlements`,
         {
           method: "POST",
@@ -4505,7 +4506,7 @@ function AddOnsTable({
     setCopyingEntitlements(true);
     setCopyFromOpen(false);
     try {
-      const res = await fetch(
+      const res = await apiFetch(
         `/api/catalog/add-ons/${sourceAddonId}/entitlements`,
       );
       if (!res.ok) {
@@ -4520,7 +4521,7 @@ function AddOnsTable({
       }
       await Promise.allSettled(
         sourceEnts.map((ent) =>
-          fetch(`/api/catalog/add-ons/${entAddon.id}/entitlements`, {
+          apiFetch(`/api/catalog/add-ons/${entAddon.id}/entitlements`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -4547,7 +4548,7 @@ function AddOnsTable({
   async function updateStatus(id: string, status: CatalogStatus) {
     setUpdating(id);
     try {
-      const res = await fetch("/api/catalog/add-ons", {
+      const res = await apiFetch("/api/catalog/add-ons", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id, status }),
@@ -4561,7 +4562,7 @@ function AddOnsTable({
   async function handleDelete(id: string) {
     setUpdating(id);
     try {
-      const res = await fetch("/api/catalog/add-ons", {
+      const res = await apiFetch("/api/catalog/add-ons", {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id }),
@@ -5157,7 +5158,7 @@ function CreditTypesTable({
     try {
       const params = new URLSearchParams({ environmentMode: env });
       if (statusFilter) params.set("status", statusFilter);
-      const res = await fetch(`/api/catalog/credits?${params}`);
+      const res = await apiFetch(`/api/catalog/credits?${params}`);
       if (res.ok) {
         const data = await res.json();
         setCreditTypes(data.creditTypes ?? []);
@@ -5180,7 +5181,7 @@ function CreditTypesTable({
   async function updateStatus(id: string, status: CatalogStatus) {
     setUpdating(id);
     try {
-      const res = await fetch("/api/catalog/credits", {
+      const res = await apiFetch("/api/catalog/credits", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id, status }),
@@ -5194,7 +5195,7 @@ function CreditTypesTable({
   async function handleDelete(id: string) {
     setDeleting(id);
     try {
-      const res = await fetch("/api/catalog/credits", {
+      const res = await apiFetch("/api/catalog/credits", {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id }),
@@ -5495,7 +5496,7 @@ function ConfigurationTab() {
       setLoadingConfig(true);
       setConfigError(null);
       try {
-        const response = await fetch("/api/catalog/config", {
+        const response = await apiFetch("/api/catalog/config", {
           cache: "no-store",
         });
         const data = await response.json().catch(() => ({}));
@@ -5611,7 +5612,7 @@ function ConfigurationTab() {
     setSavingConfig(true);
     setConfigError(null);
     try {
-      const res = await fetch("/api/catalog/config", {
+      const res = await apiFetch("/api/catalog/config", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -6389,7 +6390,7 @@ function AddEntitlementDialog({
   useEffect(() => {
     if (!open) return;
     setFeaturesLoading(true);
-    fetch("/api/v1/features")
+    apiFetch("/api/v1/features")
       .then((r) => (r.ok ? r.json() : { features: [] }))
       .then((d: { features?: CatalogFeatureDef[] }) => {
         const added = featRef.current ?? [];
@@ -6465,7 +6466,7 @@ function AddEntitlementDialog({
       let val: boolean | number | null = null;
       if (form.type === "BOOLEAN") val = form.enabled;
       else if (form.type === "NUMERIC") val = Number(form.value);
-      const res = await fetch(`/api/catalog/plans/${plan.id}/entitlements`, {
+      const res = await apiFetch(`/api/catalog/plans/${plan.id}/entitlements`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -6954,7 +6955,7 @@ function EditPlanDialog({
     }
     setLoading(true);
     try {
-      const res = await fetch("/api/catalog/plans", {
+      const res = await apiFetch("/api/catalog/plans", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -7842,7 +7843,7 @@ function AddCreditGrantDialog({
     if (!open) return;
     setCreditsLoading(true);
     // Load all credits (published + draft) so users can always link them
-    fetch(`/api/catalog/credits?environmentMode=${envMode}`)
+    apiFetch(`/api/catalog/credits?environmentMode=${envMode}`)
       .then((r) => (r.ok ? r.json() : { creditTypes: [] }))
       .then((d: { creditTypes?: CatalogCreditType[] }) =>
         setCreditTypes(d.creditTypes ?? []),
@@ -7860,7 +7861,7 @@ function AddCreditGrantDialog({
     if (!selectedId || !amount) return;
     setLoading(true);
     try {
-      const res = await fetch(`/api/catalog/plans/${plan.id}/credit-grants`, {
+      const res = await apiFetch(`/api/catalog/plans/${plan.id}/credit-grants`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -8094,7 +8095,7 @@ function PlanDetailView({
   const loadEntitlements = useCallback(async () => {
     setEntLoading(true);
     try {
-      const res = await fetch(`/api/catalog/plans/${plan.id}/entitlements`);
+      const res = await apiFetch(`/api/catalog/plans/${plan.id}/entitlements`);
       if (res.ok) {
         const data = (await res.json()) as { entitlements?: Entitlement[] };
         setEntitlements(data.entitlements ?? []);
@@ -8107,7 +8108,7 @@ function PlanDetailView({
   const loadCreditGrants = useCallback(async () => {
     setCgLoading(true);
     try {
-      const res = await fetch(`/api/catalog/plans/${plan.id}/credit-grants`);
+      const res = await apiFetch(`/api/catalog/plans/${plan.id}/credit-grants`);
       if (res.ok) {
         const data = await res.json();
         setCreditGrants(data.creditGrants ?? []);
@@ -8120,7 +8121,7 @@ function PlanDetailView({
   const loadCompanies = useCallback(async () => {
     setCompaniesLoading(true);
     try {
-      const res = await fetch(`/api/catalog/plans/${plan.id}/companies`, {
+      const res = await apiFetch(`/api/catalog/plans/${plan.id}/companies`, {
         cache: "no-store",
       });
       if (res.ok) {
@@ -8146,7 +8147,7 @@ function PlanDetailView({
   async function deleteEntitlement(featureKey: string) {
     setDeletingKey(featureKey);
     try {
-      const res = await fetch(
+      const res = await apiFetch(
         `/api/catalog/plans/${plan.id}/entitlements?featureKey=${featureKey}`,
         { method: "DELETE" },
       );
@@ -8164,7 +8165,7 @@ function PlanDetailView({
   async function toggleEntitlement(featureKey: string, enabled: boolean) {
     setToggling(featureKey);
     try {
-      await fetch(`/api/catalog/plans/${plan.id}/entitlements`, {
+      await apiFetch(`/api/catalog/plans/${plan.id}/entitlements`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ featureKey, enabled }),
@@ -8178,7 +8179,7 @@ function PlanDetailView({
   async function deleteCreditGrant(creditTypeId: string) {
     if (!window.confirm("Remove this credit grant?")) return;
     try {
-      const res = await fetch(
+      const res = await apiFetch(
         `/api/catalog/plans/${plan.id}/credit-grants?creditTypeId=${creditTypeId}`,
         { method: "DELETE" },
       );
@@ -8317,7 +8318,7 @@ function PlanDetailView({
                   {plan.status === "DRAFT" && (
                     <DropdownMenuItem
                       onClick={async () => {
-                        await fetch("/api/catalog/plans", {
+                        await apiFetch("/api/catalog/plans", {
                           method: "PUT",
                           headers: { "Content-Type": "application/json" },
                           body: JSON.stringify({
@@ -8335,7 +8336,7 @@ function PlanDetailView({
                   {plan.status !== "ARCHIVED" && (
                     <DropdownMenuItem
                       onClick={async () => {
-                        await fetch("/api/catalog/plans", {
+                        await apiFetch("/api/catalog/plans", {
                           method: "PUT",
                           headers: { "Content-Type": "application/json" },
                           body: JSON.stringify({
@@ -8358,7 +8359,7 @@ function PlanDetailView({
                           `Delete plan "${plan.name}"? This cannot be undone.`,
                         );
                         if (!confirmed) return;
-                        const res = await fetch("/api/catalog/plans", {
+                        const res = await apiFetch("/api/catalog/plans", {
                           method: "DELETE",
                           headers: { "Content-Type": "application/json" },
                           body: JSON.stringify({ id: plan.id }),
@@ -9040,7 +9041,7 @@ function AddOnDetailView({
     async function loadGrants() {
       try {
         setGrantsLoading(true);
-        const res = await fetch(`/api/catalog/add-ons/${addon.id}/grants`, {
+        const res = await apiFetch(`/api/catalog/add-ons/${addon.id}/grants`, {
           cache: "no-store",
         });
         const payload = (await res.json()) as {
@@ -9106,7 +9107,7 @@ function AddOnDetailView({
     }
     setCreatingCheckoutLink(true);
     try {
-      const res = await fetch("/api/v1/payment-links", {
+      const res = await apiFetch("/api/v1/payment-links", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -9254,7 +9255,7 @@ function AddOnDetailView({
                   {addon.status === "DRAFT" && (
                     <DropdownMenuItem
                       onClick={async () => {
-                        await fetch("/api/catalog/add-ons", {
+                        await apiFetch("/api/catalog/add-ons", {
                           method: "PUT",
                           headers: { "Content-Type": "application/json" },
                           body: JSON.stringify({
@@ -9272,7 +9273,7 @@ function AddOnDetailView({
                   {addon.status !== "ARCHIVED" && (
                     <DropdownMenuItem
                       onClick={async () => {
-                        await fetch("/api/catalog/add-ons", {
+                        await apiFetch("/api/catalog/add-ons", {
                           method: "PUT",
                           headers: { "Content-Type": "application/json" },
                           body: JSON.stringify({
@@ -9291,7 +9292,7 @@ function AddOnDetailView({
                   {addon.status !== "PUBLISHED" && (
                     <DropdownMenuItem
                       onClick={async () => {
-                        await fetch("/api/catalog/add-ons", {
+                        await apiFetch("/api/catalog/add-ons", {
                           method: "DELETE",
                           headers: { "Content-Type": "application/json" },
                           body: JSON.stringify({ id: addon.id }),
@@ -9548,7 +9549,7 @@ function CreateBundleDialog({
     e.preventDefault();
     setLoading(true);
     try {
-      const res = await fetch(`/api/catalog/credits/${creditId}/bundles`, {
+      const res = await apiFetch(`/api/catalog/credits/${creditId}/bundles`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -9669,7 +9670,7 @@ function AddPlanGrantDialog({
 
   useEffect(() => {
     if (open) {
-      fetch(`/api/catalog/plans?environmentMode=${envMode}&status=PUBLISHED`)
+      apiFetch(`/api/catalog/plans?environmentMode=${envMode}&status=PUBLISHED`)
         .then((res) => res.json())
         .then((data) => setPlans(data.plans ?? []));
     }
@@ -9680,7 +9681,7 @@ function AddPlanGrantDialog({
     if (!selectedPlanId) return;
     setLoading(true);
     try {
-      const res = await fetch(`/api/catalog/credits/${creditId}/plan-grants`, {
+      const res = await apiFetch(`/api/catalog/credits/${creditId}/plan-grants`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -9792,8 +9793,8 @@ function CreditDetailView({
     setLoadingData(true);
     try {
       const [bRes, pRes] = await Promise.all([
-        fetch(`/api/catalog/credits/${credit.id}/bundles`),
-        fetch(`/api/catalog/credits/${credit.id}/plan-grants`),
+        apiFetch(`/api/catalog/credits/${credit.id}/bundles`),
+        apiFetch(`/api/catalog/credits/${credit.id}/plan-grants`),
       ]);
       if (bRes.ok) {
         const d = await bRes.json();
@@ -9815,7 +9816,7 @@ function CreditDetailView({
   async function deleteBundle(bundleId: string) {
     if (!window.confirm("Remove this bundle?")) return;
     try {
-      await fetch(
+      await apiFetch(
         `/api/catalog/credits/${credit.id}/bundles?bundleId=${bundleId}`,
         {
           method: "DELETE",
@@ -9831,7 +9832,7 @@ function CreditDetailView({
   async function deletePlanGrant(planId: string) {
     if (!window.confirm("Remove this plan grant?")) return;
     try {
-      await fetch(
+      await apiFetch(
         `/api/catalog/credits/${credit.id}/plan-grants?planId=${planId}`,
         {
           method: "DELETE",
@@ -9924,7 +9925,7 @@ function CreditDetailView({
                   {credit.status === "DRAFT" && (
                     <DropdownMenuItem
                       onClick={async () => {
-                        await fetch("/api/catalog/credits", {
+                        await apiFetch("/api/catalog/credits", {
                           method: "PUT",
                           headers: { "Content-Type": "application/json" },
                           body: JSON.stringify({
@@ -9942,7 +9943,7 @@ function CreditDetailView({
                   {credit.status !== "ARCHIVED" && (
                     <DropdownMenuItem
                       onClick={async () => {
-                        await fetch("/api/catalog/credits", {
+                        await apiFetch("/api/catalog/credits", {
                           method: "PUT",
                           headers: { "Content-Type": "application/json" },
                           body: JSON.stringify({
@@ -9961,7 +9962,7 @@ function CreditDetailView({
                   {credit.status !== "PUBLISHED" && (
                     <DropdownMenuItem
                       onClick={async () => {
-                        await fetch("/api/catalog/credits", {
+                        await apiFetch("/api/catalog/credits", {
                           method: "DELETE",
                           headers: { "Content-Type": "application/json" },
                           body: JSON.stringify({ id: credit.id }),
@@ -10206,7 +10207,7 @@ export function CatalogSection() {
   const loadPlans = useCallback(async () => {
     setPlansLoading(true);
     try {
-      const res = await fetch(`/api/catalog/plans?environmentMode=${envMode}`);
+      const res = await apiFetch(`/api/catalog/plans?environmentMode=${envMode}`);
       if (res.ok) {
         const d = await res.json();
         setPlans(d.plans ?? []);
@@ -10219,7 +10220,7 @@ export function CatalogSection() {
   const loadAddOns = useCallback(async () => {
     setAddOnsLoading(true);
     try {
-      const res = await fetch(
+      const res = await apiFetch(
         `/api/catalog/add-ons?environmentMode=${envMode}`,
       );
       if (res.ok) {
@@ -10252,7 +10253,7 @@ export function CatalogSection() {
   async function archiveAddOn(id: string) {
     setUpdatingAddOnId(id);
     try {
-      await fetch("/api/catalog/add-ons", {
+      await apiFetch("/api/catalog/add-ons", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id, status: "ARCHIVED" }),
@@ -10515,7 +10516,7 @@ export function CatalogSection() {
                               {plan.status === "DRAFT" && (
                                 <DropdownMenuItem
                                   onClick={async () => {
-                                    await fetch("/api/catalog/plans", {
+                                    await apiFetch("/api/catalog/plans", {
                                       method: "PUT",
                                       headers: {
                                         "Content-Type": "application/json",
@@ -10535,7 +10536,7 @@ export function CatalogSection() {
                               {plan.status !== "ARCHIVED" && (
                                 <DropdownMenuItem
                                   onClick={async () => {
-                                    await fetch("/api/catalog/plans", {
+                                    await apiFetch("/api/catalog/plans", {
                                       method: "PUT",
                                       headers: {
                                         "Content-Type": "application/json",
@@ -10561,7 +10562,7 @@ export function CatalogSection() {
                                         `Delete plan "${plan.name}"? This cannot be undone.`,
                                       );
                                       if (!confirmed) return;
-                                      const res = await fetch(
+                                      const res = await apiFetch(
                                         "/api/catalog/plans",
                                         {
                                           method: "DELETE",
@@ -10716,7 +10717,7 @@ export function CatalogSection() {
                               <DropdownMenuItem
                                 onClick={async () => {
                                   setUpdatingAddOnId(addon.id);
-                                  await fetch("/api/catalog/add-ons", {
+                                  await apiFetch("/api/catalog/add-ons", {
                                     method: "PUT",
                                     headers: {
                                       "Content-Type": "application/json",

@@ -1,4 +1,5 @@
 'use client';
+import { apiFetch } from "@/lib/api-client";
 
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { useDashboardSession, type DashboardSessionPayload } from '@/hooks/use-dashboard-session';
@@ -42,7 +43,7 @@ export function EnvironmentProvider({
 
   const fetchEnvironmentMeta = useCallback(async () => {
     try {
-      const res = await fetch('/api/environments', {
+      const res = await apiFetch('/api/environments', {
         cache: 'no-store',
       });
       if (!res.ok) return;
@@ -70,7 +71,7 @@ export function EnvironmentProvider({
 
   const selectEnvironment = useCallback(
     async (environmentId: string) => {
-      const response = await fetch('/api/environments/select', {
+      const response = await apiFetch('/api/environments/select', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ environmentId }),

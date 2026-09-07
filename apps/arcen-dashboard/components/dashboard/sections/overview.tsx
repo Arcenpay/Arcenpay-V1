@@ -1,4 +1,5 @@
 "use client";
+import { apiFetch } from "@/lib/api-client";
 
 import { useState, useEffect } from "react";
 import { useAccount } from "wagmi";
@@ -161,7 +162,7 @@ export function OverviewSection() {
           chainId: String(effectiveChainId),
           environmentMode: envMode,
         });
-        const res = await fetch(`/api/platform/overview?${params.toString()}`, {
+        const res = await apiFetch(`/api/platform/overview?${params.toString()}`, {
           cache: "no-store",
         });
         if (!res.ok) {
@@ -208,7 +209,7 @@ export function OverviewSection() {
           params.set("granularity", "monthly");
           params.set("months", "24");
         }
-        const res = await fetch(`/api/platform/revenue-series?${params.toString()}`, {
+        const res = await apiFetch(`/api/platform/revenue-series?${params.toString()}`, {
           cache: "no-store",
         });
         if (!res.ok) {

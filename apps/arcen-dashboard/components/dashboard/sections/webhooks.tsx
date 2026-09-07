@@ -1,4 +1,5 @@
 "use client";
+import { apiFetch } from "@/lib/api-client";
 
 import { useState, useEffect, useCallback } from "react";
 import {
@@ -182,7 +183,7 @@ export function WebhooksSection() {
 
   // Load existing config
   useEffect(() => {
-    fetch("/api/provider/webhooks")
+    apiFetch("/api/provider/webhooks")
       .then((r) => (r.ok ? r.json() : null))
       .then((data: WebhookConfig | null) => {
         if (!data) return;
@@ -203,7 +204,7 @@ export function WebhooksSection() {
   const loadDeliveries = useCallback(async () => {
     setLoadingLog(true);
     try {
-      const res = await fetch("/api/webhooks/log?limit=50");
+      const res = await apiFetch("/api/webhooks/log?limit=50");
       if (!res.ok) return;
       const data = (await res.json()) as DeliveryLogResponse;
       const rows: DeliveryEntry[] = (
@@ -283,7 +284,7 @@ export function WebhooksSection() {
     }
     setIsSaving(true);
     try {
-      const res = await fetch("/api/provider/webhooks", {
+      const res = await apiFetch("/api/provider/webhooks", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -313,7 +314,7 @@ export function WebhooksSection() {
     setIsRotating(true);
     setNewSecret(null);
     try {
-      const res = await fetch("/api/provider/webhooks/secret", {
+      const res = await apiFetch("/api/provider/webhooks/secret", {
         method: "POST",
       });
       if (!res.ok) throw new Error("Failed to rotate secret");
@@ -347,7 +348,7 @@ export function WebhooksSection() {
     setIsTesting(true);
     setTestResult(null);
     try {
-      const res = await fetch("/api/webhooks/test", {
+      const res = await apiFetch("/api/webhooks/test", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ url: webhookUrl.trim() }),

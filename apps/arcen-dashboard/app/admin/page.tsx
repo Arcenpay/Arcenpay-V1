@@ -1,4 +1,5 @@
 "use client";
+import { apiFetch } from "@/lib/api-client";
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
@@ -163,7 +164,7 @@ export default function AdminPage() {
         headers["x-admin-secret"] = secretToTest;
       }
 
-      const res = await fetch("/api/admin/activation-keys/verify-secret", {
+      const res = await apiFetch("/api/admin/activation-keys/verify-secret", {
         method: "POST",
         headers,
       });
@@ -201,10 +202,10 @@ export default function AdminPage() {
       if (tierFilter !== "ALL") queryParams.set("tier", tierFilter);
 
       const [keysRes, statsRes] = await Promise.all([
-        fetch(`/api/admin/activation-keys?${queryParams.toString()}`, {
+        apiFetch(`/api/admin/activation-keys?${queryParams.toString()}`, {
           headers: getAuthHeaders(),
         }),
-        fetch("/api/admin/activation-keys/stats", {
+        apiFetch("/api/admin/activation-keys/stats", {
           headers: getAuthHeaders(),
         }),
       ]);
@@ -274,7 +275,7 @@ export default function AdminPage() {
         notes: newKeyForm.notes.trim() || undefined,
       };
 
-      const res = await fetch("/api/admin/activation-keys", {
+      const res = await apiFetch("/api/admin/activation-keys", {
         method: "POST",
         headers: getAuthHeaders(),
         body: JSON.stringify(payload),
@@ -312,7 +313,7 @@ export default function AdminPage() {
     }
 
     try {
-      const res = await fetch(`/api/admin/activation-keys/${keyItem.id}/revoke`, {
+      const res = await apiFetch(`/api/admin/activation-keys/${keyItem.id}/revoke`, {
         method: "POST",
         headers: getAuthHeaders(),
         body: JSON.stringify({ reason: "Revoked by platform administrator via Admin Console" }),
@@ -332,7 +333,7 @@ export default function AdminPage() {
 
   const handleReactivate = async (keyItem: ActivationKeyItem) => {
     try {
-      const res = await fetch(`/api/admin/activation-keys/${keyItem.id}/reactivate`, {
+      const res = await apiFetch(`/api/admin/activation-keys/${keyItem.id}/reactivate`, {
         method: "POST",
         headers: getAuthHeaders(),
       });
@@ -353,7 +354,7 @@ export default function AdminPage() {
     setSelectedKey(keyItem);
     setLoadingRedemptions(true);
     try {
-      const res = await fetch(`/api/admin/activation-keys/${keyItem.id}`, {
+      const res = await apiFetch(`/api/admin/activation-keys/${keyItem.id}`, {
         headers: getAuthHeaders(),
       });
       const data = await res.json();

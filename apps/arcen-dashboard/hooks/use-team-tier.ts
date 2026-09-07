@@ -1,4 +1,5 @@
 "use client";
+import { apiFetch } from "@/lib/api-client";
 
 import { useState, useEffect } from "react";
 
@@ -79,7 +80,7 @@ export function useTeamTier(): {
 
     let cancelled = false;
 
-    fetch("/api/platform/tier")
+    apiFetch("/api/platform/tier")
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (cancelled || !data) return;

@@ -1,4 +1,5 @@
 "use client";
+import { apiFetch } from "@/lib/api-client";
 
 import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent } from "@/components/ui/card";
@@ -179,7 +180,7 @@ export function SessionsSection() {
         chainId: String(effectiveChainId),
         environmentMode: envMode,
       });
-      const res = await fetch(`/api/platform/sessions?${params.toString()}`, {
+      const res = await apiFetch(`/api/platform/sessions?${params.toString()}`, {
         cache: "no-store",
       });
       if (!res.ok) {

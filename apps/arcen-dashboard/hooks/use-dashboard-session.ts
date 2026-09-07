@@ -1,4 +1,5 @@
 "use client";
+import { apiFetch } from "@/lib/api-client";
 
 import { useCallback, useEffect, useState } from "react";
 
@@ -52,7 +53,7 @@ export function useDashboardSession() {
   const refresh = useCallback(async () => {
     setIsLoading(true);
     try {
-      const response = await fetch("/api/auth/session", {
+      const response = await apiFetch("/api/auth/session", {
         credentials: "include",
         cache: "no-store",
       });

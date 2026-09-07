@@ -1,4 +1,5 @@
 "use client";
+import { apiFetch } from "@/lib/api-client";
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -48,7 +49,7 @@ export default function ProviderProfilePage() {
   const [showBilling, setShowBilling] = useState(false);
 
   useEffect(() => {
-    fetch("/api/auth/session")
+    apiFetch("/api/auth/session")
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         const isAdmin =
@@ -66,7 +67,7 @@ export default function ProviderProfilePage() {
   }, [router]);
 
   useEffect(() => {
-    fetch("/api/provider/profile")
+    apiFetch("/api/provider/profile")
       .then((res) => (res.ok ? res.json() : null))
       .then((profileData) => {
         if (profileData) {
@@ -146,7 +147,7 @@ export default function ProviderProfilePage() {
         taxId: taxId.trim() || undefined,
         gstin: gstin.trim().toUpperCase() || undefined,
       };
-      const res = await fetch("/api/provider/profile", {
+      const res = await apiFetch("/api/provider/profile", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),

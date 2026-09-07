@@ -1,4 +1,5 @@
 "use client";
+import { apiFetch } from "@/lib/api-client";
 
 import { useState, useEffect, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
@@ -333,8 +334,8 @@ export function SettingsSection() {
     try {
       setWorkspaceLoading(true);
       const [teamRes, invitesRes] = await Promise.all([
-        fetch("/api/team", { cache: "no-store" }),
-        fetch("/api/team/invites", { cache: "no-store" }),
+        apiFetch("/api/team", { cache: "no-store" }),
+        apiFetch("/api/team/invites", { cache: "no-store" }),
       ]);
 
       const teamPayload = teamRes.ok ? await teamRes.json() : null;
@@ -360,7 +361,7 @@ export function SettingsSection() {
 
   useEffect(() => {
     // Load all profile fields from the server — localStorage is no longer used
-    fetch("/api/provider/profile")
+    apiFetch("/api/provider/profile")
       .then((r) => (r.ok ? r.json() : null))
       .then((profile) => {
         if (!profile) return;
@@ -385,7 +386,7 @@ export function SettingsSection() {
         toast.error("Failed to load profile");
       });
     // Load notification preferences from server (source of truth — not localStorage)
-    fetch("/api/provider/notifications")
+    apiFetch("/api/provider/notifications")
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
         if (
@@ -457,7 +458,7 @@ export function SettingsSection() {
   const handleSaveProfile = async () => {
     setIsSaving(true);
     try {
-      const res = await fetch("/api/provider/profile", {
+      const res = await apiFetch("/api/provider/profile", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -495,7 +496,7 @@ export function SettingsSection() {
     );
     setNotifications(updated);
     try {
-      const response = await fetch("/api/provider/notifications", {
+      const response = await apiFetch("/api/provider/notifications", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ notifications: updated }),
@@ -558,7 +559,7 @@ export function SettingsSection() {
 
     setWorkspaceBusy(true);
     try {
-      const response = await fetch("/api/environments", {
+      const response = await apiFetch("/api/environments", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -590,7 +591,7 @@ export function SettingsSection() {
 
     setDeletingEnvironmentId(environmentId);
     try {
-      const response = await fetch("/api/environments", {
+      const response = await apiFetch("/api/environments", {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ environmentId }),
@@ -618,7 +619,7 @@ export function SettingsSection() {
 
     setWorkspaceBusy(true);
     try {
-      const response = await fetch("/api/team/invite", {
+      const response = await apiFetch("/api/team/invite", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -646,7 +647,7 @@ export function SettingsSection() {
   const handleRevokeInvite = async (invitationId: string, email: string) => {
     setWorkspaceBusy(true);
     try {
-      const response = await fetch(`/api/team/invites?id=${invitationId}`, {
+      const response = await apiFetch(`/api/team/invites?id=${invitationId}`, {
         method: "DELETE",
       });
       const payload = await response.json().catch(() => ({}));
@@ -667,7 +668,7 @@ export function SettingsSection() {
   const handleRemoveMember = async (userId: string, label: string) => {
     setWorkspaceBusy(true);
     try {
-      const response = await fetch(`/api/team/members?userId=${userId}`, {
+      const response = await apiFetch(`/api/team/members?userId=${userId}`, {
         method: "DELETE",
       });
       const payload = await response.json().catch(() => ({}));

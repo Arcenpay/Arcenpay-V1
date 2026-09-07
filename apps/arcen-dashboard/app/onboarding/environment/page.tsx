@@ -1,4 +1,5 @@
 "use client";
+import { apiFetch } from "@/lib/api-client";
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -86,7 +87,7 @@ export default function EnvironmentOnboardingPage() {
   }, [chainOptions, mode, selectedFamily]);
 
   useEffect(() => {
-    fetch("/api/environments", { cache: "no-store" })
+    apiFetch("/api/environments", { cache: "no-store" })
       .then((response) => (response.ok ? response.json() : null))
       .then((payload: { productionEnabled?: boolean } | null) => {
         setProductionEnabled(payload?.productionEnabled === true);
@@ -104,7 +105,7 @@ export default function EnvironmentOnboardingPage() {
     setSubmitting(true);
     setError(null);
     try {
-      const res = await fetch("/api/environments/select", {
+      const res = await apiFetch("/api/environments/select", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ environmentId }),
@@ -125,7 +126,7 @@ export default function EnvironmentOnboardingPage() {
     setSubmitting(true);
     setError(null);
     try {
-      const res = await fetch("/api/environments", {
+      const res = await apiFetch("/api/environments", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

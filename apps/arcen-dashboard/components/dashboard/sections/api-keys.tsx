@@ -1,4 +1,5 @@
 "use client";
+import { apiFetch } from "@/lib/api-client";
 
 import { useState, useEffect, useCallback } from "react";
 import { Key, Plus, Trash2, Copy, Check, AlertTriangle, Eye, EyeOff, ShieldCheck } from "lucide-react";
@@ -73,7 +74,7 @@ function ApiKeysContent() {
   const fetchKeys = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/v1/api-keys");
+      const res = await apiFetch("/api/v1/api-keys");
       if (res.ok) {
         const data = await res.json() as { data: ApiKey[] };
         setKeys(data.data);
@@ -89,7 +90,7 @@ function ApiKeysContent() {
     if (!createForm.name.trim()) return;
     setCreating(true);
     try {
-      const res = await fetch("/api/v1/api-keys", {
+      const res = await apiFetch("/api/v1/api-keys", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: createForm.name, description: createForm.description || undefined }),
@@ -110,7 +111,7 @@ function ApiKeysContent() {
     if (!confirm("Revoke this API key? This cannot be undone.")) return;
     setDeletingId(id);
     try {
-      await fetch(`/api/v1/api-keys?id=${id}`, { method: "DELETE" });
+      await apiFetch(`/api/v1/api-keys?id=${id}`, { method: "DELETE" });
       fetchKeys();
     } finally {
       setDeletingId(null);

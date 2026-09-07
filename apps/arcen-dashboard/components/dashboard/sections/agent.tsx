@@ -1,4 +1,5 @@
 "use client";
+import { apiFetch } from "@/lib/api-client";
 
 import React, { useState, useEffect } from "react";
 import { useAccount, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
@@ -172,7 +173,7 @@ function ApiKeysTab() {
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch("/api/v1/api-keys")
+    apiFetch("/api/v1/api-keys")
       .then((r) => r.json())
       .then((d) => setKeys(d.data ?? []))
       .catch(() => {
@@ -186,7 +187,7 @@ function ApiKeysTab() {
     if (!newKeyName.trim()) return;
     setCreating(true);
     try {
-      const res = await fetch("/api/v1/api-keys", {
+      const res = await apiFetch("/api/v1/api-keys", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: newKeyName }),
@@ -206,7 +207,7 @@ function ApiKeysTab() {
   };
 
   const handleDelete = async (id: string) => {
-    await fetch(`/api/v1/api-keys?id=${id}`, { method: "DELETE" });
+    await apiFetch(`/api/v1/api-keys?id=${id}`, { method: "DELETE" });
     setKeys((prev) => prev.filter((k) => k.id !== id));
   };
 
@@ -335,7 +336,7 @@ function SessionsTab() {
   const [expandedSession, setExpandedSession] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch("/api/platform/sessions")
+    apiFetch("/api/platform/sessions")
       .then((r) => r.json())
       .then((d: SessionsPayload) => {
         setSessions(d.sessions ?? []);
@@ -783,7 +784,7 @@ function PermissionsTab() {
     setSavingWallet(true);
     setSaveError(null);
     try {
-      const res = await fetch("/api/v1/agent/permissions", {
+      const res = await apiFetch("/api/v1/agent/permissions", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -814,7 +815,7 @@ function PermissionsTab() {
   };
 
   useEffect(() => {
-    fetch("/api/v1/agent/permissions")
+    apiFetch("/api/v1/agent/permissions")
       .then((r) => {
         if (!r.ok) throw new Error(`HTTP ${r.status}`);
         return r.json();
@@ -841,7 +842,7 @@ function PermissionsTab() {
     setSaved(false);
     setSaveError(null);
     try {
-      const res = await fetch("/api/v1/agent/permissions", {
+      const res = await apiFetch("/api/v1/agent/permissions", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -886,7 +887,7 @@ function PermissionsTab() {
     setTestingIdx(providerIndex);
     setTestResult(null);
     try {
-      const res = await fetch("/api/v1/agent/dispatch/test", {
+      const res = await apiFetch("/api/v1/agent/dispatch/test", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ provider }),
@@ -1422,7 +1423,7 @@ function DispatchHistoryTab() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch("/api/v1/agent/dispatch")
+    apiFetch("/api/v1/agent/dispatch")
       .then((r) => r.json())
       .then((d) => setRequests(d.requests ?? []))
       .catch(() => {

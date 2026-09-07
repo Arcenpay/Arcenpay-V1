@@ -1,4 +1,5 @@
 "use client";
+import { apiFetch } from "@/lib/api-client";
 
 import { useEffect, useMemo, useState, useTransition } from "react";
 import Image from "next/image";
@@ -124,7 +125,7 @@ export function EmailAuthFlow({
 
   useEffect(() => {
     if (step === "activate") {
-      fetch("/api/auth/session")
+      apiFetch("/api/auth/session")
         .then((res) => (res.ok ? res.json() : null))
         .then((data) => {
           if (data?.user?.email && !email) {
@@ -171,7 +172,7 @@ export function EmailAuthFlow({
   const verifyActivationKey = async (keyToVerify: string) => {
     setVerifyingKey(true);
     try {
-      const res = await fetch("/api/activation/verify", {
+      const res = await apiFetch("/api/activation/verify", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ key: keyToVerify }),
@@ -200,7 +201,7 @@ export function EmailAuthFlow({
 
     setRedeemingKey(true);
     try {
-      const res = await fetch("/api/activation/redeem", {
+      const res = await apiFetch("/api/activation/redeem", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ key: activationKey.trim() }),
@@ -224,7 +225,7 @@ export function EmailAuthFlow({
 
   const handleLogout = async () => {
     try {
-      await fetch("/api/auth/logout", { method: "POST" });
+      await apiFetch("/api/auth/logout", { method: "POST" });
     } catch {}
     window.location.href = "/login";
   };
@@ -245,7 +246,7 @@ export function EmailAuthFlow({
 
   const navigatePostAuth = async () => {
     try {
-      const sessionRes = await fetch("/api/auth/session");
+      const sessionRes = await apiFetch("/api/auth/session");
       if (sessionRes.ok) {
         const data = await sessionRes.json();
         const isAdmin =
@@ -276,7 +277,7 @@ export function EmailAuthFlow({
       setIsLinkingWallet(true);
       setError(null);
       try {
-        const nonceResponse = await fetch("/api/auth/nonce");
+        const nonceResponse = await apiFetch("/api/auth/nonce");
         if (!nonceResponse.ok)
           throw new Error("Could not start wallet verification.");
         const noncePayload = await nonceResponse.json();
@@ -288,7 +289,7 @@ export function EmailAuthFlow({
         const message = `ArcenPay Stellar Sign-In\n\nAddress: ${stellarWallet.address}\nNonce: ${nonce}\nIssued At: ${issuedAt}\nDomain: ${window.location.host}`;
         const { signedMessage } = await stellarWallet.signMessage(message);
 
-        const linkResponse = await fetch("/api/auth/link-wallet", {
+        const linkResponse = await apiFetch("/api/auth/link-wallet", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -339,7 +340,7 @@ export function EmailAuthFlow({
     setIsLinkingWallet(true);
     setError(null);
     try {
-      const nonceResponse = await fetch("/api/auth/nonce");
+      const nonceResponse = await apiFetch("/api/auth/nonce");
       if (!nonceResponse.ok) {
         throw new Error("Could not start wallet verification.");
       }
@@ -361,7 +362,7 @@ export function EmailAuthFlow({
       });
 
       const signature = await signMessageAsync({ message });
-      const linkResponse = await fetch("/api/auth/link-wallet", {
+      const linkResponse = await apiFetch("/api/auth/link-wallet", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -417,7 +418,7 @@ export function EmailAuthFlow({
 
     startTransition(async () => {
       setError(null);
-      const response = await fetch(backendApiUrl("/api/v1/auth/email/start"), {
+      const response = await apiFetch(backendApiUrl("/api/v1/auth/email/start"), {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
@@ -456,7 +457,7 @@ export function EmailAuthFlow({
   const submitCode = () => {
     startTransition(async () => {
       setError(null);
-      const response = await fetch(backendApiUrl("/api/v1/auth/email/verify"), {
+      const response = await apiFetch(backendApiUrl("/api/v1/auth/email/verify"), {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },

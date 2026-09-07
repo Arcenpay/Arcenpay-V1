@@ -1,4 +1,5 @@
 "use client";
+import { apiFetch } from "@/lib/api-client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { Activity, RefreshCw, Filter, ChevronDown, Zap, User, Flag } from "lucide-react";
@@ -141,7 +142,7 @@ export function EventsStreamSection() {
     try {
       const params = new URLSearchParams({ limit: "50" });
       if (filterType !== "all") params.set("eventType", filterType);
-      const res = await fetch(`/api/v1/events?${params}`, { cache: "no-store" });
+      const res = await apiFetch(`/api/v1/events?${params}`, { cache: "no-store" });
       if (res.ok) {
         const data = await res.json() as { data: EventRecord[] };
         setEvents(data.data);

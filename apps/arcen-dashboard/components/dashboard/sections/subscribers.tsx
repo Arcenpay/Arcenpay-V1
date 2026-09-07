@@ -1,4 +1,5 @@
 "use client";
+import { apiFetch } from "@/lib/api-client";
 
 import { useCallback, useEffect, useState } from "react";
 import { SkeletonList, SkeletonTable } from "@/components/ui/skeleton";
@@ -123,7 +124,7 @@ function CreateUserSheet({
     async function loadCompanies() {
       setLoadingCompanies(true);
       try {
-        const res = await fetch("/api/v1/companies?limit=100", { cache: "no-store" });
+        const res = await apiFetch("/api/v1/companies?limit=100", { cache: "no-store" });
         if (!res.ok) return;
 
         const data = (await res.json()) as {
@@ -152,7 +153,7 @@ function CreateUserSheet({
     setCreating(true);
     setError("");
     try {
-      const res = await fetch("/api/v1/users", {
+      const res = await apiFetch("/api/v1/users", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -308,7 +309,7 @@ export function SubscribersSection() {
       const params = new URLSearchParams();
       if (search.trim()) params.set("search", search.trim());
 
-      const res = await fetch(`/api/v1/users?${params.toString()}`, {
+      const res = await apiFetch(`/api/v1/users?${params.toString()}`, {
         cache: "no-store",
       });
       if (!res.ok) return;

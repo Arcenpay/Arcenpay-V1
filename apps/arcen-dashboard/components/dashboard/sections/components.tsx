@@ -1,4 +1,5 @@
 "use client";
+import { apiFetch } from "@/lib/api-client";
 
 import React, { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
@@ -365,8 +366,8 @@ export function ComponentsSection({ onSectionChange }: ComponentsSectionProps = 
 
   useEffect(() => {
     Promise.all([
-      fetch("/api/catalog/plans").then((r) => (r.ok ? r.json() : null)),
-      fetch("/api/v1/feature-flags").then((r) => (r.ok ? r.json() : null)),
+      apiFetch("/api/catalog/plans").then((r) => (r.ok ? r.json() : null)),
+      apiFetch("/api/v1/feature-flags").then((r) => (r.ok ? r.json() : null)),
     ])
       .then(([plansData, flagsData]) => {
         const plans: Array<{ status: string; chainSyncStatus: string }> =
@@ -394,7 +395,7 @@ export function ComponentsSection({ onSectionChange }: ComponentsSectionProps = 
 
   // Load components from server on mount
   useEffect(() => {
-    fetch("/api/v1/components")
+    apiFetch("/api/v1/components")
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
         if (!data?.data) return;
@@ -504,7 +505,7 @@ export function ComponentsSection({ onSectionChange }: ComponentsSectionProps = 
       const isNew = existingIndex < 0;
       try {
         if (isNew) {
-          const res = await fetch("/api/v1/components", {
+          const res = await apiFetch("/api/v1/components", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -537,7 +538,7 @@ export function ComponentsSection({ onSectionChange }: ComponentsSectionProps = 
             toast.error(err?.error ?? "Failed to create component");
           }
         } else {
-          const res = await fetch(`/api/v1/components/${component.id}`, {
+          const res = await apiFetch(`/api/v1/components/${component.id}`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -572,7 +573,7 @@ export function ComponentsSection({ onSectionChange }: ComponentsSectionProps = 
 
   const handleDeleteComponent = async (id: string) => {
     try {
-      const res = await fetch(`/api/v1/components/${id}`, { method: "DELETE" });
+      const res = await apiFetch(`/api/v1/components/${id}`, { method: "DELETE" });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         throw new Error(data?.error ?? "Failed to delete component");

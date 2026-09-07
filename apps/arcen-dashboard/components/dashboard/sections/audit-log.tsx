@@ -1,4 +1,5 @@
 "use client";
+import { apiFetch } from "@/lib/api-client";
 
 import { useCallback, useEffect, useState } from "react";
 import { Search, RefreshCw, Download, Terminal, User, Cpu } from "lucide-react";
@@ -94,7 +95,7 @@ export function AuditLogSection() {
     setLoading(true);
     setNextCursor(null);
     try {
-      const res = await fetch(`/api/audit-log?${buildParams().toString()}`);
+      const res = await apiFetch(`/api/audit-log?${buildParams().toString()}`);
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to load audit log");
       setEntries(Array.isArray(data.entries) ? data.entries : []);
@@ -117,7 +118,7 @@ export function AuditLogSection() {
     if (!nextCursor) return;
     setLoadingMore(true);
     try {
-      const res = await fetch(
+      const res = await apiFetch(
         `/api/audit-log?${buildParams(nextCursor).toString()}`,
       );
       const data = await res.json();
@@ -140,7 +141,7 @@ export function AuditLogSection() {
       const params = buildParams();
       params.set("format", "csv");
       params.set("limit", "200");
-      const res = await fetch(`/api/audit-log?${params.toString()}`);
+      const res = await apiFetch(`/api/audit-log?${params.toString()}`);
       if (!res.ok) throw new Error("Export failed");
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);

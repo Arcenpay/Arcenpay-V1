@@ -1,4 +1,5 @@
 "use client";
+import { apiFetch } from "@/lib/api-client";
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -176,7 +177,7 @@ function ConditionEditor({ condition, onChange, onDelete }: {
 
   useEffect(() => {
     if (type === "add_on") {
-      fetch("/api/catalog/add-ons")
+      apiFetch("/api/catalog/add-ons")
         .then((r) => r.json())
         .then((d) => {
           const items = (d?.data ?? d?.addOns ?? []) as CatalogAddOnOption[];
@@ -445,7 +446,7 @@ function EditPlanEntitlementSheet({
             ? Number(form.value)
             : null;
 
-      const res = await fetch(`/api/catalog/plans/${planEntitlement.id}/entitlements`, {
+      const res = await apiFetch(`/api/catalog/plans/${planEntitlement.id}/entitlements`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -760,7 +761,7 @@ function FlagDetailSheet({ flag, open, onClose, onSaved }: {
     if (!flag) return;
     setSaving(true);
     try {
-      const res = await fetch(`/api/v1/feature-flags/${flag.id}/rules`, {
+      const res = await apiFetch(`/api/v1/feature-flags/${flag.id}/rules`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ rules: rules.map((r, i) => ({ ...r, priority: i })) }),
@@ -871,7 +872,7 @@ function CreateFlagSheet({ open, onOpenChange, onCreated }: {
     setCreating(true);
     setError("");
     try {
-      const res = await fetch("/api/v1/feature-flags", {
+      const res = await apiFetch("/api/v1/feature-flags", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),
@@ -1066,8 +1067,8 @@ function FlagDetailView({
       setOverridesLoading(true);
       try {
         const [overridesRes, companiesRes] = await Promise.all([
-          fetch(`/api/v1/feature-flags/${flag.id}/overrides`, { cache: "no-store" }),
-          fetch("/api/v1/companies?limit=100", { cache: "no-store" }),
+          apiFetch(`/api/v1/feature-flags/${flag.id}/overrides`, { cache: "no-store" }),
+          apiFetch("/api/v1/companies?limit=100", { cache: "no-store" }),
         ]);
 
         const overridesData = overridesRes.ok
@@ -1111,7 +1112,7 @@ function FlagDetailView({
 
     setSaving(true);
     try {
-      const res = await fetch(`/api/v1/feature-flags/${flag.id}/rules`, {
+      const res = await apiFetch(`/api/v1/feature-flags/${flag.id}/rules`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -1143,7 +1144,7 @@ function FlagDetailView({
     if (!overrideCompanyId) return;
     setOverrideBusy(true);
     try {
-      const res = await fetch(`/api/v1/feature-flags/${flag.id}/overrides`, {
+      const res = await apiFetch(`/api/v1/feature-flags/${flag.id}/overrides`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -1174,7 +1175,7 @@ function FlagDetailView({
   async function removeOverride(companyId: string) {
     setOverrideBusy(true);
     try {
-      const res = await fetch(
+      const res = await apiFetch(
         `/api/v1/feature-flags/${flag.id}/overrides?companyId=${encodeURIComponent(companyId)}`,
         { method: "DELETE" },
       );
@@ -1593,7 +1594,7 @@ export function FeatureFlagsSection() {
   const fetchFlags = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/v1/feature-flags");
+      const res = await apiFetch("/api/v1/feature-flags");
       if (res.ok) {
         const data = await res.json() as { data: FeatureFlag[] };
         const nextFlags = data.data ?? [];

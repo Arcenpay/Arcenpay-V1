@@ -1,4 +1,5 @@
 "use client";
+import { apiFetch } from "@/lib/api-client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useAccount, useChainId } from "wagmi";
@@ -334,9 +335,9 @@ export function PaymentsSection() {
     try {
       setLoading(true);
       const [linksRes, sessionsRes, companiesRes] = await Promise.all([
-        fetch("/api/v1/payment-links", { cache: "no-store" }),
-        fetch("/api/v1/checkout-sessions", { cache: "no-store" }),
-        fetch("/api/v1/companies?limit=100", { cache: "no-store" }),
+        apiFetch("/api/v1/payment-links", { cache: "no-store" }),
+        apiFetch("/api/v1/checkout-sessions", { cache: "no-store" }),
+        apiFetch("/api/v1/companies?limit=100", { cache: "no-store" }),
       ]);
 
       const [linksPayload, sessionsPayload, companiesPayload] = await Promise.all([
@@ -393,7 +394,7 @@ export function PaymentsSection() {
     }
     setCreating(true);
     try {
-      const res = await fetch("/api/v1/payment-links", {
+      const res = await apiFetch("/api/v1/payment-links", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -457,7 +458,7 @@ export function PaymentsSection() {
   async function toggleLinkStatus(link: PaymentLinkRow) {
     const newStatus = link.status === "ACTIVE" ? "INACTIVE" : "ACTIVE";
     try {
-      const res = await fetch(`/api/v1/payment-links/${link.id}`, {
+      const res = await apiFetch(`/api/v1/payment-links/${link.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: newStatus }),
@@ -475,7 +476,7 @@ export function PaymentsSection() {
 
   async function archiveLink(link: PaymentLinkRow) {
     try {
-      const res = await fetch(`/api/v1/payment-links/${link.id}`, {
+      const res = await apiFetch(`/api/v1/payment-links/${link.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: "ARCHIVED" }),
@@ -499,7 +500,7 @@ export function PaymentsSection() {
     }
     setSavingEdit(true);
     try {
-      const res = await fetch(`/api/v1/payment-links/${editDialog.id}`, {
+      const res = await apiFetch(`/api/v1/payment-links/${editDialog.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

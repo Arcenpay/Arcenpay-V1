@@ -1,4 +1,5 @@
 "use client";
+import { apiFetch } from "@/lib/api-client";
 
 import React, { useState, useEffect, useMemo } from "react";
 import { createPortal } from "react-dom";
@@ -1525,7 +1526,7 @@ export function ComponentEditor({
   }
 
   async function loadConfiguredLivePlans(): Promise<RealPlan[]> {
-    const configRes = await fetch("/api/catalog/config");
+    const configRes = await apiFetch("/api/catalog/config");
     if (!configRes.ok) return [];
     const payload = (await configRes.json()) as {
       catalog?: { plans?: Array<Record<string, unknown>> };
@@ -1555,7 +1556,7 @@ export function ComponentEditor({
   useEffect(() => {
     Promise.all([
       loadConfiguredLivePlans(),
-      fetch("/api/v1/feature-flags").then((r) => (r.ok ? r.json() : null)),
+      apiFetch("/api/v1/feature-flags").then((r) => (r.ok ? r.json() : null)),
     ])
       .then(([plans, flagsRes]) => {
         const rawFlags: Array<Record<string, unknown>> = Array.isArray(
@@ -1593,7 +1594,7 @@ export function ComponentEditor({
   const [previewCompanyId, setPreviewCompanyId] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch("/api/v1/companies")
+    apiFetch("/api/v1/companies")
       .then((r) => (r.ok ? r.json() : null))
       .then((res) => {
         const raw: Array<Record<string, unknown>> = Array.isArray(res?.data)
@@ -1616,7 +1617,7 @@ export function ComponentEditor({
 
   async function loadCompanyPreviewData(companyId: string) {
     try {
-      const tokenRes = await fetch("/api/internal/preview-token", {
+      const tokenRes = await apiFetch("/api/internal/preview-token", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ companyId, componentId: config.id }),
@@ -1624,7 +1625,7 @@ export function ComponentEditor({
       if (!tokenRes.ok) return;
       const { token } = await tokenRes.json();
 
-      const renderRes = await fetch(`/api/v1/components/${config.id}/render`, {
+      const renderRes = await apiFetch(`/api/v1/components/${config.id}/render`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!renderRes.ok) return;
@@ -1684,7 +1685,7 @@ export function ComponentEditor({
     // Re-fetch live data from catalog
     Promise.all([
       loadConfiguredLivePlans(),
-      fetch("/api/v1/feature-flags").then((r) => (r.ok ? r.json() : null)),
+      apiFetch("/api/v1/feature-flags").then((r) => (r.ok ? r.json() : null)),
     ])
       .then(([plans, flagsRes]) => {
         const rawFlags: Array<Record<string, unknown>> = Array.isArray(
@@ -2200,7 +2201,7 @@ const App = () => {
       ? "YOUR_COMPONENT_ID"
       : config.id;
     return `// Node.js / server-side — generate a short-lived access token
-const res = await fetch('http://localhost:3000/api/v1/access-tokens', {
+const res = await apiFetch('http://localhost:3000/api/v1/access-tokens', {
   method: 'POST',
   headers: {
     'Authorization': 'Bearer api_your_api_key',

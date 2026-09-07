@@ -1,4 +1,5 @@
 "use client";
+import { apiFetch } from "@/lib/api-client";
 
 import { useState, useEffect, useCallback } from "react";
 import { SkeletonCard, Skeleton } from "@/components/ui/skeleton";
@@ -242,8 +243,8 @@ export function BillingSection() {
   const fetchPlatformData = useCallback(async () => {
     try {
       const [tierRes, gasRes] = await Promise.all([
-        fetch("/api/platform/tier"),
-        fetch("/api/platform/gas-budget?days=7"),
+        apiFetch("/api/platform/tier"),
+        apiFetch("/api/platform/gas-budget?days=7"),
       ]);
 
       if (tierRes.ok) {
@@ -273,7 +274,7 @@ export function BillingSection() {
   async function handleBootstrap() {
     setBootstrapping(true);
     try {
-      const res = await fetch("/api/platform/tier/bootstrap", { method: "POST" });
+      const res = await apiFetch("/api/platform/tier/bootstrap", { method: "POST" });
       const data = await res.json();
       if (res.ok && data.ok) {
         toast.success("Platform billing plans bootstrapped successfully.");

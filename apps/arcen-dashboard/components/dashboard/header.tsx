@@ -1,4 +1,5 @@
 "use client";
+import { apiFetch } from "@/lib/api-client";
 
 import { cn } from "@/lib/utils";
 import type { Section } from "@/app/(dashboard)/page";
@@ -119,7 +120,7 @@ export function Header({ activeSection, onMobileMenuToggle }: HeaderProps) {
   const environmentRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    fetch("/api/audit-log?limit=10")
+    apiFetch("/api/audit-log?limit=10")
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
         if (d?.entries) {
@@ -167,7 +168,7 @@ export function Header({ activeSection, onMobileMenuToggle }: HeaderProps) {
   const handleLogout = async () => {
     setIsLoggingOut(true);
     try {
-      await fetch("/api/auth/logout", { method: "POST" });
+      await apiFetch("/api/auth/logout", { method: "POST" });
       router.push("/login");
       router.refresh();
     } finally {

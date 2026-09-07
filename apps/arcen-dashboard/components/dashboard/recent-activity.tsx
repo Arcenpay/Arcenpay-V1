@@ -1,4 +1,5 @@
 "use client";
+import { apiFetch } from "@/lib/api-client";
 
 import { useEffect, useState } from "react";
 import { Activity, Zap, Receipt, ArrowUpRight } from "lucide-react";
@@ -28,7 +29,7 @@ export function RecentActivity({ chainId, environmentKey }: RecentActivityProps)
       try {
         setLoading(true);
         // Try the unified activity feed first; fall back to proof history
-        const res = await fetch(`/api/platform/activity?limit=6&chainId=${chainId}`);
+        const res = await apiFetch(`/api/platform/activity?limit=6&chainId=${chainId}`);
         if (res.ok) {
           const payload = await res.json();
           if (!cancelled) {
@@ -37,7 +38,7 @@ export function RecentActivity({ chainId, environmentKey }: RecentActivityProps)
           return;
         }
         // Fallback to proof history endpoint for older deployments
-        const fallback = await fetch(`/api/proofs/history?limit=6&chainId=${chainId}`);
+        const fallback = await apiFetch(`/api/proofs/history?limit=6&chainId=${chainId}`);
         if (!fallback.ok) {
           if (!cancelled) setItems([]);
           return;

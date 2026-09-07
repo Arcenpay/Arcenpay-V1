@@ -1,4 +1,5 @@
 "use client";
+import { apiFetch } from "@/lib/api-client";
 
 import { useEffect, useState, useCallback, useRef, Suspense } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
@@ -540,7 +541,7 @@ function CheckoutContent() {
   const persistCustomerDetails = useCallback(async () => {
     if (!session) return null;
 
-    const res = await fetch(`/api/public/checkout/${session.id}`, {
+    const res = await apiFetch(`/api/public/checkout/${session.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -577,7 +578,7 @@ function CheckoutContent() {
       setVerifying(true);
       setVerificationFailed(false);
       try {
-        const res = await fetch(`/api/public/checkout/${session.id}/confirm`, {
+        const res = await apiFetch(`/api/public/checkout/${session.id}/confirm`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -629,7 +630,7 @@ function CheckoutContent() {
         setError(null);
         const existingSessionId = searchParams.get("session");
         if (existingSessionId) {
-          const res = await fetch(`/api/public/checkout/${existingSessionId}`, {
+          const res = await apiFetch(`/api/public/checkout/${existingSessionId}`, {
             cache: "no-store",
           });
           if (!res.ok) throw new Error("Checkout session not found or expired.");
@@ -645,7 +646,7 @@ function CheckoutContent() {
           return;
         }
 
-        const createRes = await fetch(
+        const createRes = await apiFetch(
           `/api/public/payment-links/${params.slug}/session`,
           {
             method: "POST",
@@ -699,7 +700,7 @@ function CheckoutContent() {
     // acceptedToken is either a G… SAC issuer or a C… SAC contract id.
     let issuer = session.acceptedToken;
     if (STELLAR_CONTRACT_REGEX.test(issuer)) {
-      const opsRes = await fetch(
+      const opsRes = await apiFetch(
         `${horizonUrl}/accounts/${stellar.address}`,
         { signal: AbortSignal.timeout(8_000) },
       );
@@ -838,7 +839,7 @@ function CheckoutContent() {
     setVerificationFailed(false);
     setLoading(true);
     try {
-      const createRes = await fetch(
+      const createRes = await apiFetch(
         `/api/public/payment-links/${params.slug}/session`,
         {
           method: "POST",

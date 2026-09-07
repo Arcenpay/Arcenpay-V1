@@ -1,4 +1,5 @@
 "use client";
+import { apiFetch } from "@/lib/api-client";
 
 import { useState, useEffect } from "react";
 import { useActivationGuard } from "@/contexts/activation-context";
@@ -55,7 +56,7 @@ export function ActivationModal() {
   const handleLogout = async () => {
     setLoggingOut(true);
     try {
-      await fetch("/api/auth/logout", { method: "POST" });
+      await apiFetch("/api/auth/logout", { method: "POST" });
     } catch {}
     window.location.href = "/login";
   };
@@ -102,7 +103,7 @@ export function ActivationModal() {
   const verifyKey = async (keyToVerify: string) => {
     setVerifying(true);
     try {
-      const res = await fetch("/api/activation/verify", {
+      const res = await apiFetch("/api/activation/verify", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ key: keyToVerify }),
@@ -128,7 +129,7 @@ export function ActivationModal() {
 
     setRedeeming(true);
     try {
-      const res = await fetch("/api/activation/redeem", {
+      const res = await apiFetch("/api/activation/redeem", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ key: keyCode.trim() }),

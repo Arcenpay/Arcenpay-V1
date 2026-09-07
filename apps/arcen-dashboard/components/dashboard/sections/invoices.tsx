@@ -1,4 +1,5 @@
 "use client";
+import { apiFetch } from "@/lib/api-client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
@@ -370,7 +371,7 @@ export function InvoicesSection() {
       const params = new URLSearchParams();
       if (query.trim()) params.set("q", query.trim());
       if (status !== "ALL") params.set("status", status);
-      const res = await fetch(`/api/invoices?${params.toString()}`);
+      const res = await apiFetch(`/api/invoices?${params.toString()}`);
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to load invoices");
       setInvoices(Array.isArray(data.invoices) ? data.invoices : []);
@@ -409,7 +410,7 @@ export function InvoicesSection() {
   const handleResend = async (invoiceId: string) => {
     setBusyId(invoiceId);
     try {
-      const res = await fetch(`/api/invoices/${invoiceId}/resend`, {
+      const res = await apiFetch(`/api/invoices/${invoiceId}/resend`, {
         method: "POST",
       });
       const data = await res.json();
@@ -426,7 +427,7 @@ export function InvoicesSection() {
   const handleDownload = async (invoiceId: string) => {
     setBusyId(invoiceId);
     try {
-      const res = await fetch(`/api/invoices/${invoiceId}/download`);
+      const res = await apiFetch(`/api/invoices/${invoiceId}/download`);
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Download unavailable");
       const url = data.downloadUrl as string | undefined;
@@ -445,7 +446,7 @@ export function InvoicesSection() {
   ) => {
     setBusyId(invoiceId);
     try {
-      const res = await fetch(`/api/invoices/${invoiceId}`, {
+      const res = await apiFetch(`/api/invoices/${invoiceId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: newStatus }),

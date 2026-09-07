@@ -1,4 +1,5 @@
 "use client";
+import { apiFetch } from "@/lib/api-client";
 
 import { useEffect, useState, useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -27,7 +28,7 @@ export default function AcceptInvitePage() {
 
     startTransition(async () => {
       try {
-        const response = await fetch("/api/team/invite/accept", {
+        const response = await apiFetch("/api/team/invite/accept", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ token }),
@@ -182,7 +183,7 @@ export default function AcceptInvitePage() {
                   <button
                     type="button"
                     onClick={async () => {
-                      await fetch("/api/auth/logout", { method: "POST" }).catch(() => {});
+                      await apiFetch("/api/auth/logout", { method: "POST" }).catch(() => {});
                       router.push("/login?invite=" + encodeURIComponent(token ?? ""));
                     }}
                     className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"

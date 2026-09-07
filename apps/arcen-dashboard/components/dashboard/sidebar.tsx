@@ -1,4 +1,5 @@
 "use client";
+import { apiFetch } from "@/lib/api-client";
 
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
@@ -236,7 +237,7 @@ export function Sidebar({
   const handleLogout = async () => {
     setIsLoggingOut(true);
     try {
-      await fetch("/api/auth/logout", { method: "POST" });
+      await apiFetch("/api/auth/logout", { method: "POST" });
       router.push("/login");
       router.refresh();
     } finally {
@@ -251,7 +252,7 @@ export function Sidebar({
     }
     setIsSwitchingTeam(true);
     try {
-      const response = await fetch("/api/team/switch", {
+      const response = await apiFetch("/api/team/switch", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ teamId }),

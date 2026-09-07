@@ -1,4 +1,5 @@
 "use client";
+import { apiFetch } from "@/lib/api-client";
 
 import { useState, useEffect, useCallback } from "react";
 import {
@@ -343,7 +344,7 @@ function CreateCompanySheet({ open, onOpenChange, onCreated }: {
     setCreating(true);
     setError("");
     try {
-      const res = await fetch("/api/v1/companies", {
+      const res = await apiFetch("/api/v1/companies", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -433,7 +434,7 @@ export function CompaniesSection() {
     try {
       const params = new URLSearchParams();
       if (search) params.set("search", search);
-      const res = await fetch(`/api/v1/companies?${params}`, { cache: "no-store" });
+      const res = await apiFetch(`/api/v1/companies?${params}`, { cache: "no-store" });
       if (res.ok) {
         const data = await res.json() as { data: Company[] };
         setCompanies(data.data);
@@ -450,7 +451,7 @@ export function CompaniesSection() {
     setDetailCompany(null);
     setDetailOpen(true);
     try {
-      const res = await fetch(`/api/v1/companies/${company.id}`, { cache: "no-store" });
+      const res = await apiFetch(`/api/v1/companies/${company.id}`, { cache: "no-store" });
       if (res.ok) {
         const data = await res.json() as { data: CompanyDetail };
         setDetailCompany(data.data);

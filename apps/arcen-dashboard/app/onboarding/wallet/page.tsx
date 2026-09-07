@@ -1,4 +1,5 @@
 "use client";
+import { apiFetch } from "@/lib/api-client";
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -30,7 +31,7 @@ import type { ChainFamily } from "@arcenpay/internal-core";
 
 const routeAfterWalletLink = async () => {
   try {
-    const res = await fetch("/api/auth/session");
+    const res = await apiFetch("/api/auth/session");
     if (res.ok) {
       const data = await res.json();
       const isAdmin =
@@ -75,7 +76,7 @@ function EvmWalletConnect() {
   } = useDashboardWallet(storedWallet);
 
   useEffect(() => {
-    fetch("/api/auth/wallet-status")
+    apiFetch("/api/auth/wallet-status")
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => setStoredWallet(data?.storedWallet ?? null))
       .catch(() => setStoredWallet(null));
@@ -86,12 +87,12 @@ function EvmWalletConnect() {
     if (!isOnRequiredNetwork) { toast.error(`Switch to a supported network (${SUPPORTED_WALLET_CHAIN_LABEL})`); return; }
     setIsSigning(true);
     try {
-      const nonceRes = await fetch("/api/auth/nonce");
+      const nonceRes = await apiFetch("/api/auth/nonce");
       if (!nonceRes.ok) throw new Error("Failed to get nonce");
       const { nonce, issuedAt } = await nonceRes.json();
       const message = buildSIWEMessage({ address, chainId, nonce, domain: window.location.host, uri: window.location.origin, issuedAt });
       const signature = await signMessageAsync({ message });
-      const res = await fetch("/api/auth/link-wallet", {
+      const res = await apiFetch("/api/auth/link-wallet", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ message, signature, address, chainId, nonce }),
@@ -248,13 +249,13 @@ function StellarWalletConnect({ onLinked }: { onLinked: (address: string) => voi
     if (!wallet.address) { toast.error("Connect a Stellar wallet first"); return; }
     setIsSigning(true);
     try {
-      const nonceRes = await fetch("/api/auth/nonce");
+      const nonceRes = await apiFetch("/api/auth/nonce");
       if (!nonceRes.ok) throw new Error("Failed to get nonce");
       const { nonce, issuedAt } = await nonceRes.json();
       const message = `ArcenPay Stellar Sign-In\n\nAddress: ${wallet.address}\nNonce: ${nonce}\nIssued At: ${issuedAt}\nDomain: ${window.location.host}`;
       const { signedMessage } = await wallet.signMessage(message);
 
-      const res = await fetch("/api/auth/link-wallet", {
+      const res = await apiFetch("/api/auth/link-wallet", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ message, signature: signedMessage, address: wallet.address, chainId: wallet.chainId, nonce }),
@@ -329,7 +330,7 @@ export default function ConnectWalletPage() {
 
   // Check if wallet is already linked (skip chain-family choice for existing users)
   useEffect(() => {
-    fetch("/api/auth/wallet-status")
+    apiFetch("/api/auth/wallet-status")
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => setStoredWallet(data?.storedWallet ?? null))
       .catch(() => setStoredWallet(null));

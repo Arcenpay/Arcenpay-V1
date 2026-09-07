@@ -1,4 +1,5 @@
 "use client";
+import { apiFetch } from "@/lib/api-client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
 
@@ -38,7 +39,7 @@ export function usePlatformBillingEmbed(): {
       setError(null);
       setNeedsSetup(false);
 
-      const res = await fetch("/api/platform/billing/embed-token", {
+      const res = await apiFetch("/api/platform/billing/embed-token", {
         method: "POST",
       });
 
@@ -78,7 +79,7 @@ export function usePlatformBillingEmbed(): {
     try {
       setLoading(true);
       setError(null);
-      const res = await fetch("/api/platform/billing/enroll", {
+      const res = await apiFetch("/api/platform/billing/enroll", {
         method: "POST",
       });
       const body = await res.json().catch(() => ({}));

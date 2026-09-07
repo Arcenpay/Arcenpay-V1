@@ -1,4 +1,5 @@
 "use client";
+import { apiFetch } from "@/lib/api-client";
 
 import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
@@ -102,7 +103,7 @@ export default function NewEnvironmentPage() {
   }, [mode, chainFamily]);
 
   useEffect(() => {
-    fetch("/api/environments", { cache: "no-store" })
+    apiFetch("/api/environments", { cache: "no-store" })
       .then((response) => (response.ok ? response.json() : null))
       .then((payload: { productionEnabled?: boolean } | null) => {
         setProductionEnabled(payload?.productionEnabled === true);
@@ -122,7 +123,7 @@ export default function NewEnvironmentPage() {
     setIsLinkingWallet(true);
     setError(null);
     try {
-      const nonceRes = await fetch("/api/auth/nonce");
+      const nonceRes = await apiFetch("/api/auth/nonce");
       if (!nonceRes.ok) throw new Error("Could not start wallet verification.");
       const { nonce, issuedAt } = await nonceRes.json();
 
@@ -136,7 +137,7 @@ export default function NewEnvironmentPage() {
       });
       const signature = await signMessageAsync({ message });
 
-      const linkRes = await fetch("/api/auth/link-wallet", {
+      const linkRes = await apiFetch("/api/auth/link-wallet", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -174,14 +175,14 @@ export default function NewEnvironmentPage() {
     setIsLinkingWallet(true);
     setError(null);
     try {
-      const nonceRes = await fetch("/api/auth/nonce");
+      const nonceRes = await apiFetch("/api/auth/nonce");
       if (!nonceRes.ok) throw new Error("Could not start wallet verification.");
       const { nonce, issuedAt } = await nonceRes.json();
 
       const message = `ArcenPay Stellar Sign-In\n\nAddress: ${stellarWallet.address}\nNonce: ${nonce}\nIssued At: ${issuedAt}\nDomain: ${window.location.host}`;
       const { signedMessage } = await stellarWallet.signMessage(message);
 
-      const linkRes = await fetch("/api/auth/link-wallet", {
+      const linkRes = await apiFetch("/api/auth/link-wallet", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -214,7 +215,7 @@ export default function NewEnvironmentPage() {
     setSubmitting(true);
     setError(null);
     try {
-      const res = await fetch("/api/environments", {
+      const res = await apiFetch("/api/environments", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
