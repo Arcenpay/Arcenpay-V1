@@ -10,6 +10,11 @@ import { withPrismaReconnect } from "../../db.js";
 import { SIWE_JWT_SECRET } from "../../config.js";
 import { AUTH_COOKIE_NAME, AUTH_SESSION_TTL_MS } from "./auth-constants.js";
 
+// Both the dashboard (app.arcenpay.com) and API (api.arcenpay.com) must read
+// the same session. A host-only API cookie authenticates API fetches but is
+// invisible to the dashboard, which creates a successful-login → /login loop.
+const PRODUCTION_SESSION_COOKIE_DOMAIN = ".arcenpay.com";
+
 export type DashboardSession = {
   sessionId: string;
   userId: string;
@@ -34,11 +39,25 @@ function buildCookieOptions(expiresAt: Date) {
     sameSite: (isProd ? "none" : "lax") as "none" | "lax",
     secure: isProd,
     ...(isProd
-      ? { domain: process.env.AUTH_COOKIE_DOMAIN || ".arcenpay.com" }
+      ? { domain: PRODUCTION_SESSION_COOKIE_DOMAIN }
       : {}),
     path: "/",
     expires: expiresAt,
   };
+}
+
+function clearLegacyHostOnlySessionCookie(c: Context): void {
+  if (process.env.NODE_ENV === "production") {
+    // Delete a previous api.arcenpay.com-scoped cookie before setting the
+    // shared parent-domain cookie. Otherwise browsers can send the stale
+    // host-only value first when calling the API.
+    deleteCookie(c, AUTH_COOKIE_NAME, {
+      httpOnly: true,
+      sameSite: "none",
+      secure: true,
+      path: "/",
+    });
+  }
 }
 
 async function readSessionToken(c: Context): Promise<string | null> {
@@ -199,10 +218,11 @@ export async function createSession(
     );
   }
 
+  clearLegacyHostOnlySessionCookie(c);
   setCookie(c, AUTH_COOKIE_NAME, token, buildCookieOptions(expiresAt));
   console.info("[DEBUG-auth-20260907] session created", {
     cookieDomain: process.env.NODE_ENV === "production"
-      ? process.env.AUTH_COOKIE_DOMAIN || ".arcenpay.com"
+      ? PRODUCTION_SESSION_COOKIE_DOMAIN
       : "host-only",
     secure: process.env.NODE_ENV === "production",
   });
@@ -238,6 +258,7 @@ export async function refreshSession(
 
   const token = getCookie(c, AUTH_COOKIE_NAME);
   if (token) {
+    clearLegacyHostOnlySessionCookie(c);
     setCookie(c, AUTH_COOKIE_NAME, token, buildCookieOptions(expiresAt));
   }
 }
@@ -259,7 +280,8 @@ export async function clearSession(c: Context): Promise<void> {
     );
   }
 
-  deleteCookie(c, AUTH_COOKIE_NAME);
+  clearLegacyHostOnlySessionCookie(c);
+  deleteCookie(c, AUTH_COOKIE_NAME, buildCookieOptions(new Date(0)));
 }
 
 export async function getDbUser(userId: string) {
