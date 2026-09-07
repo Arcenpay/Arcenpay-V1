@@ -103,31 +103,6 @@ export function EmailAuthFlow({
   const [isLinkingWallet, setIsLinkingWallet] = useState(false);
   const [isPending, startTransition] = useTransition();
 
-  useEffect(() => {
-    let cancelled = false;
-
-    void apiFetch("/api/auth/session")
-      .then(async (response) => {
-        if (!response.ok || cancelled) return;
-        const data = await response.json();
-        if (cancelled || !data?.user?.id) return;
-
-        const destination =
-          data.user.walletAddress || data.user.stellarWalletAddress
-            ? "/"
-            : "/onboarding/chain";
-        console.info("[DEBUG-auth-20260907] login recovered existing API session", {
-          destination,
-        });
-        window.location.replace(destination);
-      })
-      .catch(() => {});
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
   /* Activation key states */
   const [activationKey, setActivationKey] = useState("");
   const [verifyingKey, setVerifyingKey] = useState(false);
