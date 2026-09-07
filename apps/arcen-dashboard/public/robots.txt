@@ -11,7 +11,7 @@ Disallow: /sign-up
 Disallow: /sso-callback
 
 # Host
-Host: https://app.arcenpay.xyz
+Host: https://app.arcenpay.com
 
 # Sitemaps
-Sitemap: https://app.arcenpay.xyz/sitemap.xml
+Sitemap: https://app.arcenpay.com/sitemap.xml

@@ -92,6 +92,7 @@ async function runPrismaMigrations() {
       "prisma",
       "migrate",
       "deploy",
+      "--config=apps/arcen-backend/prisma.config.ts",
       "--schema=apps/arcen-backend/prisma/schema.prisma",
     ]);
     console.log("[Railway Backend] Database migrations deployed successfully.");

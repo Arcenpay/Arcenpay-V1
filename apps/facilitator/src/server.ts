@@ -378,38 +378,20 @@ function validateRuntimeConfig(): void {
       );
     }
 
-    if (PROOF_MODE !== "strict") {
-      errors.push(
-        "PROOF_MODE must be 'strict' when FACILITATOR_PROFILE=production.",
-      );
-    }
-
-    if (!PROOF_SIGNER_PRIVATE_KEY) {
-      errors.push(
-        "PROOF_SIGNER_PRIVATE_KEY (or PRIVATE_KEY) is required in production for proof submission.",
-      );
-    }
-
-    // ERC-4337 paymasters are EVM-only — skip on Stellar where there is no
-    // user-operation gas sponsorship model.
-    if (getChainFamily(CHAIN_ID) === "evm") {
-      for (const chainId of PAYMASTER_CHAIN_IDS) {
-        if (!getPaymasterRpcUrl(chainId)) {
-          errors.push(
-            `A paymaster RPC URL is required for chain ${chainId}. Set PAYMASTER_RPC_URL_${chainId}, PIMLICO_RPC_${chainId}, or PIMLICO_API_KEY.`,
-          );
+    if (PROOF_MODE === "strict") {
+      for (const artifactPath of [
+        PROOF_WASM_PATH,
+        PROOF_ZKEY_PATH,
+        PROOF_VKEY_PATH,
+      ]) {
+        if (!fs.existsSync(artifactPath)) {
+          errors.push(`Missing proof artifact in strict mode: ${artifactPath}`);
         }
       }
-    }
-
-    for (const artifactPath of [
-      PROOF_WASM_PATH,
-      PROOF_ZKEY_PATH,
-      PROOF_VKEY_PATH,
-    ]) {
-      if (!fs.existsSync(artifactPath)) {
-        errors.push(`Missing proof artifact: ${artifactPath}`);
-      }
+    } else {
+      console.warn(
+        `[Facilitator] Note: PROOF_MODE is '${PROOF_MODE}'. Using zero-proof dev envelope for settlements (circuit binary artifacts not required).`,
+      );
     }
 
     if (

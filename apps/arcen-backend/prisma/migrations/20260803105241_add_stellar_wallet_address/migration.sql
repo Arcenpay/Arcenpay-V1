@@ -1,17 +1,17 @@
 -- DropIndex
-DROP INDEX "CatalogPlan_teamId_chainFamily_chainId_idx";
+DROP INDEX IF EXISTS "CatalogPlan_teamId_chainFamily_chainId_idx";
 
 -- DropIndex
-DROP INDEX "GasSpend_teamId_chainFamily_idx";
+DROP INDEX IF EXISTS "GasSpend_teamId_chainFamily_idx";
 
 -- DropIndex
-DROP INDEX "PlatformBillingPlan_environmentId_chainFamily_chainId_idx";
+DROP INDEX IF EXISTS "PlatformBillingPlan_environmentId_chainFamily_chainId_idx";
 
 -- DropIndex
-DROP INDEX "SubscriptionState_teamId_chainFamily_chainId_idx";
+DROP INDEX IF EXISTS "SubscriptionState_teamId_chainFamily_chainId_idx";
 
 -- DropIndex
-DROP INDEX "WorkspaceEnvironment_teamId_chainFamily_idx";
+DROP INDEX IF EXISTS "WorkspaceEnvironment_teamId_chainFamily_idx";
 
 -- AlterTable
 ALTER TABLE "User" ADD COLUMN     "stellarWalletAddress" TEXT;
