@@ -42,8 +42,8 @@
     "predev": "npm run sync:core",
     "pretest": "npm run sync:core",
     "pretypecheck": "npm run sync:core",
-    "build": "tsup src/index.ts src/smart-account.ts --clean --format cjs,esm --dts --dts-resolve --external react --external permissionless",
-    "dev": "tsup src/index.ts src/smart-account.ts --clean --format cjs,esm --dts --external react --external permissionless --watch",
+    "build": "npx tsup src/index.ts src/smart-account.ts --clean --format cjs,esm --dts --dts-resolve --external react --external permissionless",
+    "dev": "npx tsup src/index.ts src/smart-account.ts --clean --format cjs,esm --dts --external react --external permissionless --watch",
     "test": "vitest run",
     "typecheck": "tsc --noEmit --skipLibCheck",
     "clean": "rm -rf dist"
@@ -58,15 +58,15 @@
     "@tanstack/react-query": "^5.62.0",
     "lucide-react": "^0.454.0",
     "permissionless": "^0.3.5",
+    "tsup": "^8.3.0",
+    "typescript": "^5.7.0",
     "viem": "^2.21.0",
     "wagmi": "^2.14.0"
   },
   "devDependencies": {
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
-    "react": "^19.0.0",
-    "tsup": "^8.3.0",
-    "typescript": "^5.7.0"
+    "react": "^19.0.0"
   },
   "engines": {
     "node": ">=20.0.0"

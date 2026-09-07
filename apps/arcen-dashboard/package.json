@@ -3,8 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "prebuild": "npm run build --workspace=@arcenpay/internal-core && npm run build --workspace=@arcenpay/shared-types",
-    "pretypecheck": "npm run build --workspace=@arcenpay/internal-core && npm run build --workspace=@arcenpay/shared-types",
+    "prebuild": "npm run build --workspace=@arcenpay/internal-core && npm run build --workspace=@arcenpay/shared-types && npm run build --workspace=@arcenpay/react",
+    "pretypecheck": "npm run build --workspace=@arcenpay/internal-core && npm run build --workspace=@arcenpay/shared-types && npm run build --workspace=@arcenpay/react",
     "build": "NODE_OPTIONS=--max-old-space-size=8192 next build --webpack",
     "postbuild": "next-sitemap --config next-sitemap.config.mjs",
     "dev": "next dev --port 3000",
