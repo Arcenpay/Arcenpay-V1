@@ -237,7 +237,7 @@ export const ACCESS_TOKEN_SECRET: string = (() => {
 export const RESEND_API_KEY = process.env.RESEND_API_KEY ?? "";
 
 /** From address for transactional emails. */
-export const EMAIL_FROM = process.env.EMAIL_FROM || "noreply@arcenpay.xyz";
+export const EMAIL_FROM = process.env.EMAIL_FROM || "noreply@arcenpay.com";
 
 // ── Invoice ───────────────────────────────────────────────────────────────────
 

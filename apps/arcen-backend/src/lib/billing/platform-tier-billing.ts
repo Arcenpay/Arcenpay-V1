@@ -108,12 +108,13 @@ function platformPlanAmountAtomic(tier: PlatformTier): bigint {
 function platformBillingToken(): `0x${string}` {
   const configured = normalizeAddress(PLATFORM_BILLING_ACCEPTED_TOKEN);
   const fallback = normalizeAddress(
-    getTokenAddress(PLATFORM_BILLING_CHAIN_ID, "USDC"),
+    getTokenAddress(PLATFORM_BILLING_CHAIN_ID, "USDC") ??
+    getTokenAddress(PLATFORM_BILLING_CHAIN_ID, "USDT"),
   );
   const token = configured ?? fallback;
   if (!token) {
     throw new Error(
-      "PLATFORM_BILLING_ACCEPTED_TOKEN must be a valid Arc testnet USDC address.",
+      `PLATFORM_BILLING_ACCEPTED_TOKEN must be set for chain ${PLATFORM_BILLING_CHAIN_ID}.`,
     );
   }
   return token;
@@ -258,15 +259,11 @@ export async function bootstrapPlatformBillingPlans(): Promise<{
     txHash: string | null;
   }>;
 }> {
-  if (PLATFORM_BILLING_CHAIN_ID !== 5042002) {
-    throw new Error("Platform billing bootstrap is restricted to Arc testnet for v1.");
-  }
-
   const { publicClient, walletClient } = platformWalletClient();
   const contracts = getContractAddresses(PLATFORM_BILLING_CHAIN_ID);
   const planFactoryAddress = normalizeAddress(contracts.planFactory);
   if (!planFactoryAddress) {
-    throw new Error("PlanFactory is not configured for Arc testnet.");
+    throw new Error(`PlanFactory is not configured for chain ${PLATFORM_BILLING_CHAIN_ID}.`);
   }
 
   const acceptedToken = platformBillingToken();

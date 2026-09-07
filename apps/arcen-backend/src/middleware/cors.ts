@@ -89,8 +89,6 @@ function isTrustedPlatformOrigin(hostname: string): boolean {
   return (
     lower === "arcenpay.com" ||
     lower.endsWith(".arcenpay.com") ||
-    lower === "arcenpay.xyz" ||
-    lower.endsWith(".arcenpay.xyz") ||
     lower.endsWith(".vercel.app") ||
     lower.endsWith(".railway.app") ||
     isLocalHost(lower) ||
