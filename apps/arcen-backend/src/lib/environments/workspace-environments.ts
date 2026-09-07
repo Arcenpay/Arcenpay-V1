@@ -68,34 +68,11 @@ export async function findResolvedActiveEnvironment(
   });
 
   if (environments.length === 0) {
-    // Auto-create default Development environment so workspace is immediately usable
-    const defaultEnv = await db.workspaceEnvironment.create({
-      data: {
-        teamId,
-        name: "Development",
-        mode: "DEVELOPMENT",
-        chainId: 84532,
-        chainFamily: "EVM",
-      },
-    }).catch(() => null);
-
-    if (defaultEnv) {
-      await db.catalogConfig.create({
-        data: {
-          teamId,
-          environmentId: defaultEnv.id,
-          environmentMode: defaultEnv.mode,
-        },
-      }).catch(() => {});
-
-      await db.authSession.update({
-        where: { id: session.sessionId },
-        data: { activeEnvironmentId: defaultEnv.id },
-      }).catch(() => {});
-
-      return defaultEnv;
-    }
-
+    // IMPORTANT: Do NOT auto-create a default environment here.
+    // The workspace owner must explicitly choose the chain to pin during
+    // onboarding (see app/onboarding/environment). Auto-creating would silently
+    // default every workspace to Base Sepolia and skip the chain picker.
+    // Return null so the dashboard redirects to the environment creation screen.
     return null;
   }
 

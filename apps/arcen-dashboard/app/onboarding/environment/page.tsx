@@ -16,8 +16,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  BOT_TESTNET_CHAIN_ID,
   BOT_MAINNET_CHAIN_ID,
+  BASE_SEPOLIA_CHAIN_ID,
   STELLAR_TESTNET_CHAIN_ID,
   getChainLabel,
   getChainIdsForEnvironment,
@@ -50,7 +50,7 @@ function defaultChainIdForFamily(
 ): number {
   if (mode === "PRODUCTION") return BOT_MAINNET_CHAIN_ID;
   if (family === "stellar") return STELLAR_TESTNET_CHAIN_ID;
-  return BOT_TESTNET_CHAIN_ID;
+  return BASE_SEPOLIA_CHAIN_ID;
 }
 
 export default function EnvironmentOnboardingPage() {
@@ -59,7 +59,7 @@ export default function EnvironmentOnboardingPage() {
   const [selectedFamily, setSelectedFamily] = useState<ChainFamily | null>(null);
   const [name, setName] = useState("");
   const [mode, setMode] = useState<EnvironmentMode>("DEVELOPMENT");
-  const [chainId, setChainId] = useState<number>(BOT_TESTNET_CHAIN_ID);
+  const [chainId, setChainId] = useState<number>(BASE_SEPOLIA_CHAIN_ID);
   const [productionEnabled, setProductionEnabled] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);

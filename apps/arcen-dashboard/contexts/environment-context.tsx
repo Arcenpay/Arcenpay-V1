@@ -1,5 +1,6 @@
 'use client';
 import { apiFetch } from "@/lib/api-client";
+import { useRouter } from "next/navigation";
 
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { useDashboardSession, type DashboardSessionPayload } from '@/hooks/use-dashboard-session';
@@ -31,6 +32,7 @@ export function EnvironmentProvider({
 }: {
   children: React.ReactNode;
 }) {
+  const router = useRouter();
   const { data: sessionData, isLoading: sessionLoading, refresh } = useDashboardSession();
   const [environmentLimits, setEnvironmentLimits] = useState<{
     development: number;
@@ -86,6 +88,17 @@ export function EnvironmentProvider({
   const activeEnvironment = sessionData?.activeEnvironment ?? null;
   const environments = sessionData?.environments ?? [];
   const envMode = activeEnvironment?.mode ?? 'DEVELOPMENT';
+
+  // A workspace that loads with no environment must not be dumped onto a
+  // dashboard that will 409 on every billing route. Send the user to the
+  // environment-creation screen so they explicitly pick their chain first.
+  useEffect(() => {
+    if (sessionLoading) return;
+    if (!sessionData) return;
+    if (sessionData.environments.length === 0 && !sessionData.activeEnvironment) {
+      router.replace('/onboarding/environment');
+    }
+  }, [sessionLoading, sessionData, router]);
 
   const setEnvMode = useCallback(
     async (mode: EnvMode) => {

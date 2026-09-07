@@ -8,11 +8,14 @@ export const BOT_MAINNET_CHAIN_ID = 677 as const;
 export const BOT_TESTNET_CHAIN_ID = 968 as const;
 export { STELLAR_MAINNET_CHAIN_ID, STELLAR_TESTNET_CHAIN_ID, STELLAR_FUTURENET_CHAIN_ID };
 
-// All supported chains (testnet + mainnet) for the backend
+// All supported chains (testnet + mainnet) for the backend.
+// NOTE: BOT Chain Testnet (968) is intentionally EXCLUDED — its deployment is a
+// stub (all-zero addresses), so no usable contracts exist there. Only chains
+// with real, deployed contracts are listed below (available whether mainnet or
+// testnet).
 export const TESTNET_CHAIN_IDS = [
   BASE_SEPOLIA_CHAIN_ID,
   ARC_TESTNET_CHAIN_ID,
-  BOT_TESTNET_CHAIN_ID,
   STELLAR_TESTNET_CHAIN_ID,
   STELLAR_FUTURENET_CHAIN_ID,
 ] as const;

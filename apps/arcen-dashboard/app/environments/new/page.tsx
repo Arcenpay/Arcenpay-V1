@@ -19,7 +19,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  BOT_TESTNET_CHAIN_ID,
   BOT_MAINNET_CHAIN_ID,
   BASE_SEPOLIA_CHAIN_ID,
   STELLAR_TESTNET_CHAIN_ID,
@@ -58,7 +57,7 @@ function firstChainForFamily(mode: EnvironmentMode, family: ChainFamily): number
   const opts = buildChainOptions(mode, family);
   if (opts.length > 0) return opts[0].chainId;
   if (family === "stellar") return STELLAR_TESTNET_CHAIN_ID;
-  return BOT_TESTNET_CHAIN_ID;
+  return BASE_SEPOLIA_CHAIN_ID;
 }
 
 export default function NewEnvironmentPage() {
