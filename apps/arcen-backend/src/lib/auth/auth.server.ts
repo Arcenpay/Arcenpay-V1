@@ -49,7 +49,13 @@ export async function getSessionFromCtx(
   c: Context,
 ): Promise<DashboardSession | null> {
   const token = await readSessionToken(c);
-  if (!token) return null;
+  if (!token) {
+    console.warn("[DEBUG-auth-20260907] session rejected", {
+      reason: "missing_cookie",
+      path: new URL(c.req.url).pathname,
+    });
+    return null;
+  }
 
   const now = new Date();
   const tokenHash = hashAuthValue(token);
@@ -71,6 +77,10 @@ export async function getSessionFromCtx(
   );
 
   if (!record || record.revokedAt || record.expiresAt <= now) {
+    console.warn("[DEBUG-auth-20260907] session rejected", {
+      reason: !record ? "not_found" : record.revokedAt ? "revoked" : "expired",
+      path: new URL(c.req.url).pathname,
+    });
     return null;
   }
 
@@ -190,6 +200,12 @@ export async function createSession(
   }
 
   setCookie(c, AUTH_COOKIE_NAME, token, buildCookieOptions(expiresAt));
+  console.info("[DEBUG-auth-20260907] session created", {
+    cookieDomain: process.env.NODE_ENV === "production"
+      ? process.env.AUTH_COOKIE_DOMAIN || ".arcenpay.com"
+      : "host-only",
+    secure: process.env.NODE_ENV === "production",
+  });
 
   return {
     sessionId: record.id,

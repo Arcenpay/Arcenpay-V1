@@ -6,14 +6,14 @@ describe("apiFetch", () => {
     vi.unstubAllGlobals();
   });
 
-  it("uses the dashboard's same-origin API proxy for relative requests", async () => {
+  it("sends browser API requests directly to the configured backend", async () => {
     const fetchMock = vi.fn().mockResolvedValue(new Response("{}"));
     vi.stubGlobal("fetch", fetchMock);
 
     await apiFetch("/api/auth/session");
 
     expect(fetchMock).toHaveBeenCalledWith(
-      "/api/auth/session",
+      "http://localhost:3300/api/v1/auth/session",
       expect.objectContaining({ credentials: "include" }),
     );
   });

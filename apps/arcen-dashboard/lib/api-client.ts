@@ -1,3 +1,15 @@
+import { BACKEND_URL } from "@/lib/config";
+
+const AUTH_DEBUG_PREFIX = "[DEBUG-auth-20260907]";
+
+function backendPath(path: string): string {
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+  const versionedPath = normalizedPath.startsWith("/api/v1/")
+    ? normalizedPath
+    : normalizedPath.replace(/^\/api\//, "/api/v1/");
+  return `${BACKEND_URL.replace(/\/$/, "")}${versionedPath}`;
+}
+
 export function apiFetch(
   input: RequestInfo | URL,
   init?: RequestInit,
@@ -11,19 +23,38 @@ export function apiFetch(
   const nextInit: RequestInit = {
     ...init,
     credentials: init?.credentials ?? "include",
+    mode: "cors",
   };
 
-  // Relative URLs must remain on the dashboard origin. Its /api route is the
-  // backend-for-frontend proxy that can safely persist the .arcenpay.com
-  // session cookie when the API itself runs on a different host (e.g. Railway).
-  if (!/^https?:\/\//i.test(inputUrl)) {
-    return fetch(inputUrl, nextInit);
+  const url = /^https?:\/\//i.test(inputUrl) ? inputUrl : backendPath(inputUrl);
+  const method = init?.method ?? (input instanceof Request ? input.method : "GET");
+  const parsedUrl = new URL(url);
+  const isAuthRequest = parsedUrl.pathname.includes("/api/v1/auth/");
+  if (isAuthRequest) {
+    console.info(AUTH_DEBUG_PREFIX, "request", {
+      method,
+      origin: parsedUrl.origin,
+      path: parsedUrl.pathname,
+      credentials: nextInit.credentials,
+    });
   }
 
-  const url = inputUrl;
+  const logResponse = (response: Response): Response => {
+    if (isAuthRequest) {
+      console.info(AUTH_DEBUG_PREFIX, "response", {
+        method,
+        origin: parsedUrl.origin,
+        path: parsedUrl.pathname,
+        status: response.status,
+        ok: response.ok,
+      });
+    }
+    return response;
+  };
+
   if (input instanceof Request) {
-    return fetch(new Request(url, input), nextInit);
+    return fetch(new Request(url, input), nextInit).then(logResponse);
   }
 
-  return fetch(url, nextInit);
+  return fetch(url, nextInit).then(logResponse);
 }

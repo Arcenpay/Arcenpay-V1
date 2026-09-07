@@ -33,6 +33,11 @@ export function proxy(request: NextRequest) {
     if (next && next !== "/") {
       loginUrl.searchParams.set("next", next);
     }
+    console.warn("[DEBUG-auth-20260907] dashboard redirect", {
+      pathname,
+      hasSessionCookie: false,
+      redirectTo: loginUrl.pathname,
+    });
     return NextResponse.redirect(loginUrl);
   }
 

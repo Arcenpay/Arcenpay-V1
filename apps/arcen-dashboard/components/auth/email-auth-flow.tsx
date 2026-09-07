@@ -256,12 +256,29 @@ export function EmailAuthFlow({
         const keyStatus = data?.currentTeam?.activationKeyStatus;
         const isExpiredOrRevoked =
           keyStatus === "EXPIRED" || keyStatus === "REVOKED";
+        console.info("[DEBUG-auth-20260907] post-auth session", {
+          status: sessionRes.status,
+          hasWallet: Boolean(data?.user?.walletAddress || data?.user?.stellarWalletAddress),
+          isActivated,
+          keyStatus: keyStatus ?? null,
+        });
         if (isActivated || isExpiredOrRevoked) {
+          console.info("[DEBUG-auth-20260907] post-auth navigation", { destination: "/" });
           window.location.href = "/";
           return;
         }
       }
-    } catch {}
+      console.warn("[DEBUG-auth-20260907] post-auth session did not allow dashboard navigation", {
+        status: sessionRes.status,
+      });
+    } catch (error) {
+      console.warn("[DEBUG-auth-20260907] post-auth session request failed", {
+        message: error instanceof Error ? error.message : "unknown",
+      });
+    }
+    console.info("[DEBUG-auth-20260907] post-auth navigation", {
+      destination: "activate",
+    });
     setStep("activate");
   };
 
@@ -429,6 +446,10 @@ export function EmailAuthFlow({
       });
 
       const payload = await response.json().catch(() => ({}));
+      console.info("[DEBUG-auth-20260907] email start completed", {
+        status: response.status,
+        code: payload.code ?? null,
+      });
       if (!response.ok) {
         if (response.status === 409 && payload.ownerWallet) {
           setError(
@@ -472,6 +493,10 @@ export function EmailAuthFlow({
       });
 
       const payload = await response.json().catch(() => ({}));
+      console.info("[DEBUG-auth-20260907] email verify completed", {
+        status: response.status,
+        code: payload.code ?? null,
+      });
       if (!response.ok) {
         if (response.status === 409 && payload.ownerWallet) {
           setError(
@@ -488,6 +513,7 @@ export function EmailAuthFlow({
       }
 
       setStep("sign");
+      console.info("[DEBUG-auth-20260907] email verified; linking wallet");
       await linkWalletForSession();
     });
   };

@@ -127,6 +127,9 @@ export async function verifyEmail(c: Context) {
   });
 
   await createSession(c, refreshedUser.id);
+  console.info("[DEBUG-auth-20260907] email verified and session issued", {
+    hasWallet: Boolean(refreshedUser.walletAddress),
+  });
 
   return c.json({
     ok: true,
