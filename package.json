@@ -21,7 +21,7 @@
     "dev:backend": "turbo run dev --ui=tui --filter=@arcenpay/backend...",
     "dev:demo": "turbo run dev --ui=tui --filter=demo-dapp...",
     "build:backend": "turbo run build --filter=@arcenpay/backend...",
-    "build:railway": "turbo run build --filter=@arcenpay/backend... --filter=@arcenpay/facilitator...",
+    "build:railway": "npx turbo run build --filter=@arcenpay/backend... --filter=@arcenpay/facilitator...",
     "start": "node scripts/railway-start.mjs",
     "start:backend": "node --import tsx apps/arcen-backend/dist/server.js",
     "start:backend:prod": "npx prisma migrate deploy --schema=apps/arcen-backend/prisma/schema.prisma && node --import tsx apps/arcen-backend/dist/server.js",
@@ -47,6 +47,16 @@
     "verify:stellar:renewal": "npm run verify:stellar:renewal --workspace=@arcenpay/backend",
     "setup:billing": "cd apps/arcen-backend && npm run setup:platform-billing"
   },
+  "dependencies": {
+    "@arcjet/next": "^1.4.0",
+    "@arcjet/node": "^1.4.0",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.4",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "turbo": "^2.10.12",
+    "typescript": "^5.9.3"
+  },
   "devDependencies": {
     "@types/node": "^22.19.19",
     "next": "^16.0.10",
@@ -60,13 +70,5 @@
   "packageManager": "npm@10.2.4",
   "overrides": {
     "@coinbase/cdp-sdk": "1.44.1"
-  },
-  "dependencies": {
-    "@arcjet/next": "^1.4.0",
-    "@arcjet/node": "^1.4.0",
-    "@types/react": "^19.2.18",
-    "@types/react-dom": "^19.2.4",
-    "react": "^19.2.8",
-    "react-dom": "^19.2.8"
   }
 }
