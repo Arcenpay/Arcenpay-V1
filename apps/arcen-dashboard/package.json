@@ -19,7 +19,7 @@
   "dependencies": {
     "@apollo/client": "^3.14.0",
     "@arcenpay/internal-core": "*",
-    "@arcenpay/react": "*",
+    "@arcenpay/react": "^0.0.3",
     "@arcenpay/shared-types": "*",
     "@creit-tech/stellar-wallets-kit": "npm:@jsr/creit-tech__stellar-wallets-kit@^2.5.0",
     "@hookform/resolvers": "^3.10.0",

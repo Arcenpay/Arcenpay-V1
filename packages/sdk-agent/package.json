@@ -2,6 +2,23 @@
   "name": "@arcenpay/agent",
   "version": "0.0.1",
   "description": "ArcenPay SDK — AI agent client for autonomous x402 payments",
+  "license": "MIT",
+  "homepage": "https://app.arcenpay.com",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Arcenpay/Arcenpay.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Arcenpay/Arcenpay/issues"
+  },
+  "keywords": [
+    "arcenpay",
+    "agent",
+    "ai",
+    "web3",
+    "x402",
+    "payments"
+  ],
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
@@ -15,9 +32,11 @@
     }
   },
   "files": [
-    "dist",
-    "src"
+    "dist"
   ],
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "sync:core": "node ../../scripts/sync-internal-core.mjs sdk-agent",
     "prebuild": "npm run sync:core",

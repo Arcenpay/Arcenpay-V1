@@ -1,4 +1,4 @@
-import { cp, mkdir, rm, stat } from "node:fs/promises";
+import { cp, mkdir, rm, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -58,6 +58,51 @@ for (const target of targets) {
     await rm(targetDir, { recursive: true, force: true });
     await mkdir(path.dirname(targetDir), { recursive: true });
     await cp(sourceDir, targetDir, { recursive: true });
+
+    // ── Post-sync overrides ──────────────────────────────────────────────
+    // The SDK packages are published to npm and should NOT expose
+    // process.env-based url configuration to consumers. Override the
+    // app-origin module to use hardcoded production URLs.
+    // The source-of-truth in internal-core keeps env-var fallbacks because
+    // it's also used by the backend/dashboard build (which needs localhost).
+    const appOriginTarget = path.join(targetDir, "app-origin.ts");
+    const hardcoded = [
+      'export const ARCENPAY_API_URL = "https://api.arcenpay.com";',
+      'export const ARCENPAY_APP_URL = "https://app.arcenpay.com";',
+      "",
+      'export interface ResolveArcenPayBaseUrlOptions {',
+      '  explicit?: string;',
+      "}",
+      "",
+      'export interface ResolveArcenPayAppUrlOptions {',
+      '  explicit?: string;',
+      "}",
+      "",
+      "function trimTrailingSlash(value: string): string {",
+      '  return value.replace(/\\/$/, "");',
+      "}",
+      "",
+      "export function resolveArcenPayBaseUrl(",
+      '  options: ResolveArcenPayBaseUrlOptions = {},',
+      "): string {",
+      "  if (options.explicit?.trim()) {",
+      "    return trimTrailingSlash(options.explicit.trim());",
+      "  }",
+      "  return ARCENPAY_API_URL;",
+      "}",
+      "",
+      "export function resolveArcenPayAppUrl(",
+      '  options: ResolveArcenPayAppUrlOptions = {},',
+      "): string {",
+      "  if (options.explicit?.trim()) {",
+      "    return trimTrailingSlash(options.explicit.trim());",
+      "  }",
+      "  return ARCENPAY_APP_URL;",
+      "}",
+      "",
+    ].join("\n");
+    await writeFile(appOriginTarget, hardcoded, "utf-8");
+    console.log(`  Overrode app-origin.ts in ${target} with hardcoded production URLs`);
   });
 
   console.log(`Synced internal core -> packages/${target}/src/internal/core`);

@@ -196,18 +196,15 @@ export const TOKENS = {
   5042002: {
     USDC: { address: '0x3600000000000000000000000000000000000000' as const, decimals: 6 },
   },
-  // BOT Chain Mainnet — NO canonical USDC exists. This is the official
-  // bridged USDT address per dev-docs.botchain.ai/docs/Bridge/contract-addresses
-  // (verified against BOT Chain's own bridge docs, NOT fabricated). Confirm
-  // with the team whether USDT is the accepted settlement asset for this
-  // chain before enabling billing here — do not assume USDC parity.
+  // BOT Chain Mainnet — NO USDC exists (only bridged USDT). Uses the official
+  // bridged USDT address per dev-docs.botchain.ai/docs/Bridge/contract-addresses.
+  // The getUsdcAddress() helper in the backend falls back to USDT for chains
+  // that have no native USDC, so existing callers still resolve correctly.
   677: {
-    USDC: { address: '0xaBabc7Ddc03e501d190C676BF3d92ef0e6e87a3C' as const, decimals: 6 },
     USDT: { address: '0xaBabc7Ddc03e501d190C676BF3d92ef0e6e87a3C' as const, decimals: 6 },
   },
-  // BOT Chain Testnet — bridged USDT per the same bridge docs.
+  // BOT Chain Testnet — bridged USDT only (no USDC).
   968: {
-    USDC: { address: '0x75edC9335175Fc0552D51D48439F229c10420fe3' as const, decimals: 6 },
     USDT: { address: '0x75edC9335175Fc0552D51D48439F229c10420fe3' as const, decimals: 6 },
   },
   // Stellar Mainnet — Circle USDC (SAC issuer account). Address is the G…

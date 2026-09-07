@@ -48,7 +48,9 @@ function resolveUsdcOverride(chainId: number): string | null {
 /**
  * Returns the canonical USDC address for a chain. Supports both EVM
  * (0x-prefixed hex) and Stellar (G…/C… base32) addresses.
- * Returns `undefined` if no USDC is configured for the chain.
+ * Falls back to USDT if no native USDC is configured (e.g. BOT Chain
+ * only has bridged USDT). Returns `undefined` if no stablecoin is
+ * configured at all.
  * Callers must handle the missing case or use {@link getEvmUsdcAddress}
  * for EVM-only contexts that should fail fast.
  */
@@ -58,6 +60,10 @@ export function getUsdcAddress(chainId: number): string | undefined {
 
   const token = getTokenAddress(chainId, "USDC");
   if (token && isValidAddressForChain(token, chainId)) return token;
+
+  // BOT Chain (677, 968) has no native USDC — fall back to USDT
+  const usdtToken = getTokenAddress(chainId, "USDT");
+  if (usdtToken && isValidAddressForChain(usdtToken, chainId)) return usdtToken;
 
   return undefined;
 }

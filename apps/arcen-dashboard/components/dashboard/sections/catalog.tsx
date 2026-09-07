@@ -3793,7 +3793,7 @@ function PlansTable({
                   ? error.message
                   : "Gas sponsorship failed";
               console.warn(
-                "[catalog] Sponsored smart-account registration failed.",
+                "[catalog] Sponsored smart-account registration failed, falling back to direct wallet execution.",
                 {
                   chainId: domain.chainId,
                   provider: smartAccountConfig.provider ?? "unknown",
@@ -3801,14 +3801,35 @@ function PlansTable({
                   infrastructureError: isSmartAccountInfrastructureError(error),
                 },
               );
-              throw new Error(
-                `${providerLabel} sponsorship failed for this registration. ${message}`,
+              // Fallback: user pays gas directly via wallet
+              console.info(
+                "[catalog] Falling back to direct wallet execution for on-chain registration.",
+                {
+                  chainId: domain.chainId,
+                  target: data.preparedTransaction.target,
+                },
               );
+              txHash = await walletClient.sendTransaction({
+                account: walletClient.account,
+                to: data.preparedTransaction.target as `0x${string}`,
+                data: data.preparedTransaction.data as `0x${string}`,
+                value: BigInt(data.preparedTransaction.value ?? "0"),
+              });
             }
           } else {
-            throw new Error(
-              "Gas sponsorship is not configured for this chain. Pimlico must be configured before this registration can be sent.",
+            console.info(
+              "[catalog] No gas sponsorship configured for this chain. Falling back to direct wallet execution.",
+              {
+                chainId: domain.chainId,
+                target: data.preparedTransaction.target,
+              },
             );
+            txHash = await walletClient.sendTransaction({
+              account: walletClient.account,
+              to: data.preparedTransaction.target as `0x${string}`,
+              data: data.preparedTransaction.data as `0x${string}`,
+              value: BigInt(data.preparedTransaction.value ?? "0"),
+            });
           }
         }
 

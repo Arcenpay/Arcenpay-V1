@@ -296,8 +296,7 @@ export class ArcenAgent {
 
     this.apiUrl = (
       config.apiUrl ??
-      (typeof process !== 'undefined' && process.env?.ARCENPAY_API_URL ? process.env.ARCENPAY_API_URL : undefined) ??
-      'https://api.arcenpay.xyz'
+      'https://api.arcenpay.com'
     ).replace(/\/+$/, '');
 
     this.isStellar = isStellarChainId(config.chainId);

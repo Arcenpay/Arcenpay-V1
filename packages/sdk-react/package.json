@@ -1,9 +1,16 @@
 {
   "name": "@arcenpay/react",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "ArcenPay SDK — React components for Web3 subscription billing",
-  "license": "UNLICENSED",
+  "license": "MIT",
   "homepage": "https://app.arcenpay.com",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Arcenpay/Arcenpay.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Arcenpay/Arcenpay/issues"
+  },
   "keywords": [
     "arcenpay",
     "react",
@@ -58,15 +65,15 @@
     "@tanstack/react-query": "^5.62.0",
     "lucide-react": "^0.454.0",
     "permissionless": "^0.3.5",
-    "tsup": "^8.3.0",
-    "typescript": "^5.7.0",
     "viem": "^2.21.0",
     "wagmi": "^2.14.0"
   },
   "devDependencies": {
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
-    "react": "^19.0.0"
+    "react": "^19.0.0",
+    "tsup": "^8.3.0",
+    "typescript": "^5.7.0"
   },
   "engines": {
     "node": ">=20.0.0"

@@ -44,6 +44,7 @@ async function main() {
 
   const tokenAddress =
     process.env.USDC_ADDRESS ||
+    deployment.config?.USDT ||
     deployment.config?.USDC ||
     DEFAULT_USDC_BY_CHAIN[chainId];
 

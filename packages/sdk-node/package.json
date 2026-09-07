@@ -1,9 +1,16 @@
 {
   "name": "@arcenpay/node",
-  "version": "0.0.2",
+  "version": "0.0.4",
   "description": "ArcenPay SDK — Node.js middleware and billing services",
-  "license": "UNLICENSED",
+  "license": "MIT",
   "homepage": "https://app.arcenpay.com",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Arcenpay/Arcenpay.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Arcenpay/Arcenpay/issues"
+  },
   "keywords": [
     "arcenpay",
     "web3",

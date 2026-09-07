@@ -15,7 +15,7 @@
   },
   "dependencies": {
     "@arcenpay/internal-core": "*",
-    "@arcenpay/node": "*",
+    "@arcenpay/node": "^0.0.4",
     "@lit-protocol/constants": "^7.4.0",
     "@lit-protocol/encryption": "^7.4.0",
     "@lit-protocol/lit-node-client": "^7.4.0",
