@@ -49,7 +49,7 @@ export function isSupportedDashboardChainId(
 }
 
 export const DEFAULT_CHAIN_ID: SupportedDashboardChainId =
-  parseChainId(getConfiguredRuntimeChainId()) ?? ARC_TESTNET_CHAIN_ID;
+  parseChainId(getConfiguredRuntimeChainId()) ?? BOT_MAINNET_CHAIN_ID;
 
 export const DEFAULT_TESTNET_CHAIN_ID: SupportedDashboardChainId =
   TESTNET_CHAIN_ID_SET.has(DEFAULT_CHAIN_ID)

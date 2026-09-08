@@ -620,8 +620,6 @@ function isTrustedOrigin(origin?: string): boolean {
     return (
       lower === "arcenpay.com" ||
       lower.endsWith(".arcenpay.com") ||
-      lower === "arcenpay.xyz" ||
-      lower.endsWith(".arcenpay.xyz") ||
       lower.endsWith(".vercel.app") ||
       lower.endsWith(".railway.app") ||
       lower === "localhost" ||

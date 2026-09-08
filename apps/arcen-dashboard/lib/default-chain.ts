@@ -77,7 +77,7 @@ export function getChainIdsForEnvironment(
 
 /** The runtime-configured default (from env var). Falls back to Arc Testnet. */
 export const DEFAULT_CHAIN_ID: SupportedDashboardChainId =
-  parseChainId(getConfiguredRuntimeChainId()) ?? ARC_TESTNET_CHAIN_ID;
+  parseChainId(getConfiguredRuntimeChainId()) ?? BOT_MAINNET_CHAIN_ID;
 
 export const DEFAULT_TESTNET_CHAIN_ID: TestnetChainId =
   TESTNET_SET.has(DEFAULT_CHAIN_ID)

@@ -10,6 +10,7 @@ import {
   isSupportedDashboardChainId,
   getChainLabel,
   TESTNET_CHAIN_IDS,
+  MAINNET_CHAIN_IDS,
 } from "../../../lib/platform/default-chain.js";
 import { getChainFamily } from "@arcenpay/internal-core";
 
@@ -34,8 +35,6 @@ function requestOrigin(c: Context): { host: string; protocol: string } {
       const isTrustedOrigin =
         hostname === "arcenpay.com" ||
         hostname.endsWith(".arcenpay.com") ||
-        hostname === "arcenpay.xyz" ||
-        hostname.endsWith(".arcenpay.xyz") ||
         hostname === "localhost" ||
         hostname === "127.0.0.1";
       if (isTrustedOrigin) {
@@ -59,7 +58,7 @@ function requestOrigin(c: Context): { host: string; protocol: string } {
   }
 
   return {
-    host: c.req.header("host") || "arcenpay.xyz",
+    host: c.req.header("host") || "arcenpay.com",
     protocol: "https",
   };
 }
@@ -94,7 +93,7 @@ export async function linkWallet(c: Context) {
 
     // Support Stellar chain ID (synthetic: 9_000_000+)
     if (!isSupportedDashboardChainId(chainId) && !isStellarChainId(chainId)) {
-      const labels = TESTNET_CHAIN_IDS.map(getChainLabel).join(" or ");
+      const labels = [...TESTNET_CHAIN_IDS, ...MAINNET_CHAIN_IDS].map(getChainLabel).join(" or ");
       return c.json(
         {
           ok: false,
