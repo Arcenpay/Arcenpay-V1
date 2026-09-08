@@ -57,7 +57,7 @@ describe("ArcenAgent — Comprehensive Real-World SDK Verification", () => {
 
   // ─── 1. Multi-Chain Initialization & Token Resolution ──────────
   describe("Multi-Chain Support (including BOT Chain & Stellar)", () => {
-    it("should initialize on BOT Mainnet (677) and resolve bridged USDT/USDC", () => {
+    it("should initialize on BOT Mainnet (677) and resolve USDT token", () => {
       const agent = new ArcenAgent({
         privateKey: TEST_EVM_PRIVATE_KEY,
         rpcUrl: "https://rpc.botchain.ai",
@@ -66,9 +66,9 @@ describe("ArcenAgent — Comprehensive Real-World SDK Verification", () => {
 
       expect(agent.address.toLowerCase()).toBe("0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266");
       const usdtAddress = getTokenAddress(677, "USDT");
-      const usdcAddress = getTokenAddress(677, "USDC");
       expect(usdtAddress?.toLowerCase()).toBe("0xababc7ddc03e501d190c676bf3d92ef0e6e87a3c");
-      expect(usdcAddress?.toLowerCase()).toBe("0xababc7ddc03e501d190c676bf3d92ef0e6e87a3c");
+      // BOT Mainnet only has USDT — USDC is not deployed on this chain
+      expect(getTokenAddress(677, "USDC")).toBeUndefined();
     });
 
     it("should initialize on BOT Testnet (968)", () => {
