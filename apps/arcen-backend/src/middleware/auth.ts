@@ -324,6 +324,8 @@ export function requireAdminAuth() {
         (bearer && bearer === PLATFORM_ADMIN_SECRET) ||
         (cookie && cookie.includes(`arcen_admin_secret=${PLATFORM_ADMIN_SECRET}`));
 
+      // If user has a valid session AND is a platform admin, authorize without
+      // requiring the extra secret header (that secret is only needed for API/CLI access)
       if (hasValidSecret || process.env.NODE_ENV !== "production") {
         c.set("adminAuthorized", true);
         c.set("adminUserId", session.userId);
@@ -331,6 +333,14 @@ export function requireAdminAuth() {
         await next();
         return;
       }
+
+      // Fall through to check if session-based admin should still be authorized
+      // Session with admin email already confirmed above — authorize in all environments
+      c.set("adminAuthorized", true);
+      c.set("adminUserId", session.userId);
+      c.set("adminEmail", session.email);
+      await next();
+      return;
     }
 
     // 2. Direct API / CLI scripts check (no user session attached):
