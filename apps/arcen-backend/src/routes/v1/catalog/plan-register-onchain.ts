@@ -124,9 +124,11 @@ function resolveMaxOnChainChargeMicros(plan: {
     parseFloat(String(plan.annualPrice ?? "0")) * 1_000_000,
   );
   // The on-chain plan price is the charge per billing interval.
-  // Use the monthly price by default; the annual price acts as
-  // the autopay max cap enforced separately in the autopay config.
-  return BigInt(Math.max(monthlyMicros, 0));
+  // Use the maximum of monthly and annual so the signature matches
+  // what the frontend signs (the SDK's resolveMaxOnChainChargeMicros
+  // also takes the max). This ensures EIP-712 signature verification
+  // succeeds regardless of which billing interval the user selected.
+  return BigInt(Math.max(monthlyMicros, annualMicros, 0));
 }
 
 export async function registerPlanOnChain(c: Context) {
