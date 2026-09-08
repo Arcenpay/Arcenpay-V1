@@ -47,8 +47,8 @@ export async function startEmail(c: Context) {
 
   const email = normalizeEmail(parsed.data.email);
 
-  // Arcjet rate limit: 5 req/10min per IP + per email
-  const decision = await authEmailStartProtect.protect(c.req.raw as any, { email });
+  // Arcjet rate limit: 5 req/10min per IP
+  const decision = await authEmailStartProtect.protect(c.req.raw as any);
   if (decision.isDenied()) {
     console.warn("[DEBUG-auth-20260907] email start denied", {
       reason: decision.reason.isBot() ? "bot" : "rate_limited",

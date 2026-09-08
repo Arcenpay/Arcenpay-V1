@@ -56,8 +56,8 @@ async function getPlanPeriodWindow(
   });
 
   const currentPeriodStart = company?.subscriptionState?.currentPeriodStart;
-  if (currentPeriodStart) {
-    return { gte: currentPeriodStart };
+  if (currentPeriodStart && !Number.isNaN(new Date(currentPeriodStart).getTime())) {
+    return { gte: new Date(currentPeriodStart) };
   }
 
   const currentPeriodEnd = company?.subscriptionState?.currentPeriodEnd;
@@ -67,7 +67,7 @@ async function getPlanPeriodWindow(
       (company?.traits as Record<string, unknown> | null)?.billingPeriod,
   );
 
-  if (currentPeriodEnd) {
+  if (currentPeriodEnd && !Number.isNaN(new Date(currentPeriodEnd).getTime())) {
     const derivedStart = new Date(currentPeriodEnd);
     if (billingPeriod === "annual") {
       derivedStart.setUTCFullYear(derivedStart.getUTCFullYear() - 1);

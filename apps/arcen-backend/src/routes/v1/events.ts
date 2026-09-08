@@ -287,20 +287,46 @@ async function upsertUser(
     return { id: existing.id, created: false };
   }
 
-  const user = await db.arcenUser.create({
-    data: {
-      teamId,
-      environmentId,
-      companyId,
-      walletAddress,
-      clerkUserId: input.clerk_user_id,
-      externalId: input.id,
-      name: input.name,
-      email: input.email,
-      traits: (traits ?? {}) as unknown as Prisma.InputJsonValue,
-    },
-  });
-  return { id: user.id, created: true };
+  try {
+    const user = await db.arcenUser.create({
+      data: {
+        teamId,
+        environmentId,
+        companyId,
+        walletAddress,
+        clerkUserId: input.clerk_user_id,
+        externalId: input.id,
+        name: input.name,
+        email: input.email,
+        traits: (traits ?? {}) as unknown as Prisma.InputJsonValue,
+      },
+    });
+    return { id: user.id, created: true };
+  } catch (err: unknown) {
+    const isP2002 =
+      err instanceof Error &&
+      "code" in err &&
+      (err as { code?: string }).code === "P2002";
+    if (isP2002) {
+      const existingByWallet = walletAddress
+        ? await db.arcenUser.findFirst({
+            where: { teamId, environmentId, walletAddress },
+            select: { id: true },
+          })
+        : null;
+      const existingById = input.id
+        ? await db.arcenUser.findFirst({
+            where: { teamId, environmentId, externalId: input.id },
+            select: { id: true },
+          })
+        : null;
+      const found = existingByWallet ?? existingById;
+      if (found) {
+        return { id: found.id, created: false };
+      }
+    }
+    throw err;
+  }
 }
 
 // ─── Route handler ────────────────────────────────────────────────────────────

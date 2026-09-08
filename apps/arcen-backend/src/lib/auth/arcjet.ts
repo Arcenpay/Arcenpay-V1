@@ -60,20 +60,12 @@ export const authNonceProtect = authAj.withRule(
   }),
 );
 
-/** Auth email start: 5 req/10min per IP + per email */
+/** Auth email start: 5 req/10min per IP only (email characteristic is optional — skip if empty) */
 export const authEmailStartProtect = authAj
   .withRule(
     fixedWindow({
       mode: rateLimitMode,
       characteristics: ["ip.src"],
-      window: "10m",
-      max: 5,
-    }),
-  )
-  .withRule(
-    fixedWindow({
-      mode: rateLimitMode,
-      characteristics: ["email"],
       window: "10m",
       max: 5,
     }),
