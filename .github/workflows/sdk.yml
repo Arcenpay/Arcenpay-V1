@@ -39,6 +39,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Build internal-core (dependency for all SDKs)
+        run: npm run build --workspace=@arcenpay/internal-core
+
       - name: Typecheck SDK packages
         run: |
           npm run typecheck --workspace=@arcenpay/node
