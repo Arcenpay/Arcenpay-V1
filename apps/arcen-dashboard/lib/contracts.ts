@@ -25,7 +25,6 @@ import {
 import {
   BASE_SEPOLIA_CHAIN_ID,
   ARC_TESTNET_CHAIN_ID,
-  BOT_TESTNET_CHAIN_ID,
   BOT_MAINNET_CHAIN_ID,
   BASE_MAINNET_CHAIN_ID,
   DEFAULT_CHAIN_ID,
@@ -105,11 +104,6 @@ const TESTNET_CHAIN_LIST: Array<{
   {
     chainId: ARC_TESTNET_CHAIN_ID,
     label: getChainLabel(ARC_TESTNET_CHAIN_ID),
-    tag: "testnet",
-  },
-  {
-    chainId: BOT_TESTNET_CHAIN_ID,
-    label: getChainLabel(BOT_TESTNET_CHAIN_ID),
     tag: "testnet",
   },
   {

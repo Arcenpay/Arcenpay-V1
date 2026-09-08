@@ -254,6 +254,14 @@ function tokenLabel(address: string): string {
     : address.slice(0, 10) + "…";
 }
 
+function tokenSymbol(address: string | null | undefined): string | null {
+  if (!address) return null;
+  const match = TOKEN_OPTIONS.find(
+    (t) => t.address.toLowerCase() === address.toLowerCase(),
+  );
+  return match?.symbol ?? null;
+}
+
 function resolveMaxOnChainChargeMicros(plan: Pick<CatalogPlan, "price" | "annualPrice">): bigint {
   const monthlyMicros = Math.round(parseFloat(plan.price || "0") * 1_000_000);
   const annualMicros = Math.round(
@@ -2947,7 +2955,7 @@ function EditAddOnDialog({
                   >
                     {selectedChainOpt ? (
                       <div className="flex items-center gap-2.5">
-                        <Web3Icon chainId={selectedChainOpt.chainId} size="sm" />
+                        <Web3Icon chainId={selectedChainOpt.chainId} token={selectedChainOpt.symbol} size="sm" />
                         <div className="text-left">
                           <p className="text-sm font-medium leading-none">
                             {chainName(selectedChainOpt)}
@@ -3266,7 +3274,7 @@ function EditCreditTypeDialog({
                   >
                     {selectedChainOpt ? (
                       <div className="flex items-center gap-2.5">
-                        <Web3Icon chainId={selectedChainOpt.chainId} size="sm" />
+                        <Web3Icon chainId={selectedChainOpt.chainId} token={selectedChainOpt.symbol} size="sm" />
                         <div className="text-left">
                           <p className="text-sm font-medium leading-none">
                             {chainName(selectedChainOpt)}
@@ -4122,7 +4130,7 @@ function PlansTable({
                       </span>
                     ) : (
                       <span className="inline-flex items-center gap-1.5">
-                        <Web3Icon token="USDC" size="sm" />
+                        <Web3Icon token={tokenSymbol(plan.acceptedToken) ?? "USDC"} size="sm" />
                         {tokenLabel(plan.acceptedToken)}
                       </span>
                     )}
@@ -7345,6 +7353,7 @@ function EditPlanDialog({
                                     <div className="flex items-center gap-2.5">
                                       <Web3Icon
                                         chainId={opt.chainId}
+                                        token={opt.symbol}
                                         size="sm"
                                         className={!isConn ? "opacity-40" : ""}
                                       />
@@ -7406,6 +7415,7 @@ function EditPlanDialog({
                                     <div className="flex items-center gap-2.5">
                                       <Web3Icon
                                         chainId={opt.chainId}
+                                        token={opt.symbol}
                                         size="sm"
                                         className={!isConn ? "opacity-40" : ""}
                                       />

@@ -65,14 +65,14 @@ export function Web3Icon({
 }: Web3IconProps) {
   const iconSize = sizeMap[size] ?? 20;
 
-  // ── BOT Chain or Token check (renders public/botchain.jpg) ──────────
-  const isBot =
-    chainId === 677 ||
-    chainId === 968 ||
-    (typeof chainLabel === "string" && /bot\s*chain/i.test(chainLabel)) ||
-    token?.toUpperCase() === "BOT";
+  const normalizedToken = token?.toUpperCase();
 
-  if (isBot) {
+  // If a specific token symbol is provided (e.g. USDT, USDC), render the token
+  // icon — EXCEPT when the token itself is BOT, which renders the custom brand.
+  // This way selecting USDT on BOT Chain shows the USDT logo, not the chain logo.
+  const isBotToken = normalizedToken === "BOT";
+
+  if (isBotToken) {
     return (
       <span
         className={cn(
@@ -92,8 +92,8 @@ export function Web3Icon({
     );
   }
 
-  // ── Token icon ──────────────────────────────────────────────────────
-  if (token) {
+  // Token icon — takes priority over chain icon whenever a token is known.
+  if (normalizedToken) {
     return (
       <span
         className={cn(
@@ -102,7 +102,7 @@ export function Web3Icon({
         )}
       >
         <TokenIcon
-          symbol={token.toUpperCase()}
+          symbol={normalizedToken}
           variant="branded"
           size={iconSize}
           className="shrink-0"
@@ -116,7 +116,32 @@ export function Web3Icon({
     );
   }
 
-  // ── Chain icon ──────────────────────────────────────────────────────
+  // ── Chain icon (only when no token is given) ──────────────────────────
+  const isBotChain =
+    chainId === 677 ||
+    chainId === 968 ||
+    (typeof chainLabel === "string" && /bot\s*chain/i.test(chainLabel));
+
+  if (isBotChain) {
+    return (
+      <span
+        className={cn(
+          "shrink-0 inline-flex items-center justify-center rounded-full bg-white dark:bg-white p-px overflow-hidden",
+          className,
+        )}
+      >
+        <Image
+          src="/botchain.jpg"
+          alt={chainLabel || token || "BOT Chain"}
+          width={iconSize}
+          height={iconSize}
+          className="rounded-full object-cover shrink-0"
+          unoptimized
+        />
+      </span>
+    );
+  }
+
   const resolvedName = chainId
     ? chainIdToNetworkName[chainId]
     : chainLabel
