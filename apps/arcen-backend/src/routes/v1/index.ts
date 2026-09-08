@@ -19,6 +19,8 @@ import { publicRoutes } from "./public/index.js";
 import { companiesRoutes } from "./companies/index.js";
 import { mandateRoutes } from "./mandates.js";
 import { adminActivationKeysRouter } from "./admin/activation-keys.js";
+import { adminAnalyticsRouter } from "./admin/analytics.js";
+import { adminUsersRouter } from "./admin/users.js";
 import { activationRouter } from "./activation.js";
 
 // ── SDK flat files (Next.js-style exports: GET, POST, OPTIONS) ──────────────
@@ -76,7 +78,9 @@ export const v1Router = new Hono()
   .route("/environment", environmentRoutes)
   .route("/public", publicRoutes)
   .route("/mandates", mandateRoutes)
+  .route("/admin/analytics", adminAnalyticsRouter)
   .route("/admin/activation-keys", adminActivationKeysRouter)
+  .route("/admin/users", adminUsersRouter)
   .route("/activation", activationRouter)
 
   // ── SDK flat routes ──────────────────────────────────────────────────────

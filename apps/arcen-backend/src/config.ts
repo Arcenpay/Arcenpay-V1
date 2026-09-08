@@ -239,6 +239,10 @@ export const RESEND_API_KEY = process.env.RESEND_API_KEY ?? "";
 /** From address for transactional emails. */
 export const EMAIL_FROM = process.env.EMAIL_FROM || "noreply@arcenpay.com";
 
+// ── Dune Analytics ────────────────────────────────────────────────────────────
+
+/** Dune Analytics API key for on-chain metrics queries. Optional; without it Dune features will show a "configure" prompt. */
+export const DUNE_API_KEY = process.env.DUNE_API_KEY ?? "";
 // ── Invoice ───────────────────────────────────────────────────────────────────
 
 /**
