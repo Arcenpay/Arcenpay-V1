@@ -176,14 +176,16 @@ describe("ArcenAgent — Agentic Payment Links", () => {
     globalThis.fetch = vi.fn().mockImplementation(async (_url: string, init?: RequestInit) => {
       const body = JSON.parse(init?.body as string);
       expect(body.isAgentic).toBe(true);
-      expect(body.title).toBe("Agent Data Feed");
+      expect(body.name).toBe("Agent Data Feed");
       expect(body.amount).toBe(1.25);
+      // USDC on Base Sepolia (84532) resolves to the chain USDC contract.
+      expect(body.acceptedToken).toBe("0x036CbD53842c5426634e7929541eC2318f3dCF7e");
       return {
         ok: true,
         json: async () => ({
           spec: {
             ...MOCK_SPEC,
-            name: body.title,
+            name: body.name,
             amount: "1.250000",
           },
         }),

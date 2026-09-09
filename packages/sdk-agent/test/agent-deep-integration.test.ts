@@ -322,7 +322,7 @@ describe("ArcenAgent — Comprehensive Real-World SDK Verification", () => {
 
   // ─── 5. Programmatic Link Creation with API Key ────────────────
   describe("Programmatic Payment Link Creation", () => {
-    it("should pass Bearer auth and payload defaults to createPaymentLink", async () => {
+    it("should resolve token symbols, pass Bearer auth, and normalize the resulting spec", async () => {
       let capturedHeaders: HeadersInit | undefined;
       let capturedBody: any;
 
@@ -334,7 +334,7 @@ describe("ArcenAgent — Comprehensive Real-World SDK Verification", () => {
           json: async () => ({
             spec: {
               ...MOCK_BOT_SPEC,
-              name: capturedBody.title,
+              name: capturedBody.name,
               amount: String(capturedBody.amount),
             },
           }),
@@ -353,15 +353,23 @@ describe("ArcenAgent — Comprehensive Real-World SDK Verification", () => {
         amount: 3.5,
         currency: "USDT",
         description: "High resolution telemetry",
+        expiresInMinutes: 60,
       });
 
       expect((capturedHeaders as Record<string, string>)["Authorization"]).toBe("Bearer arcn_live_key_999");
-      expect(capturedBody.title).toBe("Autonomous Agent Weather Data Feed");
+      expect(capturedBody.name).toBe("Autonomous Agent Weather Data Feed");
       expect(capturedBody.amount).toBe(3.5);
       expect(capturedBody.isAgentic).toBe(true);
       expect(capturedBody.chainId).toBe(677);
+      // USDT symbol on BOT Chain 677 resolves to the chain's USDT contract.
+      expect(capturedBody.acceptedToken).toBe("0xaBabc7Ddc03e501d190C676BF3d92ef0e6e87a3C");
+      // expiresInMinutes is translated into the ISO expiresAt the control plane accepts.
+      expect(capturedBody.expiresAt).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+      expect(capturedBody.expiresInMinutes).toBeUndefined();
       expect(capturedBody.recipientWallet.toLowerCase()).toBe(agent.address.toLowerCase());
       expect(newLink.name).toBe("Autonomous Agent Weather Data Feed");
+      expect(newLink.currency).toBe("USDT");
+      expect(newLink.acceptedToken).toBe("0xaBabc7Ddc03e501d190C676BF3d92ef0e6e87a3C");
     });
   });
 

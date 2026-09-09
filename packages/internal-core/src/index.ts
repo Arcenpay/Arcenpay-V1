@@ -117,6 +117,7 @@ export {
   getTokenAddress,
   getTokenDecimals,
   getTokensForChain,
+  resolveTokenAddress,
   getChain,
   getBlockExplorerUrl,
   isSupportedChainId,

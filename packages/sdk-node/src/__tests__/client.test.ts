@@ -349,6 +349,44 @@ describe("ArcenClient", () => {
       );
     });
 
+    it("resolves acceptedToken symbols and passes through chainId/isAgentic", async () => {
+      mockFetch.mockResolvedValueOnce(
+        mockResponse({
+          paymentLink: {
+            id: "plink_2",
+            name: "Agentic data pack",
+            slug: "agentic-data-pack-ab12cd34",
+            kind: "CUSTOM",
+            status: "ACTIVE",
+            amount: "15.000000",
+            currency: "USDC",
+            acceptedToken: "0x3600000000000000000000000000000000000000",
+            recipientWallet: "0x1234567890123456789012345678901234567890",
+            chainId: 5042002,
+            isAgentic: true,
+            checkoutUrl: "http://localhost/pay/agentic-data-pack-ab12cd34",
+          },
+        }),
+      );
+
+      await client.createPaymentLink({
+        kind: "CUSTOM",
+        name: "Agentic data pack",
+        amount: 15,
+        acceptedToken: "USDC",
+        chainId: 5042002,
+        recipientWallet: "0x1234567890123456789012345678901234567890",
+        isAgentic: true,
+      });
+
+      const [url, request] = mockFetch.mock.calls[0] as [string, RequestInit];
+      expect(url).toContain("/api/v1/payment-links");
+      const body = JSON.parse(request.body as string);
+      expect(body.acceptedToken).toBe("0x3600000000000000000000000000000000000000");
+      expect(body.chainId).toBe(5042002);
+      expect(body.isAgentic).toBe(true);
+    });
+
     it("lists payment links with API-key auth", async () => {
       mockFetch.mockResolvedValueOnce(
         mockResponse({

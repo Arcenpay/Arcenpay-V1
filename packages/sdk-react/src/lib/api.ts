@@ -20,13 +20,6 @@ export function resolveOptionalDashboardBaseUrl(
   return explicit ? explicit.replace(/\/$/, "") : null;
 }
 
-export function createPaymentLinkCheckoutUrl(
-  slug: string,
-): string {
-  const resolvedBaseUrl = resolveAppBaseUrl();
-  return `${resolvedBaseUrl.replace(/\/$/, "")}/pay/${encodeURIComponent(slug)}`;
-}
-
 export function entitlementsToFeatures(
   entitlements: Record<string, EntitlementResult>,
 ): Record<string, boolean | string | number> {

@@ -125,6 +125,8 @@ import {
   STELLAR_MAINNET_CHAIN_ID,
   STELLAR_TESTNET_CHAIN_ID,
   STELLAR_FUTURENET_CHAIN_ID,
+  isValidAddressForChain,
+  normalizeWalletForChain,
 } from "./chain-family";
 
 export const SUPPORTED_CHAINS = {
@@ -255,6 +257,40 @@ export function getTokensForChain(chainId: number): string[] {
   const tokens = TOKENS[chainId as keyof typeof TOKENS];
   if (!tokens) return [];
   return Object.keys(tokens);
+}
+
+/**
+ * Resolves a token for a payment/checkout request per chain.
+ *
+ * Accepts either a raw contract address (EVM 0x… / Stellar G…, C…) or a
+ * token symbol ("USDC", "USDT"). Symbols are looked up in the per-chain
+ * TOKENS registry. "USDC" falls back to "USDT" on chains without a native
+ * USDC deployment (e.g. BOT Chain), mirroring the backend `getUsdcAddress()`.
+ *
+ * Returns `undefined` when the value cannot be resolved for the given chain.
+ */
+export function resolveTokenAddress(
+  chainId: number,
+  symbolOrAddress: string,
+): string | undefined {
+  const trimmed = symbolOrAddress.trim();
+  if (!trimmed) return undefined;
+
+  if (isValidAddressForChain(trimmed, chainId)) {
+    return normalizeWalletForChain(trimmed, chainId) ?? undefined;
+  }
+
+  const symbol = trimmed.toUpperCase();
+  const token = getTokenAddress(chainId, symbol);
+  if (token && isValidAddressForChain(token, chainId)) return token;
+
+  // Chains without a native USDC (e.g. BOT Chain) only carry bridged USDT.
+  if (symbol === "USDC") {
+    const usdt = getTokenAddress(chainId, "USDT");
+    if (usdt && isValidAddressForChain(usdt, chainId)) return usdt;
+  }
+
+  return undefined;
 }
 
 // ─── Chain Helpers ──────────────────────────────────────────────────────────

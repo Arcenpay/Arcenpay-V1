@@ -1,6 +1,7 @@
 # @arcenpay/react
 
-ArcenPay React SDK for published billing components, customer identification, entitlement-aware UI, metered usage, and hosted payment-link helpers.
+ArcenPay React SDK for published billing components, customer identification,
+entitlement-aware UI, and metered usage.
 
 ## Install
 
@@ -72,7 +73,13 @@ export function BillingPage() {
 - `useEntitlement`
 - `useConsumeEntitlement`
 - `useTrack`
-- `createPaymentLinkCheckoutUrl`
+
+> **Payment links are a server-side concern.** Create and manage them with the
+> Node SDK (`@arcenpay/node` → `client.createPaymentLink()` /
+> `listPaymentLinks()` / `updatePaymentLink()`), the dashboard, or the Agent
+> SDK (`@arcenpay/agent` → `agent.createPaymentLink()`). The hosted checkout
+> URL returned by those APIs (`checkoutUrl`) is what your React app should
+> redirect users to.
 
 ## Common hook usage
 

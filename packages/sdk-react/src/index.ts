@@ -48,8 +48,6 @@ export { useTrack } from "./hooks/useTrack";
 export type { TrackEventInput } from "./hooks/useTrack";
 export { useStellarEmbedWallet } from "./hooks/useStellarEmbedWallet";
 
-export { createPaymentLinkCheckoutUrl } from "./lib/api";
-
 // Shared public types — re-exported so app developers only need this package
 export type {
   ArcenCompanyKeys,

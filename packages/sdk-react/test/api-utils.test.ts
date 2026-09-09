@@ -1,17 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
-  createPaymentLinkCheckoutUrl,
-  resolveAppBaseUrl,
   entitlementsToFeatures,
 } from "../src/lib/api";
 
 describe("sdk-react api helpers", () => {
-  it("builds payment-link URLs from the current resolved app URL", () => {
-    expect(createPaymentLinkCheckoutUrl("starter plan")).toBe(
-      `${resolveAppBaseUrl()}/pay/starter%20plan`,
-    );
-  });
-
   it("maps numeric entitlements to numeric feature values", () => {
     expect(
       entitlementsToFeatures({

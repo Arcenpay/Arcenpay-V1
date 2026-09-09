@@ -18,7 +18,7 @@ import type {
   ConsumeEntitlementResult,
   IdentifyResult,
 } from "./sdk";
-import { resolveArcenPayBaseUrl } from "./sdk";
+import { resolveArcenPayBaseUrl, resolveTokenAddress } from "./sdk";
 
 export interface ArcenClientConfig {
   apiKey: string;
@@ -81,6 +81,8 @@ export interface PaymentLinkSummary {
   recipientWallet: string;
   chainId: number;
   checkoutUrl: string;
+  isAgentic?: boolean;
+  agenticSpecUrl?: string | null;
   description?: string | null;
   metadata?: Record<string, unknown> | null;
   successUrl?: string | null;
@@ -119,10 +121,18 @@ export interface CreatePaymentLinkInput {
   catalogAddOnId?: string;
   invoiceId?: string;
   amount?: number;
+  /** Token address or symbol ("USDC", "USDT") — symbols resolve against the chain registry. */
   acceptedToken?: string;
+  /** Display currency label. Defaults to "USDC" on the backend. */
+  currency?: string;
+  /** Chain the link settles on. Falls back to the team's default chain. */
+  chainId?: number;
+  /** Enable dual-mode agentic /spec resolution for autonomous checkout. */
+  isAgentic?: boolean;
   recipientWallet: string;
   successUrl?: string;
   cancelUrl?: string;
+  /** ISO-8601 expiry timestamp, e.g. new Date(...).toISOString(). */
   expiresAt?: string;
 }
 
@@ -592,9 +602,20 @@ export class ArcenClient {
   async createPaymentLink(
     input: CreatePaymentLinkInput,
   ): Promise<{ paymentLink: PaymentLinkSummary }> {
+    // Symbols ("USDC", "USDT") are resolved to the chain's token address so
+    // callers never need to hardcode contracts. Raw addresses pass through.
+    let acceptedToken = input.acceptedToken;
+    if (input.acceptedToken && input.chainId) {
+      acceptedToken =
+        resolveTokenAddress(input.chainId, input.acceptedToken) ?? input.acceptedToken;
+    }
+
     return this.request("POST", "/api/v1/payment-links", {
       useApiKey: true,
-      body: input,
+      body: {
+        ...input,
+        ...(acceptedToken !== undefined ? { acceptedToken } : {}),
+      },
     });
   }
 

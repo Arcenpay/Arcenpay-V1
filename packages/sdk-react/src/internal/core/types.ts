@@ -747,6 +747,10 @@ export interface AgenticPaymentLinkSpec {
   expiresAt: string | null;
   sessionUrl: string;
   confirmUrl?: string;
+  /** Hosted checkout URL (https://app.arcenpay.com/pay/:slug) — share with humans. */
+  checkoutUrl?: string;
+  /** Machine-readable spec endpoint (GET /pay/:slug/spec). */
+  agenticSpecUrl?: string;
   metadata?: Record<string, unknown> | null;
 }
 

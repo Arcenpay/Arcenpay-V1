@@ -818,8 +818,14 @@ Allows autonomous agents acting as merchants to create payment links programmati
 
 - **`params.title`:** Service title.
 - **`params.amount`:** Price in decimal units (e.g. `2.50`).
-- **`params.currency`:** Currency symbol (`"USDC"`, `"USDT"`).
+- **`params.currency`:** Currency symbol (`"USDC"`, `"USDT"`) — resolved to the chain's token contract address automatically.
+- **`params.acceptedToken`:** Optional explicit token address (overrides `currency` resolution).
+- **`params.chainId`:** Optional — defaults to the agent's configured `chainId`.
+- **`params.expiresInMinutes` / `params.expiresAt`:** Optional expiry — converted to an ISO `expiresAt` for the control plane.
 - **`params.recipientWallet`:** Payout wallet (defaults to agent address).
+- **`params.apiKey`:** Optional per-call override (constructor `apiKey` is normally required).
+
+Returns a normalized `AgenticPaymentLinkSpec` including `slug`, `checkoutUrl` (hosted page for humans), `agenticSpecUrl`, `sessionUrl`, and `confirmUrl`.
 
 ---
 
@@ -1012,7 +1018,8 @@ async function sellService() {
   });
 
   console.log("Created Payment Link Slug:", linkSpec.slug);
-  console.log("Machine Spec URL:", linkSpec.sessionUrl);
+  console.log("Hosted URL (share with humans):", linkSpec.checkoutUrl);
+  console.log("Machine Spec URL:", linkSpec.agenticSpecUrl);
 }
 
 sellService();

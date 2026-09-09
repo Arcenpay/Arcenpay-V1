@@ -18,7 +18,7 @@ import {
 } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 import { sepolia, baseSepolia, base } from 'viem/chains';
-import { arcTestnet, botMainnet, botTestnet, X402_VERSION, X402_SCHEME, SessionVaultABI, getContractAddresses, getTokenAddress, isStellarChainId, getChainDescriptor, getStellarNetworkPassphrase, getStellarSorobanRpcUrl, normalizeX402AmountToDecimal } from './internal/core';
+import { arcTestnet, botMainnet, botTestnet, X402_VERSION, X402_SCHEME, SessionVaultABI, getContractAddresses, getTokenAddress, resolveTokenAddress, isStellarChainId, getChainDescriptor, getStellarNetworkPassphrase, getStellarSorobanRpcUrl, normalizeX402AmountToDecimal } from './internal/core';
 import type {
   X402Response,
   X402PaymentHeader,
@@ -1541,6 +1541,10 @@ export class ArcenAgent {
   /**
    * Programmatically creates a new payment link (with isAgentic: true).
    * Enables agents to act as merchants selling data, model inferences, or services.
+   *
+   * `currency` / `acceptedToken` may be a symbol ("USDC", "USDT") or a token
+   * address — symbols are resolved against the chain's token registry (with a
+   * USDC → USDT fallback on chains without native USDC such as BOT Chain).
    */
   async createPaymentLink(params: CreateAgentPaymentLinkParams): Promise<AgenticPaymentLinkSpec> {
     const targetUrl = `${this.apiUrl}/api/v1/payment-links`;
@@ -1549,31 +1553,50 @@ export class ArcenAgent {
       Accept: "application/json",
     };
 
-    if (this.config.apiKey) {
-      headers["Authorization"] = `Bearer ${this.config.apiKey}`;
+    if (params.apiKey ?? this.config.apiKey) {
+      headers["Authorization"] = `Bearer ${params.apiKey ?? this.config.apiKey}`;
     }
 
+    const resolvedChainId = params.chainId ?? this.config.chainId;
     const recipientWallet =
       params.recipientWallet ??
       (this.isStellar ? this.stellarAddress! : this.account.address);
 
     const title = params.title ?? params.name ?? "Agent Payment Link";
-    const acceptedToken = params.acceptedToken ?? params.currency ?? "USDC";
+    const currency = params.currency ?? "USDC";
+
+    // Resolve acceptedToken: explicit address wins, otherwise the currency
+    // symbol is mapped to the chain's canonical token contract.
+    const requestedToken = (params.acceptedToken ?? params.currency ?? "USDC").trim();
+    const acceptedToken = resolveTokenAddress(resolvedChainId, requestedToken);
+    if (!acceptedToken) {
+      throw new Error(
+        `[ArcenPayAgent] Unsupported token "${requestedToken}" on chain ${resolvedChainId}. ` +
+          `Pass acceptedToken as a valid token address or symbol ("USDC", "USDT").`,
+      );
+    }
+
+    // The control plane accepts `expiresAt` (ISO-8601) — translate the
+    // convenience `expiresInMinutes` for callers.
+    const expiresAt = params.expiresAt
+      ? new Date(params.expiresAt).toISOString()
+      : params.expiresInMinutes
+        ? new Date(Date.now() + params.expiresInMinutes * 60_000).toISOString()
+        : undefined;
 
     const body = {
-      title,
       name: title,
       description: params.description,
       amount: params.amount,
-      currency: params.currency ?? "USDC",
+      currency,
       acceptedToken,
-      chainId: params.chainId ?? this.config.chainId,
+      chainId: resolvedChainId,
       recipientWallet,
       isAgentic: true,
-      expiresInMinutes: params.expiresInMinutes,
-      successUrl: params.successUrl,
-      cancelUrl: params.cancelUrl,
-      metadata: params.metadata,
+      ...(expiresAt ? { expiresAt } : {}),
+      ...(params.successUrl ? { successUrl: params.successUrl } : {}),
+      ...(params.cancelUrl ? { cancelUrl: params.cancelUrl } : {}),
+      ...(params.metadata ? { metadata: params.metadata } : {}),
     };
 
     const res = await globalThis.fetch(targetUrl, {
@@ -1588,7 +1611,53 @@ export class ArcenAgent {
     }
 
     const data = await res.json();
-    return (data.spec ?? data.paymentLink ?? data) as AgenticPaymentLinkSpec;
+    const created =
+      (data.spec as Record<string, unknown> | undefined) ??
+      (data.paymentLink as Record<string, unknown> | undefined) ??
+      (data as Record<string, unknown>);
+
+    const specId = String(created.id ?? "");
+    const specSlug = String(created.slug ?? "");
+    const specAmount = String(created.amount ?? "");
+    const apiRoot = (this.apiUrl ?? "").replace(/\/+$/, "");
+
+    return {
+      type: "agentic_payment_link",
+      version: "1.0",
+      id: specId,
+      slug: specSlug,
+      name: String(created.name ?? title),
+      description: (created.description as string | null) ?? null,
+      amount: specAmount,
+      amountAtomic:
+        created.amountAtomic !== undefined
+          ? String(created.amountAtomic)
+          : specAmount
+            ? String(Math.round(Number(specAmount) * 1_000_000))
+            : "",
+      currency: String(created.currency ?? currency),
+      acceptedToken: String(created.acceptedToken ?? acceptedToken),
+      chainId: Number(created.chainId ?? resolvedChainId),
+      chainFamily:
+        created.chainFamily === "stellar" || this.isStellar ? "stellar" : "evm",
+      recipientWallet: String(created.recipientWallet ?? recipientWallet),
+      status: (created.status as AgenticPaymentLinkSpec["status"]) ?? "ACTIVE",
+      isAgentic: true,
+      expiresAt: (created.expiresAt as string | null) ?? (expiresAt ?? null),
+      sessionUrl:
+        (created.sessionUrl as string | undefined) ??
+        `${apiRoot}/api/v1/public/payment-links/${specSlug}/session`,
+      confirmUrl:
+        (created.confirmUrl as string | undefined) ??
+        (apiRoot ? `${apiRoot}/api/v1/checkout-sessions/:sessionId/confirm` : undefined),
+      checkoutUrl:
+        (created.checkoutUrl as string | undefined) ??
+        (specSlug ? `${apiRoot}/pay/${specSlug}` : undefined),
+      agenticSpecUrl:
+        (created.agenticSpecUrl as string | undefined) ??
+        (specSlug ? `${apiRoot}/api/v1/public/payment-links/${specSlug}/spec` : undefined),
+      metadata: (created.metadata as Record<string, unknown> | null) ?? params.metadata ?? null,
+    } satisfies AgenticPaymentLinkSpec;
   }
 
   // ─── ArcenAuth Mandate & Policy (Layers 2 & 3) ────────────
