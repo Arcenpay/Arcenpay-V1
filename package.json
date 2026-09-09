@@ -74,6 +74,7 @@
     "@coinbase/cdp-sdk": "1.44.1"
   },
   "optionalDependencies": {
-    "@rollup/rollup-linux-x64-gnu": "^4.60.4"
+    "@rollup/rollup-linux-x64-gnu": "^4.60.4",
+    "@tailwindcss/oxide-linux-x64-gnu": "4.2.1"
   }
 }

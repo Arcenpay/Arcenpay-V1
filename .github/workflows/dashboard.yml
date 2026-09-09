@@ -63,7 +63,6 @@ jobs:
 
   docs:
     name: Validate Docs
-    if: ${{ hashFiles('apps/arcenpay-docs/docs.json') != '' }}
     runs-on: ubuntu-latest
 
     steps:
@@ -74,9 +73,11 @@ jobs:
           node-version: 22
 
       - name: Validate Mintlify docs
+        if: ${{ hashFiles('apps/arcenpay-docs/docs.json') != '' }}
         working-directory: apps/arcenpay-docs
         run: npx mint@latest validate
 
       - name: Check docs links
+        if: ${{ hashFiles('apps/arcenpay-docs/docs.json') != '' }}
         working-directory: apps/arcenpay-docs
         run: npx mint@latest broken-links
