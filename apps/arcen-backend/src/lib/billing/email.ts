@@ -35,14 +35,16 @@ async function sendWithResend(input: {
   to: string;
   subject: string;
   html: string;
+  from?: string;
   attachments?: Array<{
     filename: string;
     content: string;
     contentType?: string;
   }>;
 }) {
+  const sender = input.from || FROM || "noreply@arcenpay.com";
   const result = await getResendClient().emails.send({
-    from: FROM,
+    from: sender,
     to: input.to,
     subject: input.subject,
     html: input.html,
@@ -64,59 +66,66 @@ async function sendWithResend(input: {
   return result;
 }
 
-/** Sends a 6-digit email auth code for the dashboard login flow */
+/** Sends a 6-digit email auth code for the dashboard login flow (automated from noreply) */
 export async function sendEmailAuthCode(
   email: string,
   code: string,
 ): Promise<void> {
   await sendWithResend({
     to: email,
-    subject: "Your ArcenPay sign-in code",
+    subject: "Your ArcenPay Verification Code",
     html: `
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Sign in to ArcenPay</title>
+  <meta name="color-scheme" content="light" />
+  <meta name="supported-color-schemes" content="light" />
+  <title>Your ArcenPay Verification Code</title>
 </head>
-<body style="margin:0;padding:0;background:#0a0a0a;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="padding:40px 16px;">
+<body style="margin:0;padding:0;background-color:#f8fafc;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased;">
+  <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="padding:48px 16px;background-color:#f8fafc;">
     <tr><td align="center">
-      <table width="480" cellpadding="0" cellspacing="0"
-             style="background:#111113;border:1px solid #222225;border-radius:12px;padding:40px;">
-        <tr><td>
-          <!-- Logo -->
-          <p style="margin:0 0 32px;font-size:22px;font-weight:700;color:#ffffff;">ArcenPay</p>
+      <table width="100%" cellpadding="0" cellspacing="0" role="presentation"
+             style="max-width:480px;background-color:#ffffff;border:1px solid #e2e8f0;border-radius:16px;box-shadow:0 4px 6px -1px rgba(0,0,0,0.05),0 2px 4px -2px rgba(0,0,0,0.05);overflow:hidden;">
+        <!-- Top accent banner -->
+        <tr><td style="height:4px;background-color:#4f46e5;"></td></tr>
+        <tr><td style="padding:40px 36px;">
+          <!-- Brand header -->
+          <div style="margin-bottom:28px;">
+            <span style="font-size:20px;font-weight:800;letter-spacing:-0.5px;color:#0f172a;text-transform:none;">Arcen<span style="color:#4f46e5;">Pay</span></span>
+            <span style="display:inline-block;margin-left:8px;padding:2px 8px;background-color:#eef2ff;color:#4f46e5;font-size:11px;font-weight:600;border-radius:9999px;vertical-align:middle;">Verification</span>
+          </div>
 
-          <h1 style="margin:0 0 12px;font-size:20px;font-weight:600;color:#ffffff;">
+          <h1 style="margin:0 0 12px;font-size:22px;font-weight:700;color:#0f172a;line-height:1.3;letter-spacing:-0.3px;">
             Your verification code
           </h1>
-          <p style="margin:0 0 28px;font-size:14px;color:#888;">
-            Enter this 6-digit code in the ArcenPay dashboard to continue.
-            It expires in <strong style="color:#ccc">10 minutes</strong>.
+          <p style="margin:0 0 28px;font-size:14px;color:#475569;line-height:1.6;">
+            Enter this 6-digit code in the ArcenPay dashboard to complete your sign-in. This code will expire in <strong style="color:#0f172a;">10 minutes</strong>.
           </p>
 
-          <div style="display:inline-block;padding:16px 24px;background:#161824;border:1px solid #2d325b;border-radius:12px;">
-            <span style="display:block;font-size:32px;letter-spacing:0.35em;font-weight:700;color:#ffffff;font-family:ui-monospace, SFMono-Regular, Menlo, monospace;">
+          <!-- OTP Code Box -->
+          <div style="background-color:#f8fafc;border:2px solid #e2e8f0;border-radius:12px;padding:20px 24px;margin:24px 0;text-align:center;">
+            <span style="display:block;font-size:36px;letter-spacing:0.25em;font-weight:800;color:#0f172a;font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;">
               ${code}
             </span>
           </div>
 
-          <p style="margin:28px 0 0;font-size:12px;color:#555;">
-            If you did not request this code, you can safely ignore this email.
+          <p style="margin:24px 0 0;font-size:13px;color:#64748b;line-height:1.5;">
+            If you did not request this sign-in code, someone may have typed your email address by mistake. You can safely ignore this message.
           </p>
 
-          <hr style="margin:32px 0;border:none;border-top:1px solid #222225;" />
-          <p style="margin:0;font-size:12px;color:#444;">
-            ArcenPay will never ask you to share this code over chat or email.
+          <hr style="margin:32px 0 20px;border:none;border-top:1px solid #f1f5f9;" />
+          <p style="margin:0;font-size:12px;color:#94a3b8;line-height:1.5;">
+            ArcenPay will never ask you to share your verification code or keys over chat or email.
           </p>
         </td></tr>
       </table>
     </td></tr>
   </table>
 </body>
- </html>`,
+</html>`,
   });
 }
 

@@ -45,6 +45,7 @@ import {
 type EmailAuthFlowProps = {
   inviteToken?: string | null;
   initialStep?: Step;
+  initialKey?: string | null;
 };
 
 type Step = "chain" | "wallet" | "email" | "code" | "sign" | "activate";
@@ -69,6 +70,7 @@ function formatTimer(targetIso: string | null): string {
 export function EmailAuthFlow({
   inviteToken,
   initialStep,
+  initialKey,
 }: EmailAuthFlowProps) {
   const router = useRouter();
   const { address, isConnected } = useAccount();
@@ -104,7 +106,7 @@ export function EmailAuthFlow({
   const [isPending, startTransition] = useTransition();
 
   /* Activation key states */
-  const [activationKey, setActivationKey] = useState("");
+  const [activationKey, setActivationKey] = useState(initialKey?.trim() || "");
   const [verifyingKey, setVerifyingKey] = useState(false);
   const [redeemingKey, setRedeemingKey] = useState(false);
   const [isPlatformAdminUser, setIsPlatformAdminUser] = useState(false);

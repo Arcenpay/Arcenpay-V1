@@ -236,8 +236,11 @@ export const ACCESS_TOKEN_SECRET: string = (() => {
 /** Resend API key. Required when sending any transactional email. */
 export const RESEND_API_KEY = process.env.RESEND_API_KEY ?? "";
 
-/** From address for transactional emails. */
+/** From address for automated transactional emails (OTP, receipts, system alerts). */
 export const EMAIL_FROM = process.env.EMAIL_FROM || "noreply@arcenpay.com";
+
+/** From address for admin-sent emails (activation keys, announcements, direct communications). */
+export const EMAIL_FROM_ADMIN = process.env.EMAIL_FROM_ADMIN || "hello@arcenpay.com";
 
 // ── Dune Analytics ────────────────────────────────────────────────────────────
 

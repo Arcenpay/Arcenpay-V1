@@ -3,7 +3,7 @@ import { z } from "zod";
 import { requireAdminAuth } from "../../../middleware/auth.js";
 import { db } from "../../../db.js";
 import { ActivationKeyService } from "../../../services/activation-key.service.js";
-import { RESEND_API_KEY, EMAIL_FROM, APP_URL } from "../../../config.js";
+import { RESEND_API_KEY, EMAIL_FROM_ADMIN, APP_URL } from "../../../config.js";
 import { Resend } from "resend";
 import type { ActivationKeyStatus, PlatformTier } from "../../../generated/client/client.js";
 
@@ -22,51 +22,114 @@ const createKeySchema = z.object({
 
 const revokeKeySchema = z.object({ reason: z.string().optional() });
 
-async function sendActivationEmail(to: string, subject: string, key: { key: string; tier: string; maxUses: number; expiresAt?: Date | string | null; notes?: string | null }): Promise<{ error?: string }> {
-  const resend = new Resend(RESEND_API_KEY);
+export function buildEnterpriseActivationEmailHtml(params: {
+  key: string;
+  tier: string;
+  maxUses: number;
+  recipientEmail?: string;
+  expiresAt?: Date | string | null;
+  notes?: string | null;
+  customMessage?: string;
+}): string {
   const dashUrl = APP_URL ?? "https://app.arcenpay.com";
   const tierMap: Record<string, string> = { FREE: "Free", PLUS: "Plus", PRO: "Pro" };
-  const tierLabel = tierMap[key.tier as string] ?? key.tier;
-  const { error } = await resend.emails.send({
-    from: EMAIL_FROM || "noreply@arcenpay.com",
-    to: [to],
-    subject,
-    html: `
-<!DOCTYPE html>
-<html><head><meta charset="UTF-8" /></head>
-<body style="margin:0;padding:0;background:#0a0a0a;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="padding:40px 16px;">
+  const tierLabel = tierMap[params.tier] ?? params.tier;
+  const activationUrl = `${dashUrl}/onboarding/activation?key=${encodeURIComponent(params.key)}`;
+  const expiresFormatted = params.expiresAt ? new Date(params.expiresAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : null;
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="color-scheme" content="light" />
+  <meta name="supported-color-schemes" content="light" />
+  <title>Your ArcenPay Activation Key</title>
+</head>
+<body style="margin:0;padding:0;background-color:#f8fafc;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased;">
+  <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="padding:48px 16px;background-color:#f8fafc;">
     <tr><td align="center">
-      <table width="480" cellpadding="0" cellspacing="0" style="background:#111113;border:1px solid #222225;border-radius:12px;padding:40px;">
-        <tr><td>
-          <p style="margin:0 0 32px;font-size:22px;font-weight:700;color:#ffffff;">ArcenPay</p>
-          <h1 style="margin:0 0 12px;font-size:20px;font-weight:600;color:#ffffff;">Your ${tierLabel} Plan Awaits</h1>
-          <p style="margin:0 0 20px;font-size:14px;color:#888;line-height:1.6;">
-            You've been invited to activate a <strong style="color:#ccc;">${tierLabel}</strong> workspace.
-            Use the key below to unlock your ArcenPay billing infrastructure.
-          </p>
-          <div style="background:#1a1a1c;border:1px solid #2a2a2c;border-radius:8px;padding:16px;margin:20px 0;text-align:center;">
-            <p style="margin:0 0 6px;font-size:11px;color:#666;text-transform:uppercase;letter-spacing:1px;">Activation Key</p>
-            <p style="margin:0;font-size:20px;font-weight:700;color:#6366f1;font-family:monospace;letter-spacing:2px;">${key.key}</p>
+      <table width="100%" cellpadding="0" cellspacing="0" role="presentation"
+             style="max-width:540px;background-color:#ffffff;border:1px solid #e2e8f0;border-radius:16px;box-shadow:0 4px 6px -1px rgba(0,0,0,0.05),0 2px 4px -2px rgba(0,0,0,0.05);overflow:hidden;text-align:left;">
+        <!-- Top brand accent banner -->
+        <tr><td style="height:5px;background:linear-gradient(90deg, #4f46e5 0%, #7c3aed 100%);"></td></tr>
+        <tr><td style="padding:40px 36px;">
+          <!-- Brand Header -->
+          <div style="margin-bottom:28px;">
+            <span style="font-size:22px;font-weight:800;letter-spacing:-0.5px;color:#0f172a;">Arcen<span style="color:#4f46e5;">Pay</span></span>
+            <span style="display:inline-block;margin-left:10px;padding:3px 10px;background-color:#eef2ff;color:#4f46e5;font-size:12px;font-weight:700;border-radius:9999px;vertical-align:middle;text-transform:uppercase;letter-spacing:0.5px;">${tierLabel} Plan</span>
           </div>
-          <ol style="margin:0 0 28px;padding-left:20px;font-size:13px;color:#888;line-height:2;">
-            <li>Go to <a href="${dashUrl}" style="color:#6366f1;">${dashUrl}</a></li>
-            <li>Sign in or create your account</li>
-            <li>Enter the activation key during onboarding</li>
-          </ol>
-          <p style="margin:0;font-size:12px;color:#666;line-height:1.5;">
-            This key grants <strong>${key.maxUses} workspace${key.maxUses > 1 ? "s" : ""}</strong>
-            ${key.expiresAt ? `and expires on ${new Date(key.expiresAt).toLocaleDateString()}.` : "."}
-            ${key.notes ? `<br/>Note: ${key.notes}` : ""}
+
+          <h1 style="margin:0 0 12px;font-size:24px;font-weight:700;color:#0f172a;line-height:1.3;letter-spacing:-0.3px;">
+            Your ${tierLabel} Workspace is Ready
+          </h1>
+          <p style="margin:0 0 24px;font-size:14px;color:#475569;line-height:1.6;">
+            You've been invited to activate your <strong style="color:#0f172a;">${tierLabel}</strong> workspace on ArcenPay. Use your unique platform activation key below to unlock the Web3 billing infrastructure and control plane.
           </p>
-          <hr style="margin:32px 0;border:none;border-top:1px solid #222225;" />
-          <p style="margin:0;font-size:12px;color:#444;">Questions? Reply to this email.</p>
+
+          ${params.customMessage ? `<div style="background-color:#f1f5f9;border-left:4px solid #4f46e5;padding:14px 18px;margin-bottom:24px;border-radius:0 8px 8px 0;font-size:14px;color:#334155;line-height:1.5;">${params.customMessage}</div>` : ""}
+
+          <!-- Key Box -->
+          <div style="background-color:#f5f3ff;border:2px dashed #c7d2fe;border-radius:12px;padding:24px 20px;margin:24px 0;text-align:center;">
+            <p style="margin:0 0 8px;font-size:11px;font-weight:700;color:#6366f1;text-transform:uppercase;letter-spacing:1.5px;">Platform Activation Key</p>
+            <div style="margin:0 0 10px;font-size:24px;font-weight:800;color:#312e81;font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;letter-spacing:2.5px;">
+              ${params.key}
+            </div>
+            <div style="font-size:12px;color:#6b21a8;font-weight:500;">
+              Valid for <strong>${params.maxUses} workspace${params.maxUses > 1 ? "s" : ""}</strong>${expiresFormatted ? ` &bull; Expires ${expiresFormatted}` : ""}
+            </div>
+            ${params.notes ? `<div style="margin-top:6px;font-size:11px;color:#7c3aed;">Note: ${params.notes}</div>` : ""}
+          </div>
+
+          <!-- CTA Button -->
+          <div style="text-align:center;margin:32px 0;">
+            <a href="${activationUrl}"
+               style="display:inline-block;padding:14px 36px;background-color:#4f46e5;color:#ffffff;text-decoration:none;border-radius:10px;font-size:15px;font-weight:600;box-shadow:0 4px 6px -1px rgba(79,70,229,0.3);letter-spacing:0.2px;">
+              Activate Workspace &rarr;
+            </a>
+          </div>
+
+          <!-- Quick instructions -->
+          <div style="background-color:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:18px 20px;margin:24px 0;">
+            <p style="margin:0 0 10px;font-size:13px;font-weight:700;color:#1e293b;">How to activate:</p>
+            <ol style="margin:0;padding-left:18px;font-size:13px;color:#475569;line-height:1.7;">
+              <li>Click the button above or visit <a href="${dashUrl}" style="color:#4f46e5;text-decoration:none;font-weight:500;">${dashUrl}</a></li>
+              <li>Sign in or create your account with your email</li>
+              <li>Enter your activation key to unlock the dashboard</li>
+            </ol>
+          </div>
+
+          <hr style="margin:32px 0 20px;border:none;border-top:1px solid #f1f5f9;" />
+          <p style="margin:0 0 6px;font-size:12px;color:#64748b;line-height:1.5;">
+            Sent by the ArcenPay Platform Admin Team (<a href="mailto:hello@arcenpay.com" style="color:#4f46e5;text-decoration:none;">hello@arcenpay.com</a>).
+          </p>
+          <p style="margin:0;font-size:12px;color:#94a3b8;line-height:1.5;">
+            Questions or need assistance? Reply directly to this email.
+          </p>
         </td></tr>
       </table>
     </td></tr>
   </table>
 </body>
-</html>`,
+</html>`;
+}
+
+async function sendActivationEmail(to: string, subject: string, key: { key: string; tier: string; maxUses: number; expiresAt?: Date | string | null; notes?: string | null }): Promise<{ error?: string }> {
+  const resend = new Resend(RESEND_API_KEY);
+  const html = buildEnterpriseActivationEmailHtml({
+    key: key.key,
+    tier: key.tier,
+    maxUses: key.maxUses,
+    recipientEmail: to,
+    expiresAt: key.expiresAt,
+    notes: key.notes,
+  });
+
+  const { error } = await resend.emails.send({
+    from: EMAIL_FROM_ADMIN || "hello@arcenpay.com",
+    to: [to],
+    subject,
+    html,
   });
   return { error: error?.message };
 }
@@ -141,9 +204,15 @@ export const adminActivationKeysRouter = new Hono()
     if (!usableKey) return c.json({ ok: false, error: "No FREE keys with remaining capacity. Create one first." }, 400 as any);
     const inactiveTeams = await db.team.findMany({ where: { isPlatformActivated: false }, select: { id: true, name: true, slug: true, profileData: true }, take: 200 });
     const resend = new Resend(RESEND_API_KEY);
-    const dashUrl = APP_URL ?? "https://app.arcenpay.com";
     const customMessage = parse.data.message ?? "";
     const subject = parse.data.subject ?? "Get Started with ArcenPay — Free Plan";
+    const emailHtml = buildEnterpriseActivationEmailHtml({
+      key: usableKey.key,
+      tier: "FREE",
+      maxUses: usableKey.maxUses,
+      notes: "Free Tier activation for new workspaces",
+      customMessage: customMessage || undefined,
+    });
     let sent = 0, errors = 0;
     for (const team of inactiveTeams) {
       const profile = team.profileData as Record<string, unknown> | null;
@@ -151,8 +220,10 @@ export const adminActivationKeysRouter = new Hono()
       if (!email) continue;
       try {
         const { error } = await resend.emails.send({
-          from: EMAIL_FROM || "noreply@arcenpay.com", to: [email], subject,
-          html: `<!DOCTYPE html><html><head><meta charset="UTF-8" /></head><body style="margin:0;padding:0;background:#0a0a0a;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;"><table width="100%" cellpadding="0" cellspacing="0" style="padding:40px 16px;"><tr><td align="center"><table width="480" cellpadding="0" cellspacing="0" style="background:#111113;border:1px solid #222225;border-radius:12px;padding:40px;"><tr><td><p style="margin:0 0 32px;font-size:22px;font-weight:700;color:#ffffff;">ArcenPay</p><h1 style="margin:0 0 12px;font-size:20px;font-weight:600;color:#ffffff;">Your Free Plan is Ready</h1><p style="margin:0 0 20px;font-size:14px;color:#888;line-height:1.6;">Welcome to ArcenPay! Your <strong style="color:#ccc;">Free</strong> workspace is ready.${customMessage ? `<br/><br/>${customMessage}` : ""}</p><div style="background:#1a1a1c;border:1px solid #2a2a2c;border-radius:8px;padding:16px;margin:20px 0;text-align:center;"><p style="margin:0 0 6px;font-size:11px;color:#666;text-transform:uppercase;letter-spacing:1px;">Activation Key</p><p style="margin:0;font-size:20px;font-weight:700;color:#6366f1;font-family:monospace;letter-spacing:2px;">${usableKey.key}</p></div><ol style="margin:0 0 28px;padding-left:20px;font-size:13px;color:#888;line-height:2;"><li>Go to <a href="${dashUrl}" style="color:#6366f1;">${dashUrl}</a></li><li>Sign in with your email</li><li>Enter the activation key above</li></ol><hr style="margin:32px 0;border:none;border-top:1px solid #222225;" /><p style="margin:0;font-size:12px;color:#444;">Questions? Reply to this email.</p></td></tr></table></td></tr></table></body></html>`,
+          from: EMAIL_FROM_ADMIN || "hello@arcenpay.com",
+          to: [email],
+          subject,
+          html: emailHtml,
         });
         if (error) { errors++; } else { sent++; }
       } catch { errors++; }
@@ -201,17 +272,56 @@ export const adminActivationKeysRouter = new Hono()
       }
     }
     const resend = new Resend(RESEND_API_KEY);
-    const dashUrl = APP_URL ?? "https://app.arcenpay.com";
-    const baseStart = "<!DOCTYPE html><html><head><meta charset=\"UTF-8\" /></head><body style=\"margin:0;padding:0;background:#0a0a0a;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;\"><table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"padding:40px 16px;\"><tr><td align=\"center\"><table width=\"480\" cellpadding=\"0\" cellspacing=\"0\" style=\"background:#111113;border:1px solid #222225;border-radius:12px;padding:40px;\"><tr><td><p style=\"margin:0 0 32px;font-size:22px;font-weight:700;color:#ffffff;\">ArcenPay</p>";
-    const baseEnd = "<hr style=\"margin:32px 0;border:none;border-top:1px solid #222225;\" /><p style=\"margin:0;font-size:12px;color:#444;\">Questions? Reply to this email.</p></td></tr></table></td></tr></table></body></html>";
     let sent = 0, errors = 0;
     for (const email of to) {
       try {
-        const content = message ? message.replace(/\n/g, "<br/>") : "<h1 style=\"margin:0 0 12px;font-size:20px;font-weight:600;color:#ffffff;\">ArcenPay is Live!</h1><p style=\"margin:0 0 20px;font-size:14px;color:#888;line-height:1.6;\">We are excited to announce that ArcenPay is live. Build your billing infrastructure on-chain.</p>";
-        const keyBox = keyData ? "<div style=\"background:#1a1a1c;border:1px solid #2a2a2c;border-radius:8px;padding:16px;margin:20px 0;text-align:center;\"><p style=\"margin:0 0 6px;font-size:11px;color:#666;text-transform:uppercase;letter-spacing:1px;\">Activation Key</p><p style=\"margin:0;font-size:20px;font-weight:700;color:#6366f1;font-family:monospace;letter-spacing:2px;\">" + keyData.key + "</p></div>" : "";
+        const html = keyData
+          ? buildEnterpriseActivationEmailHtml({
+              key: keyData.key,
+              tier: keyData.tier,
+              maxUses: keyData.maxUses,
+              recipientEmail: email,
+              expiresAt: keyData.expiresAt,
+              notes: keyData.notes,
+              customMessage: message || undefined,
+            })
+          : `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="color-scheme" content="light" />
+  <title>${subject}</title>
+</head>
+<body style="margin:0;padding:0;background-color:#f8fafc;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="padding:48px 16px;background-color:#f8fafc;">
+    <tr><td align="center">
+      <table width="100%" cellpadding="0" cellspacing="0" style="max-width:540px;background-color:#ffffff;border:1px solid #e2e8f0;border-radius:16px;box-shadow:0 4px 6px -1px rgba(0,0,0,0.05);overflow:hidden;text-align:left;">
+        <tr><td style="height:5px;background:linear-gradient(90deg, #4f46e5 0%, #7c3aed 100%);"></td></tr>
+        <tr><td style="padding:40px 36px;">
+          <div style="margin-bottom:28px;">
+            <span style="font-size:22px;font-weight:800;letter-spacing:-0.5px;color:#0f172a;">Arcen<span style="color:#4f46e5;">Pay</span></span>
+          </div>
+          <h1 style="margin:0 0 16px;font-size:24px;font-weight:700;color:#0f172a;line-height:1.3;">${subject}</h1>
+          <div style="font-size:14px;color:#475569;line-height:1.6;margin-bottom:28px;">
+            ${message ? message.replace(/\n/g, "<br/>") : "We are excited to announce that ArcenPay is live. Build, manage, and scale your on-chain billing infrastructure."}
+          </div>
+          <hr style="margin:32px 0 20px;border:none;border-top:1px solid #f1f5f9;" />
+          <p style="margin:0;font-size:12px;color:#64748b;">
+            Sent by the ArcenPay Platform Admin Team (<a href="mailto:hello@arcenpay.com" style="color:#4f46e5;text-decoration:none;">hello@arcenpay.com</a>).
+          </p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+
         const { error } = await resend.emails.send({
-          from: EMAIL_FROM || "noreply@arcenpay.com", to: [email], subject,
-          html: baseStart + content + keyBox + baseEnd
+          from: EMAIL_FROM_ADMIN || "hello@arcenpay.com",
+          to: [email],
+          subject,
+          html,
         });
         if (error) { errors++; } else { sent++; }
       } catch { errors++; }

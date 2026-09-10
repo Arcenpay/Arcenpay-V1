@@ -62,4 +62,9 @@ subgraph/generated/
 # rust generated files
 **/target/
 
+# Launch email campaign (recipient data + send state = private)
+scripts/.launch-campaign-state.json
+scripts/data/*
+!scripts/data/launch-recipients.example.csv
+
 .commandcode/

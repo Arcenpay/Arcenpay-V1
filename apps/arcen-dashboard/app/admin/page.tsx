@@ -7,7 +7,7 @@ import {
   Building2, CheckCircle2, Clock, Sparkles,
   Loader2, Send, Mail, BarChart3, Activity, XCircle,
   TrendingUp, DollarSign, PieChart as PieIcon, Info, Zap, Globe, Database,
-  ChevronRight,
+  ChevronRight, AlertCircle, UserCheck, UserX, ExternalLink, UserPlus,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -25,7 +25,48 @@ import { toast } from "sonner";
 const COLORS = ["#6366f1", "#22c55e", "#eab308", "#ef4444", "#a855f7", "#06b6d4"];
 
 interface KeyItem { id: string; key: string; name: string; recipientEmail: string | null; tier: string; maxUses: number; usedCount: number; status: string; expiresAt: string | null; notes: string | null; createdAt: string; }
-interface UserItem { id: string; email: string | null; walletAddress: string | null; stellarWalletAddress: string | null; createdAt: string; }
+interface UserItem {
+  id: string;
+  email: string | null;
+  emailVerified?: boolean;
+  walletAddress: string | null;
+  stellarWalletAddress: string | null;
+  createdAt: string;
+  lastSeenAt?: string;
+  isAdmin?: boolean;
+  isActivated?: boolean;
+  activationStatus?: "ADMIN" | "ACTIVATED" | "PENDING_ACTIVATION";
+  primaryTeam?: {
+    id: string;
+    name: string;
+    slug: string;
+    platformTier: string;
+    isPlatformActivated: boolean;
+    allowPlatformBilling: boolean;
+    activationKeyId: string | null;
+    activationKey?: { id: string; key: string; name: string; tier: string; status: string } | null;
+    role?: string;
+  } | null;
+  teamsCount?: number;
+}
+interface SigninAttemptItem {
+  email: string;
+  latestAttemptAt: string;
+  firstAttemptAt: string;
+  totalRequests: number;
+  hasCompletedOtp: boolean;
+  hasAccount: boolean;
+  userId: string | null;
+  isActivated: boolean;
+  status: "REGISTERED_ACTIVE" | "REGISTERED_NEEDS_KEY" | "OTP_INCOMPLETE";
+  team?: {
+    id: string;
+    name: string;
+    slug: string;
+    tier: string;
+    isActivated: boolean;
+  } | null;
+}
 interface TeamItem { id: string; name: string; slug: string; platformTier: string; isPlatformActivated: boolean; createdAt: string; _count: { members: number }; }
 
 // ── Placeholder for rest (will append sections) ──
@@ -175,26 +216,35 @@ function BroadcastTab({ hdrs }: any) {
         <Card>
           <CardHeader><CardTitle className="text-sm"><Mail className="w-4 h-4 inline mr-1.5 text-brand" />Email Preview</CardTitle></CardHeader>
           <CardContent>
-            <div className="bg-[#0a0a0a] rounded-lg p-4 text-xs leading-relaxed" style={{ fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" }}>
-              <p style={{ margin: "0 0 24px", fontSize: "18px", fontWeight: 700, color: "#fff" }}>ArcenPay</p>
-              {message ? (
-                <div dangerouslySetInnerHTML={{ __html: message.replace(/\n/g, "<br/>") }} />
-              ) : (
-                <>
-                  <h1 style={{ margin: "0 0 12px", fontSize: "18px", fontWeight: 600, color: "#fff" }}>ArcenPay is Live!</h1>
-                  <p style={{ margin: "0 0 16px", color: "#888" }}>We are excited to announce that ArcenPay is live. Build, manage, and scale your billing infrastructure on-chain.</p>
-                </>
-              )}
-              {includeKey && (
-                <div style={{ background: "#1a1a1c", border: "1px solid #2a2a2c", borderRadius: 8, padding: 12, margin: "16px 0", textAlign: "center" }}>
-                  <p style={{ margin: "0 0 4px", fontSize: "10px", color: "#666", textTransform: "uppercase" }}>Your Activation Key</p>
-                  <p style={{ margin: 0, fontSize: "16px", fontWeight: 700, color: "#6366f1", fontFamily: "monospace" }}>ARCN-XXXX-XXXX-XXXX</p>
+            <div className="bg-[#f8fafc] border border-border rounded-lg p-4 text-xs leading-relaxed text-slate-800" style={{ fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" }}>
+              <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm space-y-3 text-left">
+                <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+                  <span className="font-extrabold text-base tracking-tight text-slate-900">Arcen<span className="text-indigo-600">Pay</span></span>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-50 text-indigo-700">PLATFORM ADMIN</span>
                 </div>
-              )}
-              <hr style={{ margin: "24px 0", border: "none", borderTop: "1px solid #222" }} />
-              <p style={{ margin: 0, fontSize: "10px", color: "#444" }}>Questions? Reply to this email.</p>
+                {message ? (
+                  <div className="text-slate-700" dangerouslySetInnerHTML={{ __html: message.replace(/\n/g, "<br/>") }} />
+                ) : (
+                  <>
+                    <h1 className="text-base font-bold text-slate-900 m-0">ArcenPay is Live!</h1>
+                    <p className="text-slate-600 m-0 text-xs leading-normal">We are excited to announce that ArcenPay is live. Build, manage, and scale your billing infrastructure on-chain.</p>
+                  </>
+                )}
+                {includeKey && (
+                  <div className="bg-indigo-50/70 border-2 border-dashed border-indigo-200 rounded-lg p-3 text-center my-2">
+                    <p className="m-0 mb-1 text-[10px] font-bold uppercase tracking-wider text-indigo-600">Platform Activation Key</p>
+                    <p className="m-0 text-base font-extrabold text-indigo-950 font-mono tracking-widest">ARCN-XXXX-XXXX-XXXX</p>
+                    <p className="m-0 mt-1 text-[10px] text-indigo-700 font-medium">Valid for 1 workspace &bull; Enterprise billing unlocked</p>
+                  </div>
+                )}
+                <div className="pt-1 text-center">
+                  <span className="inline-block bg-indigo-600 text-white font-semibold px-4 py-1.5 rounded-lg text-xs shadow-sm">Activate Workspace &rarr;</span>
+                </div>
+                <hr className="my-2 border-slate-100" />
+                <p className="m-0 text-[10px] text-slate-400">Sent by ArcenPay Platform Admin (hello@arcenpay.com). Reply to this email with questions.</p>
+              </div>
             </div>
-            <p className="text-[10px] text-muted-foreground mt-2">Attach a real key when sending for the key to appear here.</p>
+            <p className="text-[10px] text-muted-foreground mt-2">Dispatched via hello@arcenpay.com using the new enterprise email template.</p>
           </CardContent>
         </Card>
       </div>
@@ -213,7 +263,13 @@ export default function AdminPage() {
   const [duneConfigured, setDuneConfigured] = useState(false);
   const [users, setUsers] = useState([]);
   const [usersTotal, setUsersTotal] = useState(0);
+  const [unactivatedCount, setUnactivatedCount] = useState(0);
   const [userSearch, setUserSearch] = useState("");
+  const [userFilter, setUserFilter] = useState<"all" | "unactivated" | "activated" | "attempts">("all");
+  const [signinAttempts, setSigninAttempts] = useState<any[]>([]);
+  const [showDirectKeyModal, setShowDirectKeyModal] = useState(false);
+  const [directKeyEmail, setDirectKeyEmail] = useState("");
+  const [activatingUserId, setActivatingUserId] = useState<string | null>(null);
   const [teams, setTeams] = useState([]);
   const [teamsTotal, setTeamsTotal] = useState(0);
   const [teamSearch, setTeamSearch] = useState("");
@@ -245,23 +301,53 @@ export default function AdminPage() {
 
   const loadAll = useCallback(async () => {
     if (!authed) return;
-    const [aR, tR, rR, uR, tmR, kR, dR] = await Promise.all([
+    const [aR, tR, rR, uR, tmR, kR, dR, saR] = await Promise.all([
       apiFetch("/api/admin/activation-keys/analytics", { headers: hdrs() }),
       apiFetch("/api/admin/analytics/trends", { headers: hdrs() }),
       apiFetch("/api/admin/analytics/revenue", { headers: hdrs() }),
-      apiFetch("/api/admin/users?limit=100", { headers: hdrs() }),
+      apiFetch("/api/admin/users?limit=150", { headers: hdrs() }),
       apiFetch("/api/admin/users/teams?limit=100", { headers: hdrs() }),
       apiFetch("/api/admin/activation-keys?limit=200", { headers: hdrs() }),
       apiFetch("/api/admin/analytics/dune-status", { headers: hdrs() }),
+      apiFetch("/api/admin/users/signin-attempts?limit=150", { headers: hdrs() }),
     ]);
     if (aR.ok) { const d = await aR.json(); if (d.ok) setAnalytics(d.data); }
     if (tR.ok) { const d = await tR.json(); if (d.ok && d.data?.trendData) setTrends(d.data.trendData); }
     if (rR.ok) { const d = await rR.json(); if (d.ok) setRevenue(d.data); }
-    if (uR.ok) { const d = await uR.json(); if (d.ok) { setUsers(d.users||[]); setUsersTotal(d.total||0); } }
+    if (uR.ok) {
+      const d = await uR.json();
+      if (d.ok) {
+        setUsers(d.users || []);
+        setUsersTotal(d.totalAll ?? d.total ?? 0);
+        setUnactivatedCount(d.unactivatedCount || 0);
+      }
+    }
     if (tmR.ok) { const d = await tmR.json(); if (d.ok) { setTeams(d.teams||[]); setTeamsTotal(d.total||0); } }
     if (kR.ok) { const d = await kR.json(); if (d.items) setKeys(d.items); }
     if (dR.ok) { const d = await dR.json(); if (d.ok) setDuneConfigured(d.data.configured); }
+    if (saR.ok) { const d = await saR.json(); if (d.ok) setSigninAttempts(d.attempts || []); }
   }, [authed, hdrs]);
+
+  const handleQuickActivate = async (userId: string) => {
+    setActivatingUserId(userId);
+    try {
+      const r = await apiFetch(`/api/admin/users/${userId}/activate`, {
+        method: "POST",
+        headers: hdrs(),
+      });
+      const d = await r.json();
+      if (d.ok) {
+        toast.success(d.message || "Workspace activated successfully!");
+        loadAll();
+      } else {
+        toast.error(d.error || "Failed to activate workspace");
+      }
+    } catch {
+      toast.error("Network error while activating workspace");
+    } finally {
+      setActivatingUserId(null);
+    }
+  };
 
   useEffect(() => {
     if (!sessionLoading && isAuthorized) {
@@ -309,7 +395,14 @@ export default function AdminPage() {
         <Tabs value={tab} onValueChange={setTab}>
           <TabsList className="mb-6">
             <TabsTrigger value="overview"><BarChart3 className="w-4 h-4" /> Overview</TabsTrigger>
-            <TabsTrigger value="users"><Users className="w-4 h-4" /> Users</TabsTrigger>
+            <TabsTrigger value="users" className="relative">
+              <Users className="w-4 h-4" /> Users
+              {unactivatedCount > 0 && (
+                <span className="ml-1.5 px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-500">
+                  {unactivatedCount}
+                </span>
+              )}
+            </TabsTrigger>
             <TabsTrigger value="teams"><Building2 className="w-4 h-4" /> Teams</TabsTrigger>
             <TabsTrigger value="keys"><Key className="w-4 h-4" /> Keys</TabsTrigger>
             <TabsTrigger value="onchain"><Globe className="w-4 h-4" /> On-Chain</TabsTrigger>
@@ -322,7 +415,23 @@ export default function AdminPage() {
           </TabsContent>
 
           <TabsContent value="users" className="space-y-4">
-            <UsersTab users={users} total={usersTotal} search={userSearch} setSearch={setUserSearch} />
+            <UsersTab
+              users={users}
+              total={usersTotal}
+              unactivatedCount={unactivatedCount}
+              signinAttempts={signinAttempts}
+              search={userSearch}
+              setSearch={setUserSearch}
+              filter={userFilter}
+              setFilter={setUserFilter}
+              onOpenSendKey={(email: string) => {
+                setDirectKeyEmail(email);
+                setShowDirectKeyModal(true);
+              }}
+              onQuickActivate={handleQuickActivate}
+              activatingUserId={activatingUserId}
+              onRefresh={loadAll}
+            />
           </TabsContent>
 
           <TabsContent value="teams" className="space-y-4">
@@ -350,6 +459,17 @@ export default function AdminPage() {
       {showCreateKey && <CreateKeyModal form={keyForm} setForm={setKeyForm} creating={creatingKey} setCreating={setCreatingKey} onClose={() => setShowCreateKey(false)} onCreated={() => { setShowCreateKey(false); loadAll(); }} hdrs={hdrs} />}
       {showEmailKey && <EmailKeyModal keyId={emailKeyId} keys={keys} to={emailTo} setTo={setEmailTo} subject={emailSubj} setSubject={setEmailSubj} sending={sendingEmail} setSending={setSendingEmail} onClose={() => setShowEmailKey(false)} hdrs={hdrs} />}
       {showBulkEmail && <BulkEmailModal onClose={() => setShowBulkEmail(false)} hdrs={hdrs} />}
+      {showDirectKeyModal && (
+        <DirectKeyModal
+          initialEmail={directKeyEmail}
+          onClose={() => setShowDirectKeyModal(false)}
+          onSent={() => {
+            setShowDirectKeyModal(false);
+            loadAll();
+          }}
+          hdrs={hdrs}
+        />
+      )}
     </div>
   );
 }
@@ -439,42 +559,437 @@ function OverviewTab({ analytics, trends, revenue, onRefresh }: any) {
   );
 }
 
-function UsersTab({ users, total, search, setSearch }: any) {
-  const filtered = search
-    ? users.filter((u: any) => (u.email||"").toLowerCase().includes(search.toLowerCase()) || (u.walletAddress||"").toLowerCase().includes(search.toLowerCase()))
-    : users;
+function UsersTab({
+  users,
+  total,
+  unactivatedCount,
+  signinAttempts,
+  search,
+  setSearch,
+  filter,
+  setFilter,
+  onOpenSendKey,
+  onQuickActivate,
+  activatingUserId,
+  onRefresh,
+}: any) {
+  const [copiedText, setCopiedText] = useState<string | null>(null);
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedText(text);
+    toast.success("Copied to clipboard");
+    setTimeout(() => setCopiedText(null), 2000);
+  };
+
+  const unactivatedUsers = useMemo(
+    () => users.filter((u: any) => !u.isActivated && !u.isAdmin),
+    [users]
+  );
+  const activatedUsers = useMemo(
+    () => users.filter((u: any) => u.isActivated || u.isAdmin),
+    [users]
+  );
+
+  const filteredUsers = useMemo(() => {
+    let list = users;
+    if (filter === "unactivated") list = unactivatedUsers;
+    else if (filter === "activated") list = activatedUsers;
+
+    if (!search.trim()) return list;
+    const q = search.toLowerCase().trim();
+    return list.filter((u: any) =>
+      (u.email || "").toLowerCase().includes(q) ||
+      (u.walletAddress || "").toLowerCase().includes(q) ||
+      (u.stellarWalletAddress || "").toLowerCase().includes(q) ||
+      (u.primaryTeam?.name || "").toLowerCase().includes(q)
+    );
+  }, [users, filter, unactivatedUsers, activatedUsers, search]);
+
+  const filteredAttempts = useMemo(() => {
+    if (!search.trim()) return signinAttempts;
+    const q = search.toLowerCase().trim();
+    return signinAttempts.filter((a: any) => a.email.toLowerCase().includes(q));
+  }, [signinAttempts, search]);
+
   return (
-    <>
-      <div className="flex items-center gap-3">
-        <div className="relative flex-1 max-w-xs">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search by email or wallet..." className="pl-9 h-10" />
-        </div>
-        <span className="text-xs text-muted-foreground">{total} users</span>
+    <div className="space-y-4">
+      {/* Metric Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <Card className="border-border">
+          <CardContent className="pt-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-2xl font-bold">{total}</div>
+                <p className="text-xs text-muted-foreground"><Users className="w-3 h-3 inline mr-1" />Total Users</p>
+              </div>
+              <span className="p-2 rounded-lg bg-muted text-muted-foreground"><Users className="w-4 h-4" /></span>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className={"border-border " + (unactivatedCount > 0 ? "border-amber-500/40 bg-amber-500/5" : "")}>
+          <CardContent className="pt-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-2xl font-bold text-amber-500">{unactivatedCount}</div>
+                <p className="text-xs text-muted-foreground font-medium"><Clock className="w-3 h-3 inline mr-1 text-amber-500" />Needs Key / Outsiders</p>
+              </div>
+              <span className="p-2 rounded-lg bg-amber-500/10 text-amber-500"><Key className="w-4 h-4" /></span>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-border">
+          <CardContent className="pt-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-2xl font-bold text-green-500">{activatedUsers.length}</div>
+                <p className="text-xs text-muted-foreground"><CheckCircle2 className="w-3 h-3 inline mr-1 text-green-500" />Activated Users</p>
+              </div>
+              <span className="p-2 rounded-lg bg-green-500/10 text-green-500"><Shield className="w-4 h-4" /></span>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-border">
+          <CardContent className="pt-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-2xl font-bold text-indigo-500">{signinAttempts.length}</div>
+                <p className="text-xs text-muted-foreground"><Send className="w-3 h-3 inline mr-1 text-indigo-500" />Sign-in Attempts</p>
+              </div>
+              <span className="p-2 rounded-lg bg-indigo-500/10 text-indigo-500"><Mail className="w-4 h-4" /></span>
+            </div>
+          </CardContent>
+        </Card>
       </div>
-      <Card>
-        <CardContent className="p-0">
-          <table className="w-full text-sm">
-            <thead><tr className="border-b border-border text-xs text-muted-foreground">
-              <th className="text-left p-3 font-medium">Email</th>
-              <th className="text-left p-3 font-medium">Wallet</th>
-              <th className="text-left p-3 font-medium">Stellar</th>
-              <th className="text-right p-3 font-medium">Created</th>
-            </tr></thead>
-            <tbody>{filtered.map((u: any) => (
-              <tr key={u.id} className="border-b border-border/50 hover:bg-muted/20">
-                <td className="p-3 font-medium">{u.email || <span className="text-muted-foreground italic">no email</span>}</td>
-                <td className="p-3 text-muted-foreground"><code className="text-[10px]">{u.walletAddress || "-"}</code></td>
-                <td className="p-3 text-muted-foreground"><code className="text-[10px]">{u.stellarWalletAddress || "-"}</code></td>
-                <td className="p-3 text-right text-muted-foreground">{new Date(u.createdAt).toLocaleDateString()}</td>
-              </tr>
-            ))}{filtered.length === 0 && (
-              <tr><td colSpan={4} className="p-6 text-center text-muted-foreground text-sm">No users found</td></tr>
-            )}</tbody>
-          </table>
-        </CardContent>
-      </Card>
-    </>
+
+      {/* Control bar */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+        {/* Segmented Filter */}
+        <div className="flex items-center gap-1.5 p-1 bg-muted/40 rounded-lg border border-border text-xs flex-wrap">
+          <button
+            onClick={() => setFilter("all")}
+            className={"px-3 py-1.5 rounded-md font-medium transition-all " + (filter === "all" ? "bg-background shadow-xs text-foreground font-semibold" : "text-muted-foreground hover:text-foreground")}
+          >
+            All Users ({users.length})
+          </button>
+          <button
+            onClick={() => setFilter("unactivated")}
+            className={"px-3 py-1.5 rounded-md font-medium transition-all flex items-center gap-1.5 " + (filter === "unactivated" ? "bg-background shadow-xs text-amber-500 font-semibold" : "text-muted-foreground hover:text-foreground")}
+          >
+            Needs Activation
+            {unactivatedUsers.length > 0 && (
+              <span className="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-500">
+                {unactivatedUsers.length}
+              </span>
+            )}
+          </button>
+          <button
+            onClick={() => setFilter("activated")}
+            className={"px-3 py-1.5 rounded-md font-medium transition-all " + (filter === "activated" ? "bg-background shadow-xs text-green-500 font-semibold" : "text-muted-foreground hover:text-foreground")}
+          >
+            Activated ({activatedUsers.length})
+          </button>
+          <button
+            onClick={() => setFilter("attempts")}
+            className={"px-3 py-1.5 rounded-md font-medium transition-all " + (filter === "attempts" ? "bg-background shadow-xs text-indigo-500 font-semibold" : "text-muted-foreground hover:text-foreground")}
+          >
+            Outsider Sign-ins ({signinAttempts.length})
+          </button>
+        </div>
+
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <div className="relative flex-1 sm:w-64">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search email, wallet, team..."
+              className="pl-9 h-9 text-xs"
+            />
+          </div>
+          <Button variant="outline" size="sm" onClick={onRefresh} className="h-9 px-2.5">
+            <RefreshCw className="w-3.5 h-3.5" />
+          </Button>
+          <Button
+            size="sm"
+            onClick={() => onOpenSendKey("")}
+            className="h-9 text-xs bg-brand hover:bg-brand-dark text-primary-foreground gap-1.5 shrink-0"
+          >
+            <Key className="w-3.5 h-3.5" /> Issue Key
+          </Button>
+        </div>
+      </div>
+
+      {/* Table Content */}
+      {filter === "attempts" ? (
+        <Card className="border-border">
+          <CardHeader className="py-3 px-4 border-b border-border bg-muted/20">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                <Mail className="w-3.5 h-3.5 text-indigo-500" />
+                Recent Sign-in Requests & Outsider Activity
+              </CardTitle>
+              <span className="text-[11px] text-muted-foreground">Shows outsiders who requested OTP codes to enter</span>
+            </div>
+          </CardHeader>
+          <CardContent className="p-0">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border text-xs text-muted-foreground bg-muted/10">
+                  <th className="text-left p-3 font-medium">Email</th>
+                  <th className="text-left p-3 font-medium">Status</th>
+                  <th className="text-center p-3 font-medium">OTP Requests</th>
+                  <th className="text-left p-3 font-medium">Workspace</th>
+                  <th className="text-right p-3 font-medium">Latest Attempt</th>
+                  <th className="text-right p-3 font-medium">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredAttempts.map((item: any) => (
+                  <tr key={item.email} className="border-b border-border/50 hover:bg-muted/20 transition-colors">
+                    <td className="p-3">
+                      <div className="flex items-center gap-2">
+                        <div className="w-7 h-7 rounded-full bg-indigo-500/10 text-indigo-600 flex items-center justify-center font-bold text-xs uppercase">
+                          {item.email.slice(0, 2)}
+                        </div>
+                        <div>
+                          <p className="font-medium text-xs text-foreground">{item.email}</p>
+                          <p className="text-[10px] text-muted-foreground">
+                            {item.hasAccount ? "Account created" : "OTP requested only"}
+                          </p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="p-3">
+                      {item.status === "REGISTERED_ACTIVE" ? (
+                        <Badge variant="outline" className="text-[10px] bg-green-500/10 text-green-500 border-green-500/20 font-medium">
+                          <CheckCircle2 className="w-3 h-3 mr-1" /> Active Workspace
+                        </Badge>
+                      ) : item.status === "REGISTERED_NEEDS_KEY" ? (
+                        <Badge variant="outline" className="text-[10px] bg-amber-500/10 text-amber-500 border-amber-500/20 font-medium">
+                          <Clock className="w-3 h-3 mr-1" /> Awaiting Activation Key
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-[10px] bg-muted text-muted-foreground border-border font-medium">
+                          <AlertCircle className="w-3 h-3 mr-1" /> Incomplete OTP
+                        </Badge>
+                      )}
+                    </td>
+                    <td className="p-3 text-center">
+                      <span className="font-mono text-xs font-bold px-2 py-0.5 rounded bg-muted/40">
+                        {item.totalRequests}
+                      </span>
+                    </td>
+                    <td className="p-3 text-xs">
+                      {item.team ? (
+                        <div>
+                          <span className="font-medium">{item.team.name}</span>
+                          <span className="ml-1 text-[10px] text-muted-foreground font-mono">({item.team.tier})</span>
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground italic text-[11px]">Not created yet</span>
+                      )}
+                    </td>
+                    <td className="p-3 text-right text-xs text-muted-foreground">
+                      {new Date(item.latestAttemptAt).toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                    </td>
+                    <td className="p-3 text-right">
+                      <div className="flex items-center justify-end gap-1.5">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => copyToClipboard(item.email)}
+                          className="h-7 px-2 text-[11px]"
+                          title="Copy email"
+                        >
+                          <Copy className="w-3 h-3" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          onClick={() => onOpenSendKey(item.email)}
+                          className="h-7 px-2.5 text-[11px] bg-brand hover:bg-brand-dark text-primary-foreground gap-1"
+                        >
+                          <Key className="w-3 h-3" /> Send Key
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+                {filteredAttempts.length === 0 && (
+                  <tr>
+                    <td colSpan={6} className="p-8 text-center text-muted-foreground text-xs">
+                      No sign-in attempts found
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </CardContent>
+        </Card>
+      ) : (
+        <Card className="border-border">
+          <CardContent className="p-0">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border text-xs text-muted-foreground bg-muted/10">
+                  <th className="text-left p-3 font-medium">User / Email</th>
+                  <th className="text-left p-3 font-medium">Primary Workspace</th>
+                  <th className="text-left p-3 font-medium">Activation Status</th>
+                  <th className="text-left p-3 font-medium">Linked Wallet</th>
+                  <th className="text-right p-3 font-medium">Last Active / Signed In</th>
+                  <th className="text-right p-3 font-medium">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredUsers.map((u: any) => (
+                  <tr key={u.id} className="border-b border-border/50 hover:bg-muted/20 transition-colors">
+                    {/* User & Email */}
+                    <td className="p-3">
+                      <div className="flex items-center gap-2.5">
+                        <div className={"w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs " + (u.isAdmin ? "bg-purple-500/20 text-purple-600" : u.isActivated ? "bg-green-500/10 text-green-600" : "bg-amber-500/15 text-amber-600")}>
+                          {(u.email || "U").slice(0, 2).toUpperCase()}
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-medium text-xs text-foreground">
+                              {u.email || <span className="text-muted-foreground italic">no email</span>}
+                            </span>
+                            {u.isAdmin && (
+                              <Badge variant="outline" className="text-[9px] bg-purple-500/10 text-purple-600 border-purple-500/20 font-bold px-1.5 py-0">
+                                ADMIN
+                              </Badge>
+                            )}
+                          </div>
+                          <span className="text-[10px] text-muted-foreground font-mono">ID: {u.id.slice(0, 8)}...</span>
+                        </div>
+                      </div>
+                    </td>
+
+                    {/* Workspace */}
+                    <td className="p-3 text-xs">
+                      {u.primaryTeam ? (
+                        <div className="space-y-0.5">
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-semibold text-foreground">{u.primaryTeam.name}</span>
+                            <Badge variant="outline" className="text-[9px] font-mono uppercase px-1 py-0">
+                              {u.primaryTeam.platformTier}
+                            </Badge>
+                          </div>
+                          <p className="text-[10px] text-muted-foreground font-mono">slug: {u.primaryTeam.slug}</p>
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground italic text-xs">No Workspace</span>
+                      )}
+                    </td>
+
+                    {/* Activation Status */}
+                    <td className="p-3">
+                      {u.isAdmin ? (
+                        <Badge variant="outline" className="text-[10px] bg-purple-500/10 text-purple-600 border-purple-500/30 font-medium">
+                          <Shield className="w-3 h-3 mr-1" /> Platform Admin
+                        </Badge>
+                      ) : u.isActivated ? (
+                        <Badge variant="outline" className="text-[10px] bg-green-500/10 text-green-500 border-green-500/20 font-medium">
+                          <CheckCircle2 className="w-3 h-3 mr-1" /> Activated
+                        </Badge>
+                      ) : (
+                        <div className="space-y-1">
+                          <Badge variant="outline" className="text-[10px] bg-amber-500/15 text-amber-500 border-amber-500/30 font-semibold animate-pulse">
+                            <Clock className="w-3 h-3 mr-1" /> Needs Activation Key
+                          </Badge>
+                          <p className="text-[10px] text-amber-500/80">Outsider / Pending</p>
+                        </div>
+                      )}
+                    </td>
+
+                    {/* Wallet */}
+                    <td className="p-3 text-xs text-muted-foreground">
+                      {u.walletAddress ? (
+                        <div className="flex items-center gap-1 font-mono text-[11px]">
+                          <span>{u.walletAddress.slice(0, 6)}...{u.walletAddress.slice(-4)}</span>
+                          <button onClick={() => copyToClipboard(u.walletAddress)} className="text-muted-foreground hover:text-foreground">
+                            <Copy className="w-3 h-3" />
+                          </button>
+                        </div>
+                      ) : u.stellarWalletAddress ? (
+                        <div className="flex items-center gap-1 font-mono text-[11px]">
+                          <span>{u.stellarWalletAddress.slice(0, 6)}...{u.stellarWalletAddress.slice(-4)}</span>
+                          <button onClick={() => copyToClipboard(u.stellarWalletAddress)} className="text-muted-foreground hover:text-foreground">
+                            <Copy className="w-3 h-3" />
+                          </button>
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground italic text-[11px]">No wallet</span>
+                      )}
+                    </td>
+
+                    {/* Dates */}
+                    <td className="p-3 text-right text-xs text-muted-foreground">
+                      <div>{new Date(u.lastSeenAt || u.createdAt).toLocaleDateString()}</div>
+                      <span className="text-[10px] text-muted-foreground/80">
+                        Joined {new Date(u.createdAt).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
+                      </span>
+                    </td>
+
+                    {/* Actions */}
+                    <td className="p-3 text-right">
+                      <div className="flex items-center justify-end gap-1.5">
+                        {u.email && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => copyToClipboard(u.email)}
+                            className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground"
+                            title="Copy email"
+                          >
+                            <Copy className="w-3.5 h-3.5" />
+                          </Button>
+                        )}
+                        {!u.isActivated && !u.isAdmin && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            disabled={activatingUserId === u.id}
+                            onClick={() => onQuickActivate(u.id)}
+                            className="h-7 px-2 text-[11px] border-green-500/30 text-green-600 hover:bg-green-500/10 gap-1"
+                            title="Instantly activate workspace without needing key"
+                          >
+                            {activatingUserId === u.id ? (
+                              <Loader2 className="w-3 h-3 animate-spin" />
+                            ) : (
+                              <CheckCircle2 className="w-3 h-3" />
+                            )}
+                            Activate
+                          </Button>
+                        )}
+                        <Button
+                          size="sm"
+                          onClick={() => onOpenSendKey(u.email || "")}
+                          className="h-7 px-2.5 text-[11px] bg-brand hover:bg-brand-dark text-primary-foreground gap-1"
+                          title="Generate and send key from hello@arcenpay.com"
+                        >
+                          <Key className="w-3 h-3" /> Send Key
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+                {filteredUsers.length === 0 && (
+                  <tr>
+                    <td colSpan={6} className="p-8 text-center text-muted-foreground text-xs">
+                      No users match the selected filters
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </CardContent>
+        </Card>
+      )}
+    </div>
   );
 }
 
@@ -790,6 +1305,144 @@ function BulkEmailModal({ onClose, hdrs }: any) {
           <Button variant="ghost" onClick={onClose} className="flex-1">Cancel</Button>
           <Button onClick={handleBulk} disabled={sending} className="flex-1 bg-brand hover:bg-brand-dark text-primary-foreground">
             {sending ? <><Loader2 className="w-4 h-4 animate-spin mr-1" />Sending...</> : "Send Bulk Email"}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DirectKeyModal({ initialEmail, onClose, onSent, hdrs }: any) {
+  const [email, setEmail] = useState(initialEmail || "");
+  const [tier, setTier] = useState<"FREE" | "PLUS" | "PRO">("PRO");
+  const [maxUses, setMaxUses] = useState(1);
+  const [notes, setNotes] = useState("");
+  const [customMessage, setCustomMessage] = useState("");
+  const [sending, setSending] = useState(false);
+
+  const handleSubmit = async () => {
+    if (!email.trim() || !email.includes("@")) {
+      return toast.error("Please provide a valid recipient email");
+    }
+    setSending(true);
+    try {
+      const res = await apiFetch("/api/admin/users/send-activation-key", {
+        method: "POST",
+        headers: hdrs(),
+        body: JSON.stringify({
+          email: email.trim(),
+          tier,
+          maxUses,
+          notes: notes.trim() || undefined,
+          customMessage: customMessage.trim() || undefined,
+        }),
+      });
+      const data = await res.json();
+      if (data.ok) {
+        toast.success(data.message || "Activation key sent successfully!");
+        onSent();
+      } else {
+        toast.error(data.error || "Failed to send activation key");
+      }
+    } catch {
+      toast.error("Network error while sending activation key");
+    } finally {
+      setSending(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={onClose}>
+      <div className="bg-card border border-border rounded-xl max-w-md w-full p-6 space-y-4 shadow-xl text-foreground" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="p-2 rounded-lg bg-brand/10 text-brand"><Key className="w-5 h-5" /></span>
+            <div>
+              <h3 className="text-base font-bold">Issue & Email Activation Key</h3>
+              <p className="text-xs text-muted-foreground">Sent from <span className="font-mono text-indigo-500 font-semibold">hello@arcenpay.com</span></p>
+            </div>
+          </div>
+          <button onClick={onClose} className="text-muted-foreground hover:text-foreground text-sm font-bold">&times;</button>
+        </div>
+
+        <div className="space-y-3 text-xs">
+          <div>
+            <label className="font-semibold block mb-1">Recipient Email *</label>
+            <Input
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="user@example.com"
+              className="text-xs h-9"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="font-semibold block mb-1">Platform Tier</label>
+              <select
+                value={tier}
+                onChange={(e) => setTier(e.target.value as any)}
+                className="w-full h-9 px-3 rounded-md bg-background border border-border text-xs"
+              >
+                <option value="PRO">PRO (Recommended)</option>
+                <option value="PLUS">PLUS</option>
+                <option value="FREE">FREE</option>
+              </select>
+            </div>
+            <div>
+              <label className="font-semibold block mb-1">Max Workspaces</label>
+              <Input
+                type="number"
+                min={1}
+                max={50}
+                value={maxUses}
+                onChange={(e) => setMaxUses(parseInt(e.target.value || "1", 10))}
+                className="text-xs h-9"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="font-semibold block mb-1">Internal Note (optional)</label>
+            <Input
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="e.g. VIP onboarding invite / requested access"
+              className="text-xs h-9"
+            />
+          </div>
+
+          <div>
+            <label className="font-semibold block mb-1">Custom Message in Email (optional)</label>
+            <textarea
+              value={customMessage}
+              onChange={(e) => setCustomMessage(e.target.value)}
+              rows={3}
+              placeholder="Optional greeting or instructions shown in the email..."
+              className="w-full p-2.5 rounded-md bg-background border border-border text-xs resize-none"
+            />
+          </div>
+
+          <div className="bg-indigo-500/10 border border-indigo-500/20 rounded-lg p-3 text-[11px] text-muted-foreground leading-relaxed">
+            <p className="font-semibold text-indigo-400 mb-0.5 flex items-center gap-1">
+              <Sparkles className="w-3.5 h-3.5" /> High-Contrast Enterprise Template
+            </p>
+            The user receives an email from <strong>hello@arcenpay.com</strong> with their unique key and a 1-click &ldquo;Activate Workspace&rdquo; button.
+          </div>
+        </div>
+
+        <div className="flex items-center justify-end gap-2 pt-2 border-t border-border">
+          <Button variant="ghost" size="sm" onClick={onClose} disabled={sending} className="text-xs">
+            Cancel
+          </Button>
+          <Button
+            size="sm"
+            onClick={handleSubmit}
+            disabled={sending || !email.trim()}
+            className="text-xs bg-brand hover:bg-brand-dark text-primary-foreground gap-1.5"
+          >
+            {sending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+            {sending ? "Sending..." : "Send Activation Key"}
           </Button>
         </div>
       </div>

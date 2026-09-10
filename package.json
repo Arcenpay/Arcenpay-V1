@@ -45,7 +45,10 @@
     "verify:billing:live": "npx tsx scripts/verify-billing-hybrid.ts live",
     "verify:billing:all": "npx tsx scripts/verify-billing-hybrid.ts all",
     "verify:stellar:renewal": "npm run verify:stellar:renewal --workspace=@arcenpay/backend",
-    "setup:billing": "cd apps/arcen-backend && npm run setup:platform-billing"
+    "setup:billing": "cd apps/arcen-backend && npm run setup:platform-billing",
+    "send:launch": "npx tsx scripts/send-launch-emails.ts",
+    "send:launch:dry": "npx tsx scripts/send-launch-emails.ts --dry-run",
+    "send:launch:preview": "npx tsx scripts/send-launch-emails.ts --preview /tmp/launch-preview.html"
   },
   "dependencies": {
     "@arcjet/next": "^1.4.0",

@@ -10,6 +10,11 @@ export const metadata: Metadata = createPageMetadata({
   noIndex: true,
 });
 
-export default function ActivationPage() {
-  return <EmailAuthFlow initialStep="activate" />;
+interface ActivationPageProps {
+  searchParams?: Promise<{ key?: string }>;
+}
+
+export default async function ActivationPage({ searchParams }: ActivationPageProps) {
+  const params = await searchParams;
+  return <EmailAuthFlow initialStep="activate" initialKey={params?.key} />;
 }
