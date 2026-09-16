@@ -71,6 +71,7 @@ export const ModelName = {
   BillingTemplateVersion: 'BillingTemplateVersion',
   TemplateInstall: 'TemplateInstall',
   TaxProfile: 'TaxProfile',
+  InvoiceTemplate: 'InvoiceTemplate',
   InvoiceSequence: 'InvoiceSequence',
   Invoice: 'Invoice',
   InvoiceLine: 'InvoiceLine',
@@ -511,6 +512,21 @@ export const TaxProfileScalarFieldEnum = {
 export type TaxProfileScalarFieldEnum = (typeof TaxProfileScalarFieldEnum)[keyof typeof TaxProfileScalarFieldEnum]
 
 
+export const InvoiceTemplateScalarFieldEnum = {
+  id: 'id',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt',
+  teamId: 'teamId',
+  environmentId: 'environmentId',
+  name: 'name',
+  description: 'description',
+  config: 'config',
+  isActive: 'isActive'
+} as const
+
+export type InvoiceTemplateScalarFieldEnum = (typeof InvoiceTemplateScalarFieldEnum)[keyof typeof InvoiceTemplateScalarFieldEnum]
+
+
 export const InvoiceSequenceScalarFieldEnum = {
   id: 'id',
   createdAt: 'createdAt',
@@ -547,7 +563,9 @@ export const InvoiceScalarFieldEnum = {
   externalRef: 'externalRef',
   planId: 'planId',
   companyId: 'companyId',
-  metadata: 'metadata'
+  metadata: 'metadata',
+  templateId: 'templateId',
+  templateSnapshot: 'templateSnapshot'
 } as const
 
 export type InvoiceScalarFieldEnum = (typeof InvoiceScalarFieldEnum)[keyof typeof InvoiceScalarFieldEnum]

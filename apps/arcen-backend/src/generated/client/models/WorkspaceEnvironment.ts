@@ -250,6 +250,7 @@ export type WorkspaceEnvironmentWhereInput = {
   companyCreditGrants?: Prisma.CompanyCreditGrantListRelationFilter
   creditLedgerEntries?: Prisma.CreditLedgerEntryListRelationFilter
   templateInstalls?: Prisma.TemplateInstallListRelationFilter
+  invoiceTemplates?: Prisma.InvoiceTemplateListRelationFilter
   invoices?: Prisma.InvoiceListRelationFilter
   subscriptionStates?: Prisma.SubscriptionStateListRelationFilter
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestListRelationFilter
@@ -287,6 +288,7 @@ export type WorkspaceEnvironmentOrderByWithRelationInput = {
   companyCreditGrants?: Prisma.CompanyCreditGrantOrderByRelationAggregateInput
   creditLedgerEntries?: Prisma.CreditLedgerEntryOrderByRelationAggregateInput
   templateInstalls?: Prisma.TemplateInstallOrderByRelationAggregateInput
+  invoiceTemplates?: Prisma.InvoiceTemplateOrderByRelationAggregateInput
   invoices?: Prisma.InvoiceOrderByRelationAggregateInput
   subscriptionStates?: Prisma.SubscriptionStateOrderByRelationAggregateInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestOrderByRelationAggregateInput
@@ -328,6 +330,7 @@ export type WorkspaceEnvironmentWhereUniqueInput = Prisma.AtLeast<{
   companyCreditGrants?: Prisma.CompanyCreditGrantListRelationFilter
   creditLedgerEntries?: Prisma.CreditLedgerEntryListRelationFilter
   templateInstalls?: Prisma.TemplateInstallListRelationFilter
+  invoiceTemplates?: Prisma.InvoiceTemplateListRelationFilter
   invoices?: Prisma.InvoiceListRelationFilter
   subscriptionStates?: Prisma.SubscriptionStateListRelationFilter
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestListRelationFilter
@@ -394,6 +397,7 @@ export type WorkspaceEnvironmentCreateInput = {
   companyCreditGrants?: Prisma.CompanyCreditGrantCreateNestedManyWithoutEnvironmentInput
   creditLedgerEntries?: Prisma.CreditLedgerEntryCreateNestedManyWithoutEnvironmentInput
   templateInstalls?: Prisma.TemplateInstallCreateNestedManyWithoutEnvironmentInput
+  invoiceTemplates?: Prisma.InvoiceTemplateCreateNestedManyWithoutEnvironmentInput
   invoices?: Prisma.InvoiceCreateNestedManyWithoutEnvironmentInput
   subscriptionStates?: Prisma.SubscriptionStateCreateNestedManyWithoutEnvironmentInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestCreateNestedManyWithoutEnvironmentInput
@@ -430,6 +434,7 @@ export type WorkspaceEnvironmentUncheckedCreateInput = {
   companyCreditGrants?: Prisma.CompanyCreditGrantUncheckedCreateNestedManyWithoutEnvironmentInput
   creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedCreateNestedManyWithoutEnvironmentInput
   templateInstalls?: Prisma.TemplateInstallUncheckedCreateNestedManyWithoutEnvironmentInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedCreateNestedManyWithoutEnvironmentInput
   invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutEnvironmentInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedCreateNestedManyWithoutEnvironmentInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedCreateNestedManyWithoutEnvironmentInput
@@ -466,6 +471,7 @@ export type WorkspaceEnvironmentUpdateInput = {
   companyCreditGrants?: Prisma.CompanyCreditGrantUpdateManyWithoutEnvironmentNestedInput
   creditLedgerEntries?: Prisma.CreditLedgerEntryUpdateManyWithoutEnvironmentNestedInput
   templateInstalls?: Prisma.TemplateInstallUpdateManyWithoutEnvironmentNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUpdateManyWithoutEnvironmentNestedInput
   invoices?: Prisma.InvoiceUpdateManyWithoutEnvironmentNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUpdateManyWithoutEnvironmentNestedInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUpdateManyWithoutEnvironmentNestedInput
@@ -502,6 +508,7 @@ export type WorkspaceEnvironmentUncheckedUpdateInput = {
   companyCreditGrants?: Prisma.CompanyCreditGrantUncheckedUpdateManyWithoutEnvironmentNestedInput
   creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedUpdateManyWithoutEnvironmentNestedInput
   templateInstalls?: Prisma.TemplateInstallUncheckedUpdateManyWithoutEnvironmentNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedUpdateManyWithoutEnvironmentNestedInput
   invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutEnvironmentNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedUpdateManyWithoutEnvironmentNestedInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedUpdateManyWithoutEnvironmentNestedInput
@@ -792,6 +799,22 @@ export type WorkspaceEnvironmentUpdateOneWithoutTemplateInstallsNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.WorkspaceEnvironmentUpdateToOneWithWhereWithoutTemplateInstallsInput, Prisma.WorkspaceEnvironmentUpdateWithoutTemplateInstallsInput>, Prisma.WorkspaceEnvironmentUncheckedUpdateWithoutTemplateInstallsInput>
 }
 
+export type WorkspaceEnvironmentCreateNestedOneWithoutInvoiceTemplatesInput = {
+  create?: Prisma.XOR<Prisma.WorkspaceEnvironmentCreateWithoutInvoiceTemplatesInput, Prisma.WorkspaceEnvironmentUncheckedCreateWithoutInvoiceTemplatesInput>
+  connectOrCreate?: Prisma.WorkspaceEnvironmentCreateOrConnectWithoutInvoiceTemplatesInput
+  connect?: Prisma.WorkspaceEnvironmentWhereUniqueInput
+}
+
+export type WorkspaceEnvironmentUpdateOneWithoutInvoiceTemplatesNestedInput = {
+  create?: Prisma.XOR<Prisma.WorkspaceEnvironmentCreateWithoutInvoiceTemplatesInput, Prisma.WorkspaceEnvironmentUncheckedCreateWithoutInvoiceTemplatesInput>
+  connectOrCreate?: Prisma.WorkspaceEnvironmentCreateOrConnectWithoutInvoiceTemplatesInput
+  upsert?: Prisma.WorkspaceEnvironmentUpsertWithoutInvoiceTemplatesInput
+  disconnect?: Prisma.WorkspaceEnvironmentWhereInput | boolean
+  delete?: Prisma.WorkspaceEnvironmentWhereInput | boolean
+  connect?: Prisma.WorkspaceEnvironmentWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.WorkspaceEnvironmentUpdateToOneWithWhereWithoutInvoiceTemplatesInput, Prisma.WorkspaceEnvironmentUpdateWithoutInvoiceTemplatesInput>, Prisma.WorkspaceEnvironmentUncheckedUpdateWithoutInvoiceTemplatesInput>
+}
+
 export type WorkspaceEnvironmentCreateNestedOneWithoutInvoicesInput = {
   create?: Prisma.XOR<Prisma.WorkspaceEnvironmentCreateWithoutInvoicesInput, Prisma.WorkspaceEnvironmentUncheckedCreateWithoutInvoicesInput>
   connectOrCreate?: Prisma.WorkspaceEnvironmentCreateOrConnectWithoutInvoicesInput
@@ -1075,6 +1098,7 @@ export type WorkspaceEnvironmentCreateWithoutAuthSessionsInput = {
   companyCreditGrants?: Prisma.CompanyCreditGrantCreateNestedManyWithoutEnvironmentInput
   creditLedgerEntries?: Prisma.CreditLedgerEntryCreateNestedManyWithoutEnvironmentInput
   templateInstalls?: Prisma.TemplateInstallCreateNestedManyWithoutEnvironmentInput
+  invoiceTemplates?: Prisma.InvoiceTemplateCreateNestedManyWithoutEnvironmentInput
   invoices?: Prisma.InvoiceCreateNestedManyWithoutEnvironmentInput
   subscriptionStates?: Prisma.SubscriptionStateCreateNestedManyWithoutEnvironmentInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestCreateNestedManyWithoutEnvironmentInput
@@ -1110,6 +1134,7 @@ export type WorkspaceEnvironmentUncheckedCreateWithoutAuthSessionsInput = {
   companyCreditGrants?: Prisma.CompanyCreditGrantUncheckedCreateNestedManyWithoutEnvironmentInput
   creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedCreateNestedManyWithoutEnvironmentInput
   templateInstalls?: Prisma.TemplateInstallUncheckedCreateNestedManyWithoutEnvironmentInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedCreateNestedManyWithoutEnvironmentInput
   invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutEnvironmentInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedCreateNestedManyWithoutEnvironmentInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedCreateNestedManyWithoutEnvironmentInput
@@ -1161,6 +1186,7 @@ export type WorkspaceEnvironmentUpdateWithoutAuthSessionsInput = {
   companyCreditGrants?: Prisma.CompanyCreditGrantUpdateManyWithoutEnvironmentNestedInput
   creditLedgerEntries?: Prisma.CreditLedgerEntryUpdateManyWithoutEnvironmentNestedInput
   templateInstalls?: Prisma.TemplateInstallUpdateManyWithoutEnvironmentNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUpdateManyWithoutEnvironmentNestedInput
   invoices?: Prisma.InvoiceUpdateManyWithoutEnvironmentNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUpdateManyWithoutEnvironmentNestedInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUpdateManyWithoutEnvironmentNestedInput
@@ -1196,6 +1222,7 @@ export type WorkspaceEnvironmentUncheckedUpdateWithoutAuthSessionsInput = {
   companyCreditGrants?: Prisma.CompanyCreditGrantUncheckedUpdateManyWithoutEnvironmentNestedInput
   creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedUpdateManyWithoutEnvironmentNestedInput
   templateInstalls?: Prisma.TemplateInstallUncheckedUpdateManyWithoutEnvironmentNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedUpdateManyWithoutEnvironmentNestedInput
   invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutEnvironmentNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedUpdateManyWithoutEnvironmentNestedInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedUpdateManyWithoutEnvironmentNestedInput
@@ -1231,6 +1258,7 @@ export type WorkspaceEnvironmentCreateWithoutTeamInput = {
   companyCreditGrants?: Prisma.CompanyCreditGrantCreateNestedManyWithoutEnvironmentInput
   creditLedgerEntries?: Prisma.CreditLedgerEntryCreateNestedManyWithoutEnvironmentInput
   templateInstalls?: Prisma.TemplateInstallCreateNestedManyWithoutEnvironmentInput
+  invoiceTemplates?: Prisma.InvoiceTemplateCreateNestedManyWithoutEnvironmentInput
   invoices?: Prisma.InvoiceCreateNestedManyWithoutEnvironmentInput
   subscriptionStates?: Prisma.SubscriptionStateCreateNestedManyWithoutEnvironmentInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestCreateNestedManyWithoutEnvironmentInput
@@ -1266,6 +1294,7 @@ export type WorkspaceEnvironmentUncheckedCreateWithoutTeamInput = {
   companyCreditGrants?: Prisma.CompanyCreditGrantUncheckedCreateNestedManyWithoutEnvironmentInput
   creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedCreateNestedManyWithoutEnvironmentInput
   templateInstalls?: Prisma.TemplateInstallUncheckedCreateNestedManyWithoutEnvironmentInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedCreateNestedManyWithoutEnvironmentInput
   invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutEnvironmentInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedCreateNestedManyWithoutEnvironmentInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedCreateNestedManyWithoutEnvironmentInput
@@ -1342,6 +1371,7 @@ export type WorkspaceEnvironmentCreateWithoutProviderProfilesInput = {
   companyCreditGrants?: Prisma.CompanyCreditGrantCreateNestedManyWithoutEnvironmentInput
   creditLedgerEntries?: Prisma.CreditLedgerEntryCreateNestedManyWithoutEnvironmentInput
   templateInstalls?: Prisma.TemplateInstallCreateNestedManyWithoutEnvironmentInput
+  invoiceTemplates?: Prisma.InvoiceTemplateCreateNestedManyWithoutEnvironmentInput
   invoices?: Prisma.InvoiceCreateNestedManyWithoutEnvironmentInput
   subscriptionStates?: Prisma.SubscriptionStateCreateNestedManyWithoutEnvironmentInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestCreateNestedManyWithoutEnvironmentInput
@@ -1377,6 +1407,7 @@ export type WorkspaceEnvironmentUncheckedCreateWithoutProviderProfilesInput = {
   companyCreditGrants?: Prisma.CompanyCreditGrantUncheckedCreateNestedManyWithoutEnvironmentInput
   creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedCreateNestedManyWithoutEnvironmentInput
   templateInstalls?: Prisma.TemplateInstallUncheckedCreateNestedManyWithoutEnvironmentInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedCreateNestedManyWithoutEnvironmentInput
   invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutEnvironmentInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedCreateNestedManyWithoutEnvironmentInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedCreateNestedManyWithoutEnvironmentInput
@@ -1428,6 +1459,7 @@ export type WorkspaceEnvironmentUpdateWithoutProviderProfilesInput = {
   companyCreditGrants?: Prisma.CompanyCreditGrantUpdateManyWithoutEnvironmentNestedInput
   creditLedgerEntries?: Prisma.CreditLedgerEntryUpdateManyWithoutEnvironmentNestedInput
   templateInstalls?: Prisma.TemplateInstallUpdateManyWithoutEnvironmentNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUpdateManyWithoutEnvironmentNestedInput
   invoices?: Prisma.InvoiceUpdateManyWithoutEnvironmentNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUpdateManyWithoutEnvironmentNestedInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUpdateManyWithoutEnvironmentNestedInput
@@ -1463,6 +1495,7 @@ export type WorkspaceEnvironmentUncheckedUpdateWithoutProviderProfilesInput = {
   companyCreditGrants?: Prisma.CompanyCreditGrantUncheckedUpdateManyWithoutEnvironmentNestedInput
   creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedUpdateManyWithoutEnvironmentNestedInput
   templateInstalls?: Prisma.TemplateInstallUncheckedUpdateManyWithoutEnvironmentNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedUpdateManyWithoutEnvironmentNestedInput
   invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutEnvironmentNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedUpdateManyWithoutEnvironmentNestedInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedUpdateManyWithoutEnvironmentNestedInput
@@ -1497,6 +1530,7 @@ export type WorkspaceEnvironmentCreateWithoutCatalogPlansInput = {
   companyCreditGrants?: Prisma.CompanyCreditGrantCreateNestedManyWithoutEnvironmentInput
   creditLedgerEntries?: Prisma.CreditLedgerEntryCreateNestedManyWithoutEnvironmentInput
   templateInstalls?: Prisma.TemplateInstallCreateNestedManyWithoutEnvironmentInput
+  invoiceTemplates?: Prisma.InvoiceTemplateCreateNestedManyWithoutEnvironmentInput
   invoices?: Prisma.InvoiceCreateNestedManyWithoutEnvironmentInput
   subscriptionStates?: Prisma.SubscriptionStateCreateNestedManyWithoutEnvironmentInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestCreateNestedManyWithoutEnvironmentInput
@@ -1532,6 +1566,7 @@ export type WorkspaceEnvironmentUncheckedCreateWithoutCatalogPlansInput = {
   companyCreditGrants?: Prisma.CompanyCreditGrantUncheckedCreateNestedManyWithoutEnvironmentInput
   creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedCreateNestedManyWithoutEnvironmentInput
   templateInstalls?: Prisma.TemplateInstallUncheckedCreateNestedManyWithoutEnvironmentInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedCreateNestedManyWithoutEnvironmentInput
   invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutEnvironmentInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedCreateNestedManyWithoutEnvironmentInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedCreateNestedManyWithoutEnvironmentInput
@@ -1583,6 +1618,7 @@ export type WorkspaceEnvironmentUpdateWithoutCatalogPlansInput = {
   companyCreditGrants?: Prisma.CompanyCreditGrantUpdateManyWithoutEnvironmentNestedInput
   creditLedgerEntries?: Prisma.CreditLedgerEntryUpdateManyWithoutEnvironmentNestedInput
   templateInstalls?: Prisma.TemplateInstallUpdateManyWithoutEnvironmentNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUpdateManyWithoutEnvironmentNestedInput
   invoices?: Prisma.InvoiceUpdateManyWithoutEnvironmentNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUpdateManyWithoutEnvironmentNestedInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUpdateManyWithoutEnvironmentNestedInput
@@ -1618,6 +1654,7 @@ export type WorkspaceEnvironmentUncheckedUpdateWithoutCatalogPlansInput = {
   companyCreditGrants?: Prisma.CompanyCreditGrantUncheckedUpdateManyWithoutEnvironmentNestedInput
   creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedUpdateManyWithoutEnvironmentNestedInput
   templateInstalls?: Prisma.TemplateInstallUncheckedUpdateManyWithoutEnvironmentNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedUpdateManyWithoutEnvironmentNestedInput
   invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutEnvironmentNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedUpdateManyWithoutEnvironmentNestedInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedUpdateManyWithoutEnvironmentNestedInput
@@ -1653,6 +1690,7 @@ export type WorkspaceEnvironmentCreateWithoutCatalogAddOnsInput = {
   companyCreditGrants?: Prisma.CompanyCreditGrantCreateNestedManyWithoutEnvironmentInput
   creditLedgerEntries?: Prisma.CreditLedgerEntryCreateNestedManyWithoutEnvironmentInput
   templateInstalls?: Prisma.TemplateInstallCreateNestedManyWithoutEnvironmentInput
+  invoiceTemplates?: Prisma.InvoiceTemplateCreateNestedManyWithoutEnvironmentInput
   invoices?: Prisma.InvoiceCreateNestedManyWithoutEnvironmentInput
   subscriptionStates?: Prisma.SubscriptionStateCreateNestedManyWithoutEnvironmentInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestCreateNestedManyWithoutEnvironmentInput
@@ -1688,6 +1726,7 @@ export type WorkspaceEnvironmentUncheckedCreateWithoutCatalogAddOnsInput = {
   companyCreditGrants?: Prisma.CompanyCreditGrantUncheckedCreateNestedManyWithoutEnvironmentInput
   creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedCreateNestedManyWithoutEnvironmentInput
   templateInstalls?: Prisma.TemplateInstallUncheckedCreateNestedManyWithoutEnvironmentInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedCreateNestedManyWithoutEnvironmentInput
   invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutEnvironmentInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedCreateNestedManyWithoutEnvironmentInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedCreateNestedManyWithoutEnvironmentInput
@@ -1739,6 +1778,7 @@ export type WorkspaceEnvironmentUpdateWithoutCatalogAddOnsInput = {
   companyCreditGrants?: Prisma.CompanyCreditGrantUpdateManyWithoutEnvironmentNestedInput
   creditLedgerEntries?: Prisma.CreditLedgerEntryUpdateManyWithoutEnvironmentNestedInput
   templateInstalls?: Prisma.TemplateInstallUpdateManyWithoutEnvironmentNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUpdateManyWithoutEnvironmentNestedInput
   invoices?: Prisma.InvoiceUpdateManyWithoutEnvironmentNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUpdateManyWithoutEnvironmentNestedInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUpdateManyWithoutEnvironmentNestedInput
@@ -1774,6 +1814,7 @@ export type WorkspaceEnvironmentUncheckedUpdateWithoutCatalogAddOnsInput = {
   companyCreditGrants?: Prisma.CompanyCreditGrantUncheckedUpdateManyWithoutEnvironmentNestedInput
   creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedUpdateManyWithoutEnvironmentNestedInput
   templateInstalls?: Prisma.TemplateInstallUncheckedUpdateManyWithoutEnvironmentNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedUpdateManyWithoutEnvironmentNestedInput
   invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutEnvironmentNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedUpdateManyWithoutEnvironmentNestedInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedUpdateManyWithoutEnvironmentNestedInput
@@ -1809,6 +1850,7 @@ export type WorkspaceEnvironmentCreateWithoutCatalogCreditTypesInput = {
   companyCreditGrants?: Prisma.CompanyCreditGrantCreateNestedManyWithoutEnvironmentInput
   creditLedgerEntries?: Prisma.CreditLedgerEntryCreateNestedManyWithoutEnvironmentInput
   templateInstalls?: Prisma.TemplateInstallCreateNestedManyWithoutEnvironmentInput
+  invoiceTemplates?: Prisma.InvoiceTemplateCreateNestedManyWithoutEnvironmentInput
   invoices?: Prisma.InvoiceCreateNestedManyWithoutEnvironmentInput
   subscriptionStates?: Prisma.SubscriptionStateCreateNestedManyWithoutEnvironmentInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestCreateNestedManyWithoutEnvironmentInput
@@ -1844,6 +1886,7 @@ export type WorkspaceEnvironmentUncheckedCreateWithoutCatalogCreditTypesInput = 
   companyCreditGrants?: Prisma.CompanyCreditGrantUncheckedCreateNestedManyWithoutEnvironmentInput
   creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedCreateNestedManyWithoutEnvironmentInput
   templateInstalls?: Prisma.TemplateInstallUncheckedCreateNestedManyWithoutEnvironmentInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedCreateNestedManyWithoutEnvironmentInput
   invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutEnvironmentInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedCreateNestedManyWithoutEnvironmentInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedCreateNestedManyWithoutEnvironmentInput
@@ -1895,6 +1938,7 @@ export type WorkspaceEnvironmentUpdateWithoutCatalogCreditTypesInput = {
   companyCreditGrants?: Prisma.CompanyCreditGrantUpdateManyWithoutEnvironmentNestedInput
   creditLedgerEntries?: Prisma.CreditLedgerEntryUpdateManyWithoutEnvironmentNestedInput
   templateInstalls?: Prisma.TemplateInstallUpdateManyWithoutEnvironmentNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUpdateManyWithoutEnvironmentNestedInput
   invoices?: Prisma.InvoiceUpdateManyWithoutEnvironmentNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUpdateManyWithoutEnvironmentNestedInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUpdateManyWithoutEnvironmentNestedInput
@@ -1930,6 +1974,7 @@ export type WorkspaceEnvironmentUncheckedUpdateWithoutCatalogCreditTypesInput = 
   companyCreditGrants?: Prisma.CompanyCreditGrantUncheckedUpdateManyWithoutEnvironmentNestedInput
   creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedUpdateManyWithoutEnvironmentNestedInput
   templateInstalls?: Prisma.TemplateInstallUncheckedUpdateManyWithoutEnvironmentNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedUpdateManyWithoutEnvironmentNestedInput
   invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutEnvironmentNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedUpdateManyWithoutEnvironmentNestedInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedUpdateManyWithoutEnvironmentNestedInput
@@ -1965,6 +2010,7 @@ export type WorkspaceEnvironmentCreateWithoutCatalogVersionsInput = {
   companyCreditGrants?: Prisma.CompanyCreditGrantCreateNestedManyWithoutEnvironmentInput
   creditLedgerEntries?: Prisma.CreditLedgerEntryCreateNestedManyWithoutEnvironmentInput
   templateInstalls?: Prisma.TemplateInstallCreateNestedManyWithoutEnvironmentInput
+  invoiceTemplates?: Prisma.InvoiceTemplateCreateNestedManyWithoutEnvironmentInput
   invoices?: Prisma.InvoiceCreateNestedManyWithoutEnvironmentInput
   subscriptionStates?: Prisma.SubscriptionStateCreateNestedManyWithoutEnvironmentInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestCreateNestedManyWithoutEnvironmentInput
@@ -2000,6 +2046,7 @@ export type WorkspaceEnvironmentUncheckedCreateWithoutCatalogVersionsInput = {
   companyCreditGrants?: Prisma.CompanyCreditGrantUncheckedCreateNestedManyWithoutEnvironmentInput
   creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedCreateNestedManyWithoutEnvironmentInput
   templateInstalls?: Prisma.TemplateInstallUncheckedCreateNestedManyWithoutEnvironmentInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedCreateNestedManyWithoutEnvironmentInput
   invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutEnvironmentInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedCreateNestedManyWithoutEnvironmentInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedCreateNestedManyWithoutEnvironmentInput
@@ -2051,6 +2098,7 @@ export type WorkspaceEnvironmentUpdateWithoutCatalogVersionsInput = {
   companyCreditGrants?: Prisma.CompanyCreditGrantUpdateManyWithoutEnvironmentNestedInput
   creditLedgerEntries?: Prisma.CreditLedgerEntryUpdateManyWithoutEnvironmentNestedInput
   templateInstalls?: Prisma.TemplateInstallUpdateManyWithoutEnvironmentNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUpdateManyWithoutEnvironmentNestedInput
   invoices?: Prisma.InvoiceUpdateManyWithoutEnvironmentNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUpdateManyWithoutEnvironmentNestedInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUpdateManyWithoutEnvironmentNestedInput
@@ -2086,6 +2134,7 @@ export type WorkspaceEnvironmentUncheckedUpdateWithoutCatalogVersionsInput = {
   companyCreditGrants?: Prisma.CompanyCreditGrantUncheckedUpdateManyWithoutEnvironmentNestedInput
   creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedUpdateManyWithoutEnvironmentNestedInput
   templateInstalls?: Prisma.TemplateInstallUncheckedUpdateManyWithoutEnvironmentNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedUpdateManyWithoutEnvironmentNestedInput
   invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutEnvironmentNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedUpdateManyWithoutEnvironmentNestedInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedUpdateManyWithoutEnvironmentNestedInput
@@ -2121,6 +2170,7 @@ export type WorkspaceEnvironmentCreateWithoutCatalogConfigsInput = {
   companyCreditGrants?: Prisma.CompanyCreditGrantCreateNestedManyWithoutEnvironmentInput
   creditLedgerEntries?: Prisma.CreditLedgerEntryCreateNestedManyWithoutEnvironmentInput
   templateInstalls?: Prisma.TemplateInstallCreateNestedManyWithoutEnvironmentInput
+  invoiceTemplates?: Prisma.InvoiceTemplateCreateNestedManyWithoutEnvironmentInput
   invoices?: Prisma.InvoiceCreateNestedManyWithoutEnvironmentInput
   subscriptionStates?: Prisma.SubscriptionStateCreateNestedManyWithoutEnvironmentInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestCreateNestedManyWithoutEnvironmentInput
@@ -2156,6 +2206,7 @@ export type WorkspaceEnvironmentUncheckedCreateWithoutCatalogConfigsInput = {
   companyCreditGrants?: Prisma.CompanyCreditGrantUncheckedCreateNestedManyWithoutEnvironmentInput
   creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedCreateNestedManyWithoutEnvironmentInput
   templateInstalls?: Prisma.TemplateInstallUncheckedCreateNestedManyWithoutEnvironmentInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedCreateNestedManyWithoutEnvironmentInput
   invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutEnvironmentInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedCreateNestedManyWithoutEnvironmentInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedCreateNestedManyWithoutEnvironmentInput
@@ -2207,6 +2258,7 @@ export type WorkspaceEnvironmentUpdateWithoutCatalogConfigsInput = {
   companyCreditGrants?: Prisma.CompanyCreditGrantUpdateManyWithoutEnvironmentNestedInput
   creditLedgerEntries?: Prisma.CreditLedgerEntryUpdateManyWithoutEnvironmentNestedInput
   templateInstalls?: Prisma.TemplateInstallUpdateManyWithoutEnvironmentNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUpdateManyWithoutEnvironmentNestedInput
   invoices?: Prisma.InvoiceUpdateManyWithoutEnvironmentNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUpdateManyWithoutEnvironmentNestedInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUpdateManyWithoutEnvironmentNestedInput
@@ -2242,6 +2294,7 @@ export type WorkspaceEnvironmentUncheckedUpdateWithoutCatalogConfigsInput = {
   companyCreditGrants?: Prisma.CompanyCreditGrantUncheckedUpdateManyWithoutEnvironmentNestedInput
   creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedUpdateManyWithoutEnvironmentNestedInput
   templateInstalls?: Prisma.TemplateInstallUncheckedUpdateManyWithoutEnvironmentNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedUpdateManyWithoutEnvironmentNestedInput
   invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutEnvironmentNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedUpdateManyWithoutEnvironmentNestedInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedUpdateManyWithoutEnvironmentNestedInput
@@ -2277,6 +2330,7 @@ export type WorkspaceEnvironmentCreateWithoutTemplateInstallsInput = {
   catalogConfigs?: Prisma.CatalogConfigCreateNestedManyWithoutEnvironmentInput
   companyCreditGrants?: Prisma.CompanyCreditGrantCreateNestedManyWithoutEnvironmentInput
   creditLedgerEntries?: Prisma.CreditLedgerEntryCreateNestedManyWithoutEnvironmentInput
+  invoiceTemplates?: Prisma.InvoiceTemplateCreateNestedManyWithoutEnvironmentInput
   invoices?: Prisma.InvoiceCreateNestedManyWithoutEnvironmentInput
   subscriptionStates?: Prisma.SubscriptionStateCreateNestedManyWithoutEnvironmentInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestCreateNestedManyWithoutEnvironmentInput
@@ -2312,6 +2366,7 @@ export type WorkspaceEnvironmentUncheckedCreateWithoutTemplateInstallsInput = {
   catalogConfigs?: Prisma.CatalogConfigUncheckedCreateNestedManyWithoutEnvironmentInput
   companyCreditGrants?: Prisma.CompanyCreditGrantUncheckedCreateNestedManyWithoutEnvironmentInput
   creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedCreateNestedManyWithoutEnvironmentInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedCreateNestedManyWithoutEnvironmentInput
   invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutEnvironmentInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedCreateNestedManyWithoutEnvironmentInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedCreateNestedManyWithoutEnvironmentInput
@@ -2363,6 +2418,7 @@ export type WorkspaceEnvironmentUpdateWithoutTemplateInstallsInput = {
   catalogConfigs?: Prisma.CatalogConfigUpdateManyWithoutEnvironmentNestedInput
   companyCreditGrants?: Prisma.CompanyCreditGrantUpdateManyWithoutEnvironmentNestedInput
   creditLedgerEntries?: Prisma.CreditLedgerEntryUpdateManyWithoutEnvironmentNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUpdateManyWithoutEnvironmentNestedInput
   invoices?: Prisma.InvoiceUpdateManyWithoutEnvironmentNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUpdateManyWithoutEnvironmentNestedInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUpdateManyWithoutEnvironmentNestedInput
@@ -2398,6 +2454,167 @@ export type WorkspaceEnvironmentUncheckedUpdateWithoutTemplateInstallsInput = {
   catalogConfigs?: Prisma.CatalogConfigUncheckedUpdateManyWithoutEnvironmentNestedInput
   companyCreditGrants?: Prisma.CompanyCreditGrantUncheckedUpdateManyWithoutEnvironmentNestedInput
   creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedUpdateManyWithoutEnvironmentNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedUpdateManyWithoutEnvironmentNestedInput
+  invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutEnvironmentNestedInput
+  subscriptionStates?: Prisma.SubscriptionStateUncheckedUpdateManyWithoutEnvironmentNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedUpdateManyWithoutEnvironmentNestedInput
+  payments?: Prisma.PaymentUncheckedUpdateManyWithoutEnvironmentNestedInput
+  paymentLinks?: Prisma.PaymentLinkUncheckedUpdateManyWithoutEnvironmentNestedInput
+  checkoutSessions?: Prisma.CheckoutSessionUncheckedUpdateManyWithoutEnvironmentNestedInput
+  providerProfiles?: Prisma.ProviderProfileUncheckedUpdateManyWithoutEnvironmentNestedInput
+  arcenApiKeys?: Prisma.ArcenApiKeyUncheckedUpdateManyWithoutEnvironmentNestedInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedUpdateManyWithoutEnvironmentNestedInput
+  embedComponents?: Prisma.EmbedComponentUncheckedUpdateManyWithoutEnvironmentNestedInput
+  arcenCompanies?: Prisma.ArcenCompanyUncheckedUpdateManyWithoutEnvironmentNestedInput
+  arcenUsers?: Prisma.ArcenUserUncheckedUpdateManyWithoutEnvironmentNestedInput
+  arcenEvents?: Prisma.ArcenEventUncheckedUpdateManyWithoutEnvironmentNestedInput
+  platformBillingAccount?: Prisma.PlatformBillingAccountUncheckedUpdateOneWithoutEnvironmentNestedInput
+  platformBillingPlans?: Prisma.PlatformBillingPlanUncheckedUpdateManyWithoutEnvironmentNestedInput
+  platformBillingCustomers?: Prisma.PlatformBillingCustomerUncheckedUpdateManyWithoutEnvironmentNestedInput
+}
+
+export type WorkspaceEnvironmentCreateWithoutInvoiceTemplatesInput = {
+  id?: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  name: string
+  mode: $Enums.EnvironmentMode
+  chainId: number
+  chainFamily?: $Enums.ChainFamily
+  team: Prisma.TeamCreateNestedOneWithoutEnvironmentsInput
+  authSessions?: Prisma.AuthSessionCreateNestedManyWithoutActiveEnvironmentInput
+  catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutEnvironmentInput
+  catalogAddOns?: Prisma.CatalogAddOnCreateNestedManyWithoutEnvironmentInput
+  catalogCreditTypes?: Prisma.CatalogCreditTypeCreateNestedManyWithoutEnvironmentInput
+  catalogVersions?: Prisma.CatalogVersionCreateNestedManyWithoutEnvironmentInput
+  catalogConfigs?: Prisma.CatalogConfigCreateNestedManyWithoutEnvironmentInput
+  companyCreditGrants?: Prisma.CompanyCreditGrantCreateNestedManyWithoutEnvironmentInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryCreateNestedManyWithoutEnvironmentInput
+  templateInstalls?: Prisma.TemplateInstallCreateNestedManyWithoutEnvironmentInput
+  invoices?: Prisma.InvoiceCreateNestedManyWithoutEnvironmentInput
+  subscriptionStates?: Prisma.SubscriptionStateCreateNestedManyWithoutEnvironmentInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestCreateNestedManyWithoutEnvironmentInput
+  payments?: Prisma.PaymentCreateNestedManyWithoutEnvironmentInput
+  paymentLinks?: Prisma.PaymentLinkCreateNestedManyWithoutEnvironmentInput
+  checkoutSessions?: Prisma.CheckoutSessionCreateNestedManyWithoutEnvironmentInput
+  providerProfiles?: Prisma.ProviderProfileCreateNestedManyWithoutEnvironmentInput
+  arcenApiKeys?: Prisma.ArcenApiKeyCreateNestedManyWithoutEnvironmentInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenCreateNestedManyWithoutEnvironmentInput
+  embedComponents?: Prisma.EmbedComponentCreateNestedManyWithoutEnvironmentInput
+  arcenCompanies?: Prisma.ArcenCompanyCreateNestedManyWithoutEnvironmentInput
+  arcenUsers?: Prisma.ArcenUserCreateNestedManyWithoutEnvironmentInput
+  arcenEvents?: Prisma.ArcenEventCreateNestedManyWithoutEnvironmentInput
+  platformBillingAccount?: Prisma.PlatformBillingAccountCreateNestedOneWithoutEnvironmentInput
+  platformBillingPlans?: Prisma.PlatformBillingPlanCreateNestedManyWithoutEnvironmentInput
+  platformBillingCustomers?: Prisma.PlatformBillingCustomerCreateNestedManyWithoutEnvironmentInput
+}
+
+export type WorkspaceEnvironmentUncheckedCreateWithoutInvoiceTemplatesInput = {
+  id?: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  teamId: string
+  name: string
+  mode: $Enums.EnvironmentMode
+  chainId: number
+  chainFamily?: $Enums.ChainFamily
+  authSessions?: Prisma.AuthSessionUncheckedCreateNestedManyWithoutActiveEnvironmentInput
+  catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutEnvironmentInput
+  catalogAddOns?: Prisma.CatalogAddOnUncheckedCreateNestedManyWithoutEnvironmentInput
+  catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedCreateNestedManyWithoutEnvironmentInput
+  catalogVersions?: Prisma.CatalogVersionUncheckedCreateNestedManyWithoutEnvironmentInput
+  catalogConfigs?: Prisma.CatalogConfigUncheckedCreateNestedManyWithoutEnvironmentInput
+  companyCreditGrants?: Prisma.CompanyCreditGrantUncheckedCreateNestedManyWithoutEnvironmentInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedCreateNestedManyWithoutEnvironmentInput
+  templateInstalls?: Prisma.TemplateInstallUncheckedCreateNestedManyWithoutEnvironmentInput
+  invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutEnvironmentInput
+  subscriptionStates?: Prisma.SubscriptionStateUncheckedCreateNestedManyWithoutEnvironmentInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedCreateNestedManyWithoutEnvironmentInput
+  payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutEnvironmentInput
+  paymentLinks?: Prisma.PaymentLinkUncheckedCreateNestedManyWithoutEnvironmentInput
+  checkoutSessions?: Prisma.CheckoutSessionUncheckedCreateNestedManyWithoutEnvironmentInput
+  providerProfiles?: Prisma.ProviderProfileUncheckedCreateNestedManyWithoutEnvironmentInput
+  arcenApiKeys?: Prisma.ArcenApiKeyUncheckedCreateNestedManyWithoutEnvironmentInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedCreateNestedManyWithoutEnvironmentInput
+  embedComponents?: Prisma.EmbedComponentUncheckedCreateNestedManyWithoutEnvironmentInput
+  arcenCompanies?: Prisma.ArcenCompanyUncheckedCreateNestedManyWithoutEnvironmentInput
+  arcenUsers?: Prisma.ArcenUserUncheckedCreateNestedManyWithoutEnvironmentInput
+  arcenEvents?: Prisma.ArcenEventUncheckedCreateNestedManyWithoutEnvironmentInput
+  platformBillingAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedOneWithoutEnvironmentInput
+  platformBillingPlans?: Prisma.PlatformBillingPlanUncheckedCreateNestedManyWithoutEnvironmentInput
+  platformBillingCustomers?: Prisma.PlatformBillingCustomerUncheckedCreateNestedManyWithoutEnvironmentInput
+}
+
+export type WorkspaceEnvironmentCreateOrConnectWithoutInvoiceTemplatesInput = {
+  where: Prisma.WorkspaceEnvironmentWhereUniqueInput
+  create: Prisma.XOR<Prisma.WorkspaceEnvironmentCreateWithoutInvoiceTemplatesInput, Prisma.WorkspaceEnvironmentUncheckedCreateWithoutInvoiceTemplatesInput>
+}
+
+export type WorkspaceEnvironmentUpsertWithoutInvoiceTemplatesInput = {
+  update: Prisma.XOR<Prisma.WorkspaceEnvironmentUpdateWithoutInvoiceTemplatesInput, Prisma.WorkspaceEnvironmentUncheckedUpdateWithoutInvoiceTemplatesInput>
+  create: Prisma.XOR<Prisma.WorkspaceEnvironmentCreateWithoutInvoiceTemplatesInput, Prisma.WorkspaceEnvironmentUncheckedCreateWithoutInvoiceTemplatesInput>
+  where?: Prisma.WorkspaceEnvironmentWhereInput
+}
+
+export type WorkspaceEnvironmentUpdateToOneWithWhereWithoutInvoiceTemplatesInput = {
+  where?: Prisma.WorkspaceEnvironmentWhereInput
+  data: Prisma.XOR<Prisma.WorkspaceEnvironmentUpdateWithoutInvoiceTemplatesInput, Prisma.WorkspaceEnvironmentUncheckedUpdateWithoutInvoiceTemplatesInput>
+}
+
+export type WorkspaceEnvironmentUpdateWithoutInvoiceTemplatesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  mode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
+  chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  chainFamily?: Prisma.EnumChainFamilyFieldUpdateOperationsInput | $Enums.ChainFamily
+  team?: Prisma.TeamUpdateOneRequiredWithoutEnvironmentsNestedInput
+  authSessions?: Prisma.AuthSessionUpdateManyWithoutActiveEnvironmentNestedInput
+  catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutEnvironmentNestedInput
+  catalogAddOns?: Prisma.CatalogAddOnUpdateManyWithoutEnvironmentNestedInput
+  catalogCreditTypes?: Prisma.CatalogCreditTypeUpdateManyWithoutEnvironmentNestedInput
+  catalogVersions?: Prisma.CatalogVersionUpdateManyWithoutEnvironmentNestedInput
+  catalogConfigs?: Prisma.CatalogConfigUpdateManyWithoutEnvironmentNestedInput
+  companyCreditGrants?: Prisma.CompanyCreditGrantUpdateManyWithoutEnvironmentNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUpdateManyWithoutEnvironmentNestedInput
+  templateInstalls?: Prisma.TemplateInstallUpdateManyWithoutEnvironmentNestedInput
+  invoices?: Prisma.InvoiceUpdateManyWithoutEnvironmentNestedInput
+  subscriptionStates?: Prisma.SubscriptionStateUpdateManyWithoutEnvironmentNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUpdateManyWithoutEnvironmentNestedInput
+  payments?: Prisma.PaymentUpdateManyWithoutEnvironmentNestedInput
+  paymentLinks?: Prisma.PaymentLinkUpdateManyWithoutEnvironmentNestedInput
+  checkoutSessions?: Prisma.CheckoutSessionUpdateManyWithoutEnvironmentNestedInput
+  providerProfiles?: Prisma.ProviderProfileUpdateManyWithoutEnvironmentNestedInput
+  arcenApiKeys?: Prisma.ArcenApiKeyUpdateManyWithoutEnvironmentNestedInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUpdateManyWithoutEnvironmentNestedInput
+  embedComponents?: Prisma.EmbedComponentUpdateManyWithoutEnvironmentNestedInput
+  arcenCompanies?: Prisma.ArcenCompanyUpdateManyWithoutEnvironmentNestedInput
+  arcenUsers?: Prisma.ArcenUserUpdateManyWithoutEnvironmentNestedInput
+  arcenEvents?: Prisma.ArcenEventUpdateManyWithoutEnvironmentNestedInput
+  platformBillingAccount?: Prisma.PlatformBillingAccountUpdateOneWithoutEnvironmentNestedInput
+  platformBillingPlans?: Prisma.PlatformBillingPlanUpdateManyWithoutEnvironmentNestedInput
+  platformBillingCustomers?: Prisma.PlatformBillingCustomerUpdateManyWithoutEnvironmentNestedInput
+}
+
+export type WorkspaceEnvironmentUncheckedUpdateWithoutInvoiceTemplatesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  teamId?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  mode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
+  chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  chainFamily?: Prisma.EnumChainFamilyFieldUpdateOperationsInput | $Enums.ChainFamily
+  authSessions?: Prisma.AuthSessionUncheckedUpdateManyWithoutActiveEnvironmentNestedInput
+  catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutEnvironmentNestedInput
+  catalogAddOns?: Prisma.CatalogAddOnUncheckedUpdateManyWithoutEnvironmentNestedInput
+  catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedUpdateManyWithoutEnvironmentNestedInput
+  catalogVersions?: Prisma.CatalogVersionUncheckedUpdateManyWithoutEnvironmentNestedInput
+  catalogConfigs?: Prisma.CatalogConfigUncheckedUpdateManyWithoutEnvironmentNestedInput
+  companyCreditGrants?: Prisma.CompanyCreditGrantUncheckedUpdateManyWithoutEnvironmentNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedUpdateManyWithoutEnvironmentNestedInput
+  templateInstalls?: Prisma.TemplateInstallUncheckedUpdateManyWithoutEnvironmentNestedInput
   invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutEnvironmentNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedUpdateManyWithoutEnvironmentNestedInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedUpdateManyWithoutEnvironmentNestedInput
@@ -2434,6 +2651,7 @@ export type WorkspaceEnvironmentCreateWithoutInvoicesInput = {
   companyCreditGrants?: Prisma.CompanyCreditGrantCreateNestedManyWithoutEnvironmentInput
   creditLedgerEntries?: Prisma.CreditLedgerEntryCreateNestedManyWithoutEnvironmentInput
   templateInstalls?: Prisma.TemplateInstallCreateNestedManyWithoutEnvironmentInput
+  invoiceTemplates?: Prisma.InvoiceTemplateCreateNestedManyWithoutEnvironmentInput
   subscriptionStates?: Prisma.SubscriptionStateCreateNestedManyWithoutEnvironmentInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestCreateNestedManyWithoutEnvironmentInput
   payments?: Prisma.PaymentCreateNestedManyWithoutEnvironmentInput
@@ -2469,6 +2687,7 @@ export type WorkspaceEnvironmentUncheckedCreateWithoutInvoicesInput = {
   companyCreditGrants?: Prisma.CompanyCreditGrantUncheckedCreateNestedManyWithoutEnvironmentInput
   creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedCreateNestedManyWithoutEnvironmentInput
   templateInstalls?: Prisma.TemplateInstallUncheckedCreateNestedManyWithoutEnvironmentInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedCreateNestedManyWithoutEnvironmentInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedCreateNestedManyWithoutEnvironmentInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedCreateNestedManyWithoutEnvironmentInput
   payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutEnvironmentInput
@@ -2520,6 +2739,7 @@ export type WorkspaceEnvironmentUpdateWithoutInvoicesInput = {
   companyCreditGrants?: Prisma.CompanyCreditGrantUpdateManyWithoutEnvironmentNestedInput
   creditLedgerEntries?: Prisma.CreditLedgerEntryUpdateManyWithoutEnvironmentNestedInput
   templateInstalls?: Prisma.TemplateInstallUpdateManyWithoutEnvironmentNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUpdateManyWithoutEnvironmentNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUpdateManyWithoutEnvironmentNestedInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUpdateManyWithoutEnvironmentNestedInput
   payments?: Prisma.PaymentUpdateManyWithoutEnvironmentNestedInput
@@ -2555,6 +2775,7 @@ export type WorkspaceEnvironmentUncheckedUpdateWithoutInvoicesInput = {
   companyCreditGrants?: Prisma.CompanyCreditGrantUncheckedUpdateManyWithoutEnvironmentNestedInput
   creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedUpdateManyWithoutEnvironmentNestedInput
   templateInstalls?: Prisma.TemplateInstallUncheckedUpdateManyWithoutEnvironmentNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedUpdateManyWithoutEnvironmentNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedUpdateManyWithoutEnvironmentNestedInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedUpdateManyWithoutEnvironmentNestedInput
   payments?: Prisma.PaymentUncheckedUpdateManyWithoutEnvironmentNestedInput
@@ -2590,6 +2811,7 @@ export type WorkspaceEnvironmentCreateWithoutSubscriptionStatesInput = {
   companyCreditGrants?: Prisma.CompanyCreditGrantCreateNestedManyWithoutEnvironmentInput
   creditLedgerEntries?: Prisma.CreditLedgerEntryCreateNestedManyWithoutEnvironmentInput
   templateInstalls?: Prisma.TemplateInstallCreateNestedManyWithoutEnvironmentInput
+  invoiceTemplates?: Prisma.InvoiceTemplateCreateNestedManyWithoutEnvironmentInput
   invoices?: Prisma.InvoiceCreateNestedManyWithoutEnvironmentInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestCreateNestedManyWithoutEnvironmentInput
   payments?: Prisma.PaymentCreateNestedManyWithoutEnvironmentInput
@@ -2625,6 +2847,7 @@ export type WorkspaceEnvironmentUncheckedCreateWithoutSubscriptionStatesInput = 
   companyCreditGrants?: Prisma.CompanyCreditGrantUncheckedCreateNestedManyWithoutEnvironmentInput
   creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedCreateNestedManyWithoutEnvironmentInput
   templateInstalls?: Prisma.TemplateInstallUncheckedCreateNestedManyWithoutEnvironmentInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedCreateNestedManyWithoutEnvironmentInput
   invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutEnvironmentInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedCreateNestedManyWithoutEnvironmentInput
   payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutEnvironmentInput
@@ -2676,6 +2899,7 @@ export type WorkspaceEnvironmentUpdateWithoutSubscriptionStatesInput = {
   companyCreditGrants?: Prisma.CompanyCreditGrantUpdateManyWithoutEnvironmentNestedInput
   creditLedgerEntries?: Prisma.CreditLedgerEntryUpdateManyWithoutEnvironmentNestedInput
   templateInstalls?: Prisma.TemplateInstallUpdateManyWithoutEnvironmentNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUpdateManyWithoutEnvironmentNestedInput
   invoices?: Prisma.InvoiceUpdateManyWithoutEnvironmentNestedInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUpdateManyWithoutEnvironmentNestedInput
   payments?: Prisma.PaymentUpdateManyWithoutEnvironmentNestedInput
@@ -2711,6 +2935,7 @@ export type WorkspaceEnvironmentUncheckedUpdateWithoutSubscriptionStatesInput = 
   companyCreditGrants?: Prisma.CompanyCreditGrantUncheckedUpdateManyWithoutEnvironmentNestedInput
   creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedUpdateManyWithoutEnvironmentNestedInput
   templateInstalls?: Prisma.TemplateInstallUncheckedUpdateManyWithoutEnvironmentNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedUpdateManyWithoutEnvironmentNestedInput
   invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutEnvironmentNestedInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedUpdateManyWithoutEnvironmentNestedInput
   payments?: Prisma.PaymentUncheckedUpdateManyWithoutEnvironmentNestedInput
@@ -2746,6 +2971,7 @@ export type WorkspaceEnvironmentCreateWithoutSubscriptionChangeRequestsInput = {
   companyCreditGrants?: Prisma.CompanyCreditGrantCreateNestedManyWithoutEnvironmentInput
   creditLedgerEntries?: Prisma.CreditLedgerEntryCreateNestedManyWithoutEnvironmentInput
   templateInstalls?: Prisma.TemplateInstallCreateNestedManyWithoutEnvironmentInput
+  invoiceTemplates?: Prisma.InvoiceTemplateCreateNestedManyWithoutEnvironmentInput
   invoices?: Prisma.InvoiceCreateNestedManyWithoutEnvironmentInput
   subscriptionStates?: Prisma.SubscriptionStateCreateNestedManyWithoutEnvironmentInput
   payments?: Prisma.PaymentCreateNestedManyWithoutEnvironmentInput
@@ -2781,6 +3007,7 @@ export type WorkspaceEnvironmentUncheckedCreateWithoutSubscriptionChangeRequests
   companyCreditGrants?: Prisma.CompanyCreditGrantUncheckedCreateNestedManyWithoutEnvironmentInput
   creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedCreateNestedManyWithoutEnvironmentInput
   templateInstalls?: Prisma.TemplateInstallUncheckedCreateNestedManyWithoutEnvironmentInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedCreateNestedManyWithoutEnvironmentInput
   invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutEnvironmentInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedCreateNestedManyWithoutEnvironmentInput
   payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutEnvironmentInput
@@ -2832,6 +3059,7 @@ export type WorkspaceEnvironmentUpdateWithoutSubscriptionChangeRequestsInput = {
   companyCreditGrants?: Prisma.CompanyCreditGrantUpdateManyWithoutEnvironmentNestedInput
   creditLedgerEntries?: Prisma.CreditLedgerEntryUpdateManyWithoutEnvironmentNestedInput
   templateInstalls?: Prisma.TemplateInstallUpdateManyWithoutEnvironmentNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUpdateManyWithoutEnvironmentNestedInput
   invoices?: Prisma.InvoiceUpdateManyWithoutEnvironmentNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUpdateManyWithoutEnvironmentNestedInput
   payments?: Prisma.PaymentUpdateManyWithoutEnvironmentNestedInput
@@ -2867,6 +3095,7 @@ export type WorkspaceEnvironmentUncheckedUpdateWithoutSubscriptionChangeRequests
   companyCreditGrants?: Prisma.CompanyCreditGrantUncheckedUpdateManyWithoutEnvironmentNestedInput
   creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedUpdateManyWithoutEnvironmentNestedInput
   templateInstalls?: Prisma.TemplateInstallUncheckedUpdateManyWithoutEnvironmentNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedUpdateManyWithoutEnvironmentNestedInput
   invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutEnvironmentNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedUpdateManyWithoutEnvironmentNestedInput
   payments?: Prisma.PaymentUncheckedUpdateManyWithoutEnvironmentNestedInput
@@ -2902,6 +3131,7 @@ export type WorkspaceEnvironmentCreateWithoutPaymentsInput = {
   companyCreditGrants?: Prisma.CompanyCreditGrantCreateNestedManyWithoutEnvironmentInput
   creditLedgerEntries?: Prisma.CreditLedgerEntryCreateNestedManyWithoutEnvironmentInput
   templateInstalls?: Prisma.TemplateInstallCreateNestedManyWithoutEnvironmentInput
+  invoiceTemplates?: Prisma.InvoiceTemplateCreateNestedManyWithoutEnvironmentInput
   invoices?: Prisma.InvoiceCreateNestedManyWithoutEnvironmentInput
   subscriptionStates?: Prisma.SubscriptionStateCreateNestedManyWithoutEnvironmentInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestCreateNestedManyWithoutEnvironmentInput
@@ -2937,6 +3167,7 @@ export type WorkspaceEnvironmentUncheckedCreateWithoutPaymentsInput = {
   companyCreditGrants?: Prisma.CompanyCreditGrantUncheckedCreateNestedManyWithoutEnvironmentInput
   creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedCreateNestedManyWithoutEnvironmentInput
   templateInstalls?: Prisma.TemplateInstallUncheckedCreateNestedManyWithoutEnvironmentInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedCreateNestedManyWithoutEnvironmentInput
   invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutEnvironmentInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedCreateNestedManyWithoutEnvironmentInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedCreateNestedManyWithoutEnvironmentInput
@@ -2988,6 +3219,7 @@ export type WorkspaceEnvironmentUpdateWithoutPaymentsInput = {
   companyCreditGrants?: Prisma.CompanyCreditGrantUpdateManyWithoutEnvironmentNestedInput
   creditLedgerEntries?: Prisma.CreditLedgerEntryUpdateManyWithoutEnvironmentNestedInput
   templateInstalls?: Prisma.TemplateInstallUpdateManyWithoutEnvironmentNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUpdateManyWithoutEnvironmentNestedInput
   invoices?: Prisma.InvoiceUpdateManyWithoutEnvironmentNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUpdateManyWithoutEnvironmentNestedInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUpdateManyWithoutEnvironmentNestedInput
@@ -3023,6 +3255,7 @@ export type WorkspaceEnvironmentUncheckedUpdateWithoutPaymentsInput = {
   companyCreditGrants?: Prisma.CompanyCreditGrantUncheckedUpdateManyWithoutEnvironmentNestedInput
   creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedUpdateManyWithoutEnvironmentNestedInput
   templateInstalls?: Prisma.TemplateInstallUncheckedUpdateManyWithoutEnvironmentNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedUpdateManyWithoutEnvironmentNestedInput
   invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutEnvironmentNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedUpdateManyWithoutEnvironmentNestedInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedUpdateManyWithoutEnvironmentNestedInput
@@ -3058,6 +3291,7 @@ export type WorkspaceEnvironmentCreateWithoutPlatformBillingPlansInput = {
   companyCreditGrants?: Prisma.CompanyCreditGrantCreateNestedManyWithoutEnvironmentInput
   creditLedgerEntries?: Prisma.CreditLedgerEntryCreateNestedManyWithoutEnvironmentInput
   templateInstalls?: Prisma.TemplateInstallCreateNestedManyWithoutEnvironmentInput
+  invoiceTemplates?: Prisma.InvoiceTemplateCreateNestedManyWithoutEnvironmentInput
   invoices?: Prisma.InvoiceCreateNestedManyWithoutEnvironmentInput
   subscriptionStates?: Prisma.SubscriptionStateCreateNestedManyWithoutEnvironmentInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestCreateNestedManyWithoutEnvironmentInput
@@ -3093,6 +3327,7 @@ export type WorkspaceEnvironmentUncheckedCreateWithoutPlatformBillingPlansInput 
   companyCreditGrants?: Prisma.CompanyCreditGrantUncheckedCreateNestedManyWithoutEnvironmentInput
   creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedCreateNestedManyWithoutEnvironmentInput
   templateInstalls?: Prisma.TemplateInstallUncheckedCreateNestedManyWithoutEnvironmentInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedCreateNestedManyWithoutEnvironmentInput
   invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutEnvironmentInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedCreateNestedManyWithoutEnvironmentInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedCreateNestedManyWithoutEnvironmentInput
@@ -3144,6 +3379,7 @@ export type WorkspaceEnvironmentUpdateWithoutPlatformBillingPlansInput = {
   companyCreditGrants?: Prisma.CompanyCreditGrantUpdateManyWithoutEnvironmentNestedInput
   creditLedgerEntries?: Prisma.CreditLedgerEntryUpdateManyWithoutEnvironmentNestedInput
   templateInstalls?: Prisma.TemplateInstallUpdateManyWithoutEnvironmentNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUpdateManyWithoutEnvironmentNestedInput
   invoices?: Prisma.InvoiceUpdateManyWithoutEnvironmentNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUpdateManyWithoutEnvironmentNestedInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUpdateManyWithoutEnvironmentNestedInput
@@ -3179,6 +3415,7 @@ export type WorkspaceEnvironmentUncheckedUpdateWithoutPlatformBillingPlansInput 
   companyCreditGrants?: Prisma.CompanyCreditGrantUncheckedUpdateManyWithoutEnvironmentNestedInput
   creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedUpdateManyWithoutEnvironmentNestedInput
   templateInstalls?: Prisma.TemplateInstallUncheckedUpdateManyWithoutEnvironmentNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedUpdateManyWithoutEnvironmentNestedInput
   invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutEnvironmentNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedUpdateManyWithoutEnvironmentNestedInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedUpdateManyWithoutEnvironmentNestedInput
@@ -3214,6 +3451,7 @@ export type WorkspaceEnvironmentCreateWithoutPlatformBillingAccountInput = {
   companyCreditGrants?: Prisma.CompanyCreditGrantCreateNestedManyWithoutEnvironmentInput
   creditLedgerEntries?: Prisma.CreditLedgerEntryCreateNestedManyWithoutEnvironmentInput
   templateInstalls?: Prisma.TemplateInstallCreateNestedManyWithoutEnvironmentInput
+  invoiceTemplates?: Prisma.InvoiceTemplateCreateNestedManyWithoutEnvironmentInput
   invoices?: Prisma.InvoiceCreateNestedManyWithoutEnvironmentInput
   subscriptionStates?: Prisma.SubscriptionStateCreateNestedManyWithoutEnvironmentInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestCreateNestedManyWithoutEnvironmentInput
@@ -3249,6 +3487,7 @@ export type WorkspaceEnvironmentUncheckedCreateWithoutPlatformBillingAccountInpu
   companyCreditGrants?: Prisma.CompanyCreditGrantUncheckedCreateNestedManyWithoutEnvironmentInput
   creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedCreateNestedManyWithoutEnvironmentInput
   templateInstalls?: Prisma.TemplateInstallUncheckedCreateNestedManyWithoutEnvironmentInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedCreateNestedManyWithoutEnvironmentInput
   invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutEnvironmentInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedCreateNestedManyWithoutEnvironmentInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedCreateNestedManyWithoutEnvironmentInput
@@ -3300,6 +3539,7 @@ export type WorkspaceEnvironmentUpdateWithoutPlatformBillingAccountInput = {
   companyCreditGrants?: Prisma.CompanyCreditGrantUpdateManyWithoutEnvironmentNestedInput
   creditLedgerEntries?: Prisma.CreditLedgerEntryUpdateManyWithoutEnvironmentNestedInput
   templateInstalls?: Prisma.TemplateInstallUpdateManyWithoutEnvironmentNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUpdateManyWithoutEnvironmentNestedInput
   invoices?: Prisma.InvoiceUpdateManyWithoutEnvironmentNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUpdateManyWithoutEnvironmentNestedInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUpdateManyWithoutEnvironmentNestedInput
@@ -3335,6 +3575,7 @@ export type WorkspaceEnvironmentUncheckedUpdateWithoutPlatformBillingAccountInpu
   companyCreditGrants?: Prisma.CompanyCreditGrantUncheckedUpdateManyWithoutEnvironmentNestedInput
   creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedUpdateManyWithoutEnvironmentNestedInput
   templateInstalls?: Prisma.TemplateInstallUncheckedUpdateManyWithoutEnvironmentNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedUpdateManyWithoutEnvironmentNestedInput
   invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutEnvironmentNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedUpdateManyWithoutEnvironmentNestedInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedUpdateManyWithoutEnvironmentNestedInput
@@ -3370,6 +3611,7 @@ export type WorkspaceEnvironmentCreateWithoutPlatformBillingCustomersInput = {
   companyCreditGrants?: Prisma.CompanyCreditGrantCreateNestedManyWithoutEnvironmentInput
   creditLedgerEntries?: Prisma.CreditLedgerEntryCreateNestedManyWithoutEnvironmentInput
   templateInstalls?: Prisma.TemplateInstallCreateNestedManyWithoutEnvironmentInput
+  invoiceTemplates?: Prisma.InvoiceTemplateCreateNestedManyWithoutEnvironmentInput
   invoices?: Prisma.InvoiceCreateNestedManyWithoutEnvironmentInput
   subscriptionStates?: Prisma.SubscriptionStateCreateNestedManyWithoutEnvironmentInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestCreateNestedManyWithoutEnvironmentInput
@@ -3405,6 +3647,7 @@ export type WorkspaceEnvironmentUncheckedCreateWithoutPlatformBillingCustomersIn
   companyCreditGrants?: Prisma.CompanyCreditGrantUncheckedCreateNestedManyWithoutEnvironmentInput
   creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedCreateNestedManyWithoutEnvironmentInput
   templateInstalls?: Prisma.TemplateInstallUncheckedCreateNestedManyWithoutEnvironmentInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedCreateNestedManyWithoutEnvironmentInput
   invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutEnvironmentInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedCreateNestedManyWithoutEnvironmentInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedCreateNestedManyWithoutEnvironmentInput
@@ -3456,6 +3699,7 @@ export type WorkspaceEnvironmentUpdateWithoutPlatformBillingCustomersInput = {
   companyCreditGrants?: Prisma.CompanyCreditGrantUpdateManyWithoutEnvironmentNestedInput
   creditLedgerEntries?: Prisma.CreditLedgerEntryUpdateManyWithoutEnvironmentNestedInput
   templateInstalls?: Prisma.TemplateInstallUpdateManyWithoutEnvironmentNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUpdateManyWithoutEnvironmentNestedInput
   invoices?: Prisma.InvoiceUpdateManyWithoutEnvironmentNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUpdateManyWithoutEnvironmentNestedInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUpdateManyWithoutEnvironmentNestedInput
@@ -3491,6 +3735,7 @@ export type WorkspaceEnvironmentUncheckedUpdateWithoutPlatformBillingCustomersIn
   companyCreditGrants?: Prisma.CompanyCreditGrantUncheckedUpdateManyWithoutEnvironmentNestedInput
   creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedUpdateManyWithoutEnvironmentNestedInput
   templateInstalls?: Prisma.TemplateInstallUncheckedUpdateManyWithoutEnvironmentNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedUpdateManyWithoutEnvironmentNestedInput
   invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutEnvironmentNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedUpdateManyWithoutEnvironmentNestedInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedUpdateManyWithoutEnvironmentNestedInput
@@ -3526,6 +3771,7 @@ export type WorkspaceEnvironmentCreateWithoutArcenCompaniesInput = {
   companyCreditGrants?: Prisma.CompanyCreditGrantCreateNestedManyWithoutEnvironmentInput
   creditLedgerEntries?: Prisma.CreditLedgerEntryCreateNestedManyWithoutEnvironmentInput
   templateInstalls?: Prisma.TemplateInstallCreateNestedManyWithoutEnvironmentInput
+  invoiceTemplates?: Prisma.InvoiceTemplateCreateNestedManyWithoutEnvironmentInput
   invoices?: Prisma.InvoiceCreateNestedManyWithoutEnvironmentInput
   subscriptionStates?: Prisma.SubscriptionStateCreateNestedManyWithoutEnvironmentInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestCreateNestedManyWithoutEnvironmentInput
@@ -3561,6 +3807,7 @@ export type WorkspaceEnvironmentUncheckedCreateWithoutArcenCompaniesInput = {
   companyCreditGrants?: Prisma.CompanyCreditGrantUncheckedCreateNestedManyWithoutEnvironmentInput
   creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedCreateNestedManyWithoutEnvironmentInput
   templateInstalls?: Prisma.TemplateInstallUncheckedCreateNestedManyWithoutEnvironmentInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedCreateNestedManyWithoutEnvironmentInput
   invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutEnvironmentInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedCreateNestedManyWithoutEnvironmentInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedCreateNestedManyWithoutEnvironmentInput
@@ -3612,6 +3859,7 @@ export type WorkspaceEnvironmentUpdateWithoutArcenCompaniesInput = {
   companyCreditGrants?: Prisma.CompanyCreditGrantUpdateManyWithoutEnvironmentNestedInput
   creditLedgerEntries?: Prisma.CreditLedgerEntryUpdateManyWithoutEnvironmentNestedInput
   templateInstalls?: Prisma.TemplateInstallUpdateManyWithoutEnvironmentNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUpdateManyWithoutEnvironmentNestedInput
   invoices?: Prisma.InvoiceUpdateManyWithoutEnvironmentNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUpdateManyWithoutEnvironmentNestedInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUpdateManyWithoutEnvironmentNestedInput
@@ -3647,6 +3895,7 @@ export type WorkspaceEnvironmentUncheckedUpdateWithoutArcenCompaniesInput = {
   companyCreditGrants?: Prisma.CompanyCreditGrantUncheckedUpdateManyWithoutEnvironmentNestedInput
   creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedUpdateManyWithoutEnvironmentNestedInput
   templateInstalls?: Prisma.TemplateInstallUncheckedUpdateManyWithoutEnvironmentNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedUpdateManyWithoutEnvironmentNestedInput
   invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutEnvironmentNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedUpdateManyWithoutEnvironmentNestedInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedUpdateManyWithoutEnvironmentNestedInput
@@ -3682,6 +3931,7 @@ export type WorkspaceEnvironmentCreateWithoutArcenUsersInput = {
   companyCreditGrants?: Prisma.CompanyCreditGrantCreateNestedManyWithoutEnvironmentInput
   creditLedgerEntries?: Prisma.CreditLedgerEntryCreateNestedManyWithoutEnvironmentInput
   templateInstalls?: Prisma.TemplateInstallCreateNestedManyWithoutEnvironmentInput
+  invoiceTemplates?: Prisma.InvoiceTemplateCreateNestedManyWithoutEnvironmentInput
   invoices?: Prisma.InvoiceCreateNestedManyWithoutEnvironmentInput
   subscriptionStates?: Prisma.SubscriptionStateCreateNestedManyWithoutEnvironmentInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestCreateNestedManyWithoutEnvironmentInput
@@ -3717,6 +3967,7 @@ export type WorkspaceEnvironmentUncheckedCreateWithoutArcenUsersInput = {
   companyCreditGrants?: Prisma.CompanyCreditGrantUncheckedCreateNestedManyWithoutEnvironmentInput
   creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedCreateNestedManyWithoutEnvironmentInput
   templateInstalls?: Prisma.TemplateInstallUncheckedCreateNestedManyWithoutEnvironmentInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedCreateNestedManyWithoutEnvironmentInput
   invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutEnvironmentInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedCreateNestedManyWithoutEnvironmentInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedCreateNestedManyWithoutEnvironmentInput
@@ -3768,6 +4019,7 @@ export type WorkspaceEnvironmentUpdateWithoutArcenUsersInput = {
   companyCreditGrants?: Prisma.CompanyCreditGrantUpdateManyWithoutEnvironmentNestedInput
   creditLedgerEntries?: Prisma.CreditLedgerEntryUpdateManyWithoutEnvironmentNestedInput
   templateInstalls?: Prisma.TemplateInstallUpdateManyWithoutEnvironmentNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUpdateManyWithoutEnvironmentNestedInput
   invoices?: Prisma.InvoiceUpdateManyWithoutEnvironmentNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUpdateManyWithoutEnvironmentNestedInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUpdateManyWithoutEnvironmentNestedInput
@@ -3803,6 +4055,7 @@ export type WorkspaceEnvironmentUncheckedUpdateWithoutArcenUsersInput = {
   companyCreditGrants?: Prisma.CompanyCreditGrantUncheckedUpdateManyWithoutEnvironmentNestedInput
   creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedUpdateManyWithoutEnvironmentNestedInput
   templateInstalls?: Prisma.TemplateInstallUncheckedUpdateManyWithoutEnvironmentNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedUpdateManyWithoutEnvironmentNestedInput
   invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutEnvironmentNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedUpdateManyWithoutEnvironmentNestedInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedUpdateManyWithoutEnvironmentNestedInput
@@ -3838,6 +4091,7 @@ export type WorkspaceEnvironmentCreateWithoutArcenEventsInput = {
   companyCreditGrants?: Prisma.CompanyCreditGrantCreateNestedManyWithoutEnvironmentInput
   creditLedgerEntries?: Prisma.CreditLedgerEntryCreateNestedManyWithoutEnvironmentInput
   templateInstalls?: Prisma.TemplateInstallCreateNestedManyWithoutEnvironmentInput
+  invoiceTemplates?: Prisma.InvoiceTemplateCreateNestedManyWithoutEnvironmentInput
   invoices?: Prisma.InvoiceCreateNestedManyWithoutEnvironmentInput
   subscriptionStates?: Prisma.SubscriptionStateCreateNestedManyWithoutEnvironmentInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestCreateNestedManyWithoutEnvironmentInput
@@ -3873,6 +4127,7 @@ export type WorkspaceEnvironmentUncheckedCreateWithoutArcenEventsInput = {
   companyCreditGrants?: Prisma.CompanyCreditGrantUncheckedCreateNestedManyWithoutEnvironmentInput
   creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedCreateNestedManyWithoutEnvironmentInput
   templateInstalls?: Prisma.TemplateInstallUncheckedCreateNestedManyWithoutEnvironmentInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedCreateNestedManyWithoutEnvironmentInput
   invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutEnvironmentInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedCreateNestedManyWithoutEnvironmentInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedCreateNestedManyWithoutEnvironmentInput
@@ -3924,6 +4179,7 @@ export type WorkspaceEnvironmentUpdateWithoutArcenEventsInput = {
   companyCreditGrants?: Prisma.CompanyCreditGrantUpdateManyWithoutEnvironmentNestedInput
   creditLedgerEntries?: Prisma.CreditLedgerEntryUpdateManyWithoutEnvironmentNestedInput
   templateInstalls?: Prisma.TemplateInstallUpdateManyWithoutEnvironmentNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUpdateManyWithoutEnvironmentNestedInput
   invoices?: Prisma.InvoiceUpdateManyWithoutEnvironmentNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUpdateManyWithoutEnvironmentNestedInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUpdateManyWithoutEnvironmentNestedInput
@@ -3959,6 +4215,7 @@ export type WorkspaceEnvironmentUncheckedUpdateWithoutArcenEventsInput = {
   companyCreditGrants?: Prisma.CompanyCreditGrantUncheckedUpdateManyWithoutEnvironmentNestedInput
   creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedUpdateManyWithoutEnvironmentNestedInput
   templateInstalls?: Prisma.TemplateInstallUncheckedUpdateManyWithoutEnvironmentNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedUpdateManyWithoutEnvironmentNestedInput
   invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutEnvironmentNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedUpdateManyWithoutEnvironmentNestedInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedUpdateManyWithoutEnvironmentNestedInput
@@ -3993,6 +4250,7 @@ export type WorkspaceEnvironmentCreateWithoutCompanyCreditGrantsInput = {
   catalogConfigs?: Prisma.CatalogConfigCreateNestedManyWithoutEnvironmentInput
   creditLedgerEntries?: Prisma.CreditLedgerEntryCreateNestedManyWithoutEnvironmentInput
   templateInstalls?: Prisma.TemplateInstallCreateNestedManyWithoutEnvironmentInput
+  invoiceTemplates?: Prisma.InvoiceTemplateCreateNestedManyWithoutEnvironmentInput
   invoices?: Prisma.InvoiceCreateNestedManyWithoutEnvironmentInput
   subscriptionStates?: Prisma.SubscriptionStateCreateNestedManyWithoutEnvironmentInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestCreateNestedManyWithoutEnvironmentInput
@@ -4028,6 +4286,7 @@ export type WorkspaceEnvironmentUncheckedCreateWithoutCompanyCreditGrantsInput =
   catalogConfigs?: Prisma.CatalogConfigUncheckedCreateNestedManyWithoutEnvironmentInput
   creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedCreateNestedManyWithoutEnvironmentInput
   templateInstalls?: Prisma.TemplateInstallUncheckedCreateNestedManyWithoutEnvironmentInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedCreateNestedManyWithoutEnvironmentInput
   invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutEnvironmentInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedCreateNestedManyWithoutEnvironmentInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedCreateNestedManyWithoutEnvironmentInput
@@ -4079,6 +4338,7 @@ export type WorkspaceEnvironmentUpdateWithoutCompanyCreditGrantsInput = {
   catalogConfigs?: Prisma.CatalogConfigUpdateManyWithoutEnvironmentNestedInput
   creditLedgerEntries?: Prisma.CreditLedgerEntryUpdateManyWithoutEnvironmentNestedInput
   templateInstalls?: Prisma.TemplateInstallUpdateManyWithoutEnvironmentNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUpdateManyWithoutEnvironmentNestedInput
   invoices?: Prisma.InvoiceUpdateManyWithoutEnvironmentNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUpdateManyWithoutEnvironmentNestedInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUpdateManyWithoutEnvironmentNestedInput
@@ -4114,6 +4374,7 @@ export type WorkspaceEnvironmentUncheckedUpdateWithoutCompanyCreditGrantsInput =
   catalogConfigs?: Prisma.CatalogConfigUncheckedUpdateManyWithoutEnvironmentNestedInput
   creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedUpdateManyWithoutEnvironmentNestedInput
   templateInstalls?: Prisma.TemplateInstallUncheckedUpdateManyWithoutEnvironmentNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedUpdateManyWithoutEnvironmentNestedInput
   invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutEnvironmentNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedUpdateManyWithoutEnvironmentNestedInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedUpdateManyWithoutEnvironmentNestedInput
@@ -4149,6 +4410,7 @@ export type WorkspaceEnvironmentCreateWithoutCreditLedgerEntriesInput = {
   catalogConfigs?: Prisma.CatalogConfigCreateNestedManyWithoutEnvironmentInput
   companyCreditGrants?: Prisma.CompanyCreditGrantCreateNestedManyWithoutEnvironmentInput
   templateInstalls?: Prisma.TemplateInstallCreateNestedManyWithoutEnvironmentInput
+  invoiceTemplates?: Prisma.InvoiceTemplateCreateNestedManyWithoutEnvironmentInput
   invoices?: Prisma.InvoiceCreateNestedManyWithoutEnvironmentInput
   subscriptionStates?: Prisma.SubscriptionStateCreateNestedManyWithoutEnvironmentInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestCreateNestedManyWithoutEnvironmentInput
@@ -4184,6 +4446,7 @@ export type WorkspaceEnvironmentUncheckedCreateWithoutCreditLedgerEntriesInput =
   catalogConfigs?: Prisma.CatalogConfigUncheckedCreateNestedManyWithoutEnvironmentInput
   companyCreditGrants?: Prisma.CompanyCreditGrantUncheckedCreateNestedManyWithoutEnvironmentInput
   templateInstalls?: Prisma.TemplateInstallUncheckedCreateNestedManyWithoutEnvironmentInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedCreateNestedManyWithoutEnvironmentInput
   invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutEnvironmentInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedCreateNestedManyWithoutEnvironmentInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedCreateNestedManyWithoutEnvironmentInput
@@ -4235,6 +4498,7 @@ export type WorkspaceEnvironmentUpdateWithoutCreditLedgerEntriesInput = {
   catalogConfigs?: Prisma.CatalogConfigUpdateManyWithoutEnvironmentNestedInput
   companyCreditGrants?: Prisma.CompanyCreditGrantUpdateManyWithoutEnvironmentNestedInput
   templateInstalls?: Prisma.TemplateInstallUpdateManyWithoutEnvironmentNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUpdateManyWithoutEnvironmentNestedInput
   invoices?: Prisma.InvoiceUpdateManyWithoutEnvironmentNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUpdateManyWithoutEnvironmentNestedInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUpdateManyWithoutEnvironmentNestedInput
@@ -4270,6 +4534,7 @@ export type WorkspaceEnvironmentUncheckedUpdateWithoutCreditLedgerEntriesInput =
   catalogConfigs?: Prisma.CatalogConfigUncheckedUpdateManyWithoutEnvironmentNestedInput
   companyCreditGrants?: Prisma.CompanyCreditGrantUncheckedUpdateManyWithoutEnvironmentNestedInput
   templateInstalls?: Prisma.TemplateInstallUncheckedUpdateManyWithoutEnvironmentNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedUpdateManyWithoutEnvironmentNestedInput
   invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutEnvironmentNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedUpdateManyWithoutEnvironmentNestedInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedUpdateManyWithoutEnvironmentNestedInput
@@ -4306,6 +4571,7 @@ export type WorkspaceEnvironmentCreateWithoutPaymentLinksInput = {
   companyCreditGrants?: Prisma.CompanyCreditGrantCreateNestedManyWithoutEnvironmentInput
   creditLedgerEntries?: Prisma.CreditLedgerEntryCreateNestedManyWithoutEnvironmentInput
   templateInstalls?: Prisma.TemplateInstallCreateNestedManyWithoutEnvironmentInput
+  invoiceTemplates?: Prisma.InvoiceTemplateCreateNestedManyWithoutEnvironmentInput
   invoices?: Prisma.InvoiceCreateNestedManyWithoutEnvironmentInput
   subscriptionStates?: Prisma.SubscriptionStateCreateNestedManyWithoutEnvironmentInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestCreateNestedManyWithoutEnvironmentInput
@@ -4341,6 +4607,7 @@ export type WorkspaceEnvironmentUncheckedCreateWithoutPaymentLinksInput = {
   companyCreditGrants?: Prisma.CompanyCreditGrantUncheckedCreateNestedManyWithoutEnvironmentInput
   creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedCreateNestedManyWithoutEnvironmentInput
   templateInstalls?: Prisma.TemplateInstallUncheckedCreateNestedManyWithoutEnvironmentInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedCreateNestedManyWithoutEnvironmentInput
   invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutEnvironmentInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedCreateNestedManyWithoutEnvironmentInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedCreateNestedManyWithoutEnvironmentInput
@@ -4392,6 +4659,7 @@ export type WorkspaceEnvironmentUpdateWithoutPaymentLinksInput = {
   companyCreditGrants?: Prisma.CompanyCreditGrantUpdateManyWithoutEnvironmentNestedInput
   creditLedgerEntries?: Prisma.CreditLedgerEntryUpdateManyWithoutEnvironmentNestedInput
   templateInstalls?: Prisma.TemplateInstallUpdateManyWithoutEnvironmentNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUpdateManyWithoutEnvironmentNestedInput
   invoices?: Prisma.InvoiceUpdateManyWithoutEnvironmentNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUpdateManyWithoutEnvironmentNestedInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUpdateManyWithoutEnvironmentNestedInput
@@ -4427,6 +4695,7 @@ export type WorkspaceEnvironmentUncheckedUpdateWithoutPaymentLinksInput = {
   companyCreditGrants?: Prisma.CompanyCreditGrantUncheckedUpdateManyWithoutEnvironmentNestedInput
   creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedUpdateManyWithoutEnvironmentNestedInput
   templateInstalls?: Prisma.TemplateInstallUncheckedUpdateManyWithoutEnvironmentNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedUpdateManyWithoutEnvironmentNestedInput
   invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutEnvironmentNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedUpdateManyWithoutEnvironmentNestedInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedUpdateManyWithoutEnvironmentNestedInput
@@ -4462,6 +4731,7 @@ export type WorkspaceEnvironmentCreateWithoutCheckoutSessionsInput = {
   companyCreditGrants?: Prisma.CompanyCreditGrantCreateNestedManyWithoutEnvironmentInput
   creditLedgerEntries?: Prisma.CreditLedgerEntryCreateNestedManyWithoutEnvironmentInput
   templateInstalls?: Prisma.TemplateInstallCreateNestedManyWithoutEnvironmentInput
+  invoiceTemplates?: Prisma.InvoiceTemplateCreateNestedManyWithoutEnvironmentInput
   invoices?: Prisma.InvoiceCreateNestedManyWithoutEnvironmentInput
   subscriptionStates?: Prisma.SubscriptionStateCreateNestedManyWithoutEnvironmentInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestCreateNestedManyWithoutEnvironmentInput
@@ -4497,6 +4767,7 @@ export type WorkspaceEnvironmentUncheckedCreateWithoutCheckoutSessionsInput = {
   companyCreditGrants?: Prisma.CompanyCreditGrantUncheckedCreateNestedManyWithoutEnvironmentInput
   creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedCreateNestedManyWithoutEnvironmentInput
   templateInstalls?: Prisma.TemplateInstallUncheckedCreateNestedManyWithoutEnvironmentInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedCreateNestedManyWithoutEnvironmentInput
   invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutEnvironmentInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedCreateNestedManyWithoutEnvironmentInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedCreateNestedManyWithoutEnvironmentInput
@@ -4548,6 +4819,7 @@ export type WorkspaceEnvironmentUpdateWithoutCheckoutSessionsInput = {
   companyCreditGrants?: Prisma.CompanyCreditGrantUpdateManyWithoutEnvironmentNestedInput
   creditLedgerEntries?: Prisma.CreditLedgerEntryUpdateManyWithoutEnvironmentNestedInput
   templateInstalls?: Prisma.TemplateInstallUpdateManyWithoutEnvironmentNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUpdateManyWithoutEnvironmentNestedInput
   invoices?: Prisma.InvoiceUpdateManyWithoutEnvironmentNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUpdateManyWithoutEnvironmentNestedInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUpdateManyWithoutEnvironmentNestedInput
@@ -4583,6 +4855,7 @@ export type WorkspaceEnvironmentUncheckedUpdateWithoutCheckoutSessionsInput = {
   companyCreditGrants?: Prisma.CompanyCreditGrantUncheckedUpdateManyWithoutEnvironmentNestedInput
   creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedUpdateManyWithoutEnvironmentNestedInput
   templateInstalls?: Prisma.TemplateInstallUncheckedUpdateManyWithoutEnvironmentNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedUpdateManyWithoutEnvironmentNestedInput
   invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutEnvironmentNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedUpdateManyWithoutEnvironmentNestedInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedUpdateManyWithoutEnvironmentNestedInput
@@ -4618,6 +4891,7 @@ export type WorkspaceEnvironmentCreateWithoutEmbedAccessTokensInput = {
   companyCreditGrants?: Prisma.CompanyCreditGrantCreateNestedManyWithoutEnvironmentInput
   creditLedgerEntries?: Prisma.CreditLedgerEntryCreateNestedManyWithoutEnvironmentInput
   templateInstalls?: Prisma.TemplateInstallCreateNestedManyWithoutEnvironmentInput
+  invoiceTemplates?: Prisma.InvoiceTemplateCreateNestedManyWithoutEnvironmentInput
   invoices?: Prisma.InvoiceCreateNestedManyWithoutEnvironmentInput
   subscriptionStates?: Prisma.SubscriptionStateCreateNestedManyWithoutEnvironmentInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestCreateNestedManyWithoutEnvironmentInput
@@ -4653,6 +4927,7 @@ export type WorkspaceEnvironmentUncheckedCreateWithoutEmbedAccessTokensInput = {
   companyCreditGrants?: Prisma.CompanyCreditGrantUncheckedCreateNestedManyWithoutEnvironmentInput
   creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedCreateNestedManyWithoutEnvironmentInput
   templateInstalls?: Prisma.TemplateInstallUncheckedCreateNestedManyWithoutEnvironmentInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedCreateNestedManyWithoutEnvironmentInput
   invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutEnvironmentInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedCreateNestedManyWithoutEnvironmentInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedCreateNestedManyWithoutEnvironmentInput
@@ -4704,6 +4979,7 @@ export type WorkspaceEnvironmentUpdateWithoutEmbedAccessTokensInput = {
   companyCreditGrants?: Prisma.CompanyCreditGrantUpdateManyWithoutEnvironmentNestedInput
   creditLedgerEntries?: Prisma.CreditLedgerEntryUpdateManyWithoutEnvironmentNestedInput
   templateInstalls?: Prisma.TemplateInstallUpdateManyWithoutEnvironmentNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUpdateManyWithoutEnvironmentNestedInput
   invoices?: Prisma.InvoiceUpdateManyWithoutEnvironmentNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUpdateManyWithoutEnvironmentNestedInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUpdateManyWithoutEnvironmentNestedInput
@@ -4739,6 +5015,7 @@ export type WorkspaceEnvironmentUncheckedUpdateWithoutEmbedAccessTokensInput = {
   companyCreditGrants?: Prisma.CompanyCreditGrantUncheckedUpdateManyWithoutEnvironmentNestedInput
   creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedUpdateManyWithoutEnvironmentNestedInput
   templateInstalls?: Prisma.TemplateInstallUncheckedUpdateManyWithoutEnvironmentNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedUpdateManyWithoutEnvironmentNestedInput
   invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutEnvironmentNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedUpdateManyWithoutEnvironmentNestedInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedUpdateManyWithoutEnvironmentNestedInput
@@ -4774,6 +5051,7 @@ export type WorkspaceEnvironmentCreateWithoutArcenApiKeysInput = {
   companyCreditGrants?: Prisma.CompanyCreditGrantCreateNestedManyWithoutEnvironmentInput
   creditLedgerEntries?: Prisma.CreditLedgerEntryCreateNestedManyWithoutEnvironmentInput
   templateInstalls?: Prisma.TemplateInstallCreateNestedManyWithoutEnvironmentInput
+  invoiceTemplates?: Prisma.InvoiceTemplateCreateNestedManyWithoutEnvironmentInput
   invoices?: Prisma.InvoiceCreateNestedManyWithoutEnvironmentInput
   subscriptionStates?: Prisma.SubscriptionStateCreateNestedManyWithoutEnvironmentInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestCreateNestedManyWithoutEnvironmentInput
@@ -4809,6 +5087,7 @@ export type WorkspaceEnvironmentUncheckedCreateWithoutArcenApiKeysInput = {
   companyCreditGrants?: Prisma.CompanyCreditGrantUncheckedCreateNestedManyWithoutEnvironmentInput
   creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedCreateNestedManyWithoutEnvironmentInput
   templateInstalls?: Prisma.TemplateInstallUncheckedCreateNestedManyWithoutEnvironmentInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedCreateNestedManyWithoutEnvironmentInput
   invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutEnvironmentInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedCreateNestedManyWithoutEnvironmentInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedCreateNestedManyWithoutEnvironmentInput
@@ -4860,6 +5139,7 @@ export type WorkspaceEnvironmentUpdateWithoutArcenApiKeysInput = {
   companyCreditGrants?: Prisma.CompanyCreditGrantUpdateManyWithoutEnvironmentNestedInput
   creditLedgerEntries?: Prisma.CreditLedgerEntryUpdateManyWithoutEnvironmentNestedInput
   templateInstalls?: Prisma.TemplateInstallUpdateManyWithoutEnvironmentNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUpdateManyWithoutEnvironmentNestedInput
   invoices?: Prisma.InvoiceUpdateManyWithoutEnvironmentNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUpdateManyWithoutEnvironmentNestedInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUpdateManyWithoutEnvironmentNestedInput
@@ -4895,6 +5175,7 @@ export type WorkspaceEnvironmentUncheckedUpdateWithoutArcenApiKeysInput = {
   companyCreditGrants?: Prisma.CompanyCreditGrantUncheckedUpdateManyWithoutEnvironmentNestedInput
   creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedUpdateManyWithoutEnvironmentNestedInput
   templateInstalls?: Prisma.TemplateInstallUncheckedUpdateManyWithoutEnvironmentNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedUpdateManyWithoutEnvironmentNestedInput
   invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutEnvironmentNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedUpdateManyWithoutEnvironmentNestedInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedUpdateManyWithoutEnvironmentNestedInput
@@ -4930,6 +5211,7 @@ export type WorkspaceEnvironmentCreateWithoutEmbedComponentsInput = {
   companyCreditGrants?: Prisma.CompanyCreditGrantCreateNestedManyWithoutEnvironmentInput
   creditLedgerEntries?: Prisma.CreditLedgerEntryCreateNestedManyWithoutEnvironmentInput
   templateInstalls?: Prisma.TemplateInstallCreateNestedManyWithoutEnvironmentInput
+  invoiceTemplates?: Prisma.InvoiceTemplateCreateNestedManyWithoutEnvironmentInput
   invoices?: Prisma.InvoiceCreateNestedManyWithoutEnvironmentInput
   subscriptionStates?: Prisma.SubscriptionStateCreateNestedManyWithoutEnvironmentInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestCreateNestedManyWithoutEnvironmentInput
@@ -4965,6 +5247,7 @@ export type WorkspaceEnvironmentUncheckedCreateWithoutEmbedComponentsInput = {
   companyCreditGrants?: Prisma.CompanyCreditGrantUncheckedCreateNestedManyWithoutEnvironmentInput
   creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedCreateNestedManyWithoutEnvironmentInput
   templateInstalls?: Prisma.TemplateInstallUncheckedCreateNestedManyWithoutEnvironmentInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedCreateNestedManyWithoutEnvironmentInput
   invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutEnvironmentInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedCreateNestedManyWithoutEnvironmentInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedCreateNestedManyWithoutEnvironmentInput
@@ -5016,6 +5299,7 @@ export type WorkspaceEnvironmentUpdateWithoutEmbedComponentsInput = {
   companyCreditGrants?: Prisma.CompanyCreditGrantUpdateManyWithoutEnvironmentNestedInput
   creditLedgerEntries?: Prisma.CreditLedgerEntryUpdateManyWithoutEnvironmentNestedInput
   templateInstalls?: Prisma.TemplateInstallUpdateManyWithoutEnvironmentNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUpdateManyWithoutEnvironmentNestedInput
   invoices?: Prisma.InvoiceUpdateManyWithoutEnvironmentNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUpdateManyWithoutEnvironmentNestedInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUpdateManyWithoutEnvironmentNestedInput
@@ -5051,6 +5335,7 @@ export type WorkspaceEnvironmentUncheckedUpdateWithoutEmbedComponentsInput = {
   companyCreditGrants?: Prisma.CompanyCreditGrantUncheckedUpdateManyWithoutEnvironmentNestedInput
   creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedUpdateManyWithoutEnvironmentNestedInput
   templateInstalls?: Prisma.TemplateInstallUncheckedUpdateManyWithoutEnvironmentNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedUpdateManyWithoutEnvironmentNestedInput
   invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutEnvironmentNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedUpdateManyWithoutEnvironmentNestedInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedUpdateManyWithoutEnvironmentNestedInput
@@ -5095,6 +5380,7 @@ export type WorkspaceEnvironmentUpdateWithoutTeamInput = {
   companyCreditGrants?: Prisma.CompanyCreditGrantUpdateManyWithoutEnvironmentNestedInput
   creditLedgerEntries?: Prisma.CreditLedgerEntryUpdateManyWithoutEnvironmentNestedInput
   templateInstalls?: Prisma.TemplateInstallUpdateManyWithoutEnvironmentNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUpdateManyWithoutEnvironmentNestedInput
   invoices?: Prisma.InvoiceUpdateManyWithoutEnvironmentNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUpdateManyWithoutEnvironmentNestedInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUpdateManyWithoutEnvironmentNestedInput
@@ -5130,6 +5416,7 @@ export type WorkspaceEnvironmentUncheckedUpdateWithoutTeamInput = {
   companyCreditGrants?: Prisma.CompanyCreditGrantUncheckedUpdateManyWithoutEnvironmentNestedInput
   creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedUpdateManyWithoutEnvironmentNestedInput
   templateInstalls?: Prisma.TemplateInstallUncheckedUpdateManyWithoutEnvironmentNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedUpdateManyWithoutEnvironmentNestedInput
   invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutEnvironmentNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedUpdateManyWithoutEnvironmentNestedInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedUpdateManyWithoutEnvironmentNestedInput
@@ -5173,6 +5460,7 @@ export type WorkspaceEnvironmentCountOutputType = {
   companyCreditGrants: number
   creditLedgerEntries: number
   templateInstalls: number
+  invoiceTemplates: number
   invoices: number
   subscriptionStates: number
   subscriptionChangeRequests: number
@@ -5200,6 +5488,7 @@ export type WorkspaceEnvironmentCountOutputTypeSelect<ExtArgs extends runtime.Ty
   companyCreditGrants?: boolean | WorkspaceEnvironmentCountOutputTypeCountCompanyCreditGrantsArgs
   creditLedgerEntries?: boolean | WorkspaceEnvironmentCountOutputTypeCountCreditLedgerEntriesArgs
   templateInstalls?: boolean | WorkspaceEnvironmentCountOutputTypeCountTemplateInstallsArgs
+  invoiceTemplates?: boolean | WorkspaceEnvironmentCountOutputTypeCountInvoiceTemplatesArgs
   invoices?: boolean | WorkspaceEnvironmentCountOutputTypeCountInvoicesArgs
   subscriptionStates?: boolean | WorkspaceEnvironmentCountOutputTypeCountSubscriptionStatesArgs
   subscriptionChangeRequests?: boolean | WorkspaceEnvironmentCountOutputTypeCountSubscriptionChangeRequestsArgs
@@ -5288,6 +5577,13 @@ export type WorkspaceEnvironmentCountOutputTypeCountCreditLedgerEntriesArgs<ExtA
  */
 export type WorkspaceEnvironmentCountOutputTypeCountTemplateInstallsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   where?: Prisma.TemplateInstallWhereInput
+}
+
+/**
+ * WorkspaceEnvironmentCountOutputType without action
+ */
+export type WorkspaceEnvironmentCountOutputTypeCountInvoiceTemplatesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.InvoiceTemplateWhereInput
 }
 
 /**
@@ -5415,6 +5711,7 @@ export type WorkspaceEnvironmentSelect<ExtArgs extends runtime.Types.Extensions.
   companyCreditGrants?: boolean | Prisma.WorkspaceEnvironment$companyCreditGrantsArgs<ExtArgs>
   creditLedgerEntries?: boolean | Prisma.WorkspaceEnvironment$creditLedgerEntriesArgs<ExtArgs>
   templateInstalls?: boolean | Prisma.WorkspaceEnvironment$templateInstallsArgs<ExtArgs>
+  invoiceTemplates?: boolean | Prisma.WorkspaceEnvironment$invoiceTemplatesArgs<ExtArgs>
   invoices?: boolean | Prisma.WorkspaceEnvironment$invoicesArgs<ExtArgs>
   subscriptionStates?: boolean | Prisma.WorkspaceEnvironment$subscriptionStatesArgs<ExtArgs>
   subscriptionChangeRequests?: boolean | Prisma.WorkspaceEnvironment$subscriptionChangeRequestsArgs<ExtArgs>
@@ -5481,6 +5778,7 @@ export type WorkspaceEnvironmentInclude<ExtArgs extends runtime.Types.Extensions
   companyCreditGrants?: boolean | Prisma.WorkspaceEnvironment$companyCreditGrantsArgs<ExtArgs>
   creditLedgerEntries?: boolean | Prisma.WorkspaceEnvironment$creditLedgerEntriesArgs<ExtArgs>
   templateInstalls?: boolean | Prisma.WorkspaceEnvironment$templateInstallsArgs<ExtArgs>
+  invoiceTemplates?: boolean | Prisma.WorkspaceEnvironment$invoiceTemplatesArgs<ExtArgs>
   invoices?: boolean | Prisma.WorkspaceEnvironment$invoicesArgs<ExtArgs>
   subscriptionStates?: boolean | Prisma.WorkspaceEnvironment$subscriptionStatesArgs<ExtArgs>
   subscriptionChangeRequests?: boolean | Prisma.WorkspaceEnvironment$subscriptionChangeRequestsArgs<ExtArgs>
@@ -5519,6 +5817,7 @@ export type $WorkspaceEnvironmentPayload<ExtArgs extends runtime.Types.Extension
     companyCreditGrants: Prisma.$CompanyCreditGrantPayload<ExtArgs>[]
     creditLedgerEntries: Prisma.$CreditLedgerEntryPayload<ExtArgs>[]
     templateInstalls: Prisma.$TemplateInstallPayload<ExtArgs>[]
+    invoiceTemplates: Prisma.$InvoiceTemplatePayload<ExtArgs>[]
     invoices: Prisma.$InvoicePayload<ExtArgs>[]
     subscriptionStates: Prisma.$SubscriptionStatePayload<ExtArgs>[]
     subscriptionChangeRequests: Prisma.$SubscriptionChangeRequestPayload<ExtArgs>[]
@@ -5949,6 +6248,7 @@ export interface Prisma__WorkspaceEnvironmentClient<T, Null = never, ExtArgs ext
   companyCreditGrants<T extends Prisma.WorkspaceEnvironment$companyCreditGrantsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.WorkspaceEnvironment$companyCreditGrantsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$CompanyCreditGrantPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   creditLedgerEntries<T extends Prisma.WorkspaceEnvironment$creditLedgerEntriesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.WorkspaceEnvironment$creditLedgerEntriesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$CreditLedgerEntryPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   templateInstalls<T extends Prisma.WorkspaceEnvironment$templateInstallsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.WorkspaceEnvironment$templateInstallsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$TemplateInstallPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  invoiceTemplates<T extends Prisma.WorkspaceEnvironment$invoiceTemplatesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.WorkspaceEnvironment$invoiceTemplatesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$InvoiceTemplatePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   invoices<T extends Prisma.WorkspaceEnvironment$invoicesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.WorkspaceEnvironment$invoicesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$InvoicePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   subscriptionStates<T extends Prisma.WorkspaceEnvironment$subscriptionStatesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.WorkspaceEnvironment$subscriptionStatesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$SubscriptionStatePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   subscriptionChangeRequests<T extends Prisma.WorkspaceEnvironment$subscriptionChangeRequestsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.WorkspaceEnvironment$subscriptionChangeRequestsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$SubscriptionChangeRequestPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
@@ -6611,6 +6911,30 @@ export type WorkspaceEnvironment$templateInstallsArgs<ExtArgs extends runtime.Ty
   take?: number
   skip?: number
   distinct?: Prisma.TemplateInstallScalarFieldEnum | Prisma.TemplateInstallScalarFieldEnum[]
+}
+
+/**
+ * WorkspaceEnvironment.invoiceTemplates
+ */
+export type WorkspaceEnvironment$invoiceTemplatesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the InvoiceTemplate
+   */
+  select?: Prisma.InvoiceTemplateSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the InvoiceTemplate
+   */
+  omit?: Prisma.InvoiceTemplateOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.InvoiceTemplateInclude<ExtArgs> | null
+  where?: Prisma.InvoiceTemplateWhereInput
+  orderBy?: Prisma.InvoiceTemplateOrderByWithRelationInput | Prisma.InvoiceTemplateOrderByWithRelationInput[]
+  cursor?: Prisma.InvoiceTemplateWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.InvoiceTemplateScalarFieldEnum | Prisma.InvoiceTemplateScalarFieldEnum[]
 }
 
 /**

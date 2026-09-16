@@ -264,6 +264,7 @@ export type TeamWhereInput = {
   catalogConfigs?: Prisma.CatalogConfigListRelationFilter
   billingTemplates?: Prisma.BillingTemplateListRelationFilter
   templateInstalls?: Prisma.TemplateInstallListRelationFilter
+  invoiceTemplates?: Prisma.InvoiceTemplateListRelationFilter
   invoices?: Prisma.InvoiceListRelationFilter
   payments?: Prisma.PaymentListRelationFilter
   paymentLinks?: Prisma.PaymentLinkListRelationFilter
@@ -325,6 +326,7 @@ export type TeamOrderByWithRelationInput = {
   catalogConfigs?: Prisma.CatalogConfigOrderByRelationAggregateInput
   billingTemplates?: Prisma.BillingTemplateOrderByRelationAggregateInput
   templateInstalls?: Prisma.TemplateInstallOrderByRelationAggregateInput
+  invoiceTemplates?: Prisma.InvoiceTemplateOrderByRelationAggregateInput
   invoices?: Prisma.InvoiceOrderByRelationAggregateInput
   payments?: Prisma.PaymentOrderByRelationAggregateInput
   paymentLinks?: Prisma.PaymentLinkOrderByRelationAggregateInput
@@ -389,6 +391,7 @@ export type TeamWhereUniqueInput = Prisma.AtLeast<{
   catalogConfigs?: Prisma.CatalogConfigListRelationFilter
   billingTemplates?: Prisma.BillingTemplateListRelationFilter
   templateInstalls?: Prisma.TemplateInstallListRelationFilter
+  invoiceTemplates?: Prisma.InvoiceTemplateListRelationFilter
   invoices?: Prisma.InvoiceListRelationFilter
   payments?: Prisma.PaymentListRelationFilter
   paymentLinks?: Prisma.PaymentLinkListRelationFilter
@@ -489,6 +492,7 @@ export type TeamCreateInput = {
   catalogConfigs?: Prisma.CatalogConfigCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateCreateNestedManyWithoutTeamInput
   templateInstalls?: Prisma.TemplateInstallCreateNestedManyWithoutTeamInput
+  invoiceTemplates?: Prisma.InvoiceTemplateCreateNestedManyWithoutTeamInput
   invoices?: Prisma.InvoiceCreateNestedManyWithoutTeamInput
   payments?: Prisma.PaymentCreateNestedManyWithoutTeamInput
   paymentLinks?: Prisma.PaymentLinkCreateNestedManyWithoutTeamInput
@@ -549,6 +553,7 @@ export type TeamUncheckedCreateInput = {
   catalogConfigs?: Prisma.CatalogConfigUncheckedCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateUncheckedCreateNestedManyWithoutTeamInput
   templateInstalls?: Prisma.TemplateInstallUncheckedCreateNestedManyWithoutTeamInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedCreateNestedManyWithoutTeamInput
   invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutTeamInput
   payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutTeamInput
   paymentLinks?: Prisma.PaymentLinkUncheckedCreateNestedManyWithoutTeamInput
@@ -609,6 +614,7 @@ export type TeamUpdateInput = {
   catalogConfigs?: Prisma.CatalogConfigUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUpdateManyWithoutTeamNestedInput
   templateInstalls?: Prisma.TemplateInstallUpdateManyWithoutTeamNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUpdateManyWithoutTeamNestedInput
   invoices?: Prisma.InvoiceUpdateManyWithoutTeamNestedInput
   payments?: Prisma.PaymentUpdateManyWithoutTeamNestedInput
   paymentLinks?: Prisma.PaymentLinkUpdateManyWithoutTeamNestedInput
@@ -669,6 +675,7 @@ export type TeamUncheckedUpdateInput = {
   catalogConfigs?: Prisma.CatalogConfigUncheckedUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUncheckedUpdateManyWithoutTeamNestedInput
   templateInstalls?: Prisma.TemplateInstallUncheckedUpdateManyWithoutTeamNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedUpdateManyWithoutTeamNestedInput
   invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutTeamNestedInput
   payments?: Prisma.PaymentUncheckedUpdateManyWithoutTeamNestedInput
   paymentLinks?: Prisma.PaymentLinkUncheckedUpdateManyWithoutTeamNestedInput
@@ -989,6 +996,20 @@ export type TeamUpdateOneRequiredWithoutTaxProfileNestedInput = {
   upsert?: Prisma.TeamUpsertWithoutTaxProfileInput
   connect?: Prisma.TeamWhereUniqueInput
   update?: Prisma.XOR<Prisma.XOR<Prisma.TeamUpdateToOneWithWhereWithoutTaxProfileInput, Prisma.TeamUpdateWithoutTaxProfileInput>, Prisma.TeamUncheckedUpdateWithoutTaxProfileInput>
+}
+
+export type TeamCreateNestedOneWithoutInvoiceTemplatesInput = {
+  create?: Prisma.XOR<Prisma.TeamCreateWithoutInvoiceTemplatesInput, Prisma.TeamUncheckedCreateWithoutInvoiceTemplatesInput>
+  connectOrCreate?: Prisma.TeamCreateOrConnectWithoutInvoiceTemplatesInput
+  connect?: Prisma.TeamWhereUniqueInput
+}
+
+export type TeamUpdateOneRequiredWithoutInvoiceTemplatesNestedInput = {
+  create?: Prisma.XOR<Prisma.TeamCreateWithoutInvoiceTemplatesInput, Prisma.TeamUncheckedCreateWithoutInvoiceTemplatesInput>
+  connectOrCreate?: Prisma.TeamCreateOrConnectWithoutInvoiceTemplatesInput
+  upsert?: Prisma.TeamUpsertWithoutInvoiceTemplatesInput
+  connect?: Prisma.TeamWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.TeamUpdateToOneWithWhereWithoutInvoiceTemplatesInput, Prisma.TeamUpdateWithoutInvoiceTemplatesInput>, Prisma.TeamUncheckedUpdateWithoutInvoiceTemplatesInput>
 }
 
 export type TeamCreateNestedOneWithoutInvoiceSequencesInput = {
@@ -1494,6 +1515,7 @@ export type TeamCreateWithoutEnvironmentsInput = {
   catalogConfigs?: Prisma.CatalogConfigCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateCreateNestedManyWithoutTeamInput
   templateInstalls?: Prisma.TemplateInstallCreateNestedManyWithoutTeamInput
+  invoiceTemplates?: Prisma.InvoiceTemplateCreateNestedManyWithoutTeamInput
   invoices?: Prisma.InvoiceCreateNestedManyWithoutTeamInput
   payments?: Prisma.PaymentCreateNestedManyWithoutTeamInput
   paymentLinks?: Prisma.PaymentLinkCreateNestedManyWithoutTeamInput
@@ -1553,6 +1575,7 @@ export type TeamUncheckedCreateWithoutEnvironmentsInput = {
   catalogConfigs?: Prisma.CatalogConfigUncheckedCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateUncheckedCreateNestedManyWithoutTeamInput
   templateInstalls?: Prisma.TemplateInstallUncheckedCreateNestedManyWithoutTeamInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedCreateNestedManyWithoutTeamInput
   invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutTeamInput
   payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutTeamInput
   paymentLinks?: Prisma.PaymentLinkUncheckedCreateNestedManyWithoutTeamInput
@@ -1628,6 +1651,7 @@ export type TeamUpdateWithoutEnvironmentsInput = {
   catalogConfigs?: Prisma.CatalogConfigUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUpdateManyWithoutTeamNestedInput
   templateInstalls?: Prisma.TemplateInstallUpdateManyWithoutTeamNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUpdateManyWithoutTeamNestedInput
   invoices?: Prisma.InvoiceUpdateManyWithoutTeamNestedInput
   payments?: Prisma.PaymentUpdateManyWithoutTeamNestedInput
   paymentLinks?: Prisma.PaymentLinkUpdateManyWithoutTeamNestedInput
@@ -1687,6 +1711,7 @@ export type TeamUncheckedUpdateWithoutEnvironmentsInput = {
   catalogConfigs?: Prisma.CatalogConfigUncheckedUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUncheckedUpdateManyWithoutTeamNestedInput
   templateInstalls?: Prisma.TemplateInstallUncheckedUpdateManyWithoutTeamNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedUpdateManyWithoutTeamNestedInput
   invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutTeamNestedInput
   payments?: Prisma.PaymentUncheckedUpdateManyWithoutTeamNestedInput
   paymentLinks?: Prisma.PaymentLinkUncheckedUpdateManyWithoutTeamNestedInput
@@ -1746,6 +1771,7 @@ export type TeamCreateWithoutMembersInput = {
   catalogConfigs?: Prisma.CatalogConfigCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateCreateNestedManyWithoutTeamInput
   templateInstalls?: Prisma.TemplateInstallCreateNestedManyWithoutTeamInput
+  invoiceTemplates?: Prisma.InvoiceTemplateCreateNestedManyWithoutTeamInput
   invoices?: Prisma.InvoiceCreateNestedManyWithoutTeamInput
   payments?: Prisma.PaymentCreateNestedManyWithoutTeamInput
   paymentLinks?: Prisma.PaymentLinkCreateNestedManyWithoutTeamInput
@@ -1805,6 +1831,7 @@ export type TeamUncheckedCreateWithoutMembersInput = {
   catalogConfigs?: Prisma.CatalogConfigUncheckedCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateUncheckedCreateNestedManyWithoutTeamInput
   templateInstalls?: Prisma.TemplateInstallUncheckedCreateNestedManyWithoutTeamInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedCreateNestedManyWithoutTeamInput
   invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutTeamInput
   payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutTeamInput
   paymentLinks?: Prisma.PaymentLinkUncheckedCreateNestedManyWithoutTeamInput
@@ -1880,6 +1907,7 @@ export type TeamUpdateWithoutMembersInput = {
   catalogConfigs?: Prisma.CatalogConfigUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUpdateManyWithoutTeamNestedInput
   templateInstalls?: Prisma.TemplateInstallUpdateManyWithoutTeamNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUpdateManyWithoutTeamNestedInput
   invoices?: Prisma.InvoiceUpdateManyWithoutTeamNestedInput
   payments?: Prisma.PaymentUpdateManyWithoutTeamNestedInput
   paymentLinks?: Prisma.PaymentLinkUpdateManyWithoutTeamNestedInput
@@ -1939,6 +1967,7 @@ export type TeamUncheckedUpdateWithoutMembersInput = {
   catalogConfigs?: Prisma.CatalogConfigUncheckedUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUncheckedUpdateManyWithoutTeamNestedInput
   templateInstalls?: Prisma.TemplateInstallUncheckedUpdateManyWithoutTeamNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedUpdateManyWithoutTeamNestedInput
   invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutTeamNestedInput
   payments?: Prisma.PaymentUncheckedUpdateManyWithoutTeamNestedInput
   paymentLinks?: Prisma.PaymentLinkUncheckedUpdateManyWithoutTeamNestedInput
@@ -1998,6 +2027,7 @@ export type TeamCreateWithoutInvitationsInput = {
   catalogConfigs?: Prisma.CatalogConfigCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateCreateNestedManyWithoutTeamInput
   templateInstalls?: Prisma.TemplateInstallCreateNestedManyWithoutTeamInput
+  invoiceTemplates?: Prisma.InvoiceTemplateCreateNestedManyWithoutTeamInput
   invoices?: Prisma.InvoiceCreateNestedManyWithoutTeamInput
   payments?: Prisma.PaymentCreateNestedManyWithoutTeamInput
   paymentLinks?: Prisma.PaymentLinkCreateNestedManyWithoutTeamInput
@@ -2057,6 +2087,7 @@ export type TeamUncheckedCreateWithoutInvitationsInput = {
   catalogConfigs?: Prisma.CatalogConfigUncheckedCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateUncheckedCreateNestedManyWithoutTeamInput
   templateInstalls?: Prisma.TemplateInstallUncheckedCreateNestedManyWithoutTeamInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedCreateNestedManyWithoutTeamInput
   invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutTeamInput
   payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutTeamInput
   paymentLinks?: Prisma.PaymentLinkUncheckedCreateNestedManyWithoutTeamInput
@@ -2132,6 +2163,7 @@ export type TeamUpdateWithoutInvitationsInput = {
   catalogConfigs?: Prisma.CatalogConfigUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUpdateManyWithoutTeamNestedInput
   templateInstalls?: Prisma.TemplateInstallUpdateManyWithoutTeamNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUpdateManyWithoutTeamNestedInput
   invoices?: Prisma.InvoiceUpdateManyWithoutTeamNestedInput
   payments?: Prisma.PaymentUpdateManyWithoutTeamNestedInput
   paymentLinks?: Prisma.PaymentLinkUpdateManyWithoutTeamNestedInput
@@ -2191,6 +2223,7 @@ export type TeamUncheckedUpdateWithoutInvitationsInput = {
   catalogConfigs?: Prisma.CatalogConfigUncheckedUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUncheckedUpdateManyWithoutTeamNestedInput
   templateInstalls?: Prisma.TemplateInstallUncheckedUpdateManyWithoutTeamNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedUpdateManyWithoutTeamNestedInput
   invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutTeamNestedInput
   payments?: Prisma.PaymentUncheckedUpdateManyWithoutTeamNestedInput
   paymentLinks?: Prisma.PaymentLinkUncheckedUpdateManyWithoutTeamNestedInput
@@ -2250,6 +2283,7 @@ export type TeamCreateWithoutProviderProfilesInput = {
   catalogConfigs?: Prisma.CatalogConfigCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateCreateNestedManyWithoutTeamInput
   templateInstalls?: Prisma.TemplateInstallCreateNestedManyWithoutTeamInput
+  invoiceTemplates?: Prisma.InvoiceTemplateCreateNestedManyWithoutTeamInput
   invoices?: Prisma.InvoiceCreateNestedManyWithoutTeamInput
   payments?: Prisma.PaymentCreateNestedManyWithoutTeamInput
   paymentLinks?: Prisma.PaymentLinkCreateNestedManyWithoutTeamInput
@@ -2309,6 +2343,7 @@ export type TeamUncheckedCreateWithoutProviderProfilesInput = {
   catalogConfigs?: Prisma.CatalogConfigUncheckedCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateUncheckedCreateNestedManyWithoutTeamInput
   templateInstalls?: Prisma.TemplateInstallUncheckedCreateNestedManyWithoutTeamInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedCreateNestedManyWithoutTeamInput
   invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutTeamInput
   payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutTeamInput
   paymentLinks?: Prisma.PaymentLinkUncheckedCreateNestedManyWithoutTeamInput
@@ -2384,6 +2419,7 @@ export type TeamUpdateWithoutProviderProfilesInput = {
   catalogConfigs?: Prisma.CatalogConfigUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUpdateManyWithoutTeamNestedInput
   templateInstalls?: Prisma.TemplateInstallUpdateManyWithoutTeamNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUpdateManyWithoutTeamNestedInput
   invoices?: Prisma.InvoiceUpdateManyWithoutTeamNestedInput
   payments?: Prisma.PaymentUpdateManyWithoutTeamNestedInput
   paymentLinks?: Prisma.PaymentLinkUpdateManyWithoutTeamNestedInput
@@ -2443,6 +2479,7 @@ export type TeamUncheckedUpdateWithoutProviderProfilesInput = {
   catalogConfigs?: Prisma.CatalogConfigUncheckedUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUncheckedUpdateManyWithoutTeamNestedInput
   templateInstalls?: Prisma.TemplateInstallUncheckedUpdateManyWithoutTeamNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedUpdateManyWithoutTeamNestedInput
   invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutTeamNestedInput
   payments?: Prisma.PaymentUncheckedUpdateManyWithoutTeamNestedInput
   paymentLinks?: Prisma.PaymentLinkUncheckedUpdateManyWithoutTeamNestedInput
@@ -2502,6 +2539,7 @@ export type TeamCreateWithoutCatalogPlansInput = {
   catalogConfigs?: Prisma.CatalogConfigCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateCreateNestedManyWithoutTeamInput
   templateInstalls?: Prisma.TemplateInstallCreateNestedManyWithoutTeamInput
+  invoiceTemplates?: Prisma.InvoiceTemplateCreateNestedManyWithoutTeamInput
   invoices?: Prisma.InvoiceCreateNestedManyWithoutTeamInput
   payments?: Prisma.PaymentCreateNestedManyWithoutTeamInput
   paymentLinks?: Prisma.PaymentLinkCreateNestedManyWithoutTeamInput
@@ -2561,6 +2599,7 @@ export type TeamUncheckedCreateWithoutCatalogPlansInput = {
   catalogConfigs?: Prisma.CatalogConfigUncheckedCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateUncheckedCreateNestedManyWithoutTeamInput
   templateInstalls?: Prisma.TemplateInstallUncheckedCreateNestedManyWithoutTeamInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedCreateNestedManyWithoutTeamInput
   invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutTeamInput
   payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutTeamInput
   paymentLinks?: Prisma.PaymentLinkUncheckedCreateNestedManyWithoutTeamInput
@@ -2636,6 +2675,7 @@ export type TeamUpdateWithoutCatalogPlansInput = {
   catalogConfigs?: Prisma.CatalogConfigUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUpdateManyWithoutTeamNestedInput
   templateInstalls?: Prisma.TemplateInstallUpdateManyWithoutTeamNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUpdateManyWithoutTeamNestedInput
   invoices?: Prisma.InvoiceUpdateManyWithoutTeamNestedInput
   payments?: Prisma.PaymentUpdateManyWithoutTeamNestedInput
   paymentLinks?: Prisma.PaymentLinkUpdateManyWithoutTeamNestedInput
@@ -2695,6 +2735,7 @@ export type TeamUncheckedUpdateWithoutCatalogPlansInput = {
   catalogConfigs?: Prisma.CatalogConfigUncheckedUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUncheckedUpdateManyWithoutTeamNestedInput
   templateInstalls?: Prisma.TemplateInstallUncheckedUpdateManyWithoutTeamNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedUpdateManyWithoutTeamNestedInput
   invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutTeamNestedInput
   payments?: Prisma.PaymentUncheckedUpdateManyWithoutTeamNestedInput
   paymentLinks?: Prisma.PaymentLinkUncheckedUpdateManyWithoutTeamNestedInput
@@ -2754,6 +2795,7 @@ export type TeamCreateWithoutCatalogAddOnsInput = {
   catalogConfigs?: Prisma.CatalogConfigCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateCreateNestedManyWithoutTeamInput
   templateInstalls?: Prisma.TemplateInstallCreateNestedManyWithoutTeamInput
+  invoiceTemplates?: Prisma.InvoiceTemplateCreateNestedManyWithoutTeamInput
   invoices?: Prisma.InvoiceCreateNestedManyWithoutTeamInput
   payments?: Prisma.PaymentCreateNestedManyWithoutTeamInput
   paymentLinks?: Prisma.PaymentLinkCreateNestedManyWithoutTeamInput
@@ -2813,6 +2855,7 @@ export type TeamUncheckedCreateWithoutCatalogAddOnsInput = {
   catalogConfigs?: Prisma.CatalogConfigUncheckedCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateUncheckedCreateNestedManyWithoutTeamInput
   templateInstalls?: Prisma.TemplateInstallUncheckedCreateNestedManyWithoutTeamInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedCreateNestedManyWithoutTeamInput
   invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutTeamInput
   payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutTeamInput
   paymentLinks?: Prisma.PaymentLinkUncheckedCreateNestedManyWithoutTeamInput
@@ -2888,6 +2931,7 @@ export type TeamUpdateWithoutCatalogAddOnsInput = {
   catalogConfigs?: Prisma.CatalogConfigUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUpdateManyWithoutTeamNestedInput
   templateInstalls?: Prisma.TemplateInstallUpdateManyWithoutTeamNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUpdateManyWithoutTeamNestedInput
   invoices?: Prisma.InvoiceUpdateManyWithoutTeamNestedInput
   payments?: Prisma.PaymentUpdateManyWithoutTeamNestedInput
   paymentLinks?: Prisma.PaymentLinkUpdateManyWithoutTeamNestedInput
@@ -2947,6 +2991,7 @@ export type TeamUncheckedUpdateWithoutCatalogAddOnsInput = {
   catalogConfigs?: Prisma.CatalogConfigUncheckedUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUncheckedUpdateManyWithoutTeamNestedInput
   templateInstalls?: Prisma.TemplateInstallUncheckedUpdateManyWithoutTeamNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedUpdateManyWithoutTeamNestedInput
   invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutTeamNestedInput
   payments?: Prisma.PaymentUncheckedUpdateManyWithoutTeamNestedInput
   paymentLinks?: Prisma.PaymentLinkUncheckedUpdateManyWithoutTeamNestedInput
@@ -3006,6 +3051,7 @@ export type TeamCreateWithoutCatalogCreditTypesInput = {
   catalogConfigs?: Prisma.CatalogConfigCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateCreateNestedManyWithoutTeamInput
   templateInstalls?: Prisma.TemplateInstallCreateNestedManyWithoutTeamInput
+  invoiceTemplates?: Prisma.InvoiceTemplateCreateNestedManyWithoutTeamInput
   invoices?: Prisma.InvoiceCreateNestedManyWithoutTeamInput
   payments?: Prisma.PaymentCreateNestedManyWithoutTeamInput
   paymentLinks?: Prisma.PaymentLinkCreateNestedManyWithoutTeamInput
@@ -3065,6 +3111,7 @@ export type TeamUncheckedCreateWithoutCatalogCreditTypesInput = {
   catalogConfigs?: Prisma.CatalogConfigUncheckedCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateUncheckedCreateNestedManyWithoutTeamInput
   templateInstalls?: Prisma.TemplateInstallUncheckedCreateNestedManyWithoutTeamInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedCreateNestedManyWithoutTeamInput
   invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutTeamInput
   payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutTeamInput
   paymentLinks?: Prisma.PaymentLinkUncheckedCreateNestedManyWithoutTeamInput
@@ -3140,6 +3187,7 @@ export type TeamUpdateWithoutCatalogCreditTypesInput = {
   catalogConfigs?: Prisma.CatalogConfigUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUpdateManyWithoutTeamNestedInput
   templateInstalls?: Prisma.TemplateInstallUpdateManyWithoutTeamNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUpdateManyWithoutTeamNestedInput
   invoices?: Prisma.InvoiceUpdateManyWithoutTeamNestedInput
   payments?: Prisma.PaymentUpdateManyWithoutTeamNestedInput
   paymentLinks?: Prisma.PaymentLinkUpdateManyWithoutTeamNestedInput
@@ -3199,6 +3247,7 @@ export type TeamUncheckedUpdateWithoutCatalogCreditTypesInput = {
   catalogConfigs?: Prisma.CatalogConfigUncheckedUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUncheckedUpdateManyWithoutTeamNestedInput
   templateInstalls?: Prisma.TemplateInstallUncheckedUpdateManyWithoutTeamNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedUpdateManyWithoutTeamNestedInput
   invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutTeamNestedInput
   payments?: Prisma.PaymentUncheckedUpdateManyWithoutTeamNestedInput
   paymentLinks?: Prisma.PaymentLinkUncheckedUpdateManyWithoutTeamNestedInput
@@ -3258,6 +3307,7 @@ export type TeamCreateWithoutCatalogVersionsInput = {
   catalogConfigs?: Prisma.CatalogConfigCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateCreateNestedManyWithoutTeamInput
   templateInstalls?: Prisma.TemplateInstallCreateNestedManyWithoutTeamInput
+  invoiceTemplates?: Prisma.InvoiceTemplateCreateNestedManyWithoutTeamInput
   invoices?: Prisma.InvoiceCreateNestedManyWithoutTeamInput
   payments?: Prisma.PaymentCreateNestedManyWithoutTeamInput
   paymentLinks?: Prisma.PaymentLinkCreateNestedManyWithoutTeamInput
@@ -3317,6 +3367,7 @@ export type TeamUncheckedCreateWithoutCatalogVersionsInput = {
   catalogConfigs?: Prisma.CatalogConfigUncheckedCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateUncheckedCreateNestedManyWithoutTeamInput
   templateInstalls?: Prisma.TemplateInstallUncheckedCreateNestedManyWithoutTeamInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedCreateNestedManyWithoutTeamInput
   invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutTeamInput
   payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutTeamInput
   paymentLinks?: Prisma.PaymentLinkUncheckedCreateNestedManyWithoutTeamInput
@@ -3392,6 +3443,7 @@ export type TeamUpdateWithoutCatalogVersionsInput = {
   catalogConfigs?: Prisma.CatalogConfigUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUpdateManyWithoutTeamNestedInput
   templateInstalls?: Prisma.TemplateInstallUpdateManyWithoutTeamNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUpdateManyWithoutTeamNestedInput
   invoices?: Prisma.InvoiceUpdateManyWithoutTeamNestedInput
   payments?: Prisma.PaymentUpdateManyWithoutTeamNestedInput
   paymentLinks?: Prisma.PaymentLinkUpdateManyWithoutTeamNestedInput
@@ -3451,6 +3503,7 @@ export type TeamUncheckedUpdateWithoutCatalogVersionsInput = {
   catalogConfigs?: Prisma.CatalogConfigUncheckedUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUncheckedUpdateManyWithoutTeamNestedInput
   templateInstalls?: Prisma.TemplateInstallUncheckedUpdateManyWithoutTeamNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedUpdateManyWithoutTeamNestedInput
   invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutTeamNestedInput
   payments?: Prisma.PaymentUncheckedUpdateManyWithoutTeamNestedInput
   paymentLinks?: Prisma.PaymentLinkUncheckedUpdateManyWithoutTeamNestedInput
@@ -3510,6 +3563,7 @@ export type TeamCreateWithoutCatalogConfigsInput = {
   catalogVersions?: Prisma.CatalogVersionCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateCreateNestedManyWithoutTeamInput
   templateInstalls?: Prisma.TemplateInstallCreateNestedManyWithoutTeamInput
+  invoiceTemplates?: Prisma.InvoiceTemplateCreateNestedManyWithoutTeamInput
   invoices?: Prisma.InvoiceCreateNestedManyWithoutTeamInput
   payments?: Prisma.PaymentCreateNestedManyWithoutTeamInput
   paymentLinks?: Prisma.PaymentLinkCreateNestedManyWithoutTeamInput
@@ -3569,6 +3623,7 @@ export type TeamUncheckedCreateWithoutCatalogConfigsInput = {
   catalogVersions?: Prisma.CatalogVersionUncheckedCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateUncheckedCreateNestedManyWithoutTeamInput
   templateInstalls?: Prisma.TemplateInstallUncheckedCreateNestedManyWithoutTeamInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedCreateNestedManyWithoutTeamInput
   invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutTeamInput
   payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutTeamInput
   paymentLinks?: Prisma.PaymentLinkUncheckedCreateNestedManyWithoutTeamInput
@@ -3644,6 +3699,7 @@ export type TeamUpdateWithoutCatalogConfigsInput = {
   catalogVersions?: Prisma.CatalogVersionUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUpdateManyWithoutTeamNestedInput
   templateInstalls?: Prisma.TemplateInstallUpdateManyWithoutTeamNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUpdateManyWithoutTeamNestedInput
   invoices?: Prisma.InvoiceUpdateManyWithoutTeamNestedInput
   payments?: Prisma.PaymentUpdateManyWithoutTeamNestedInput
   paymentLinks?: Prisma.PaymentLinkUpdateManyWithoutTeamNestedInput
@@ -3703,6 +3759,7 @@ export type TeamUncheckedUpdateWithoutCatalogConfigsInput = {
   catalogVersions?: Prisma.CatalogVersionUncheckedUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUncheckedUpdateManyWithoutTeamNestedInput
   templateInstalls?: Prisma.TemplateInstallUncheckedUpdateManyWithoutTeamNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedUpdateManyWithoutTeamNestedInput
   invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutTeamNestedInput
   payments?: Prisma.PaymentUncheckedUpdateManyWithoutTeamNestedInput
   paymentLinks?: Prisma.PaymentLinkUncheckedUpdateManyWithoutTeamNestedInput
@@ -3762,6 +3819,7 @@ export type TeamCreateWithoutBillingTemplatesInput = {
   catalogVersions?: Prisma.CatalogVersionCreateNestedManyWithoutTeamInput
   catalogConfigs?: Prisma.CatalogConfigCreateNestedManyWithoutTeamInput
   templateInstalls?: Prisma.TemplateInstallCreateNestedManyWithoutTeamInput
+  invoiceTemplates?: Prisma.InvoiceTemplateCreateNestedManyWithoutTeamInput
   invoices?: Prisma.InvoiceCreateNestedManyWithoutTeamInput
   payments?: Prisma.PaymentCreateNestedManyWithoutTeamInput
   paymentLinks?: Prisma.PaymentLinkCreateNestedManyWithoutTeamInput
@@ -3821,6 +3879,7 @@ export type TeamUncheckedCreateWithoutBillingTemplatesInput = {
   catalogVersions?: Prisma.CatalogVersionUncheckedCreateNestedManyWithoutTeamInput
   catalogConfigs?: Prisma.CatalogConfigUncheckedCreateNestedManyWithoutTeamInput
   templateInstalls?: Prisma.TemplateInstallUncheckedCreateNestedManyWithoutTeamInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedCreateNestedManyWithoutTeamInput
   invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutTeamInput
   payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutTeamInput
   paymentLinks?: Prisma.PaymentLinkUncheckedCreateNestedManyWithoutTeamInput
@@ -3896,6 +3955,7 @@ export type TeamUpdateWithoutBillingTemplatesInput = {
   catalogVersions?: Prisma.CatalogVersionUpdateManyWithoutTeamNestedInput
   catalogConfigs?: Prisma.CatalogConfigUpdateManyWithoutTeamNestedInput
   templateInstalls?: Prisma.TemplateInstallUpdateManyWithoutTeamNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUpdateManyWithoutTeamNestedInput
   invoices?: Prisma.InvoiceUpdateManyWithoutTeamNestedInput
   payments?: Prisma.PaymentUpdateManyWithoutTeamNestedInput
   paymentLinks?: Prisma.PaymentLinkUpdateManyWithoutTeamNestedInput
@@ -3955,6 +4015,7 @@ export type TeamUncheckedUpdateWithoutBillingTemplatesInput = {
   catalogVersions?: Prisma.CatalogVersionUncheckedUpdateManyWithoutTeamNestedInput
   catalogConfigs?: Prisma.CatalogConfigUncheckedUpdateManyWithoutTeamNestedInput
   templateInstalls?: Prisma.TemplateInstallUncheckedUpdateManyWithoutTeamNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedUpdateManyWithoutTeamNestedInput
   invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutTeamNestedInput
   payments?: Prisma.PaymentUncheckedUpdateManyWithoutTeamNestedInput
   paymentLinks?: Prisma.PaymentLinkUncheckedUpdateManyWithoutTeamNestedInput
@@ -4014,6 +4075,7 @@ export type TeamCreateWithoutTemplateInstallsInput = {
   catalogVersions?: Prisma.CatalogVersionCreateNestedManyWithoutTeamInput
   catalogConfigs?: Prisma.CatalogConfigCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateCreateNestedManyWithoutTeamInput
+  invoiceTemplates?: Prisma.InvoiceTemplateCreateNestedManyWithoutTeamInput
   invoices?: Prisma.InvoiceCreateNestedManyWithoutTeamInput
   payments?: Prisma.PaymentCreateNestedManyWithoutTeamInput
   paymentLinks?: Prisma.PaymentLinkCreateNestedManyWithoutTeamInput
@@ -4073,6 +4135,7 @@ export type TeamUncheckedCreateWithoutTemplateInstallsInput = {
   catalogVersions?: Prisma.CatalogVersionUncheckedCreateNestedManyWithoutTeamInput
   catalogConfigs?: Prisma.CatalogConfigUncheckedCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateUncheckedCreateNestedManyWithoutTeamInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedCreateNestedManyWithoutTeamInput
   invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutTeamInput
   payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutTeamInput
   paymentLinks?: Prisma.PaymentLinkUncheckedCreateNestedManyWithoutTeamInput
@@ -4148,6 +4211,7 @@ export type TeamUpdateWithoutTemplateInstallsInput = {
   catalogVersions?: Prisma.CatalogVersionUpdateManyWithoutTeamNestedInput
   catalogConfigs?: Prisma.CatalogConfigUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUpdateManyWithoutTeamNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUpdateManyWithoutTeamNestedInput
   invoices?: Prisma.InvoiceUpdateManyWithoutTeamNestedInput
   payments?: Prisma.PaymentUpdateManyWithoutTeamNestedInput
   paymentLinks?: Prisma.PaymentLinkUpdateManyWithoutTeamNestedInput
@@ -4207,6 +4271,7 @@ export type TeamUncheckedUpdateWithoutTemplateInstallsInput = {
   catalogVersions?: Prisma.CatalogVersionUncheckedUpdateManyWithoutTeamNestedInput
   catalogConfigs?: Prisma.CatalogConfigUncheckedUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUncheckedUpdateManyWithoutTeamNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedUpdateManyWithoutTeamNestedInput
   invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutTeamNestedInput
   payments?: Prisma.PaymentUncheckedUpdateManyWithoutTeamNestedInput
   paymentLinks?: Prisma.PaymentLinkUncheckedUpdateManyWithoutTeamNestedInput
@@ -4267,6 +4332,7 @@ export type TeamCreateWithoutTaxProfileInput = {
   catalogConfigs?: Prisma.CatalogConfigCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateCreateNestedManyWithoutTeamInput
   templateInstalls?: Prisma.TemplateInstallCreateNestedManyWithoutTeamInput
+  invoiceTemplates?: Prisma.InvoiceTemplateCreateNestedManyWithoutTeamInput
   invoices?: Prisma.InvoiceCreateNestedManyWithoutTeamInput
   payments?: Prisma.PaymentCreateNestedManyWithoutTeamInput
   paymentLinks?: Prisma.PaymentLinkCreateNestedManyWithoutTeamInput
@@ -4326,6 +4392,7 @@ export type TeamUncheckedCreateWithoutTaxProfileInput = {
   catalogConfigs?: Prisma.CatalogConfigUncheckedCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateUncheckedCreateNestedManyWithoutTeamInput
   templateInstalls?: Prisma.TemplateInstallUncheckedCreateNestedManyWithoutTeamInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedCreateNestedManyWithoutTeamInput
   invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutTeamInput
   payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutTeamInput
   paymentLinks?: Prisma.PaymentLinkUncheckedCreateNestedManyWithoutTeamInput
@@ -4401,6 +4468,7 @@ export type TeamUpdateWithoutTaxProfileInput = {
   catalogConfigs?: Prisma.CatalogConfigUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUpdateManyWithoutTeamNestedInput
   templateInstalls?: Prisma.TemplateInstallUpdateManyWithoutTeamNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUpdateManyWithoutTeamNestedInput
   invoices?: Prisma.InvoiceUpdateManyWithoutTeamNestedInput
   payments?: Prisma.PaymentUpdateManyWithoutTeamNestedInput
   paymentLinks?: Prisma.PaymentLinkUpdateManyWithoutTeamNestedInput
@@ -4460,6 +4528,7 @@ export type TeamUncheckedUpdateWithoutTaxProfileInput = {
   catalogConfigs?: Prisma.CatalogConfigUncheckedUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUncheckedUpdateManyWithoutTeamNestedInput
   templateInstalls?: Prisma.TemplateInstallUncheckedUpdateManyWithoutTeamNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedUpdateManyWithoutTeamNestedInput
   invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutTeamNestedInput
   payments?: Prisma.PaymentUncheckedUpdateManyWithoutTeamNestedInput
   paymentLinks?: Prisma.PaymentLinkUncheckedUpdateManyWithoutTeamNestedInput
@@ -4470,6 +4539,262 @@ export type TeamUncheckedUpdateWithoutTaxProfileInput = {
   subscriptionStates?: Prisma.SubscriptionStateUncheckedUpdateManyWithoutTeamNestedInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedUpdateManyWithoutTeamNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedUpdateManyWithoutTeamNestedInput
+  invoiceSequences?: Prisma.InvoiceSequenceUncheckedUpdateManyWithoutTeamNestedInput
+  auditEvents?: Prisma.AuditEventUncheckedUpdateManyWithoutTeamNestedInput
+  billingEvents?: Prisma.BillingEventUncheckedUpdateManyWithoutTeamNestedInput
+  webhookDeliveries?: Prisma.WebhookDeliveryUncheckedUpdateManyWithoutTeamNestedInput
+  gasSpends?: Prisma.GasSpendUncheckedUpdateManyWithoutTeamNestedInput
+  tierHistory?: Prisma.TierUpgradeHistoryUncheckedUpdateManyWithoutTeamNestedInput
+  supportTickets?: Prisma.SupportTicketUncheckedUpdateManyWithoutTeamNestedInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedUpdateManyWithoutProviderTeamNestedInput
+  platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerUncheckedUpdateManyWithoutProviderTeamNestedInput
+  platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerUncheckedUpdateOneWithoutWorkspaceTeamNestedInput
+  arcenCompanies?: Prisma.ArcenCompanyUncheckedUpdateManyWithoutTeamNestedInput
+  addOnGrants?: Prisma.CompanyAddOnGrantUncheckedUpdateManyWithoutTeamNestedInput
+  creditGrants?: Prisma.CompanyCreditGrantUncheckedUpdateManyWithoutTeamNestedInput
+  featureFlags?: Prisma.CatalogFeatureFlagUncheckedUpdateManyWithoutTeamNestedInput
+  arcenApiKeys?: Prisma.ArcenApiKeyUncheckedUpdateManyWithoutTeamNestedInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedUpdateManyWithoutTeamNestedInput
+  embedComponents?: Prisma.EmbedComponentUncheckedUpdateManyWithoutTeamNestedInput
+  agentConfig?: Prisma.ArcenAgentConfigUncheckedUpdateOneWithoutTeamNestedInput
+  dispatchRequests?: Prisma.ArcenDispatchRequestUncheckedUpdateManyWithoutTeamNestedInput
+}
+
+export type TeamCreateWithoutInvoiceTemplatesInput = {
+  id?: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  name: string
+  slug: string
+  environmentMode?: $Enums.EnvironmentMode
+  invoicePrefix?: string | null
+  platformTier?: $Enums.PlatformTier
+  tierExpiresAt?: Date | string | null
+  tierSubscriptionId?: string | null
+  isPlatformActivated?: boolean
+  allowPlatformBilling?: boolean
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationKey?: Prisma.PlatformActivationKeyCreateNestedOneWithoutTeamsInput
+  activationRedemptions?: Prisma.PlatformActivationRedemptionCreateNestedManyWithoutTeamInput
+  members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
+  providerProfiles?: Prisma.ProviderProfileCreateNestedManyWithoutTeamInput
+  invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
+  environments?: Prisma.WorkspaceEnvironmentCreateNestedManyWithoutTeamInput
+  catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutTeamInput
+  catalogAddOns?: Prisma.CatalogAddOnCreateNestedManyWithoutTeamInput
+  catalogCreditTypes?: Prisma.CatalogCreditTypeCreateNestedManyWithoutTeamInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryCreateNestedManyWithoutTeamInput
+  catalogVersions?: Prisma.CatalogVersionCreateNestedManyWithoutTeamInput
+  catalogConfigs?: Prisma.CatalogConfigCreateNestedManyWithoutTeamInput
+  billingTemplates?: Prisma.BillingTemplateCreateNestedManyWithoutTeamInput
+  templateInstalls?: Prisma.TemplateInstallCreateNestedManyWithoutTeamInput
+  invoices?: Prisma.InvoiceCreateNestedManyWithoutTeamInput
+  payments?: Prisma.PaymentCreateNestedManyWithoutTeamInput
+  paymentLinks?: Prisma.PaymentLinkCreateNestedManyWithoutTeamInput
+  checkoutSessions?: Prisma.CheckoutSessionCreateNestedManyWithoutTeamInput
+  billingBalances?: Prisma.BillingBalanceCreateNestedManyWithoutTeamInput
+  refunds?: Prisma.RefundCreateNestedManyWithoutTeamInput
+  billingAdjustments?: Prisma.BillingAdjustmentCreateNestedManyWithoutTeamInput
+  subscriptionStates?: Prisma.SubscriptionStateCreateNestedManyWithoutTeamInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestCreateNestedManyWithoutTeamInput
+  billingRecoveryTasks?: Prisma.BillingRecoveryTaskCreateNestedManyWithoutTeamInput
+  taxProfile?: Prisma.TaxProfileCreateNestedOneWithoutTeamInput
+  invoiceSequences?: Prisma.InvoiceSequenceCreateNestedManyWithoutTeamInput
+  auditEvents?: Prisma.AuditEventCreateNestedManyWithoutTeamInput
+  billingEvents?: Prisma.BillingEventCreateNestedManyWithoutTeamInput
+  webhookDeliveries?: Prisma.WebhookDeliveryCreateNestedManyWithoutTeamInput
+  gasSpends?: Prisma.GasSpendCreateNestedManyWithoutTeamInput
+  tierHistory?: Prisma.TierUpgradeHistoryCreateNestedManyWithoutTeamInput
+  supportTickets?: Prisma.SupportTicketCreateNestedManyWithoutTeamInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountCreateNestedManyWithoutProviderTeamInput
+  platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerCreateNestedManyWithoutProviderTeamInput
+  platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerCreateNestedOneWithoutWorkspaceTeamInput
+  arcenCompanies?: Prisma.ArcenCompanyCreateNestedManyWithoutTeamInput
+  addOnGrants?: Prisma.CompanyAddOnGrantCreateNestedManyWithoutTeamInput
+  creditGrants?: Prisma.CompanyCreditGrantCreateNestedManyWithoutTeamInput
+  featureFlags?: Prisma.CatalogFeatureFlagCreateNestedManyWithoutTeamInput
+  arcenApiKeys?: Prisma.ArcenApiKeyCreateNestedManyWithoutTeamInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenCreateNestedManyWithoutTeamInput
+  embedComponents?: Prisma.EmbedComponentCreateNestedManyWithoutTeamInput
+  agentConfig?: Prisma.ArcenAgentConfigCreateNestedOneWithoutTeamInput
+  dispatchRequests?: Prisma.ArcenDispatchRequestCreateNestedManyWithoutTeamInput
+}
+
+export type TeamUncheckedCreateWithoutInvoiceTemplatesInput = {
+  id?: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  name: string
+  slug: string
+  environmentMode?: $Enums.EnvironmentMode
+  invoicePrefix?: string | null
+  platformTier?: $Enums.PlatformTier
+  tierExpiresAt?: Date | string | null
+  tierSubscriptionId?: string | null
+  isPlatformActivated?: boolean
+  activationKeyId?: string | null
+  allowPlatformBilling?: boolean
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationRedemptions?: Prisma.PlatformActivationRedemptionUncheckedCreateNestedManyWithoutTeamInput
+  members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
+  providerProfiles?: Prisma.ProviderProfileUncheckedCreateNestedManyWithoutTeamInput
+  invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
+  environments?: Prisma.WorkspaceEnvironmentUncheckedCreateNestedManyWithoutTeamInput
+  catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutTeamInput
+  catalogAddOns?: Prisma.CatalogAddOnUncheckedCreateNestedManyWithoutTeamInput
+  catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedCreateNestedManyWithoutTeamInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedCreateNestedManyWithoutTeamInput
+  catalogVersions?: Prisma.CatalogVersionUncheckedCreateNestedManyWithoutTeamInput
+  catalogConfigs?: Prisma.CatalogConfigUncheckedCreateNestedManyWithoutTeamInput
+  billingTemplates?: Prisma.BillingTemplateUncheckedCreateNestedManyWithoutTeamInput
+  templateInstalls?: Prisma.TemplateInstallUncheckedCreateNestedManyWithoutTeamInput
+  invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutTeamInput
+  payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutTeamInput
+  paymentLinks?: Prisma.PaymentLinkUncheckedCreateNestedManyWithoutTeamInput
+  checkoutSessions?: Prisma.CheckoutSessionUncheckedCreateNestedManyWithoutTeamInput
+  billingBalances?: Prisma.BillingBalanceUncheckedCreateNestedManyWithoutTeamInput
+  refunds?: Prisma.RefundUncheckedCreateNestedManyWithoutTeamInput
+  billingAdjustments?: Prisma.BillingAdjustmentUncheckedCreateNestedManyWithoutTeamInput
+  subscriptionStates?: Prisma.SubscriptionStateUncheckedCreateNestedManyWithoutTeamInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedCreateNestedManyWithoutTeamInput
+  billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedCreateNestedManyWithoutTeamInput
+  taxProfile?: Prisma.TaxProfileUncheckedCreateNestedOneWithoutTeamInput
+  invoiceSequences?: Prisma.InvoiceSequenceUncheckedCreateNestedManyWithoutTeamInput
+  auditEvents?: Prisma.AuditEventUncheckedCreateNestedManyWithoutTeamInput
+  billingEvents?: Prisma.BillingEventUncheckedCreateNestedManyWithoutTeamInput
+  webhookDeliveries?: Prisma.WebhookDeliveryUncheckedCreateNestedManyWithoutTeamInput
+  gasSpends?: Prisma.GasSpendUncheckedCreateNestedManyWithoutTeamInput
+  tierHistory?: Prisma.TierUpgradeHistoryUncheckedCreateNestedManyWithoutTeamInput
+  supportTickets?: Prisma.SupportTicketUncheckedCreateNestedManyWithoutTeamInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedManyWithoutProviderTeamInput
+  platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerUncheckedCreateNestedManyWithoutProviderTeamInput
+  platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerUncheckedCreateNestedOneWithoutWorkspaceTeamInput
+  arcenCompanies?: Prisma.ArcenCompanyUncheckedCreateNestedManyWithoutTeamInput
+  addOnGrants?: Prisma.CompanyAddOnGrantUncheckedCreateNestedManyWithoutTeamInput
+  creditGrants?: Prisma.CompanyCreditGrantUncheckedCreateNestedManyWithoutTeamInput
+  featureFlags?: Prisma.CatalogFeatureFlagUncheckedCreateNestedManyWithoutTeamInput
+  arcenApiKeys?: Prisma.ArcenApiKeyUncheckedCreateNestedManyWithoutTeamInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedCreateNestedManyWithoutTeamInput
+  embedComponents?: Prisma.EmbedComponentUncheckedCreateNestedManyWithoutTeamInput
+  agentConfig?: Prisma.ArcenAgentConfigUncheckedCreateNestedOneWithoutTeamInput
+  dispatchRequests?: Prisma.ArcenDispatchRequestUncheckedCreateNestedManyWithoutTeamInput
+}
+
+export type TeamCreateOrConnectWithoutInvoiceTemplatesInput = {
+  where: Prisma.TeamWhereUniqueInput
+  create: Prisma.XOR<Prisma.TeamCreateWithoutInvoiceTemplatesInput, Prisma.TeamUncheckedCreateWithoutInvoiceTemplatesInput>
+}
+
+export type TeamUpsertWithoutInvoiceTemplatesInput = {
+  update: Prisma.XOR<Prisma.TeamUpdateWithoutInvoiceTemplatesInput, Prisma.TeamUncheckedUpdateWithoutInvoiceTemplatesInput>
+  create: Prisma.XOR<Prisma.TeamCreateWithoutInvoiceTemplatesInput, Prisma.TeamUncheckedCreateWithoutInvoiceTemplatesInput>
+  where?: Prisma.TeamWhereInput
+}
+
+export type TeamUpdateToOneWithWhereWithoutInvoiceTemplatesInput = {
+  where?: Prisma.TeamWhereInput
+  data: Prisma.XOR<Prisma.TeamUpdateWithoutInvoiceTemplatesInput, Prisma.TeamUncheckedUpdateWithoutInvoiceTemplatesInput>
+}
+
+export type TeamUpdateWithoutInvoiceTemplatesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  slug?: Prisma.StringFieldUpdateOperationsInput | string
+  environmentMode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
+  invoicePrefix?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
+  tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isPlatformActivated?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  allowPlatformBilling?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationKey?: Prisma.PlatformActivationKeyUpdateOneWithoutTeamsNestedInput
+  activationRedemptions?: Prisma.PlatformActivationRedemptionUpdateManyWithoutTeamNestedInput
+  members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
+  providerProfiles?: Prisma.ProviderProfileUpdateManyWithoutTeamNestedInput
+  invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
+  environments?: Prisma.WorkspaceEnvironmentUpdateManyWithoutTeamNestedInput
+  catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutTeamNestedInput
+  catalogAddOns?: Prisma.CatalogAddOnUpdateManyWithoutTeamNestedInput
+  catalogCreditTypes?: Prisma.CatalogCreditTypeUpdateManyWithoutTeamNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUpdateManyWithoutTeamNestedInput
+  catalogVersions?: Prisma.CatalogVersionUpdateManyWithoutTeamNestedInput
+  catalogConfigs?: Prisma.CatalogConfigUpdateManyWithoutTeamNestedInput
+  billingTemplates?: Prisma.BillingTemplateUpdateManyWithoutTeamNestedInput
+  templateInstalls?: Prisma.TemplateInstallUpdateManyWithoutTeamNestedInput
+  invoices?: Prisma.InvoiceUpdateManyWithoutTeamNestedInput
+  payments?: Prisma.PaymentUpdateManyWithoutTeamNestedInput
+  paymentLinks?: Prisma.PaymentLinkUpdateManyWithoutTeamNestedInput
+  checkoutSessions?: Prisma.CheckoutSessionUpdateManyWithoutTeamNestedInput
+  billingBalances?: Prisma.BillingBalanceUpdateManyWithoutTeamNestedInput
+  refunds?: Prisma.RefundUpdateManyWithoutTeamNestedInput
+  billingAdjustments?: Prisma.BillingAdjustmentUpdateManyWithoutTeamNestedInput
+  subscriptionStates?: Prisma.SubscriptionStateUpdateManyWithoutTeamNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUpdateManyWithoutTeamNestedInput
+  billingRecoveryTasks?: Prisma.BillingRecoveryTaskUpdateManyWithoutTeamNestedInput
+  taxProfile?: Prisma.TaxProfileUpdateOneWithoutTeamNestedInput
+  invoiceSequences?: Prisma.InvoiceSequenceUpdateManyWithoutTeamNestedInput
+  auditEvents?: Prisma.AuditEventUpdateManyWithoutTeamNestedInput
+  billingEvents?: Prisma.BillingEventUpdateManyWithoutTeamNestedInput
+  webhookDeliveries?: Prisma.WebhookDeliveryUpdateManyWithoutTeamNestedInput
+  gasSpends?: Prisma.GasSpendUpdateManyWithoutTeamNestedInput
+  tierHistory?: Prisma.TierUpgradeHistoryUpdateManyWithoutTeamNestedInput
+  supportTickets?: Prisma.SupportTicketUpdateManyWithoutTeamNestedInput
+  platformBillingProviderAccount?: Prisma.PlatformBillingAccountUpdateManyWithoutProviderTeamNestedInput
+  platformBillingProviderCustomers?: Prisma.PlatformBillingCustomerUpdateManyWithoutProviderTeamNestedInput
+  platformBillingWorkspaceCustomer?: Prisma.PlatformBillingCustomerUpdateOneWithoutWorkspaceTeamNestedInput
+  arcenCompanies?: Prisma.ArcenCompanyUpdateManyWithoutTeamNestedInput
+  addOnGrants?: Prisma.CompanyAddOnGrantUpdateManyWithoutTeamNestedInput
+  creditGrants?: Prisma.CompanyCreditGrantUpdateManyWithoutTeamNestedInput
+  featureFlags?: Prisma.CatalogFeatureFlagUpdateManyWithoutTeamNestedInput
+  arcenApiKeys?: Prisma.ArcenApiKeyUpdateManyWithoutTeamNestedInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUpdateManyWithoutTeamNestedInput
+  embedComponents?: Prisma.EmbedComponentUpdateManyWithoutTeamNestedInput
+  agentConfig?: Prisma.ArcenAgentConfigUpdateOneWithoutTeamNestedInput
+  dispatchRequests?: Prisma.ArcenDispatchRequestUpdateManyWithoutTeamNestedInput
+}
+
+export type TeamUncheckedUpdateWithoutInvoiceTemplatesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  slug?: Prisma.StringFieldUpdateOperationsInput | string
+  environmentMode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
+  invoicePrefix?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
+  tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isPlatformActivated?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  activationKeyId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  allowPlatformBilling?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  profileData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  activationRedemptions?: Prisma.PlatformActivationRedemptionUncheckedUpdateManyWithoutTeamNestedInput
+  members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
+  providerProfiles?: Prisma.ProviderProfileUncheckedUpdateManyWithoutTeamNestedInput
+  invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
+  environments?: Prisma.WorkspaceEnvironmentUncheckedUpdateManyWithoutTeamNestedInput
+  catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutTeamNestedInput
+  catalogAddOns?: Prisma.CatalogAddOnUncheckedUpdateManyWithoutTeamNestedInput
+  catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedUpdateManyWithoutTeamNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedUpdateManyWithoutTeamNestedInput
+  catalogVersions?: Prisma.CatalogVersionUncheckedUpdateManyWithoutTeamNestedInput
+  catalogConfigs?: Prisma.CatalogConfigUncheckedUpdateManyWithoutTeamNestedInput
+  billingTemplates?: Prisma.BillingTemplateUncheckedUpdateManyWithoutTeamNestedInput
+  templateInstalls?: Prisma.TemplateInstallUncheckedUpdateManyWithoutTeamNestedInput
+  invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutTeamNestedInput
+  payments?: Prisma.PaymentUncheckedUpdateManyWithoutTeamNestedInput
+  paymentLinks?: Prisma.PaymentLinkUncheckedUpdateManyWithoutTeamNestedInput
+  checkoutSessions?: Prisma.CheckoutSessionUncheckedUpdateManyWithoutTeamNestedInput
+  billingBalances?: Prisma.BillingBalanceUncheckedUpdateManyWithoutTeamNestedInput
+  refunds?: Prisma.RefundUncheckedUpdateManyWithoutTeamNestedInput
+  billingAdjustments?: Prisma.BillingAdjustmentUncheckedUpdateManyWithoutTeamNestedInput
+  subscriptionStates?: Prisma.SubscriptionStateUncheckedUpdateManyWithoutTeamNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedUpdateManyWithoutTeamNestedInput
+  billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedUpdateManyWithoutTeamNestedInput
+  taxProfile?: Prisma.TaxProfileUncheckedUpdateOneWithoutTeamNestedInput
   invoiceSequences?: Prisma.InvoiceSequenceUncheckedUpdateManyWithoutTeamNestedInput
   auditEvents?: Prisma.AuditEventUncheckedUpdateManyWithoutTeamNestedInput
   billingEvents?: Prisma.BillingEventUncheckedUpdateManyWithoutTeamNestedInput
@@ -4519,6 +4844,7 @@ export type TeamCreateWithoutInvoiceSequencesInput = {
   catalogConfigs?: Prisma.CatalogConfigCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateCreateNestedManyWithoutTeamInput
   templateInstalls?: Prisma.TemplateInstallCreateNestedManyWithoutTeamInput
+  invoiceTemplates?: Prisma.InvoiceTemplateCreateNestedManyWithoutTeamInput
   invoices?: Prisma.InvoiceCreateNestedManyWithoutTeamInput
   payments?: Prisma.PaymentCreateNestedManyWithoutTeamInput
   paymentLinks?: Prisma.PaymentLinkCreateNestedManyWithoutTeamInput
@@ -4578,6 +4904,7 @@ export type TeamUncheckedCreateWithoutInvoiceSequencesInput = {
   catalogConfigs?: Prisma.CatalogConfigUncheckedCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateUncheckedCreateNestedManyWithoutTeamInput
   templateInstalls?: Prisma.TemplateInstallUncheckedCreateNestedManyWithoutTeamInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedCreateNestedManyWithoutTeamInput
   invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutTeamInput
   payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutTeamInput
   paymentLinks?: Prisma.PaymentLinkUncheckedCreateNestedManyWithoutTeamInput
@@ -4653,6 +4980,7 @@ export type TeamUpdateWithoutInvoiceSequencesInput = {
   catalogConfigs?: Prisma.CatalogConfigUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUpdateManyWithoutTeamNestedInput
   templateInstalls?: Prisma.TemplateInstallUpdateManyWithoutTeamNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUpdateManyWithoutTeamNestedInput
   invoices?: Prisma.InvoiceUpdateManyWithoutTeamNestedInput
   payments?: Prisma.PaymentUpdateManyWithoutTeamNestedInput
   paymentLinks?: Prisma.PaymentLinkUpdateManyWithoutTeamNestedInput
@@ -4712,6 +5040,7 @@ export type TeamUncheckedUpdateWithoutInvoiceSequencesInput = {
   catalogConfigs?: Prisma.CatalogConfigUncheckedUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUncheckedUpdateManyWithoutTeamNestedInput
   templateInstalls?: Prisma.TemplateInstallUncheckedUpdateManyWithoutTeamNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedUpdateManyWithoutTeamNestedInput
   invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutTeamNestedInput
   payments?: Prisma.PaymentUncheckedUpdateManyWithoutTeamNestedInput
   paymentLinks?: Prisma.PaymentLinkUncheckedUpdateManyWithoutTeamNestedInput
@@ -4771,6 +5100,7 @@ export type TeamCreateWithoutInvoicesInput = {
   catalogConfigs?: Prisma.CatalogConfigCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateCreateNestedManyWithoutTeamInput
   templateInstalls?: Prisma.TemplateInstallCreateNestedManyWithoutTeamInput
+  invoiceTemplates?: Prisma.InvoiceTemplateCreateNestedManyWithoutTeamInput
   payments?: Prisma.PaymentCreateNestedManyWithoutTeamInput
   paymentLinks?: Prisma.PaymentLinkCreateNestedManyWithoutTeamInput
   checkoutSessions?: Prisma.CheckoutSessionCreateNestedManyWithoutTeamInput
@@ -4830,6 +5160,7 @@ export type TeamUncheckedCreateWithoutInvoicesInput = {
   catalogConfigs?: Prisma.CatalogConfigUncheckedCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateUncheckedCreateNestedManyWithoutTeamInput
   templateInstalls?: Prisma.TemplateInstallUncheckedCreateNestedManyWithoutTeamInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedCreateNestedManyWithoutTeamInput
   payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutTeamInput
   paymentLinks?: Prisma.PaymentLinkUncheckedCreateNestedManyWithoutTeamInput
   checkoutSessions?: Prisma.CheckoutSessionUncheckedCreateNestedManyWithoutTeamInput
@@ -4905,6 +5236,7 @@ export type TeamUpdateWithoutInvoicesInput = {
   catalogConfigs?: Prisma.CatalogConfigUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUpdateManyWithoutTeamNestedInput
   templateInstalls?: Prisma.TemplateInstallUpdateManyWithoutTeamNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUpdateManyWithoutTeamNestedInput
   payments?: Prisma.PaymentUpdateManyWithoutTeamNestedInput
   paymentLinks?: Prisma.PaymentLinkUpdateManyWithoutTeamNestedInput
   checkoutSessions?: Prisma.CheckoutSessionUpdateManyWithoutTeamNestedInput
@@ -4964,6 +5296,7 @@ export type TeamUncheckedUpdateWithoutInvoicesInput = {
   catalogConfigs?: Prisma.CatalogConfigUncheckedUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUncheckedUpdateManyWithoutTeamNestedInput
   templateInstalls?: Prisma.TemplateInstallUncheckedUpdateManyWithoutTeamNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedUpdateManyWithoutTeamNestedInput
   payments?: Prisma.PaymentUncheckedUpdateManyWithoutTeamNestedInput
   paymentLinks?: Prisma.PaymentLinkUncheckedUpdateManyWithoutTeamNestedInput
   checkoutSessions?: Prisma.CheckoutSessionUncheckedUpdateManyWithoutTeamNestedInput
@@ -5023,6 +5356,7 @@ export type TeamCreateWithoutAuditEventsInput = {
   catalogConfigs?: Prisma.CatalogConfigCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateCreateNestedManyWithoutTeamInput
   templateInstalls?: Prisma.TemplateInstallCreateNestedManyWithoutTeamInput
+  invoiceTemplates?: Prisma.InvoiceTemplateCreateNestedManyWithoutTeamInput
   invoices?: Prisma.InvoiceCreateNestedManyWithoutTeamInput
   payments?: Prisma.PaymentCreateNestedManyWithoutTeamInput
   paymentLinks?: Prisma.PaymentLinkCreateNestedManyWithoutTeamInput
@@ -5082,6 +5416,7 @@ export type TeamUncheckedCreateWithoutAuditEventsInput = {
   catalogConfigs?: Prisma.CatalogConfigUncheckedCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateUncheckedCreateNestedManyWithoutTeamInput
   templateInstalls?: Prisma.TemplateInstallUncheckedCreateNestedManyWithoutTeamInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedCreateNestedManyWithoutTeamInput
   invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutTeamInput
   payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutTeamInput
   paymentLinks?: Prisma.PaymentLinkUncheckedCreateNestedManyWithoutTeamInput
@@ -5157,6 +5492,7 @@ export type TeamUpdateWithoutAuditEventsInput = {
   catalogConfigs?: Prisma.CatalogConfigUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUpdateManyWithoutTeamNestedInput
   templateInstalls?: Prisma.TemplateInstallUpdateManyWithoutTeamNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUpdateManyWithoutTeamNestedInput
   invoices?: Prisma.InvoiceUpdateManyWithoutTeamNestedInput
   payments?: Prisma.PaymentUpdateManyWithoutTeamNestedInput
   paymentLinks?: Prisma.PaymentLinkUpdateManyWithoutTeamNestedInput
@@ -5216,6 +5552,7 @@ export type TeamUncheckedUpdateWithoutAuditEventsInput = {
   catalogConfigs?: Prisma.CatalogConfigUncheckedUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUncheckedUpdateManyWithoutTeamNestedInput
   templateInstalls?: Prisma.TemplateInstallUncheckedUpdateManyWithoutTeamNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedUpdateManyWithoutTeamNestedInput
   invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutTeamNestedInput
   payments?: Prisma.PaymentUncheckedUpdateManyWithoutTeamNestedInput
   paymentLinks?: Prisma.PaymentLinkUncheckedUpdateManyWithoutTeamNestedInput
@@ -5275,6 +5612,7 @@ export type TeamCreateWithoutBillingEventsInput = {
   catalogConfigs?: Prisma.CatalogConfigCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateCreateNestedManyWithoutTeamInput
   templateInstalls?: Prisma.TemplateInstallCreateNestedManyWithoutTeamInput
+  invoiceTemplates?: Prisma.InvoiceTemplateCreateNestedManyWithoutTeamInput
   invoices?: Prisma.InvoiceCreateNestedManyWithoutTeamInput
   payments?: Prisma.PaymentCreateNestedManyWithoutTeamInput
   paymentLinks?: Prisma.PaymentLinkCreateNestedManyWithoutTeamInput
@@ -5334,6 +5672,7 @@ export type TeamUncheckedCreateWithoutBillingEventsInput = {
   catalogConfigs?: Prisma.CatalogConfigUncheckedCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateUncheckedCreateNestedManyWithoutTeamInput
   templateInstalls?: Prisma.TemplateInstallUncheckedCreateNestedManyWithoutTeamInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedCreateNestedManyWithoutTeamInput
   invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutTeamInput
   payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutTeamInput
   paymentLinks?: Prisma.PaymentLinkUncheckedCreateNestedManyWithoutTeamInput
@@ -5409,6 +5748,7 @@ export type TeamUpdateWithoutBillingEventsInput = {
   catalogConfigs?: Prisma.CatalogConfigUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUpdateManyWithoutTeamNestedInput
   templateInstalls?: Prisma.TemplateInstallUpdateManyWithoutTeamNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUpdateManyWithoutTeamNestedInput
   invoices?: Prisma.InvoiceUpdateManyWithoutTeamNestedInput
   payments?: Prisma.PaymentUpdateManyWithoutTeamNestedInput
   paymentLinks?: Prisma.PaymentLinkUpdateManyWithoutTeamNestedInput
@@ -5468,6 +5808,7 @@ export type TeamUncheckedUpdateWithoutBillingEventsInput = {
   catalogConfigs?: Prisma.CatalogConfigUncheckedUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUncheckedUpdateManyWithoutTeamNestedInput
   templateInstalls?: Prisma.TemplateInstallUncheckedUpdateManyWithoutTeamNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedUpdateManyWithoutTeamNestedInput
   invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutTeamNestedInput
   payments?: Prisma.PaymentUncheckedUpdateManyWithoutTeamNestedInput
   paymentLinks?: Prisma.PaymentLinkUncheckedUpdateManyWithoutTeamNestedInput
@@ -5527,6 +5868,7 @@ export type TeamCreateWithoutSubscriptionStatesInput = {
   catalogConfigs?: Prisma.CatalogConfigCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateCreateNestedManyWithoutTeamInput
   templateInstalls?: Prisma.TemplateInstallCreateNestedManyWithoutTeamInput
+  invoiceTemplates?: Prisma.InvoiceTemplateCreateNestedManyWithoutTeamInput
   invoices?: Prisma.InvoiceCreateNestedManyWithoutTeamInput
   payments?: Prisma.PaymentCreateNestedManyWithoutTeamInput
   paymentLinks?: Prisma.PaymentLinkCreateNestedManyWithoutTeamInput
@@ -5586,6 +5928,7 @@ export type TeamUncheckedCreateWithoutSubscriptionStatesInput = {
   catalogConfigs?: Prisma.CatalogConfigUncheckedCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateUncheckedCreateNestedManyWithoutTeamInput
   templateInstalls?: Prisma.TemplateInstallUncheckedCreateNestedManyWithoutTeamInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedCreateNestedManyWithoutTeamInput
   invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutTeamInput
   payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutTeamInput
   paymentLinks?: Prisma.PaymentLinkUncheckedCreateNestedManyWithoutTeamInput
@@ -5661,6 +6004,7 @@ export type TeamUpdateWithoutSubscriptionStatesInput = {
   catalogConfigs?: Prisma.CatalogConfigUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUpdateManyWithoutTeamNestedInput
   templateInstalls?: Prisma.TemplateInstallUpdateManyWithoutTeamNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUpdateManyWithoutTeamNestedInput
   invoices?: Prisma.InvoiceUpdateManyWithoutTeamNestedInput
   payments?: Prisma.PaymentUpdateManyWithoutTeamNestedInput
   paymentLinks?: Prisma.PaymentLinkUpdateManyWithoutTeamNestedInput
@@ -5720,6 +6064,7 @@ export type TeamUncheckedUpdateWithoutSubscriptionStatesInput = {
   catalogConfigs?: Prisma.CatalogConfigUncheckedUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUncheckedUpdateManyWithoutTeamNestedInput
   templateInstalls?: Prisma.TemplateInstallUncheckedUpdateManyWithoutTeamNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedUpdateManyWithoutTeamNestedInput
   invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutTeamNestedInput
   payments?: Prisma.PaymentUncheckedUpdateManyWithoutTeamNestedInput
   paymentLinks?: Prisma.PaymentLinkUncheckedUpdateManyWithoutTeamNestedInput
@@ -5779,6 +6124,7 @@ export type TeamCreateWithoutSubscriptionChangeRequestsInput = {
   catalogConfigs?: Prisma.CatalogConfigCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateCreateNestedManyWithoutTeamInput
   templateInstalls?: Prisma.TemplateInstallCreateNestedManyWithoutTeamInput
+  invoiceTemplates?: Prisma.InvoiceTemplateCreateNestedManyWithoutTeamInput
   invoices?: Prisma.InvoiceCreateNestedManyWithoutTeamInput
   payments?: Prisma.PaymentCreateNestedManyWithoutTeamInput
   paymentLinks?: Prisma.PaymentLinkCreateNestedManyWithoutTeamInput
@@ -5838,6 +6184,7 @@ export type TeamUncheckedCreateWithoutSubscriptionChangeRequestsInput = {
   catalogConfigs?: Prisma.CatalogConfigUncheckedCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateUncheckedCreateNestedManyWithoutTeamInput
   templateInstalls?: Prisma.TemplateInstallUncheckedCreateNestedManyWithoutTeamInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedCreateNestedManyWithoutTeamInput
   invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutTeamInput
   payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutTeamInput
   paymentLinks?: Prisma.PaymentLinkUncheckedCreateNestedManyWithoutTeamInput
@@ -5913,6 +6260,7 @@ export type TeamUpdateWithoutSubscriptionChangeRequestsInput = {
   catalogConfigs?: Prisma.CatalogConfigUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUpdateManyWithoutTeamNestedInput
   templateInstalls?: Prisma.TemplateInstallUpdateManyWithoutTeamNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUpdateManyWithoutTeamNestedInput
   invoices?: Prisma.InvoiceUpdateManyWithoutTeamNestedInput
   payments?: Prisma.PaymentUpdateManyWithoutTeamNestedInput
   paymentLinks?: Prisma.PaymentLinkUpdateManyWithoutTeamNestedInput
@@ -5972,6 +6320,7 @@ export type TeamUncheckedUpdateWithoutSubscriptionChangeRequestsInput = {
   catalogConfigs?: Prisma.CatalogConfigUncheckedUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUncheckedUpdateManyWithoutTeamNestedInput
   templateInstalls?: Prisma.TemplateInstallUncheckedUpdateManyWithoutTeamNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedUpdateManyWithoutTeamNestedInput
   invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutTeamNestedInput
   payments?: Prisma.PaymentUncheckedUpdateManyWithoutTeamNestedInput
   paymentLinks?: Prisma.PaymentLinkUncheckedUpdateManyWithoutTeamNestedInput
@@ -6031,6 +6380,7 @@ export type TeamCreateWithoutPaymentsInput = {
   catalogConfigs?: Prisma.CatalogConfigCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateCreateNestedManyWithoutTeamInput
   templateInstalls?: Prisma.TemplateInstallCreateNestedManyWithoutTeamInput
+  invoiceTemplates?: Prisma.InvoiceTemplateCreateNestedManyWithoutTeamInput
   invoices?: Prisma.InvoiceCreateNestedManyWithoutTeamInput
   paymentLinks?: Prisma.PaymentLinkCreateNestedManyWithoutTeamInput
   checkoutSessions?: Prisma.CheckoutSessionCreateNestedManyWithoutTeamInput
@@ -6090,6 +6440,7 @@ export type TeamUncheckedCreateWithoutPaymentsInput = {
   catalogConfigs?: Prisma.CatalogConfigUncheckedCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateUncheckedCreateNestedManyWithoutTeamInput
   templateInstalls?: Prisma.TemplateInstallUncheckedCreateNestedManyWithoutTeamInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedCreateNestedManyWithoutTeamInput
   invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutTeamInput
   paymentLinks?: Prisma.PaymentLinkUncheckedCreateNestedManyWithoutTeamInput
   checkoutSessions?: Prisma.CheckoutSessionUncheckedCreateNestedManyWithoutTeamInput
@@ -6165,6 +6516,7 @@ export type TeamUpdateWithoutPaymentsInput = {
   catalogConfigs?: Prisma.CatalogConfigUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUpdateManyWithoutTeamNestedInput
   templateInstalls?: Prisma.TemplateInstallUpdateManyWithoutTeamNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUpdateManyWithoutTeamNestedInput
   invoices?: Prisma.InvoiceUpdateManyWithoutTeamNestedInput
   paymentLinks?: Prisma.PaymentLinkUpdateManyWithoutTeamNestedInput
   checkoutSessions?: Prisma.CheckoutSessionUpdateManyWithoutTeamNestedInput
@@ -6224,6 +6576,7 @@ export type TeamUncheckedUpdateWithoutPaymentsInput = {
   catalogConfigs?: Prisma.CatalogConfigUncheckedUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUncheckedUpdateManyWithoutTeamNestedInput
   templateInstalls?: Prisma.TemplateInstallUncheckedUpdateManyWithoutTeamNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedUpdateManyWithoutTeamNestedInput
   invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutTeamNestedInput
   paymentLinks?: Prisma.PaymentLinkUncheckedUpdateManyWithoutTeamNestedInput
   checkoutSessions?: Prisma.CheckoutSessionUncheckedUpdateManyWithoutTeamNestedInput
@@ -6283,6 +6636,7 @@ export type TeamCreateWithoutBillingAdjustmentsInput = {
   catalogConfigs?: Prisma.CatalogConfigCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateCreateNestedManyWithoutTeamInput
   templateInstalls?: Prisma.TemplateInstallCreateNestedManyWithoutTeamInput
+  invoiceTemplates?: Prisma.InvoiceTemplateCreateNestedManyWithoutTeamInput
   invoices?: Prisma.InvoiceCreateNestedManyWithoutTeamInput
   payments?: Prisma.PaymentCreateNestedManyWithoutTeamInput
   paymentLinks?: Prisma.PaymentLinkCreateNestedManyWithoutTeamInput
@@ -6342,6 +6696,7 @@ export type TeamUncheckedCreateWithoutBillingAdjustmentsInput = {
   catalogConfigs?: Prisma.CatalogConfigUncheckedCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateUncheckedCreateNestedManyWithoutTeamInput
   templateInstalls?: Prisma.TemplateInstallUncheckedCreateNestedManyWithoutTeamInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedCreateNestedManyWithoutTeamInput
   invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutTeamInput
   payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutTeamInput
   paymentLinks?: Prisma.PaymentLinkUncheckedCreateNestedManyWithoutTeamInput
@@ -6417,6 +6772,7 @@ export type TeamUpdateWithoutBillingAdjustmentsInput = {
   catalogConfigs?: Prisma.CatalogConfigUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUpdateManyWithoutTeamNestedInput
   templateInstalls?: Prisma.TemplateInstallUpdateManyWithoutTeamNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUpdateManyWithoutTeamNestedInput
   invoices?: Prisma.InvoiceUpdateManyWithoutTeamNestedInput
   payments?: Prisma.PaymentUpdateManyWithoutTeamNestedInput
   paymentLinks?: Prisma.PaymentLinkUpdateManyWithoutTeamNestedInput
@@ -6476,6 +6832,7 @@ export type TeamUncheckedUpdateWithoutBillingAdjustmentsInput = {
   catalogConfigs?: Prisma.CatalogConfigUncheckedUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUncheckedUpdateManyWithoutTeamNestedInput
   templateInstalls?: Prisma.TemplateInstallUncheckedUpdateManyWithoutTeamNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedUpdateManyWithoutTeamNestedInput
   invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutTeamNestedInput
   payments?: Prisma.PaymentUncheckedUpdateManyWithoutTeamNestedInput
   paymentLinks?: Prisma.PaymentLinkUncheckedUpdateManyWithoutTeamNestedInput
@@ -6535,6 +6892,7 @@ export type TeamCreateWithoutBillingBalancesInput = {
   catalogConfigs?: Prisma.CatalogConfigCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateCreateNestedManyWithoutTeamInput
   templateInstalls?: Prisma.TemplateInstallCreateNestedManyWithoutTeamInput
+  invoiceTemplates?: Prisma.InvoiceTemplateCreateNestedManyWithoutTeamInput
   invoices?: Prisma.InvoiceCreateNestedManyWithoutTeamInput
   payments?: Prisma.PaymentCreateNestedManyWithoutTeamInput
   paymentLinks?: Prisma.PaymentLinkCreateNestedManyWithoutTeamInput
@@ -6594,6 +6952,7 @@ export type TeamUncheckedCreateWithoutBillingBalancesInput = {
   catalogConfigs?: Prisma.CatalogConfigUncheckedCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateUncheckedCreateNestedManyWithoutTeamInput
   templateInstalls?: Prisma.TemplateInstallUncheckedCreateNestedManyWithoutTeamInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedCreateNestedManyWithoutTeamInput
   invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutTeamInput
   payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutTeamInput
   paymentLinks?: Prisma.PaymentLinkUncheckedCreateNestedManyWithoutTeamInput
@@ -6669,6 +7028,7 @@ export type TeamUpdateWithoutBillingBalancesInput = {
   catalogConfigs?: Prisma.CatalogConfigUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUpdateManyWithoutTeamNestedInput
   templateInstalls?: Prisma.TemplateInstallUpdateManyWithoutTeamNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUpdateManyWithoutTeamNestedInput
   invoices?: Prisma.InvoiceUpdateManyWithoutTeamNestedInput
   payments?: Prisma.PaymentUpdateManyWithoutTeamNestedInput
   paymentLinks?: Prisma.PaymentLinkUpdateManyWithoutTeamNestedInput
@@ -6728,6 +7088,7 @@ export type TeamUncheckedUpdateWithoutBillingBalancesInput = {
   catalogConfigs?: Prisma.CatalogConfigUncheckedUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUncheckedUpdateManyWithoutTeamNestedInput
   templateInstalls?: Prisma.TemplateInstallUncheckedUpdateManyWithoutTeamNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedUpdateManyWithoutTeamNestedInput
   invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutTeamNestedInput
   payments?: Prisma.PaymentUncheckedUpdateManyWithoutTeamNestedInput
   paymentLinks?: Prisma.PaymentLinkUncheckedUpdateManyWithoutTeamNestedInput
@@ -6787,6 +7148,7 @@ export type TeamCreateWithoutRefundsInput = {
   catalogConfigs?: Prisma.CatalogConfigCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateCreateNestedManyWithoutTeamInput
   templateInstalls?: Prisma.TemplateInstallCreateNestedManyWithoutTeamInput
+  invoiceTemplates?: Prisma.InvoiceTemplateCreateNestedManyWithoutTeamInput
   invoices?: Prisma.InvoiceCreateNestedManyWithoutTeamInput
   payments?: Prisma.PaymentCreateNestedManyWithoutTeamInput
   paymentLinks?: Prisma.PaymentLinkCreateNestedManyWithoutTeamInput
@@ -6846,6 +7208,7 @@ export type TeamUncheckedCreateWithoutRefundsInput = {
   catalogConfigs?: Prisma.CatalogConfigUncheckedCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateUncheckedCreateNestedManyWithoutTeamInput
   templateInstalls?: Prisma.TemplateInstallUncheckedCreateNestedManyWithoutTeamInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedCreateNestedManyWithoutTeamInput
   invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutTeamInput
   payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutTeamInput
   paymentLinks?: Prisma.PaymentLinkUncheckedCreateNestedManyWithoutTeamInput
@@ -6921,6 +7284,7 @@ export type TeamUpdateWithoutRefundsInput = {
   catalogConfigs?: Prisma.CatalogConfigUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUpdateManyWithoutTeamNestedInput
   templateInstalls?: Prisma.TemplateInstallUpdateManyWithoutTeamNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUpdateManyWithoutTeamNestedInput
   invoices?: Prisma.InvoiceUpdateManyWithoutTeamNestedInput
   payments?: Prisma.PaymentUpdateManyWithoutTeamNestedInput
   paymentLinks?: Prisma.PaymentLinkUpdateManyWithoutTeamNestedInput
@@ -6980,6 +7344,7 @@ export type TeamUncheckedUpdateWithoutRefundsInput = {
   catalogConfigs?: Prisma.CatalogConfigUncheckedUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUncheckedUpdateManyWithoutTeamNestedInput
   templateInstalls?: Prisma.TemplateInstallUncheckedUpdateManyWithoutTeamNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedUpdateManyWithoutTeamNestedInput
   invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutTeamNestedInput
   payments?: Prisma.PaymentUncheckedUpdateManyWithoutTeamNestedInput
   paymentLinks?: Prisma.PaymentLinkUncheckedUpdateManyWithoutTeamNestedInput
@@ -7039,6 +7404,7 @@ export type TeamCreateWithoutBillingRecoveryTasksInput = {
   catalogConfigs?: Prisma.CatalogConfigCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateCreateNestedManyWithoutTeamInput
   templateInstalls?: Prisma.TemplateInstallCreateNestedManyWithoutTeamInput
+  invoiceTemplates?: Prisma.InvoiceTemplateCreateNestedManyWithoutTeamInput
   invoices?: Prisma.InvoiceCreateNestedManyWithoutTeamInput
   payments?: Prisma.PaymentCreateNestedManyWithoutTeamInput
   paymentLinks?: Prisma.PaymentLinkCreateNestedManyWithoutTeamInput
@@ -7098,6 +7464,7 @@ export type TeamUncheckedCreateWithoutBillingRecoveryTasksInput = {
   catalogConfigs?: Prisma.CatalogConfigUncheckedCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateUncheckedCreateNestedManyWithoutTeamInput
   templateInstalls?: Prisma.TemplateInstallUncheckedCreateNestedManyWithoutTeamInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedCreateNestedManyWithoutTeamInput
   invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutTeamInput
   payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutTeamInput
   paymentLinks?: Prisma.PaymentLinkUncheckedCreateNestedManyWithoutTeamInput
@@ -7173,6 +7540,7 @@ export type TeamUpdateWithoutBillingRecoveryTasksInput = {
   catalogConfigs?: Prisma.CatalogConfigUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUpdateManyWithoutTeamNestedInput
   templateInstalls?: Prisma.TemplateInstallUpdateManyWithoutTeamNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUpdateManyWithoutTeamNestedInput
   invoices?: Prisma.InvoiceUpdateManyWithoutTeamNestedInput
   payments?: Prisma.PaymentUpdateManyWithoutTeamNestedInput
   paymentLinks?: Prisma.PaymentLinkUpdateManyWithoutTeamNestedInput
@@ -7232,6 +7600,7 @@ export type TeamUncheckedUpdateWithoutBillingRecoveryTasksInput = {
   catalogConfigs?: Prisma.CatalogConfigUncheckedUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUncheckedUpdateManyWithoutTeamNestedInput
   templateInstalls?: Prisma.TemplateInstallUncheckedUpdateManyWithoutTeamNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedUpdateManyWithoutTeamNestedInput
   invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutTeamNestedInput
   payments?: Prisma.PaymentUncheckedUpdateManyWithoutTeamNestedInput
   paymentLinks?: Prisma.PaymentLinkUncheckedUpdateManyWithoutTeamNestedInput
@@ -7291,6 +7660,7 @@ export type TeamCreateWithoutWebhookDeliveriesInput = {
   catalogConfigs?: Prisma.CatalogConfigCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateCreateNestedManyWithoutTeamInput
   templateInstalls?: Prisma.TemplateInstallCreateNestedManyWithoutTeamInput
+  invoiceTemplates?: Prisma.InvoiceTemplateCreateNestedManyWithoutTeamInput
   invoices?: Prisma.InvoiceCreateNestedManyWithoutTeamInput
   payments?: Prisma.PaymentCreateNestedManyWithoutTeamInput
   paymentLinks?: Prisma.PaymentLinkCreateNestedManyWithoutTeamInput
@@ -7350,6 +7720,7 @@ export type TeamUncheckedCreateWithoutWebhookDeliveriesInput = {
   catalogConfigs?: Prisma.CatalogConfigUncheckedCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateUncheckedCreateNestedManyWithoutTeamInput
   templateInstalls?: Prisma.TemplateInstallUncheckedCreateNestedManyWithoutTeamInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedCreateNestedManyWithoutTeamInput
   invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutTeamInput
   payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutTeamInput
   paymentLinks?: Prisma.PaymentLinkUncheckedCreateNestedManyWithoutTeamInput
@@ -7425,6 +7796,7 @@ export type TeamUpdateWithoutWebhookDeliveriesInput = {
   catalogConfigs?: Prisma.CatalogConfigUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUpdateManyWithoutTeamNestedInput
   templateInstalls?: Prisma.TemplateInstallUpdateManyWithoutTeamNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUpdateManyWithoutTeamNestedInput
   invoices?: Prisma.InvoiceUpdateManyWithoutTeamNestedInput
   payments?: Prisma.PaymentUpdateManyWithoutTeamNestedInput
   paymentLinks?: Prisma.PaymentLinkUpdateManyWithoutTeamNestedInput
@@ -7484,6 +7856,7 @@ export type TeamUncheckedUpdateWithoutWebhookDeliveriesInput = {
   catalogConfigs?: Prisma.CatalogConfigUncheckedUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUncheckedUpdateManyWithoutTeamNestedInput
   templateInstalls?: Prisma.TemplateInstallUncheckedUpdateManyWithoutTeamNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedUpdateManyWithoutTeamNestedInput
   invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutTeamNestedInput
   payments?: Prisma.PaymentUncheckedUpdateManyWithoutTeamNestedInput
   paymentLinks?: Prisma.PaymentLinkUncheckedUpdateManyWithoutTeamNestedInput
@@ -7543,6 +7916,7 @@ export type TeamCreateWithoutPlatformBillingProviderAccountInput = {
   catalogConfigs?: Prisma.CatalogConfigCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateCreateNestedManyWithoutTeamInput
   templateInstalls?: Prisma.TemplateInstallCreateNestedManyWithoutTeamInput
+  invoiceTemplates?: Prisma.InvoiceTemplateCreateNestedManyWithoutTeamInput
   invoices?: Prisma.InvoiceCreateNestedManyWithoutTeamInput
   payments?: Prisma.PaymentCreateNestedManyWithoutTeamInput
   paymentLinks?: Prisma.PaymentLinkCreateNestedManyWithoutTeamInput
@@ -7602,6 +7976,7 @@ export type TeamUncheckedCreateWithoutPlatformBillingProviderAccountInput = {
   catalogConfigs?: Prisma.CatalogConfigUncheckedCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateUncheckedCreateNestedManyWithoutTeamInput
   templateInstalls?: Prisma.TemplateInstallUncheckedCreateNestedManyWithoutTeamInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedCreateNestedManyWithoutTeamInput
   invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutTeamInput
   payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutTeamInput
   paymentLinks?: Prisma.PaymentLinkUncheckedCreateNestedManyWithoutTeamInput
@@ -7677,6 +8052,7 @@ export type TeamUpdateWithoutPlatformBillingProviderAccountInput = {
   catalogConfigs?: Prisma.CatalogConfigUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUpdateManyWithoutTeamNestedInput
   templateInstalls?: Prisma.TemplateInstallUpdateManyWithoutTeamNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUpdateManyWithoutTeamNestedInput
   invoices?: Prisma.InvoiceUpdateManyWithoutTeamNestedInput
   payments?: Prisma.PaymentUpdateManyWithoutTeamNestedInput
   paymentLinks?: Prisma.PaymentLinkUpdateManyWithoutTeamNestedInput
@@ -7736,6 +8112,7 @@ export type TeamUncheckedUpdateWithoutPlatformBillingProviderAccountInput = {
   catalogConfigs?: Prisma.CatalogConfigUncheckedUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUncheckedUpdateManyWithoutTeamNestedInput
   templateInstalls?: Prisma.TemplateInstallUncheckedUpdateManyWithoutTeamNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedUpdateManyWithoutTeamNestedInput
   invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutTeamNestedInput
   payments?: Prisma.PaymentUncheckedUpdateManyWithoutTeamNestedInput
   paymentLinks?: Prisma.PaymentLinkUncheckedUpdateManyWithoutTeamNestedInput
@@ -7795,6 +8172,7 @@ export type TeamCreateWithoutPlatformBillingWorkspaceCustomerInput = {
   catalogConfigs?: Prisma.CatalogConfigCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateCreateNestedManyWithoutTeamInput
   templateInstalls?: Prisma.TemplateInstallCreateNestedManyWithoutTeamInput
+  invoiceTemplates?: Prisma.InvoiceTemplateCreateNestedManyWithoutTeamInput
   invoices?: Prisma.InvoiceCreateNestedManyWithoutTeamInput
   payments?: Prisma.PaymentCreateNestedManyWithoutTeamInput
   paymentLinks?: Prisma.PaymentLinkCreateNestedManyWithoutTeamInput
@@ -7854,6 +8232,7 @@ export type TeamUncheckedCreateWithoutPlatformBillingWorkspaceCustomerInput = {
   catalogConfigs?: Prisma.CatalogConfigUncheckedCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateUncheckedCreateNestedManyWithoutTeamInput
   templateInstalls?: Prisma.TemplateInstallUncheckedCreateNestedManyWithoutTeamInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedCreateNestedManyWithoutTeamInput
   invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutTeamInput
   payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutTeamInput
   paymentLinks?: Prisma.PaymentLinkUncheckedCreateNestedManyWithoutTeamInput
@@ -7918,6 +8297,7 @@ export type TeamCreateWithoutPlatformBillingProviderCustomersInput = {
   catalogConfigs?: Prisma.CatalogConfigCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateCreateNestedManyWithoutTeamInput
   templateInstalls?: Prisma.TemplateInstallCreateNestedManyWithoutTeamInput
+  invoiceTemplates?: Prisma.InvoiceTemplateCreateNestedManyWithoutTeamInput
   invoices?: Prisma.InvoiceCreateNestedManyWithoutTeamInput
   payments?: Prisma.PaymentCreateNestedManyWithoutTeamInput
   paymentLinks?: Prisma.PaymentLinkCreateNestedManyWithoutTeamInput
@@ -7977,6 +8357,7 @@ export type TeamUncheckedCreateWithoutPlatformBillingProviderCustomersInput = {
   catalogConfigs?: Prisma.CatalogConfigUncheckedCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateUncheckedCreateNestedManyWithoutTeamInput
   templateInstalls?: Prisma.TemplateInstallUncheckedCreateNestedManyWithoutTeamInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedCreateNestedManyWithoutTeamInput
   invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutTeamInput
   payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutTeamInput
   paymentLinks?: Prisma.PaymentLinkUncheckedCreateNestedManyWithoutTeamInput
@@ -8052,6 +8433,7 @@ export type TeamUpdateWithoutPlatformBillingWorkspaceCustomerInput = {
   catalogConfigs?: Prisma.CatalogConfigUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUpdateManyWithoutTeamNestedInput
   templateInstalls?: Prisma.TemplateInstallUpdateManyWithoutTeamNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUpdateManyWithoutTeamNestedInput
   invoices?: Prisma.InvoiceUpdateManyWithoutTeamNestedInput
   payments?: Prisma.PaymentUpdateManyWithoutTeamNestedInput
   paymentLinks?: Prisma.PaymentLinkUpdateManyWithoutTeamNestedInput
@@ -8111,6 +8493,7 @@ export type TeamUncheckedUpdateWithoutPlatformBillingWorkspaceCustomerInput = {
   catalogConfigs?: Prisma.CatalogConfigUncheckedUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUncheckedUpdateManyWithoutTeamNestedInput
   templateInstalls?: Prisma.TemplateInstallUncheckedUpdateManyWithoutTeamNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedUpdateManyWithoutTeamNestedInput
   invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutTeamNestedInput
   payments?: Prisma.PaymentUncheckedUpdateManyWithoutTeamNestedInput
   paymentLinks?: Prisma.PaymentLinkUncheckedUpdateManyWithoutTeamNestedInput
@@ -8181,6 +8564,7 @@ export type TeamUpdateWithoutPlatformBillingProviderCustomersInput = {
   catalogConfigs?: Prisma.CatalogConfigUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUpdateManyWithoutTeamNestedInput
   templateInstalls?: Prisma.TemplateInstallUpdateManyWithoutTeamNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUpdateManyWithoutTeamNestedInput
   invoices?: Prisma.InvoiceUpdateManyWithoutTeamNestedInput
   payments?: Prisma.PaymentUpdateManyWithoutTeamNestedInput
   paymentLinks?: Prisma.PaymentLinkUpdateManyWithoutTeamNestedInput
@@ -8240,6 +8624,7 @@ export type TeamUncheckedUpdateWithoutPlatformBillingProviderCustomersInput = {
   catalogConfigs?: Prisma.CatalogConfigUncheckedUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUncheckedUpdateManyWithoutTeamNestedInput
   templateInstalls?: Prisma.TemplateInstallUncheckedUpdateManyWithoutTeamNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedUpdateManyWithoutTeamNestedInput
   invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutTeamNestedInput
   payments?: Prisma.PaymentUncheckedUpdateManyWithoutTeamNestedInput
   paymentLinks?: Prisma.PaymentLinkUncheckedUpdateManyWithoutTeamNestedInput
@@ -8299,6 +8684,7 @@ export type TeamCreateWithoutGasSpendsInput = {
   catalogConfigs?: Prisma.CatalogConfigCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateCreateNestedManyWithoutTeamInput
   templateInstalls?: Prisma.TemplateInstallCreateNestedManyWithoutTeamInput
+  invoiceTemplates?: Prisma.InvoiceTemplateCreateNestedManyWithoutTeamInput
   invoices?: Prisma.InvoiceCreateNestedManyWithoutTeamInput
   payments?: Prisma.PaymentCreateNestedManyWithoutTeamInput
   paymentLinks?: Prisma.PaymentLinkCreateNestedManyWithoutTeamInput
@@ -8358,6 +8744,7 @@ export type TeamUncheckedCreateWithoutGasSpendsInput = {
   catalogConfigs?: Prisma.CatalogConfigUncheckedCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateUncheckedCreateNestedManyWithoutTeamInput
   templateInstalls?: Prisma.TemplateInstallUncheckedCreateNestedManyWithoutTeamInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedCreateNestedManyWithoutTeamInput
   invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutTeamInput
   payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutTeamInput
   paymentLinks?: Prisma.PaymentLinkUncheckedCreateNestedManyWithoutTeamInput
@@ -8433,6 +8820,7 @@ export type TeamUpdateWithoutGasSpendsInput = {
   catalogConfigs?: Prisma.CatalogConfigUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUpdateManyWithoutTeamNestedInput
   templateInstalls?: Prisma.TemplateInstallUpdateManyWithoutTeamNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUpdateManyWithoutTeamNestedInput
   invoices?: Prisma.InvoiceUpdateManyWithoutTeamNestedInput
   payments?: Prisma.PaymentUpdateManyWithoutTeamNestedInput
   paymentLinks?: Prisma.PaymentLinkUpdateManyWithoutTeamNestedInput
@@ -8492,6 +8880,7 @@ export type TeamUncheckedUpdateWithoutGasSpendsInput = {
   catalogConfigs?: Prisma.CatalogConfigUncheckedUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUncheckedUpdateManyWithoutTeamNestedInput
   templateInstalls?: Prisma.TemplateInstallUncheckedUpdateManyWithoutTeamNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedUpdateManyWithoutTeamNestedInput
   invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutTeamNestedInput
   payments?: Prisma.PaymentUncheckedUpdateManyWithoutTeamNestedInput
   paymentLinks?: Prisma.PaymentLinkUncheckedUpdateManyWithoutTeamNestedInput
@@ -8551,6 +8940,7 @@ export type TeamCreateWithoutTierHistoryInput = {
   catalogConfigs?: Prisma.CatalogConfigCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateCreateNestedManyWithoutTeamInput
   templateInstalls?: Prisma.TemplateInstallCreateNestedManyWithoutTeamInput
+  invoiceTemplates?: Prisma.InvoiceTemplateCreateNestedManyWithoutTeamInput
   invoices?: Prisma.InvoiceCreateNestedManyWithoutTeamInput
   payments?: Prisma.PaymentCreateNestedManyWithoutTeamInput
   paymentLinks?: Prisma.PaymentLinkCreateNestedManyWithoutTeamInput
@@ -8610,6 +9000,7 @@ export type TeamUncheckedCreateWithoutTierHistoryInput = {
   catalogConfigs?: Prisma.CatalogConfigUncheckedCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateUncheckedCreateNestedManyWithoutTeamInput
   templateInstalls?: Prisma.TemplateInstallUncheckedCreateNestedManyWithoutTeamInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedCreateNestedManyWithoutTeamInput
   invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutTeamInput
   payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutTeamInput
   paymentLinks?: Prisma.PaymentLinkUncheckedCreateNestedManyWithoutTeamInput
@@ -8685,6 +9076,7 @@ export type TeamUpdateWithoutTierHistoryInput = {
   catalogConfigs?: Prisma.CatalogConfigUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUpdateManyWithoutTeamNestedInput
   templateInstalls?: Prisma.TemplateInstallUpdateManyWithoutTeamNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUpdateManyWithoutTeamNestedInput
   invoices?: Prisma.InvoiceUpdateManyWithoutTeamNestedInput
   payments?: Prisma.PaymentUpdateManyWithoutTeamNestedInput
   paymentLinks?: Prisma.PaymentLinkUpdateManyWithoutTeamNestedInput
@@ -8744,6 +9136,7 @@ export type TeamUncheckedUpdateWithoutTierHistoryInput = {
   catalogConfigs?: Prisma.CatalogConfigUncheckedUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUncheckedUpdateManyWithoutTeamNestedInput
   templateInstalls?: Prisma.TemplateInstallUncheckedUpdateManyWithoutTeamNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedUpdateManyWithoutTeamNestedInput
   invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutTeamNestedInput
   payments?: Prisma.PaymentUncheckedUpdateManyWithoutTeamNestedInput
   paymentLinks?: Prisma.PaymentLinkUncheckedUpdateManyWithoutTeamNestedInput
@@ -8803,6 +9196,7 @@ export type TeamCreateWithoutSupportTicketsInput = {
   catalogConfigs?: Prisma.CatalogConfigCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateCreateNestedManyWithoutTeamInput
   templateInstalls?: Prisma.TemplateInstallCreateNestedManyWithoutTeamInput
+  invoiceTemplates?: Prisma.InvoiceTemplateCreateNestedManyWithoutTeamInput
   invoices?: Prisma.InvoiceCreateNestedManyWithoutTeamInput
   payments?: Prisma.PaymentCreateNestedManyWithoutTeamInput
   paymentLinks?: Prisma.PaymentLinkCreateNestedManyWithoutTeamInput
@@ -8862,6 +9256,7 @@ export type TeamUncheckedCreateWithoutSupportTicketsInput = {
   catalogConfigs?: Prisma.CatalogConfigUncheckedCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateUncheckedCreateNestedManyWithoutTeamInput
   templateInstalls?: Prisma.TemplateInstallUncheckedCreateNestedManyWithoutTeamInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedCreateNestedManyWithoutTeamInput
   invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutTeamInput
   payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutTeamInput
   paymentLinks?: Prisma.PaymentLinkUncheckedCreateNestedManyWithoutTeamInput
@@ -8937,6 +9332,7 @@ export type TeamUpdateWithoutSupportTicketsInput = {
   catalogConfigs?: Prisma.CatalogConfigUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUpdateManyWithoutTeamNestedInput
   templateInstalls?: Prisma.TemplateInstallUpdateManyWithoutTeamNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUpdateManyWithoutTeamNestedInput
   invoices?: Prisma.InvoiceUpdateManyWithoutTeamNestedInput
   payments?: Prisma.PaymentUpdateManyWithoutTeamNestedInput
   paymentLinks?: Prisma.PaymentLinkUpdateManyWithoutTeamNestedInput
@@ -8996,6 +9392,7 @@ export type TeamUncheckedUpdateWithoutSupportTicketsInput = {
   catalogConfigs?: Prisma.CatalogConfigUncheckedUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUncheckedUpdateManyWithoutTeamNestedInput
   templateInstalls?: Prisma.TemplateInstallUncheckedUpdateManyWithoutTeamNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedUpdateManyWithoutTeamNestedInput
   invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutTeamNestedInput
   payments?: Prisma.PaymentUncheckedUpdateManyWithoutTeamNestedInput
   paymentLinks?: Prisma.PaymentLinkUncheckedUpdateManyWithoutTeamNestedInput
@@ -9055,6 +9452,7 @@ export type TeamCreateWithoutArcenCompaniesInput = {
   catalogConfigs?: Prisma.CatalogConfigCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateCreateNestedManyWithoutTeamInput
   templateInstalls?: Prisma.TemplateInstallCreateNestedManyWithoutTeamInput
+  invoiceTemplates?: Prisma.InvoiceTemplateCreateNestedManyWithoutTeamInput
   invoices?: Prisma.InvoiceCreateNestedManyWithoutTeamInput
   payments?: Prisma.PaymentCreateNestedManyWithoutTeamInput
   paymentLinks?: Prisma.PaymentLinkCreateNestedManyWithoutTeamInput
@@ -9114,6 +9512,7 @@ export type TeamUncheckedCreateWithoutArcenCompaniesInput = {
   catalogConfigs?: Prisma.CatalogConfigUncheckedCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateUncheckedCreateNestedManyWithoutTeamInput
   templateInstalls?: Prisma.TemplateInstallUncheckedCreateNestedManyWithoutTeamInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedCreateNestedManyWithoutTeamInput
   invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutTeamInput
   payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutTeamInput
   paymentLinks?: Prisma.PaymentLinkUncheckedCreateNestedManyWithoutTeamInput
@@ -9189,6 +9588,7 @@ export type TeamUpdateWithoutArcenCompaniesInput = {
   catalogConfigs?: Prisma.CatalogConfigUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUpdateManyWithoutTeamNestedInput
   templateInstalls?: Prisma.TemplateInstallUpdateManyWithoutTeamNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUpdateManyWithoutTeamNestedInput
   invoices?: Prisma.InvoiceUpdateManyWithoutTeamNestedInput
   payments?: Prisma.PaymentUpdateManyWithoutTeamNestedInput
   paymentLinks?: Prisma.PaymentLinkUpdateManyWithoutTeamNestedInput
@@ -9248,6 +9648,7 @@ export type TeamUncheckedUpdateWithoutArcenCompaniesInput = {
   catalogConfigs?: Prisma.CatalogConfigUncheckedUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUncheckedUpdateManyWithoutTeamNestedInput
   templateInstalls?: Prisma.TemplateInstallUncheckedUpdateManyWithoutTeamNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedUpdateManyWithoutTeamNestedInput
   invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutTeamNestedInput
   payments?: Prisma.PaymentUncheckedUpdateManyWithoutTeamNestedInput
   paymentLinks?: Prisma.PaymentLinkUncheckedUpdateManyWithoutTeamNestedInput
@@ -9307,6 +9708,7 @@ export type TeamCreateWithoutAddOnGrantsInput = {
   catalogConfigs?: Prisma.CatalogConfigCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateCreateNestedManyWithoutTeamInput
   templateInstalls?: Prisma.TemplateInstallCreateNestedManyWithoutTeamInput
+  invoiceTemplates?: Prisma.InvoiceTemplateCreateNestedManyWithoutTeamInput
   invoices?: Prisma.InvoiceCreateNestedManyWithoutTeamInput
   payments?: Prisma.PaymentCreateNestedManyWithoutTeamInput
   paymentLinks?: Prisma.PaymentLinkCreateNestedManyWithoutTeamInput
@@ -9366,6 +9768,7 @@ export type TeamUncheckedCreateWithoutAddOnGrantsInput = {
   catalogConfigs?: Prisma.CatalogConfigUncheckedCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateUncheckedCreateNestedManyWithoutTeamInput
   templateInstalls?: Prisma.TemplateInstallUncheckedCreateNestedManyWithoutTeamInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedCreateNestedManyWithoutTeamInput
   invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutTeamInput
   payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutTeamInput
   paymentLinks?: Prisma.PaymentLinkUncheckedCreateNestedManyWithoutTeamInput
@@ -9441,6 +9844,7 @@ export type TeamUpdateWithoutAddOnGrantsInput = {
   catalogConfigs?: Prisma.CatalogConfigUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUpdateManyWithoutTeamNestedInput
   templateInstalls?: Prisma.TemplateInstallUpdateManyWithoutTeamNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUpdateManyWithoutTeamNestedInput
   invoices?: Prisma.InvoiceUpdateManyWithoutTeamNestedInput
   payments?: Prisma.PaymentUpdateManyWithoutTeamNestedInput
   paymentLinks?: Prisma.PaymentLinkUpdateManyWithoutTeamNestedInput
@@ -9500,6 +9904,7 @@ export type TeamUncheckedUpdateWithoutAddOnGrantsInput = {
   catalogConfigs?: Prisma.CatalogConfigUncheckedUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUncheckedUpdateManyWithoutTeamNestedInput
   templateInstalls?: Prisma.TemplateInstallUncheckedUpdateManyWithoutTeamNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedUpdateManyWithoutTeamNestedInput
   invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutTeamNestedInput
   payments?: Prisma.PaymentUncheckedUpdateManyWithoutTeamNestedInput
   paymentLinks?: Prisma.PaymentLinkUncheckedUpdateManyWithoutTeamNestedInput
@@ -9559,6 +9964,7 @@ export type TeamCreateWithoutCreditGrantsInput = {
   catalogConfigs?: Prisma.CatalogConfigCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateCreateNestedManyWithoutTeamInput
   templateInstalls?: Prisma.TemplateInstallCreateNestedManyWithoutTeamInput
+  invoiceTemplates?: Prisma.InvoiceTemplateCreateNestedManyWithoutTeamInput
   invoices?: Prisma.InvoiceCreateNestedManyWithoutTeamInput
   payments?: Prisma.PaymentCreateNestedManyWithoutTeamInput
   paymentLinks?: Prisma.PaymentLinkCreateNestedManyWithoutTeamInput
@@ -9618,6 +10024,7 @@ export type TeamUncheckedCreateWithoutCreditGrantsInput = {
   catalogConfigs?: Prisma.CatalogConfigUncheckedCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateUncheckedCreateNestedManyWithoutTeamInput
   templateInstalls?: Prisma.TemplateInstallUncheckedCreateNestedManyWithoutTeamInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedCreateNestedManyWithoutTeamInput
   invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutTeamInput
   payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutTeamInput
   paymentLinks?: Prisma.PaymentLinkUncheckedCreateNestedManyWithoutTeamInput
@@ -9693,6 +10100,7 @@ export type TeamUpdateWithoutCreditGrantsInput = {
   catalogConfigs?: Prisma.CatalogConfigUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUpdateManyWithoutTeamNestedInput
   templateInstalls?: Prisma.TemplateInstallUpdateManyWithoutTeamNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUpdateManyWithoutTeamNestedInput
   invoices?: Prisma.InvoiceUpdateManyWithoutTeamNestedInput
   payments?: Prisma.PaymentUpdateManyWithoutTeamNestedInput
   paymentLinks?: Prisma.PaymentLinkUpdateManyWithoutTeamNestedInput
@@ -9752,6 +10160,7 @@ export type TeamUncheckedUpdateWithoutCreditGrantsInput = {
   catalogConfigs?: Prisma.CatalogConfigUncheckedUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUncheckedUpdateManyWithoutTeamNestedInput
   templateInstalls?: Prisma.TemplateInstallUncheckedUpdateManyWithoutTeamNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedUpdateManyWithoutTeamNestedInput
   invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutTeamNestedInput
   payments?: Prisma.PaymentUncheckedUpdateManyWithoutTeamNestedInput
   paymentLinks?: Prisma.PaymentLinkUncheckedUpdateManyWithoutTeamNestedInput
@@ -9810,6 +10219,7 @@ export type TeamCreateWithoutCreditLedgerEntriesInput = {
   catalogConfigs?: Prisma.CatalogConfigCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateCreateNestedManyWithoutTeamInput
   templateInstalls?: Prisma.TemplateInstallCreateNestedManyWithoutTeamInput
+  invoiceTemplates?: Prisma.InvoiceTemplateCreateNestedManyWithoutTeamInput
   invoices?: Prisma.InvoiceCreateNestedManyWithoutTeamInput
   payments?: Prisma.PaymentCreateNestedManyWithoutTeamInput
   paymentLinks?: Prisma.PaymentLinkCreateNestedManyWithoutTeamInput
@@ -9869,6 +10279,7 @@ export type TeamUncheckedCreateWithoutCreditLedgerEntriesInput = {
   catalogConfigs?: Prisma.CatalogConfigUncheckedCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateUncheckedCreateNestedManyWithoutTeamInput
   templateInstalls?: Prisma.TemplateInstallUncheckedCreateNestedManyWithoutTeamInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedCreateNestedManyWithoutTeamInput
   invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutTeamInput
   payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutTeamInput
   paymentLinks?: Prisma.PaymentLinkUncheckedCreateNestedManyWithoutTeamInput
@@ -9944,6 +10355,7 @@ export type TeamUpdateWithoutCreditLedgerEntriesInput = {
   catalogConfigs?: Prisma.CatalogConfigUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUpdateManyWithoutTeamNestedInput
   templateInstalls?: Prisma.TemplateInstallUpdateManyWithoutTeamNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUpdateManyWithoutTeamNestedInput
   invoices?: Prisma.InvoiceUpdateManyWithoutTeamNestedInput
   payments?: Prisma.PaymentUpdateManyWithoutTeamNestedInput
   paymentLinks?: Prisma.PaymentLinkUpdateManyWithoutTeamNestedInput
@@ -10003,6 +10415,7 @@ export type TeamUncheckedUpdateWithoutCreditLedgerEntriesInput = {
   catalogConfigs?: Prisma.CatalogConfigUncheckedUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUncheckedUpdateManyWithoutTeamNestedInput
   templateInstalls?: Prisma.TemplateInstallUncheckedUpdateManyWithoutTeamNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedUpdateManyWithoutTeamNestedInput
   invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutTeamNestedInput
   payments?: Prisma.PaymentUncheckedUpdateManyWithoutTeamNestedInput
   paymentLinks?: Prisma.PaymentLinkUncheckedUpdateManyWithoutTeamNestedInput
@@ -10063,6 +10476,7 @@ export type TeamCreateWithoutPaymentLinksInput = {
   catalogConfigs?: Prisma.CatalogConfigCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateCreateNestedManyWithoutTeamInput
   templateInstalls?: Prisma.TemplateInstallCreateNestedManyWithoutTeamInput
+  invoiceTemplates?: Prisma.InvoiceTemplateCreateNestedManyWithoutTeamInput
   invoices?: Prisma.InvoiceCreateNestedManyWithoutTeamInput
   payments?: Prisma.PaymentCreateNestedManyWithoutTeamInput
   checkoutSessions?: Prisma.CheckoutSessionCreateNestedManyWithoutTeamInput
@@ -10122,6 +10536,7 @@ export type TeamUncheckedCreateWithoutPaymentLinksInput = {
   catalogConfigs?: Prisma.CatalogConfigUncheckedCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateUncheckedCreateNestedManyWithoutTeamInput
   templateInstalls?: Prisma.TemplateInstallUncheckedCreateNestedManyWithoutTeamInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedCreateNestedManyWithoutTeamInput
   invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutTeamInput
   payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutTeamInput
   checkoutSessions?: Prisma.CheckoutSessionUncheckedCreateNestedManyWithoutTeamInput
@@ -10197,6 +10612,7 @@ export type TeamUpdateWithoutPaymentLinksInput = {
   catalogConfigs?: Prisma.CatalogConfigUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUpdateManyWithoutTeamNestedInput
   templateInstalls?: Prisma.TemplateInstallUpdateManyWithoutTeamNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUpdateManyWithoutTeamNestedInput
   invoices?: Prisma.InvoiceUpdateManyWithoutTeamNestedInput
   payments?: Prisma.PaymentUpdateManyWithoutTeamNestedInput
   checkoutSessions?: Prisma.CheckoutSessionUpdateManyWithoutTeamNestedInput
@@ -10256,6 +10672,7 @@ export type TeamUncheckedUpdateWithoutPaymentLinksInput = {
   catalogConfigs?: Prisma.CatalogConfigUncheckedUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUncheckedUpdateManyWithoutTeamNestedInput
   templateInstalls?: Prisma.TemplateInstallUncheckedUpdateManyWithoutTeamNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedUpdateManyWithoutTeamNestedInput
   invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutTeamNestedInput
   payments?: Prisma.PaymentUncheckedUpdateManyWithoutTeamNestedInput
   checkoutSessions?: Prisma.CheckoutSessionUncheckedUpdateManyWithoutTeamNestedInput
@@ -10315,6 +10732,7 @@ export type TeamCreateWithoutCheckoutSessionsInput = {
   catalogConfigs?: Prisma.CatalogConfigCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateCreateNestedManyWithoutTeamInput
   templateInstalls?: Prisma.TemplateInstallCreateNestedManyWithoutTeamInput
+  invoiceTemplates?: Prisma.InvoiceTemplateCreateNestedManyWithoutTeamInput
   invoices?: Prisma.InvoiceCreateNestedManyWithoutTeamInput
   payments?: Prisma.PaymentCreateNestedManyWithoutTeamInput
   paymentLinks?: Prisma.PaymentLinkCreateNestedManyWithoutTeamInput
@@ -10374,6 +10792,7 @@ export type TeamUncheckedCreateWithoutCheckoutSessionsInput = {
   catalogConfigs?: Prisma.CatalogConfigUncheckedCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateUncheckedCreateNestedManyWithoutTeamInput
   templateInstalls?: Prisma.TemplateInstallUncheckedCreateNestedManyWithoutTeamInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedCreateNestedManyWithoutTeamInput
   invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutTeamInput
   payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutTeamInput
   paymentLinks?: Prisma.PaymentLinkUncheckedCreateNestedManyWithoutTeamInput
@@ -10449,6 +10868,7 @@ export type TeamUpdateWithoutCheckoutSessionsInput = {
   catalogConfigs?: Prisma.CatalogConfigUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUpdateManyWithoutTeamNestedInput
   templateInstalls?: Prisma.TemplateInstallUpdateManyWithoutTeamNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUpdateManyWithoutTeamNestedInput
   invoices?: Prisma.InvoiceUpdateManyWithoutTeamNestedInput
   payments?: Prisma.PaymentUpdateManyWithoutTeamNestedInput
   paymentLinks?: Prisma.PaymentLinkUpdateManyWithoutTeamNestedInput
@@ -10508,6 +10928,7 @@ export type TeamUncheckedUpdateWithoutCheckoutSessionsInput = {
   catalogConfigs?: Prisma.CatalogConfigUncheckedUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUncheckedUpdateManyWithoutTeamNestedInput
   templateInstalls?: Prisma.TemplateInstallUncheckedUpdateManyWithoutTeamNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedUpdateManyWithoutTeamNestedInput
   invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutTeamNestedInput
   payments?: Prisma.PaymentUncheckedUpdateManyWithoutTeamNestedInput
   paymentLinks?: Prisma.PaymentLinkUncheckedUpdateManyWithoutTeamNestedInput
@@ -10567,6 +10988,7 @@ export type TeamCreateWithoutFeatureFlagsInput = {
   catalogConfigs?: Prisma.CatalogConfigCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateCreateNestedManyWithoutTeamInput
   templateInstalls?: Prisma.TemplateInstallCreateNestedManyWithoutTeamInput
+  invoiceTemplates?: Prisma.InvoiceTemplateCreateNestedManyWithoutTeamInput
   invoices?: Prisma.InvoiceCreateNestedManyWithoutTeamInput
   payments?: Prisma.PaymentCreateNestedManyWithoutTeamInput
   paymentLinks?: Prisma.PaymentLinkCreateNestedManyWithoutTeamInput
@@ -10626,6 +11048,7 @@ export type TeamUncheckedCreateWithoutFeatureFlagsInput = {
   catalogConfigs?: Prisma.CatalogConfigUncheckedCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateUncheckedCreateNestedManyWithoutTeamInput
   templateInstalls?: Prisma.TemplateInstallUncheckedCreateNestedManyWithoutTeamInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedCreateNestedManyWithoutTeamInput
   invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutTeamInput
   payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutTeamInput
   paymentLinks?: Prisma.PaymentLinkUncheckedCreateNestedManyWithoutTeamInput
@@ -10701,6 +11124,7 @@ export type TeamUpdateWithoutFeatureFlagsInput = {
   catalogConfigs?: Prisma.CatalogConfigUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUpdateManyWithoutTeamNestedInput
   templateInstalls?: Prisma.TemplateInstallUpdateManyWithoutTeamNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUpdateManyWithoutTeamNestedInput
   invoices?: Prisma.InvoiceUpdateManyWithoutTeamNestedInput
   payments?: Prisma.PaymentUpdateManyWithoutTeamNestedInput
   paymentLinks?: Prisma.PaymentLinkUpdateManyWithoutTeamNestedInput
@@ -10760,6 +11184,7 @@ export type TeamUncheckedUpdateWithoutFeatureFlagsInput = {
   catalogConfigs?: Prisma.CatalogConfigUncheckedUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUncheckedUpdateManyWithoutTeamNestedInput
   templateInstalls?: Prisma.TemplateInstallUncheckedUpdateManyWithoutTeamNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedUpdateManyWithoutTeamNestedInput
   invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutTeamNestedInput
   payments?: Prisma.PaymentUncheckedUpdateManyWithoutTeamNestedInput
   paymentLinks?: Prisma.PaymentLinkUncheckedUpdateManyWithoutTeamNestedInput
@@ -10819,6 +11244,7 @@ export type TeamCreateWithoutEmbedAccessTokensInput = {
   catalogConfigs?: Prisma.CatalogConfigCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateCreateNestedManyWithoutTeamInput
   templateInstalls?: Prisma.TemplateInstallCreateNestedManyWithoutTeamInput
+  invoiceTemplates?: Prisma.InvoiceTemplateCreateNestedManyWithoutTeamInput
   invoices?: Prisma.InvoiceCreateNestedManyWithoutTeamInput
   payments?: Prisma.PaymentCreateNestedManyWithoutTeamInput
   paymentLinks?: Prisma.PaymentLinkCreateNestedManyWithoutTeamInput
@@ -10878,6 +11304,7 @@ export type TeamUncheckedCreateWithoutEmbedAccessTokensInput = {
   catalogConfigs?: Prisma.CatalogConfigUncheckedCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateUncheckedCreateNestedManyWithoutTeamInput
   templateInstalls?: Prisma.TemplateInstallUncheckedCreateNestedManyWithoutTeamInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedCreateNestedManyWithoutTeamInput
   invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutTeamInput
   payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutTeamInput
   paymentLinks?: Prisma.PaymentLinkUncheckedCreateNestedManyWithoutTeamInput
@@ -10953,6 +11380,7 @@ export type TeamUpdateWithoutEmbedAccessTokensInput = {
   catalogConfigs?: Prisma.CatalogConfigUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUpdateManyWithoutTeamNestedInput
   templateInstalls?: Prisma.TemplateInstallUpdateManyWithoutTeamNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUpdateManyWithoutTeamNestedInput
   invoices?: Prisma.InvoiceUpdateManyWithoutTeamNestedInput
   payments?: Prisma.PaymentUpdateManyWithoutTeamNestedInput
   paymentLinks?: Prisma.PaymentLinkUpdateManyWithoutTeamNestedInput
@@ -11012,6 +11440,7 @@ export type TeamUncheckedUpdateWithoutEmbedAccessTokensInput = {
   catalogConfigs?: Prisma.CatalogConfigUncheckedUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUncheckedUpdateManyWithoutTeamNestedInput
   templateInstalls?: Prisma.TemplateInstallUncheckedUpdateManyWithoutTeamNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedUpdateManyWithoutTeamNestedInput
   invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutTeamNestedInput
   payments?: Prisma.PaymentUncheckedUpdateManyWithoutTeamNestedInput
   paymentLinks?: Prisma.PaymentLinkUncheckedUpdateManyWithoutTeamNestedInput
@@ -11071,6 +11500,7 @@ export type TeamCreateWithoutArcenApiKeysInput = {
   catalogConfigs?: Prisma.CatalogConfigCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateCreateNestedManyWithoutTeamInput
   templateInstalls?: Prisma.TemplateInstallCreateNestedManyWithoutTeamInput
+  invoiceTemplates?: Prisma.InvoiceTemplateCreateNestedManyWithoutTeamInput
   invoices?: Prisma.InvoiceCreateNestedManyWithoutTeamInput
   payments?: Prisma.PaymentCreateNestedManyWithoutTeamInput
   paymentLinks?: Prisma.PaymentLinkCreateNestedManyWithoutTeamInput
@@ -11130,6 +11560,7 @@ export type TeamUncheckedCreateWithoutArcenApiKeysInput = {
   catalogConfigs?: Prisma.CatalogConfigUncheckedCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateUncheckedCreateNestedManyWithoutTeamInput
   templateInstalls?: Prisma.TemplateInstallUncheckedCreateNestedManyWithoutTeamInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedCreateNestedManyWithoutTeamInput
   invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutTeamInput
   payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutTeamInput
   paymentLinks?: Prisma.PaymentLinkUncheckedCreateNestedManyWithoutTeamInput
@@ -11205,6 +11636,7 @@ export type TeamUpdateWithoutArcenApiKeysInput = {
   catalogConfigs?: Prisma.CatalogConfigUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUpdateManyWithoutTeamNestedInput
   templateInstalls?: Prisma.TemplateInstallUpdateManyWithoutTeamNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUpdateManyWithoutTeamNestedInput
   invoices?: Prisma.InvoiceUpdateManyWithoutTeamNestedInput
   payments?: Prisma.PaymentUpdateManyWithoutTeamNestedInput
   paymentLinks?: Prisma.PaymentLinkUpdateManyWithoutTeamNestedInput
@@ -11264,6 +11696,7 @@ export type TeamUncheckedUpdateWithoutArcenApiKeysInput = {
   catalogConfigs?: Prisma.CatalogConfigUncheckedUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUncheckedUpdateManyWithoutTeamNestedInput
   templateInstalls?: Prisma.TemplateInstallUncheckedUpdateManyWithoutTeamNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedUpdateManyWithoutTeamNestedInput
   invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutTeamNestedInput
   payments?: Prisma.PaymentUncheckedUpdateManyWithoutTeamNestedInput
   paymentLinks?: Prisma.PaymentLinkUncheckedUpdateManyWithoutTeamNestedInput
@@ -11323,6 +11756,7 @@ export type TeamCreateWithoutEmbedComponentsInput = {
   catalogConfigs?: Prisma.CatalogConfigCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateCreateNestedManyWithoutTeamInput
   templateInstalls?: Prisma.TemplateInstallCreateNestedManyWithoutTeamInput
+  invoiceTemplates?: Prisma.InvoiceTemplateCreateNestedManyWithoutTeamInput
   invoices?: Prisma.InvoiceCreateNestedManyWithoutTeamInput
   payments?: Prisma.PaymentCreateNestedManyWithoutTeamInput
   paymentLinks?: Prisma.PaymentLinkCreateNestedManyWithoutTeamInput
@@ -11382,6 +11816,7 @@ export type TeamUncheckedCreateWithoutEmbedComponentsInput = {
   catalogConfigs?: Prisma.CatalogConfigUncheckedCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateUncheckedCreateNestedManyWithoutTeamInput
   templateInstalls?: Prisma.TemplateInstallUncheckedCreateNestedManyWithoutTeamInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedCreateNestedManyWithoutTeamInput
   invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutTeamInput
   payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutTeamInput
   paymentLinks?: Prisma.PaymentLinkUncheckedCreateNestedManyWithoutTeamInput
@@ -11457,6 +11892,7 @@ export type TeamUpdateWithoutEmbedComponentsInput = {
   catalogConfigs?: Prisma.CatalogConfigUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUpdateManyWithoutTeamNestedInput
   templateInstalls?: Prisma.TemplateInstallUpdateManyWithoutTeamNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUpdateManyWithoutTeamNestedInput
   invoices?: Prisma.InvoiceUpdateManyWithoutTeamNestedInput
   payments?: Prisma.PaymentUpdateManyWithoutTeamNestedInput
   paymentLinks?: Prisma.PaymentLinkUpdateManyWithoutTeamNestedInput
@@ -11516,6 +11952,7 @@ export type TeamUncheckedUpdateWithoutEmbedComponentsInput = {
   catalogConfigs?: Prisma.CatalogConfigUncheckedUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUncheckedUpdateManyWithoutTeamNestedInput
   templateInstalls?: Prisma.TemplateInstallUncheckedUpdateManyWithoutTeamNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedUpdateManyWithoutTeamNestedInput
   invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutTeamNestedInput
   payments?: Prisma.PaymentUncheckedUpdateManyWithoutTeamNestedInput
   paymentLinks?: Prisma.PaymentLinkUncheckedUpdateManyWithoutTeamNestedInput
@@ -11575,6 +12012,7 @@ export type TeamCreateWithoutAgentConfigInput = {
   catalogConfigs?: Prisma.CatalogConfigCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateCreateNestedManyWithoutTeamInput
   templateInstalls?: Prisma.TemplateInstallCreateNestedManyWithoutTeamInput
+  invoiceTemplates?: Prisma.InvoiceTemplateCreateNestedManyWithoutTeamInput
   invoices?: Prisma.InvoiceCreateNestedManyWithoutTeamInput
   payments?: Prisma.PaymentCreateNestedManyWithoutTeamInput
   paymentLinks?: Prisma.PaymentLinkCreateNestedManyWithoutTeamInput
@@ -11634,6 +12072,7 @@ export type TeamUncheckedCreateWithoutAgentConfigInput = {
   catalogConfigs?: Prisma.CatalogConfigUncheckedCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateUncheckedCreateNestedManyWithoutTeamInput
   templateInstalls?: Prisma.TemplateInstallUncheckedCreateNestedManyWithoutTeamInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedCreateNestedManyWithoutTeamInput
   invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutTeamInput
   payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutTeamInput
   paymentLinks?: Prisma.PaymentLinkUncheckedCreateNestedManyWithoutTeamInput
@@ -11709,6 +12148,7 @@ export type TeamUpdateWithoutAgentConfigInput = {
   catalogConfigs?: Prisma.CatalogConfigUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUpdateManyWithoutTeamNestedInput
   templateInstalls?: Prisma.TemplateInstallUpdateManyWithoutTeamNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUpdateManyWithoutTeamNestedInput
   invoices?: Prisma.InvoiceUpdateManyWithoutTeamNestedInput
   payments?: Prisma.PaymentUpdateManyWithoutTeamNestedInput
   paymentLinks?: Prisma.PaymentLinkUpdateManyWithoutTeamNestedInput
@@ -11768,6 +12208,7 @@ export type TeamUncheckedUpdateWithoutAgentConfigInput = {
   catalogConfigs?: Prisma.CatalogConfigUncheckedUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUncheckedUpdateManyWithoutTeamNestedInput
   templateInstalls?: Prisma.TemplateInstallUncheckedUpdateManyWithoutTeamNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedUpdateManyWithoutTeamNestedInput
   invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutTeamNestedInput
   payments?: Prisma.PaymentUncheckedUpdateManyWithoutTeamNestedInput
   paymentLinks?: Prisma.PaymentLinkUncheckedUpdateManyWithoutTeamNestedInput
@@ -11827,6 +12268,7 @@ export type TeamCreateWithoutDispatchRequestsInput = {
   catalogConfigs?: Prisma.CatalogConfigCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateCreateNestedManyWithoutTeamInput
   templateInstalls?: Prisma.TemplateInstallCreateNestedManyWithoutTeamInput
+  invoiceTemplates?: Prisma.InvoiceTemplateCreateNestedManyWithoutTeamInput
   invoices?: Prisma.InvoiceCreateNestedManyWithoutTeamInput
   payments?: Prisma.PaymentCreateNestedManyWithoutTeamInput
   paymentLinks?: Prisma.PaymentLinkCreateNestedManyWithoutTeamInput
@@ -11886,6 +12328,7 @@ export type TeamUncheckedCreateWithoutDispatchRequestsInput = {
   catalogConfigs?: Prisma.CatalogConfigUncheckedCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateUncheckedCreateNestedManyWithoutTeamInput
   templateInstalls?: Prisma.TemplateInstallUncheckedCreateNestedManyWithoutTeamInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedCreateNestedManyWithoutTeamInput
   invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutTeamInput
   payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutTeamInput
   paymentLinks?: Prisma.PaymentLinkUncheckedCreateNestedManyWithoutTeamInput
@@ -11961,6 +12404,7 @@ export type TeamUpdateWithoutDispatchRequestsInput = {
   catalogConfigs?: Prisma.CatalogConfigUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUpdateManyWithoutTeamNestedInput
   templateInstalls?: Prisma.TemplateInstallUpdateManyWithoutTeamNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUpdateManyWithoutTeamNestedInput
   invoices?: Prisma.InvoiceUpdateManyWithoutTeamNestedInput
   payments?: Prisma.PaymentUpdateManyWithoutTeamNestedInput
   paymentLinks?: Prisma.PaymentLinkUpdateManyWithoutTeamNestedInput
@@ -12020,6 +12464,7 @@ export type TeamUncheckedUpdateWithoutDispatchRequestsInput = {
   catalogConfigs?: Prisma.CatalogConfigUncheckedUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUncheckedUpdateManyWithoutTeamNestedInput
   templateInstalls?: Prisma.TemplateInstallUncheckedUpdateManyWithoutTeamNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedUpdateManyWithoutTeamNestedInput
   invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutTeamNestedInput
   payments?: Prisma.PaymentUncheckedUpdateManyWithoutTeamNestedInput
   paymentLinks?: Prisma.PaymentLinkUncheckedUpdateManyWithoutTeamNestedInput
@@ -12078,6 +12523,7 @@ export type TeamCreateWithoutActivationKeyInput = {
   catalogConfigs?: Prisma.CatalogConfigCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateCreateNestedManyWithoutTeamInput
   templateInstalls?: Prisma.TemplateInstallCreateNestedManyWithoutTeamInput
+  invoiceTemplates?: Prisma.InvoiceTemplateCreateNestedManyWithoutTeamInput
   invoices?: Prisma.InvoiceCreateNestedManyWithoutTeamInput
   payments?: Prisma.PaymentCreateNestedManyWithoutTeamInput
   paymentLinks?: Prisma.PaymentLinkCreateNestedManyWithoutTeamInput
@@ -12137,6 +12583,7 @@ export type TeamUncheckedCreateWithoutActivationKeyInput = {
   catalogConfigs?: Prisma.CatalogConfigUncheckedCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateUncheckedCreateNestedManyWithoutTeamInput
   templateInstalls?: Prisma.TemplateInstallUncheckedCreateNestedManyWithoutTeamInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedCreateNestedManyWithoutTeamInput
   invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutTeamInput
   payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutTeamInput
   paymentLinks?: Prisma.PaymentLinkUncheckedCreateNestedManyWithoutTeamInput
@@ -12242,6 +12689,7 @@ export type TeamCreateWithoutActivationRedemptionsInput = {
   catalogConfigs?: Prisma.CatalogConfigCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateCreateNestedManyWithoutTeamInput
   templateInstalls?: Prisma.TemplateInstallCreateNestedManyWithoutTeamInput
+  invoiceTemplates?: Prisma.InvoiceTemplateCreateNestedManyWithoutTeamInput
   invoices?: Prisma.InvoiceCreateNestedManyWithoutTeamInput
   payments?: Prisma.PaymentCreateNestedManyWithoutTeamInput
   paymentLinks?: Prisma.PaymentLinkCreateNestedManyWithoutTeamInput
@@ -12301,6 +12749,7 @@ export type TeamUncheckedCreateWithoutActivationRedemptionsInput = {
   catalogConfigs?: Prisma.CatalogConfigUncheckedCreateNestedManyWithoutTeamInput
   billingTemplates?: Prisma.BillingTemplateUncheckedCreateNestedManyWithoutTeamInput
   templateInstalls?: Prisma.TemplateInstallUncheckedCreateNestedManyWithoutTeamInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedCreateNestedManyWithoutTeamInput
   invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutTeamInput
   payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutTeamInput
   paymentLinks?: Prisma.PaymentLinkUncheckedCreateNestedManyWithoutTeamInput
@@ -12376,6 +12825,7 @@ export type TeamUpdateWithoutActivationRedemptionsInput = {
   catalogConfigs?: Prisma.CatalogConfigUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUpdateManyWithoutTeamNestedInput
   templateInstalls?: Prisma.TemplateInstallUpdateManyWithoutTeamNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUpdateManyWithoutTeamNestedInput
   invoices?: Prisma.InvoiceUpdateManyWithoutTeamNestedInput
   payments?: Prisma.PaymentUpdateManyWithoutTeamNestedInput
   paymentLinks?: Prisma.PaymentLinkUpdateManyWithoutTeamNestedInput
@@ -12435,6 +12885,7 @@ export type TeamUncheckedUpdateWithoutActivationRedemptionsInput = {
   catalogConfigs?: Prisma.CatalogConfigUncheckedUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUncheckedUpdateManyWithoutTeamNestedInput
   templateInstalls?: Prisma.TemplateInstallUncheckedUpdateManyWithoutTeamNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedUpdateManyWithoutTeamNestedInput
   invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutTeamNestedInput
   payments?: Prisma.PaymentUncheckedUpdateManyWithoutTeamNestedInput
   paymentLinks?: Prisma.PaymentLinkUncheckedUpdateManyWithoutTeamNestedInput
@@ -12510,6 +12961,7 @@ export type TeamUpdateWithoutActivationKeyInput = {
   catalogConfigs?: Prisma.CatalogConfigUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUpdateManyWithoutTeamNestedInput
   templateInstalls?: Prisma.TemplateInstallUpdateManyWithoutTeamNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUpdateManyWithoutTeamNestedInput
   invoices?: Prisma.InvoiceUpdateManyWithoutTeamNestedInput
   payments?: Prisma.PaymentUpdateManyWithoutTeamNestedInput
   paymentLinks?: Prisma.PaymentLinkUpdateManyWithoutTeamNestedInput
@@ -12569,6 +13021,7 @@ export type TeamUncheckedUpdateWithoutActivationKeyInput = {
   catalogConfigs?: Prisma.CatalogConfigUncheckedUpdateManyWithoutTeamNestedInput
   billingTemplates?: Prisma.BillingTemplateUncheckedUpdateManyWithoutTeamNestedInput
   templateInstalls?: Prisma.TemplateInstallUncheckedUpdateManyWithoutTeamNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedUpdateManyWithoutTeamNestedInput
   invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutTeamNestedInput
   payments?: Prisma.PaymentUncheckedUpdateManyWithoutTeamNestedInput
   paymentLinks?: Prisma.PaymentLinkUncheckedUpdateManyWithoutTeamNestedInput
@@ -12636,6 +13089,7 @@ export type TeamCountOutputType = {
   catalogConfigs: number
   billingTemplates: number
   templateInstalls: number
+  invoiceTemplates: number
   invoices: number
   payments: number
   paymentLinks: number
@@ -12679,6 +13133,7 @@ export type TeamCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.I
   catalogConfigs?: boolean | TeamCountOutputTypeCountCatalogConfigsArgs
   billingTemplates?: boolean | TeamCountOutputTypeCountBillingTemplatesArgs
   templateInstalls?: boolean | TeamCountOutputTypeCountTemplateInstallsArgs
+  invoiceTemplates?: boolean | TeamCountOutputTypeCountInvoiceTemplatesArgs
   invoices?: boolean | TeamCountOutputTypeCountInvoicesArgs
   payments?: boolean | TeamCountOutputTypeCountPaymentsArgs
   paymentLinks?: boolean | TeamCountOutputTypeCountPaymentLinksArgs
@@ -12807,6 +13262,13 @@ export type TeamCountOutputTypeCountBillingTemplatesArgs<ExtArgs extends runtime
  */
 export type TeamCountOutputTypeCountTemplateInstallsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   where?: Prisma.TemplateInstallWhereInput
+}
+
+/**
+ * TeamCountOutputType without action
+ */
+export type TeamCountOutputTypeCountInvoiceTemplatesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.InvoiceTemplateWhereInput
 }
 
 /**
@@ -13028,6 +13490,7 @@ export type TeamSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = r
   catalogConfigs?: boolean | Prisma.Team$catalogConfigsArgs<ExtArgs>
   billingTemplates?: boolean | Prisma.Team$billingTemplatesArgs<ExtArgs>
   templateInstalls?: boolean | Prisma.Team$templateInstallsArgs<ExtArgs>
+  invoiceTemplates?: boolean | Prisma.Team$invoiceTemplatesArgs<ExtArgs>
   invoices?: boolean | Prisma.Team$invoicesArgs<ExtArgs>
   payments?: boolean | Prisma.Team$paymentsArgs<ExtArgs>
   paymentLinks?: boolean | Prisma.Team$paymentLinksArgs<ExtArgs>
@@ -13130,6 +13593,7 @@ export type TeamInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = 
   catalogConfigs?: boolean | Prisma.Team$catalogConfigsArgs<ExtArgs>
   billingTemplates?: boolean | Prisma.Team$billingTemplatesArgs<ExtArgs>
   templateInstalls?: boolean | Prisma.Team$templateInstallsArgs<ExtArgs>
+  invoiceTemplates?: boolean | Prisma.Team$invoiceTemplatesArgs<ExtArgs>
   invoices?: boolean | Prisma.Team$invoicesArgs<ExtArgs>
   payments?: boolean | Prisma.Team$paymentsArgs<ExtArgs>
   paymentLinks?: boolean | Prisma.Team$paymentLinksArgs<ExtArgs>
@@ -13186,6 +13650,7 @@ export type $TeamPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs =
     catalogConfigs: Prisma.$CatalogConfigPayload<ExtArgs>[]
     billingTemplates: Prisma.$BillingTemplatePayload<ExtArgs>[]
     templateInstalls: Prisma.$TemplateInstallPayload<ExtArgs>[]
+    invoiceTemplates: Prisma.$InvoiceTemplatePayload<ExtArgs>[]
     invoices: Prisma.$InvoicePayload<ExtArgs>[]
     payments: Prisma.$PaymentPayload<ExtArgs>[]
     paymentLinks: Prisma.$PaymentLinkPayload<ExtArgs>[]
@@ -13640,6 +14105,7 @@ export interface Prisma__TeamClient<T, Null = never, ExtArgs extends runtime.Typ
   catalogConfigs<T extends Prisma.Team$catalogConfigsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Team$catalogConfigsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$CatalogConfigPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   billingTemplates<T extends Prisma.Team$billingTemplatesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Team$billingTemplatesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$BillingTemplatePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   templateInstalls<T extends Prisma.Team$templateInstallsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Team$templateInstallsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$TemplateInstallPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  invoiceTemplates<T extends Prisma.Team$invoiceTemplatesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Team$invoiceTemplatesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$InvoiceTemplatePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   invoices<T extends Prisma.Team$invoicesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Team$invoicesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$InvoicePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   payments<T extends Prisma.Team$paymentsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Team$paymentsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$PaymentPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   paymentLinks<T extends Prisma.Team$paymentLinksArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Team$paymentLinksArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$PaymentLinkPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
@@ -14437,6 +14903,30 @@ export type Team$templateInstallsArgs<ExtArgs extends runtime.Types.Extensions.I
   take?: number
   skip?: number
   distinct?: Prisma.TemplateInstallScalarFieldEnum | Prisma.TemplateInstallScalarFieldEnum[]
+}
+
+/**
+ * Team.invoiceTemplates
+ */
+export type Team$invoiceTemplatesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the InvoiceTemplate
+   */
+  select?: Prisma.InvoiceTemplateSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the InvoiceTemplate
+   */
+  omit?: Prisma.InvoiceTemplateOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.InvoiceTemplateInclude<ExtArgs> | null
+  where?: Prisma.InvoiceTemplateWhereInput
+  orderBy?: Prisma.InvoiceTemplateOrderByWithRelationInput | Prisma.InvoiceTemplateOrderByWithRelationInput[]
+  cursor?: Prisma.InvoiceTemplateWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.InvoiceTemplateScalarFieldEnum | Prisma.InvoiceTemplateScalarFieldEnum[]
 }
 
 /**

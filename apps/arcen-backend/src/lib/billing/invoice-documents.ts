@@ -21,6 +21,8 @@ import {
   type LoadedInvoiceContext,
 } from "./invoice-context.js";
 import { toPrismaJson } from "../../utils/prisma-json.js";
+import { renderTemplateInvoicePdf } from "./invoice-builder/renderer.js";
+import { resolveTemplateConfigForTeam } from "./invoice-builder/template-store.js";
 
 function sanitizePathSegment(value: string): string {
   return value.replace(/[^a-zA-Z0-9_\-]/g, "_");
@@ -154,7 +156,7 @@ function renderWrappedLines(
   return lines.length > 0 ? lines : [text];
 }
 
-async function renderBillingDocumentPdf(input: {
+export async function renderLegacyBillingDocumentPdf(input: {
   kind: BillingDocumentKind;
   context: NonNullable<LoadedInvoiceContext>;
   receiptNumber?: string | null;
@@ -173,6 +175,11 @@ async function renderBillingDocumentPdf(input: {
       ? String(invoice.amountOutstanding)
       : String(invoice.total);
   const doc = await PDFDocument.create();
+  // Pin PDF metadata dates to the invoice issue date so regenerating the same
+  // invoice produces byte-identical output (idempotent document generation).
+  const docDate = invoice.issuedAt ?? new Date(0);
+  doc.setCreationDate(docDate);
+  doc.setModificationDate(docDate);
   const page = doc.addPage([595, 842]);
   const font = await doc.embedFont(StandardFonts.Helvetica);
   const boldFont = await doc.embedFont(StandardFonts.HelveticaBold);
@@ -426,6 +433,33 @@ async function renderBillingDocumentPdf(input: {
 
   return doc.save();
 }
+/**
+ * Public document renderer dispatcher.
+ *
+ *  1. If the invoice carries a frozen template snapshot → template renderer
+ *     (historical invoices never change after issuance).
+ *  2. Else if the team has an active invoice template → template renderer.
+ *  3. Else → the legacy hardcoded renderer, byte-identical to pre-builder
+ *     output (covered by golden snapshot tests).
+ */
+export async function renderBillingDocumentPdf(input: {
+  kind: BillingDocumentKind;
+  context: NonNullable<LoadedInvoiceContext>;
+  receiptNumber?: string | null;
+}): Promise<Uint8Array> {
+  const config = await resolveTemplateConfigForTeam({
+    teamId: input.context.invoice.teamId,
+    environmentId: input.context.invoice.environmentId ?? null,
+    templateId: input.context.invoice.templateId ?? null,
+    templateSnapshot: input.context.invoice.templateSnapshot ?? null,
+  });
+  if (config) {
+    return renderTemplateInvoicePdf(input, config);
+  }
+  return renderLegacyBillingDocumentPdf(input);
+}
+
+
 
 async function writeReceiptMetadata(
   context: NonNullable<LoadedInvoiceContext>,
