@@ -4,7 +4,7 @@ Instructions for AI coding assistants and developers working on the ArcenPay cod
 
 ## What ArcenPay Is
 
-ArcenPay is a **Web3 Entitlement Layer** built on the MEAP protocol + ZKVUB
+ArcenPay is a **Web3 Entitlement Layer** built on the ArcenPay Protocol + ZKVUB
 settlement. It is a **dashboard-managed billing platform** that combines
 on-chain subscriptions (Solidity on Base/Ethereum) with off-chain billing
 infrastructure (Prisma + PostgreSQL + Hono) bridged by a facilitator node.
@@ -76,7 +76,7 @@ arcenpay-v1/
 │   ├── shared-types/          # API envelope types (NO billing types — known gap)
 │   ├── sdk-react/             # Browser SDK (ArcenPayProvider, hooks, ArcenEmbed)
 │   ├── sdk-node/              # Server SDK (ArcenClient, x402Middleware)
-│   └── sdk-agent/             # Agent payment SDK (MEAPAgent, auto-payment fetch)
+│   └── sdk-agent/             # Agent payment SDK (ArcenAgent, auto-payment fetch)
 ├── circuits/                  # ZK proof circuits (Groth16, usage aggregation)
 ├── subgraph/                  # TheGraph indexing for SubscriptionRegistry events
 ├── docker-compose.yml         # PostgreSQL :5433 + Redis :6379
@@ -630,7 +630,7 @@ npm run test:launch      # Dashboard + facilitator
 | **BillingKeeper** | Facilitator component that scans SubscriptionRegistry for expiring subscriptions and executes renewals via AutopayModule. |
 | **Idempotency Key** | Unique key per operation ensuring at-most-once semantics across retries. Multiple uniqueness scopes: BillingEvent (@unique), Payment (@unique), BillingRecoveryTask (@unique, also txHash). |
 | **Micros** | Internal amount representation: 1 USDC = 1,000,000 micros (6 decimal places). All billing calculations use integers in micros. |
-| **MEAP** | Modular Entitlement and Access Protocol — the product protocol layer: subscription NFTs, plan catalog, entitlements. |
+| **ArcenPay Protocol** | Web3 Entitlement and Access Protocol — the core product protocol layer: subscription NFTs, plan catalog, entitlements. |
 | **ZKVUB** | Zero-Knowledge Verifiable Usage Billing — settlement verification via Groth16 zk-SNARK proofs for metered billing sessions. |
 | **x402** | HTTP 402 Payment Required protocol. Agent SDK negotiates auto-payment via EIP-712 signed headers, SessionVault balance checks. |
 

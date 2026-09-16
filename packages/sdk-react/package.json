@@ -1,12 +1,12 @@
 {
   "name": "@arcenpay/react",
-  "version": "0.0.3",
+  "version": "1.0.0",
   "description": "ArcenPay SDK — React components for Web3 subscription billing",
   "license": "MIT",
   "homepage": "https://app.arcenpay.com",
   "repository": {
     "type": "git",
-    "url": "https://github.com/Arcenpay/Arcenpay.git"
+    "url": "git+https://github.com/Arcenpay/Arcenpay.git"
   },
   "bugs": {
     "url": "https://github.com/Arcenpay/Arcenpay/issues"

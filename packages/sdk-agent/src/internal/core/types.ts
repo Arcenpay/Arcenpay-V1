@@ -485,7 +485,7 @@ export interface ComponentRenderData {
 
 // --- SDK Config ---
 
-export interface MEAPConfig {
+export interface ArcenPayConfig {
   network: NetworkConfig;
   litNetwork?: "manzano" | "habanero";
   litConfig?: {
@@ -524,8 +524,8 @@ export interface MEAPConfig {
   >;
 }
 
-/** @alias MEAPConfig — ArcenPay-branded alias */
-export type ArcenPayConfig = MEAPConfig;
+/** @deprecated Use ArcenPayConfig */
+export type MEAPConfig = ArcenPayConfig;
 
 // --- ArcenPay Company/User Key Types ---
 

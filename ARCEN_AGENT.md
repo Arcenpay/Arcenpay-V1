@@ -10,7 +10,7 @@
 1. [Executive Overview](#1-executive-overview)
    - [What Arcen Agent Is](#what-arcen-agent-is)
    - [Why Autonomous Agents Need Web3 Entitlements](#why-autonomous-agents-need-web3-entitlements)
-   - [The Protocol Stack (MEAP + SessionVault + x402 + ArcenAuth)](#the-protocol-stack-meap--sessionvault--x402--arcenauth)
+   - [The Protocol Stack (ArcenPay + SessionVault + x402 + ArcenAuth)](#the-protocol-stack-arcenpay--sessionvault--x402--arcenauth)
 2. [Core Architecture & Protocols](#2-core-architecture--protocols)
    - [Protocol A: x402 Autonomous Micro-Settlement (HTTP 402)](#protocol-a-x402-autonomous-micro-settlement-http-402)
    - [Protocol B: Agentic Payment Links (Machine Checkout)](#protocol-b-agentic-payment-links-machine-checkout)
@@ -113,10 +113,10 @@ Traditional web billing (Stripe, PayPal, credit cards) fails completely for auto
 3. **Account Custody:** Agents cannot open corporate bank accounts; they require self-custodial cryptographic keypairs with pre-configured budget ceilings.
 4. **Machine Discoverability:** Payment links must expose standardized, machine-readable specifications (`/spec`) allowing agents to discover prices, verify tokens, and settle in milliseconds.
 
-### The Protocol Stack (MEAP + SessionVault + x402)
+### The Protocol Stack (ArcenPay + SessionVault + x402)
 
 ArcenPay's agent architecture combines three layers:
-- **MEAP (Machine-Executed Autonomous Payments):** The protocol standard defining autonomous merchant discovery, machine specifications, and cryptographic receipts.
+- **ArcenPay Machine Protocol:** The protocol standard defining autonomous merchant discovery, machine specifications, and cryptographic receipts.
 - **SessionVault:** Smart contracts on EVM and Stellar Soroban where an agent locks a USDC/USDT reserve once. Off-chain signed balance vouchers debit this reserve with **zero gas fees per API call**, which are later batched and settled on-chain by the facilitator using Zero-Knowledge Proofs (ZKVUB).
 - **x402 Protocol:** An open standard leveraging the HTTP `402 Payment Required` status code to initiate real-time payment challenges and automatic request replay.
 

@@ -1,5 +1,5 @@
 specVersion: 0.0.5
-description: MEAP + ZKVUB Protocol — Subscription and Usage Billing Indexer (Base Sepolia)
+description: ArcenPay + ZKVUB Protocol — Subscription and Usage Billing Indexer (Base Sepolia)
 repository: https://github.com/arcenpay/arcenpay
 
 schema:

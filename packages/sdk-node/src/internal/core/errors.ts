@@ -98,7 +98,7 @@ export function parseContractError(error: unknown): string {
     return errorString || 'An unknown error occurred.';
 }
 
-export type MEAPErrorCode =
+export type ArcenPayErrorCode =
     | 'UNKNOWN'
     | 'CONTRACT_REVERT'
     | 'WALLET_REJECTED'
@@ -107,52 +107,55 @@ export type MEAPErrorCode =
     | 'UNAUTHORIZED'
     | 'NETWORK_ERROR';
 
-export class MEAPError extends Error {
-    code: MEAPErrorCode;
+/** @deprecated Use ArcenPayErrorCode */
+export type MEAPErrorCode = ArcenPayErrorCode;
+
+export class ArcenPayError extends Error {
+    code: ArcenPayErrorCode;
     cause?: unknown;
     details?: Record<string, unknown>;
 
     constructor(
         message: string,
-        code: MEAPErrorCode = 'UNKNOWN',
+        code: ArcenPayErrorCode = 'UNKNOWN',
         options?: { cause?: unknown; details?: Record<string, unknown> },
     ) {
         super(message);
-        this.name = 'MEAPError';
+        this.name = 'ArcenPayError';
         this.code = code;
         this.cause = options?.cause;
         this.details = options?.details;
     }
 }
 
-export class ContractError extends MEAPError {
+export class ContractError extends ArcenPayError {
     constructor(message: string, options?: { cause?: unknown; details?: Record<string, unknown> }) {
         super(message, 'CONTRACT_REVERT', options);
         this.name = 'ContractError';
     }
 }
 
-export class AuthError extends MEAPError {
+export class AuthError extends ArcenPayError {
     constructor(message: string, options?: { cause?: unknown; details?: Record<string, unknown> }) {
         super(message, 'UNAUTHORIZED', options);
         this.name = 'AuthError';
     }
 }
 
-export function normalizeError(error: unknown): MEAPError {
-    if (error instanceof MEAPError) return error;
+export function normalizeError(error: unknown): ArcenPayError {
+    if (error instanceof ArcenPayError) return error;
 
     const message = typeof error === 'string' ? error : (error as Error)?.message || 'Unknown error';
     const lower = message.toLowerCase();
 
     if (lower.includes('user rejected') || lower.includes('user denied')) {
-        return new MEAPError('Transaction was rejected in your wallet.', 'WALLET_REJECTED', {
+        return new ArcenPayError('Transaction was rejected in your wallet.', 'WALLET_REJECTED', {
             cause: error,
         });
     }
 
     if (lower.includes('insufficient funds')) {
-        return new MEAPError('Insufficient ETH for gas fees.', 'INSUFFICIENT_FUNDS', {
+        return new ArcenPayError('Insufficient ETH for gas fees.', 'INSUFFICIENT_FUNDS', {
             cause: error,
         });
     }
@@ -161,10 +164,8 @@ export function normalizeError(error: unknown): MEAPError {
         return new ContractError(parseContractError(error), { cause: error });
     }
 
-    return new MEAPError(message, 'UNKNOWN', { cause: error });
+    return new ArcenPayError(message, 'UNKNOWN', { cause: error });
 }
 
-/** @alias MEAPError — ArcenPay-branded alias */
-export { MEAPError as ArcenPayError };
-/** @alias MEAPErrorCode — ArcenPay-branded alias */
-export type { MEAPErrorCode as ArcenPayErrorCode };
+/** @deprecated Use ArcenPayError */
+export const MEAPError = ArcenPayError;

@@ -1,6 +1,6 @@
 {
-  "name": "meap-circuits",
-  "version": "0.1.0",
+  "name": "arcenpay-circuits",
+  "version": "1.0.0",
   "description": "ZKVUB zk-SNARK circuits (Groth16 via Circom)",
   "scripts": {
     "check:tooling": "bash scripts/ensure-tooling.sh all",

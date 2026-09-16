@@ -169,6 +169,7 @@ const PROOF_MODE =
     ? "strict"
     : "dev";
 const PROOF_BUILD_DIR =
+  process.env.ARCENPAY_CIRCUIT_BUILD_DIR ||
   process.env.MEAP_CIRCUIT_BUILD_DIR ||
   path.resolve(process.cwd(), "circuits", "build");
 const PROOF_WASM_PATH =
@@ -180,8 +181,12 @@ const PROOF_ZKEY_PATH =
 const PROOF_VKEY_PATH =
   process.env.ZK_CIRCUIT_VKEY_PATH ||
   path.join(PROOF_BUILD_DIR, "verification_key.json");
-const PROOF_ARTIFACT_VERSION = process.env.MEAP_PROOF_ARTIFACT_VERSION || "";
+const PROOF_ARTIFACT_VERSION =
+  process.env.ARCENPAY_PROOF_ARTIFACT_VERSION ||
+  process.env.MEAP_PROOF_ARTIFACT_VERSION ||
+  "";
 const PROOF_ARTIFACT_MANIFEST_PATH =
+  process.env.ARCENPAY_PROOF_ARTIFACT_MANIFEST_PATH ||
   process.env.MEAP_PROOF_ARTIFACT_MANIFEST_PATH ||
   path.resolve(process.cwd(), "circuits", "artifact-manifest.json");
 const PROOF_SIGNER_PRIVATE_KEY =
@@ -406,7 +411,7 @@ function validateRuntimeConfig(): void {
       !fs.existsSync(PROOF_ARTIFACT_MANIFEST_PATH)
     ) {
       errors.push(
-        `MEAP_PROOF_ARTIFACT_VERSION is set but artifact manifest is missing: ${PROOF_ARTIFACT_MANIFEST_PATH}`,
+        `ARCENPAY_PROOF_ARTIFACT_VERSION is set but artifact manifest is missing: ${PROOF_ARTIFACT_MANIFEST_PATH}`,
       );
     }
 
@@ -3446,9 +3451,9 @@ app.use(
 app.get("/api/premium/data", (req, res) => {
   const payment = (
     req as express.Request & {
-      meapPayment?: X402VerifiedPaymentContext;
+      arcenpayPayment?: X402VerifiedPaymentContext;
     }
-  ).meapPayment;
+  ).arcenpayPayment;
   let aggregation: {
     totalEntries: number;
     thresholdReached: boolean;

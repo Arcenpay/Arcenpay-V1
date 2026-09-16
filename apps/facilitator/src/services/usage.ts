@@ -150,9 +150,13 @@ export class UsageService {
         config.proveScriptPath ||
         path.join(circuitsRootDir, "scripts", "prove.js"),
       artifactVersion:
-        config.artifactVersion || process.env.MEAP_PROOF_ARTIFACT_VERSION || "",
+        config.artifactVersion ||
+        process.env.ARCENPAY_PROOF_ARTIFACT_VERSION ||
+        process.env.MEAP_PROOF_ARTIFACT_VERSION ||
+        "",
       artifactManifestPath:
         config.artifactManifestPath ||
+        process.env.ARCENPAY_PROOF_ARTIFACT_MANIFEST_PATH ||
         process.env.MEAP_PROOF_ARTIFACT_MANIFEST_PATH ||
         path.join(circuitsRootDir, "artifact-manifest.json"),
       signerPrivateKey: config.signerPrivateKey,
@@ -472,6 +476,7 @@ export class UsageService {
     if (explicitRoot) return path.resolve(explicitRoot);
 
     const candidates = [
+      process.env.ARCENPAY_CIRCUITS_DIR,
       process.env.MEAP_CIRCUITS_DIR,
       path.resolve(process.cwd(), "circuits"),
       path.resolve(process.cwd(), "..", "..", "circuits"),

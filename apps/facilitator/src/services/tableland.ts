@@ -11,7 +11,7 @@ import type { PlanTier, TablelandEntitlement } from "@arcenpay/internal-core";
 import { JsonRpcProvider, Wallet } from "ethers";
 
 export interface TablelandConfig {
-  /** Tableland table name (e.g., meap_feature_flags_84532_123) */
+  /** Tableland table name (e.g., arcenpay_feature_flags_84532_123) */
   tableName: string;
   /** Tableland controller wallet private key (required for writes) */
   privateKey?: string;

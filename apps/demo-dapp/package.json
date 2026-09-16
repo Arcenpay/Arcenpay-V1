@@ -1,7 +1,7 @@
 {
   "name": "demo-dapp",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -10,7 +10,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@arcenpay/react": "^0.0.3",
+    "@arcenpay/react": "^1.0.0",
     "@stellar/freighter-api": "^6.0.1",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",

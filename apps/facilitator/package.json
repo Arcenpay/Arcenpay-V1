@@ -1,6 +1,6 @@
 {
   "name": "@arcenpay/facilitator",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "type": "module",
   "private": true,
   "description": "ArcenPay Facilitator Node — x402 payment validation and on-chain submission",
@@ -15,7 +15,7 @@
   },
   "dependencies": {
     "@arcenpay/internal-core": "*",
-    "@arcenpay/node": "^0.0.4",
+    "@arcenpay/node": "^1.0.0",
     "@lit-protocol/constants": "^7.4.0",
     "@lit-protocol/encryption": "^7.4.0",
     "@lit-protocol/lit-node-client": "^7.4.0",

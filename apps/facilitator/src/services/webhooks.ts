@@ -241,10 +241,10 @@ export class WebhookService {
    * ```ts
    * import { verifyWebhookSignature } from '@arcenpay/node';
    *
-   * app.post('/webhooks/meap', (req, res) => {
+   * app.post('/webhooks/arcenpay', (req, res) => {
    *   const raw = JSON.stringify(req.body);
    *   const sig = req.headers['x-arcenpay-signature'] as string;
-   *   if (!verifyWebhookSignature(raw, sig, process.env.MEAP_WEBHOOK_SECRET!)) {
+   *   if (!verifyWebhookSignature(raw, sig, process.env.ARCENPAY_WEBHOOK_SECRET!)) {
    *     return res.status(401).json({ error: 'Invalid signature' });
    *   }
    * });

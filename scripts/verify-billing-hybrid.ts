@@ -494,6 +494,7 @@ async function runLiveVerification(
   const rpcUrl =
     dashboardEnv[`RPC_URL_${chainId}`] ||
     facilitatorEnv.RPC_URL ||
+    rootEnv[`ARCENPAY_RPC_URL_${chainId}`] ||
     rootEnv[`MEAP_RPC_URL_${chainId}`] ||
     rootEnv[`RPC_URL_${chainId}`] ||
     rootEnv.SEPOLIA_RPC_URL;

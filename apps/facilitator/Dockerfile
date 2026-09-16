@@ -1,5 +1,5 @@
 # ============================================================
-#  MEAP Facilitator Node — Production Docker Build
+#  ArcenPay Facilitator Node — Production Docker Build
 #  x402 payment validation + settlement + billing automation
 # ============================================================
 

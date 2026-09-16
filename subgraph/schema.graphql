@@ -1,4 +1,4 @@
-# MEAP + ZKVUB Protocol — Subgraph Schema
+# ArcenPay + ZKVUB Protocol — Subgraph Schema
 
 type Provider @entity(immutable: false) {
   id: ID! # provider wallet
