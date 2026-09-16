@@ -481,6 +481,11 @@ export interface ComponentRenderData {
   paymentMethod?: ComponentPaymentMethod | null;
   recentInvoices?: ComponentInvoiceSummary[];
   subscriptionTransition?: ComponentSubscriptionTransition | null;
+  /**
+   * Server-enforced branding policy for the embed. hides the ArcenPay
+   * footer only when the provider tier allows it (PLUS/PRO).
+   */
+  branding?: { hideBrandingAllowed: boolean } | null;
 }
 
 // --- SDK Config ---

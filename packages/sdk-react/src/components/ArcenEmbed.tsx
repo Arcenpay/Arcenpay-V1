@@ -1004,6 +1004,14 @@ function normalizeComponentRenderData(value: unknown): ComponentRenderData {
     usage: Array.isArray(raw.usage)
       ? (raw.usage as ComponentUsageItem[])
       : [],
+    branding:
+      raw.branding && typeof raw.branding === "object"
+        ? {
+            hideBrandingAllowed:
+              (raw.branding as { hideBrandingAllowed?: unknown })
+                .hideBrandingAllowed === true,
+          }
+        : null,
   };
 }
 
@@ -4561,6 +4569,7 @@ function PortalContent({
   data,
   tokens,
   flashMsg,
+  hideBranding = false,
   onChangePlan,
   onUnsubscribe,
   onResumeSubscription,
@@ -4571,6 +4580,7 @@ function PortalContent({
   data: ComponentRenderData;
   tokens: Tokens;
   flashMsg: string | null;
+  hideBranding?: boolean;
   onChangePlan: () => void;
   onUnsubscribe: () => void;
   onResumeSubscription: () => void;
@@ -5500,25 +5510,27 @@ function PortalContent({
                 () => setShowAllFeatures((v) => !v),
               ),
                 )}
-                {/* Branding */}
-                <div style={{ textAlign: "center", paddingTop: 4 }}>
-                  <div style={{ fontSize: 11, color: tokens.mutedColor }}>
-                    Secured by{" "}
-                    <strong
-                      style={{ fontWeight: 700, color: tokens.textColor }}
-                    >
-                      ArcenPay
-                    </strong>{" "}
-                    · On-chain payments
+                {/* Branding — only shown unless white-label is active. */}
+                {!hideBranding && (
+                  <div style={{ textAlign: "center", paddingTop: 4 }}>
+                    <div style={{ fontSize: 11, color: tokens.mutedColor }}>
+                      Secured by{" "}
+                      <strong
+                        style={{ fontWeight: 700, color: tokens.textColor }}
+                      >
+                        ArcenPay
+                      </strong>{" "}
+                      · On-chain payments
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
             )}
           </div>
         ))}
 
       {/* Branding when no billing column (grid/single layouts) */}
-      {!isMerged && !hasRightCol && (
+      {!isMerged && !hasRightCol && !hideBranding && (
         <div style={{ marginTop: 20, textAlign: "center" }}>
           <div style={{ fontSize: 11, color: tokens.mutedColor }}>
             Secured by{" "}
@@ -10293,6 +10305,17 @@ export function ArcenEmbed({
   const effectiveContainerWidth =
     mode === "modal" ? modalContentWidth || 360 : containerWidth;
 
+  /**
+   * White-label enforcement: the client `hideBranding` prop requests removal,
+   * but the SERVER advertises whether the provider's tier permits it
+   * (`component-render` returns `branding.hideBrandingAllowed`). FREE tier
+   * always keeps the "Secured by ArcenPay" badge. When the server is silent
+   * (older proxies/mock data), the client prop works as before.
+   */
+  const serverHideBrandingAllowed = state.data?.branding?.hideBrandingAllowed;
+  const effectiveHideBranding =
+    hideBranding && (serverHideBrandingAllowed ?? true);
+
   const isInline = mode === "inline";
   const effectiveSelectedPlanId = state.data
     ? resolvePlanSelectionForBillingPeriod({
@@ -11301,7 +11324,7 @@ export function ArcenEmbed({
               containerWidth={effectiveContainerWidth}
             />
           )}
-          {!hideBranding && <SecuredByArcenpay tokens={tokens} />}
+          {!effectiveHideBranding && <SecuredByArcenpay tokens={tokens} />}
         </>
       ) : (
         <>
@@ -11309,6 +11332,7 @@ export function ArcenEmbed({
             data={data}
             tokens={tokens}
             flashMsg={flashMsg}
+            hideBranding={effectiveHideBranding}
             onChangePlan={handleOpenCheckout}
             onUnsubscribe={handleOpenUnsubscribe}
             onResumeSubscription={handleResumeSubscription}
@@ -11321,7 +11345,7 @@ export function ArcenEmbed({
               onClose={() => dispatch({ type: "GOTO_PORTAL" })}
               tokens={tokens}
               contentRef={modalContentRef}
-              hideBranding={hideBranding}
+              hideBranding={effectiveHideBranding}
             >
               {view === "checkout" && (
                 <CheckoutContent
@@ -11429,7 +11453,7 @@ export function ArcenEmbed({
               )}
             </FullScreenModal>
           )}
-          {!hideBranding && <SecuredByArcenpay tokens={tokens} />}
+          {!effectiveHideBranding && <SecuredByArcenpay tokens={tokens} />}
         </>
       )}
     </div>

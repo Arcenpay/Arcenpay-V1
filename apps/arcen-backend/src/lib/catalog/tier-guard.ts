@@ -22,6 +22,7 @@ export const TIER_FEATURES: Record<PlatformTier, {
     analytics: boolean;
     webhooks: boolean;
     customBranding: boolean;
+    invoiceBuilder: boolean;
     apiAccess: boolean;
     prioritySupport: boolean;
     dedicatedSupport: boolean;
@@ -38,6 +39,7 @@ export const TIER_FEATURES: Record<PlatformTier, {
         analytics: true,
         webhooks: true,
         customBranding: false,
+        invoiceBuilder: false,
         apiAccess: true,
         prioritySupport: false,
         dedicatedSupport: false,
@@ -54,6 +56,7 @@ export const TIER_FEATURES: Record<PlatformTier, {
         analytics: true,
         webhooks: true,
         customBranding: true,
+        invoiceBuilder: true,
         apiAccess: true,
         prioritySupport: true,
         dedicatedSupport: false,
@@ -70,6 +73,7 @@ export const TIER_FEATURES: Record<PlatformTier, {
         analytics: true,
         webhooks: true,
         customBranding: true,
+        invoiceBuilder: true,
         apiAccess: true,
         prioritySupport: true,
         dedicatedSupport: true,

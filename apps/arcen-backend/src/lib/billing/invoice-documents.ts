@@ -22,7 +22,10 @@ import {
 } from "./invoice-context.js";
 import { toPrismaJson } from "../../utils/prisma-json.js";
 import { renderTemplateInvoicePdf } from "./invoice-builder/renderer.js";
-import { resolveTemplateConfigForTeam } from "./invoice-builder/template-store.js";
+import {
+  resolveTemplateConfigForTeam,
+  stampInvoiceTemplateSnapshot,
+} from "./invoice-builder/template-store.js";
 
 function sanitizePathSegment(value: string): string {
   return value.replace(/[^a-zA-Z0-9_\-]/g, "_");
@@ -447,14 +450,26 @@ export async function renderBillingDocumentPdf(input: {
   context: NonNullable<LoadedInvoiceContext>;
   receiptNumber?: string | null;
 }): Promise<Uint8Array> {
-  const config = await resolveTemplateConfigForTeam({
+  const resolved = await resolveTemplateConfigForTeam({
     teamId: input.context.invoice.teamId,
     environmentId: input.context.invoice.environmentId ?? null,
     templateId: input.context.invoice.templateId ?? null,
     templateSnapshot: input.context.invoice.templateSnapshot ?? null,
   });
-  if (config) {
-    return renderTemplateInvoicePdf(input, config);
+  if (resolved) {
+    // Freeze the design on first render (fire-and-forget; must never block
+    // or fail PDF generation). Subsequent renders use the snapshot.
+    if (!input.context.invoice.templateSnapshot && resolved.templateId) {
+      stampInvoiceTemplateSnapshot({
+        invoiceId: input.context.invoice.id,
+        teamId: input.context.invoice.teamId,
+        templateId: resolved.templateId,
+        config: resolved.config,
+      }).catch((err) => {
+        console.warn("[invoice-documents] Failed to stamp template snapshot:", err);
+      });
+    }
+    return renderTemplateInvoicePdf(input, resolved.config);
   }
   return renderLegacyBillingDocumentPdf(input);
 }

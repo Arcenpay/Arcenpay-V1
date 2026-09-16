@@ -1,4 +1,5 @@
 import { db } from "../../../db.js";
+import { Prisma } from "../../../generated/client/client.js";
 import { toPrismaJson } from "../../../utils/prisma-json.js";
 import { asRecord } from "../utils.js";
 import { validateInvoiceTemplateConfig } from "./schema.js";
@@ -33,9 +34,9 @@ export async function resolveTemplateConfigForTeam(input: {
   environmentId: string | null;
   templateId: string | null;
   templateSnapshot: unknown;
-}): Promise<InvoiceTemplateConfig | null> {
+}): Promise<{ config: InvoiceTemplateConfig; templateId: string | null } | null> {
   const snapshot = readTemplateSnapshot(input.templateSnapshot);
-  if (snapshot) return snapshot;
+  if (snapshot) return { config: snapshot, templateId: input.templateId };
 
   // No usable snapshot → consult the active template (if any).
   const type = await db.invoiceTemplate.findFirst({
@@ -49,11 +50,13 @@ export async function resolveTemplateConfigForTeam(input: {
     orderBy: input.environmentId
       ? [{ environmentId: { sort: "desc", nulls: "last" } }, { updatedAt: "desc" }]
       : [{ updatedAt: "desc" }],
-    select: { config: true },
+    select: { id: true, config: true },
   });
   if (!type) return null;
 
-  return readTemplateSnapshot(type.config);
+  const config = readTemplateSnapshot(type.config);
+  if (!config) return null;
+  return { config, templateId: type.id };
 }
 // ── CRUD helpers (routes are thin; validation happens before these) ──────────
 
@@ -185,6 +188,31 @@ export async function activateInvoiceTemplate(input: {
     });
     return { ok: true, alreadyActive: false };
   });
+}
+
+/**
+ * Freezes the active template design onto an invoice row (idempotent).
+ * Only stamps rows that don't already have a snapshot, so the FIRST render
+ * permanently captures the design; later template edits never affect it.
+ */
+export async function stampInvoiceTemplateSnapshot(input: {
+  invoiceId: string;
+  teamId: string;
+  templateId: string;
+  config: InvoiceTemplateConfig;
+}): Promise<boolean> {
+  const result = await db.invoice.updateMany({
+    where: {
+      id: input.invoiceId,
+      teamId: input.teamId,
+      templateSnapshot: { equals: Prisma.DbNull },
+    },
+    data: {
+      templateId: input.templateId,
+      templateSnapshot: toPrismaJson({ config: input.config }),
+    },
+  });
+  return result.count > 0;
 }
 
 export async function duplicateInvoiceTemplate(input: {

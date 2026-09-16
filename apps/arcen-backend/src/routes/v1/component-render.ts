@@ -25,6 +25,7 @@ import {
   listMetadataEntitlements,
 } from "../../lib/catalog/catalog-entitlements.js";
 import { normalizeComponentDesign } from "../../lib/catalog/component-design.js";
+import { assertTierFeature } from "../../lib/catalog/tier-guard.js";
 import {
   extractEmbedAccessToken,
   resolveEmbedAccessToken,
@@ -1534,6 +1535,12 @@ export async function GET(c: Context) {
     : [];
   const rawDesign = (component.design ?? {}) as Record<string, unknown>;
 
+  // White-label enforcement: the "Secured by ArcenPay" badge may only be
+  // removed when the provider's platform tier grants custom branding.
+  const brandingGate = teamId
+    ? await assertTierFeature(teamId, "customBranding")
+    : { allowed: false };
+
   return c.json(
     {
       data: {
@@ -1545,6 +1552,9 @@ export async function GET(c: Context) {
             type: normalizeElementType(String(el.type ?? "")),
           })),
           design: normalizeComponentDesign(rawDesign),
+        },
+        branding: {
+          hideBrandingAllowed: brandingGate.allowed,
         },
         company: companyData,
         activePlan,
