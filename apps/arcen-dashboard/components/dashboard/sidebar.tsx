@@ -124,6 +124,7 @@ const navGroups: NavGroup[] = [
     collapsible: true,
     items: [
       { id: "invoices", label: "Invoices" },
+      { id: "invoice-builder", label: "Invoice Builder" },
       { id: "payments", label: "Payments" },
       { id: "billing", label: "Billing & Plan" },
       { id: "audit-log", label: "Audit Log" },

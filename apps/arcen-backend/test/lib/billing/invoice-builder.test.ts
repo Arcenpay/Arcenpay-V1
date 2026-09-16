@@ -119,20 +119,20 @@ describe("invoice builder — template resolution", () => {
       templateId: null,
       templateSnapshot: { config: snapshot },
     });
-    expect(resolved).toEqual(snapshot);
+    expect(resolved).toEqual({ config: snapshot, templateId: null });
     expect(mockDb.invoiceTemplate.findFirst).not.toHaveBeenCalled();
   });
 
   it("falls back to the active template when no snapshot exists", async () => {
     const active = buildDefaultInvoiceTemplateConfig();
-    mockDb.invoiceTemplate.findFirst.mockResolvedValue({ config: active });
+    mockDb.invoiceTemplate.findFirst.mockResolvedValue({ id: "template-1", config: active });
     const resolved = await resolveTemplateConfigForTeam({
       teamId: "team-1",
       environmentId: "env-1",
       templateId: null,
       templateSnapshot: null,
     });
-    expect(resolved).toEqual(active);
+    expect(resolved).toEqual({ config: active, templateId: "template-1" });
   });
 
   it("returns null (legacy path) when there is no snapshot and no active template", async () => {

@@ -11,6 +11,7 @@ import { SessionsSection } from "@/components/dashboard/sections/sessions";
 import { FeaturesSection } from "@/components/dashboard/sections/features";
 import { SettingsSection } from "@/components/dashboard/sections/settings";
 import { InvoicesSection } from "@/components/dashboard/sections/invoices";
+import { InvoiceBuilderSection } from "@/components/dashboard/sections/invoice-builder";
 import { AuditLogSection } from "@/components/dashboard/sections/audit-log";
 import {
   CatalogPlansSection,
@@ -44,6 +45,7 @@ export type Section =
   | "catalog-config"
   | "subscribers"
   | "invoices"
+  | "invoice-builder"
   | "sessions"
   | "features"
   | "components"
@@ -65,6 +67,7 @@ const VALID_SECTIONS: Section[] = [
   "catalog-config",
   "subscribers",
   "invoices",
+  "invoice-builder",
   "sessions",
   "features",
   "components",
@@ -187,6 +190,12 @@ export default function Dashboard() {
         return (
           <SectionErrorBoundary fallbackLabel="Invoices failed to load">
             <InvoicesSection />
+          </SectionErrorBoundary>
+        );
+      case "invoice-builder":
+        return (
+          <SectionErrorBoundary fallbackLabel="Invoice Builder failed to load">
+            <InvoiceBuilderSection />
           </SectionErrorBoundary>
         );
       case "sessions":
