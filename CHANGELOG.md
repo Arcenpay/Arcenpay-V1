@@ -21,6 +21,11 @@ All notable changes to ArcenPay are documented here.
 - Catalog management: plans, add-ons, credits, coupons
 - Feature flag engine with DB-first rules and on-chain fallback
 - Invoicing, billing events, webhook delivery, dunning
+- Invoice Builder (`/invoices/templates`): declarative JSON layouts, logo,
+  brand colors, fonts, watermark and portrait/landscape PDF rendering with
+  immutable per-invoice design snapshots (Plus/Pro)
+- White-label embed branding: "Secured by ArcenPay" can be removed only on
+  Plus/Pro (server-enforced via `component-render` branding policy)
 - Platform tiers (FREE / PLUS / PRO) with limits
 - Gas sponsorship via hosted paymaster
 - Tableland flag mirroring (optional)
