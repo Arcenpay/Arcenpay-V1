@@ -6,15 +6,33 @@ import {
   type InvoiceTemplateConfig,
 } from "../../../src/lib/billing/invoice-builder/types.js";
 import { validateInvoiceTemplateConfig } from "../../../src/lib/billing/invoice-builder/schema.js";
-import { resolveTemplateConfigForTeam } from "../../../src/lib/billing/invoice-builder/template-store.js";
+import {
+  activateInvoiceTemplate,
+  deleteInvoiceTemplate,
+  ensureInvoiceBuilderDefaultTemplate,
+  resolveTemplateConfigForTeam,
+  stampInvoiceTemplateSnapshot,
+} from "../../../src/lib/billing/invoice-builder/template-store.js";
 import { renderTemplateInvoicePdf } from "../../../src/lib/billing/invoice-builder/renderer.js";
 import { buildInvoiceContextFixture } from "../../fixtures/invoice-documents.fixture.js";
 
 vi.mock("../../../src/db.js", () => {
   const findFirst = vi.fn();
+  const count = vi.fn();
+  const create = vi.fn();
+  const updateMany = vi.fn();
+  const update = vi.fn();
+  const deleteFn = vi.fn();
+  const transaction = vi.fn((fn: (tx: Record<string, unknown>) => Promise<unknown>) =>
+    fn({
+      invoiceTemplate: { findFirst, updateMany, update, delete: deleteFn },
+    }),
+  );
   return {
     db: {
-      invoiceTemplate: { findFirst },
+      invoiceTemplate: { findFirst, count, create, updateMany, update, delete: deleteFn },
+      invoice: { updateMany },
+      $transaction: transaction,
     },
   };
 });
@@ -210,3 +228,111 @@ describe("invoice builder — template rendering", () => {
   });
 });
 
+
+describe("invoice builder — default seeding & snapshot stamping", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("seeds + activates the Classic template on first visit for Plus/Pro", async () => {
+    mockDb.invoiceTemplate.count.mockResolvedValueOnce(0);
+    mockDb.invoiceTemplate.create.mockResolvedValueOnce({ id: "template-seeded" });
+    const result = await ensureInvoiceBuilderDefaultTemplate({
+      teamId: "team-1",
+      environmentId: null,
+      tierAllowed: true,
+    });
+    expect(result).toEqual({ seeded: true, activated: true });
+    const data = mockDb.invoiceTemplate.create.mock.calls[0][0].data;
+    expect(data.isActive).toBe(true);
+    expect(data.name).toBe("Classic");
+    expect(data.teamId).toBe("team-1");
+  });
+
+  it("never seeds for FREE tier", async () => {
+    const result = await ensureInvoiceBuilderDefaultTemplate({
+      teamId: "team-1",
+      environmentId: null,
+      tierAllowed: false,
+    });
+    expect(result).toEqual({ seeded: false, activated: false });
+    expect(mockDb.invoiceTemplate.count).not.toHaveBeenCalled();
+  });
+
+  it("is a no-op when the team already has templates (idempotent)", async () => {
+    mockDb.invoiceTemplate.count.mockResolvedValueOnce(3);
+    const result = await ensureInvoiceBuilderDefaultTemplate({
+      teamId: "team-1",
+      environmentId: "env-1",
+      tierAllowed: true,
+    });
+    expect(result).toEqual({ seeded: false, activated: false });
+    expect(mockDb.invoiceTemplate.create).not.toHaveBeenCalled();
+  });
+
+  it("stamps a snapshot only once (idempotent freeze)", async () => {
+    const config = buildDefaultInvoiceTemplateConfig();
+    mockDb.invoice.updateMany.mockResolvedValueOnce({ count: 1 });
+    const stamped = await stampInvoiceTemplateSnapshot({
+      invoiceId: "invoice-1",
+      teamId: "team-1",
+      templateId: "template-1",
+      config,
+    });
+    expect(stamped).toBe(true);
+    const where = mockDb.invoice.updateMany.mock.calls[0][0].where;
+    expect(where.id).toBe("invoice-1");
+    expect(where.templateSnapshot).toMatchObject({
+      equals: expect.any(Object),
+    });
+
+    mockDb.invoice.updateMany.mockResolvedValueOnce({ count: 0 });
+    const again = await stampInvoiceTemplateSnapshot({
+      invoiceId: "invoice-1",
+      teamId: "team-1",
+      templateId: "template-1",
+      config,
+    });
+    expect(again).toBe(false);
+  });
+
+  it("activating a template deactivates its siblings atomically (idempotent)", async () => {
+    mockDb.invoiceTemplate.findFirst.mockResolvedValueOnce({
+      id: "template-2",
+      environmentId: null,
+    });
+    mockDb.invoiceTemplate.findFirst.mockResolvedValueOnce(null);
+    mockDb.invoiceTemplate.updateMany.mockResolvedValueOnce({ count: 0 });
+    mockDb.invoiceTemplate.update.mockResolvedValueOnce({ id: "template-2" });
+    const result = await activateInvoiceTemplate({
+      teamId: "team-1",
+      id: "template-2",
+      environmentId: null,
+    });
+    expect(result).toEqual({ ok: true, alreadyActive: false });
+  });
+
+  it("refuses to delete a protected (seeded default) template", async () => {
+    mockDb.invoiceTemplate.findFirst.mockResolvedValueOnce({
+      id: "template-default",
+      isProtected: true,
+    });
+    const result = await deleteInvoiceTemplate({
+      teamId: "team-1",
+      id: "template-default",
+    });
+    expect(result).toEqual({ deleted: false, protected: true });
+    expect(mockDb.invoiceTemplate.delete).not.toHaveBeenCalled();
+  });
+
+  it("deletes custom templates normally", async () => {
+    mockDb.invoiceTemplate.findFirst.mockResolvedValueOnce({
+      id: "template-custom",
+      isProtected: false,
+    });
+    mockDb.invoiceTemplate.delete.mockResolvedValueOnce({ id: "template-custom" });
+    const result = await deleteInvoiceTemplate({
+      teamId: "team-1",
+      id: "template-custom",
+    });
+    expect(result).toEqual({ deleted: true });
+  });
+});

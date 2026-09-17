@@ -1,11 +1,8 @@
 import { createHmac, timingSafeEqual } from "crypto";
-import { promises as fs } from "fs";
-import path from "path";
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import { db } from "../../db.js";
 import {
   APP_URL,
-  INVOICE_STORAGE_DIR,
   INVOICE_DOWNLOAD_SIGNING_SECRET,
   INVOICE_DOWNLOAD_URL_TTL_SECONDS,
 } from "../../config.js";
@@ -21,6 +18,8 @@ import {
   type LoadedInvoiceContext,
 } from "./invoice-context.js";
 import { toPrismaJson } from "../../utils/prisma-json.js";
+import { getStorage } from "../storage/index.js";
+import { wrapColumnText } from "./utils.js";
 import { renderTemplateInvoicePdf } from "./invoice-builder/renderer.js";
 import {
   resolveTemplateConfigForTeam,
@@ -55,64 +54,51 @@ function signPayload(payload: string): string {
   return base64Url(createHmac("sha256", INVOICE_DOWNLOAD_SIGNING_SECRET).update(payload).digest());
 }
 
-function makeSignedPayload(invoiceId: string, objectKey: string, exp: number): string {
-  return `${invoiceId}.${objectKey}.${exp}`;
+type InvoiceDocumentKind = "invoice" | "receipt";
+
+function makeSignedPayload(invoiceId: string, kind: string, exp: number): string {
+  return `${invoiceId}.${kind}.${exp}`;
 }
 
-export function createInvoiceDownloadUrl(
-  invoiceId: string,
-  objectKey: string,
-  expiresInSeconds = INVOICE_DOWNLOAD_URL_TTL_SECONDS,
-): string {
-  const exp = Math.floor(Date.now() / 1000) + expiresInSeconds;
-  const payload = makeSignedPayload(invoiceId, objectKey, exp);
+/**
+ * Stripe-style signed render URL. The PDF itself is never stored — each
+ * request renders the live invoice object (snapshot-aware) on demand.
+ */
+export function createInvoiceDownloadUrl(input: {
+  invoiceId: string;
+  kind: InvoiceDocumentKind;
+  expiresInSeconds?: number;
+}): string {
+  const exp =
+    Math.floor(Date.now() / 1000) +
+    (input.expiresInSeconds ?? INVOICE_DOWNLOAD_URL_TTL_SECONDS);
+  const payload = makeSignedPayload(input.invoiceId, input.kind, exp);
   const sig = signPayload(payload);
-  const keyParam = encodeURIComponent(objectKey);
   return `${APP_URL}/api/invoices/public/${encodeURIComponent(
-    invoiceId,
-  )}/download?key=${keyParam}&exp=${exp}&sig=${encodeURIComponent(sig)}`;
+    input.invoiceId,
+  )}/download?kind=${input.kind}&exp=${exp}&sig=${encodeURIComponent(sig)}`;
 }
 
 export function verifyInvoiceDownloadToken(input: {
   invoiceId: string;
-  objectKey: string;
+  kind: string;
   expRaw: string;
   signature: string;
 }): boolean {
+  if (input.kind !== "invoice" && input.kind !== "receipt") return false;
   const exp = Number(input.expRaw);
   if (!Number.isFinite(exp)) return false;
   if (Math.floor(Date.now() / 1000) > exp) return false;
 
-  const payload = makeSignedPayload(input.invoiceId, input.objectKey, exp);
+  const payload = makeSignedPayload(input.invoiceId, input.kind, exp);
   const expected = signPayload(payload);
   const a = Buffer.from(expected);
   const b = Buffer.from(input.signature);
   if (a.length !== b.length) return false;
   return timingSafeEqual(a, b);
 }
-
-async function ensureDirForObjectKey(objectKey: string): Promise<string> {
-  if (objectKey.includes("..")) {
-    throw new Error("Invalid object key");
-  }
-  const absPath = path.join(INVOICE_STORAGE_DIR, objectKey);
-  await fs.mkdir(path.dirname(absPath), { recursive: true });
-  return absPath;
-}
-
-async function writeObject(objectKey: string, bytes: Uint8Array): Promise<void> {
-  const absPath = await ensureDirForObjectKey(objectKey);
-  await fs.writeFile(absPath, Buffer.from(bytes));
-}
-
 export async function readObject(objectKey: string): Promise<Buffer | null> {
-  try {
-    const absPath = path.join(INVOICE_STORAGE_DIR, objectKey);
-    if (objectKey.includes("..")) return null;
-    return await fs.readFile(absPath);
-  } catch {
-    return null;
-  }
+  return getStorage().get(objectKey).catch(() => null);
 }
 
 type BillingDocumentKind = "invoice" | "receipt";
@@ -266,26 +252,32 @@ export async function renderLegacyBillingDocumentPdf(input: {
 
   let providerY = 560;
   for (const line of providerLines) {
-    drawText(page, line, {
-      x: 58,
-      y: providerY,
-      size: 11,
-      font,
-      boldFont,
-    });
-    providerY -= 22;
+    for (const chunk of wrapColumnText(line, 46)) {
+      drawText(page, chunk, {
+        x: 58,
+        y: providerY,
+        size: 11,
+        font,
+        boldFont,
+      });
+      providerY -= 22;
+    }
   }
 
   let customerY = 560;
   for (const line of customerLines) {
-    drawText(page, line, {
-      x: 338,
-      y: customerY,
-      size: 11,
-      font,
-      boldFont,
-    });
-    customerY -= 22;
+    // Bill-to column is narrower (x=338 → page edge): wrap at 34 chars and
+    // split long wallet addresses so they never overflow in portrait.
+    for (const chunk of wrapColumnText(line, 34)) {
+      drawText(page, chunk, {
+        x: 338,
+        y: customerY,
+        size: 11,
+        font,
+        boldFont,
+      });
+      customerY -= 22;
+    }
   }
 
   const amountHeadline =
@@ -476,124 +468,95 @@ export async function renderBillingDocumentPdf(input: {
 
 
 
-async function writeReceiptMetadata(
-  context: NonNullable<LoadedInvoiceContext>,
-  payload: { number: string; objectKey: string },
-) {
-  await db.invoice.update({
-    where: { id: context.invoice.id },
-    data: {
-      metadata: toPrismaJson({
-        ...context.metadata,
-        receipt: {
-          ...context.receiptMeta,
-          number: payload.number,
-          objectKey: payload.objectKey,
-        },
-      }),
-    },
-  });
-}
-
-export async function ensureInvoicePdfForTeam(teamId: string, invoiceId: string): Promise<{
-  objectKey: string;
-  downloadUrl: string;
-}> {
-  const context = await loadInvoiceBillingContext(teamId, invoiceId);
-  if (!context) {
-    throw new Error("Invoice not found");
-  }
-
-  let objectKey = context.invoice.externalRef || "";
-  const existing = objectKey ? await readObject(objectKey) : null;
-
-  if (!existing) {
-    const fileSafeNumber = sanitizePathSegment(context.invoice.number || context.invoice.id);
-    objectKey = `invoices/${context.invoice.id}/${fileSafeNumber}.pdf`;
-    const pdfBytes = await renderBillingDocumentPdf({
-      kind: "invoice",
-      context,
-    });
-    await writeObject(objectKey, pdfBytes);
-    await db.invoice.update({
-      where: { id: context.invoice.id },
-      data: { externalRef: objectKey },
-    });
-  }
-
-  return {
-    objectKey,
-    downloadUrl: createInvoiceDownloadUrl(context.invoice.id, objectKey),
-  };
-}
-
-export async function ensureReceiptPdfForTeam(teamId: string, invoiceId: string): Promise<{
-  objectKey: string;
-  filename: string;
-  receiptNumber: string;
-}> {
-  const context = await loadInvoiceBillingContext(teamId, invoiceId);
-  if (!context) {
-    throw new Error("Invoice not found");
-  }
-  if (context.invoice.status !== "PAID") {
+export async function renderInvoicePdfBytes(input: {
+  teamId: string;
+  invoiceId: string;
+  kind: InvoiceDocumentKind;
+}): Promise<{ bytes: Buffer; filename: string; receiptNumber: string | null }> {
+  const context = await loadInvoiceBillingContext(input.teamId, input.invoiceId);
+  if (!context) throw new Error("Invoice not found");
+  if (input.kind === "receipt" && context.invoice.status !== "PAID") {
     throw new Error("Receipt is only available for paid invoices");
   }
 
-  const receiptNumber = getStoredReceiptNumber(context);
-  let objectKey = readReceiptObjectKey(context) || "";
-  const existing = objectKey ? await readObject(objectKey) : null;
-
-  if (!existing) {
-    const safeReceiptNumber = sanitizePathSegment(receiptNumber);
-    objectKey = `receipts/${context.invoice.id}/${safeReceiptNumber}.pdf`;
-    const pdfBytes = await renderBillingDocumentPdf({
-      kind: "receipt",
-      context,
-      receiptNumber,
-    });
-    await writeObject(objectKey, pdfBytes);
-  }
-
-  if (readReceiptObjectKey(context) !== objectKey || context.receiptMeta.number !== receiptNumber) {
-    await writeReceiptMetadata(context, { number: receiptNumber, objectKey });
-  }
-
-  return {
-    objectKey,
-    filename: `${sanitizePathSegment(receiptNumber)}.pdf`,
+  const receiptNumber =
+    input.kind === "receipt" ? getStoredReceiptNumber(context) : null;
+  const pdfBytes = await renderBillingDocumentPdf({
+    kind: input.kind,
+    context,
     receiptNumber,
+  });
+
+  const filename =
+    input.kind === "invoice"
+      ? `${sanitizePathSegment(context.invoice.number || context.invoice.id)}.pdf`
+      : `${sanitizePathSegment(receiptNumber ?? context.invoice.id)}.pdf`;
+  return { bytes: Buffer.from(pdfBytes), filename, receiptNumber };
+}
+
+/**
+ * Issues a signed render URL. Nothing is rendered or written at this point:
+ * the PDF is generated on-demand when the URL is opened (Stripe-style).
+ */
+export async function getInvoicePdfDownloadUrl(input: {
+  teamId: string;
+  invoiceId: string;
+  kind?: InvoiceDocumentKind;
+}): Promise<{ downloadUrl: string }> {
+  const context = await loadInvoiceBillingContext(input.teamId, input.invoiceId);
+  if (!context) throw new Error("Invoice not found");
+  const kind = input.kind ?? "invoice";
+  return {
+    downloadUrl: createInvoiceDownloadUrl({ invoiceId: context.invoice.id, kind }),
   };
 }
 
-export async function readSignedInvoicePdf(params: {
+/** Compat alias used by routes/webhooks that only need the download URL. */
+export async function ensureInvoicePdfForTeam(
+  teamId: string,
+  invoiceId: string,
+): Promise<{ downloadUrl: string }> {
+  return getInvoicePdfDownloadUrl({ teamId, invoiceId, kind: "invoice" });
+}
+
+/**
+ * Verifies a signed render URL and generates the PDF live from the invoice
+ * object. Returns null on invalid/expired tokens (same security envelope as
+ * the previous object-key flow).
+ */
+export async function renderSignedInvoicePdf(input: {
   invoiceId: string;
-  objectKey: string;
+  kind: string;
   expRaw: string;
   signature: string;
 }): Promise<{ bytes: Buffer; filename: string } | null> {
   if (
     !verifyInvoiceDownloadToken({
-      invoiceId: params.invoiceId,
-      objectKey: params.objectKey,
-      expRaw: params.expRaw,
-      signature: params.signature,
+      invoiceId: input.invoiceId,
+      kind: input.kind,
+      expRaw: input.expRaw,
+      signature: input.signature,
     })
   ) {
     return null;
   }
 
+  const kind = input.kind as InvoiceDocumentKind;
   const invoice = await db.invoice.findUnique({
-    where: { id: params.invoiceId },
-    select: { id: true, number: true, externalRef: true },
+    where: { id: input.invoiceId },
+    select: { id: true, teamId: true },
   });
-  if (!invoice || invoice.externalRef !== params.objectKey) {
+  if (!invoice) return null;
+
+  try {
+    const result = await renderInvoicePdfBytes({
+      teamId: invoice.teamId,
+      invoiceId: invoice.id,
+      kind,
+    });
+    return { bytes: result.bytes, filename: result.filename };
+  } catch {
+    // Receipt for unpaid invoice or missing row — treat as not found/denied.
     return null;
   }
-
-  const bytes = await readObject(params.objectKey);
-  if (!bytes) return null;
-
-  const filename = `${sanitizePathSegment(invoice.number || invoice.id)}.pdf`;
-  return { bytes, filename };
 }

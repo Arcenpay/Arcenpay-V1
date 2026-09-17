@@ -861,6 +861,9 @@ model InvoiceTemplate {
   // At most one active template per (team, environment) scope. When null is
   // overridden, existing invoices render from their immutable snapshot.
   isActive Boolean @default(false)
+  // Seeded platform default (the stock "Classic" template). Protected rows
+  // can be edited/published but never deleted (Plus/Pro baseline design).
+  isProtected Boolean @default(false)
 
   team        Team                  @relation(fields: [teamId], references: [id], onDelete: Cascade)
   environment WorkspaceEnvironment? @relation(fields: [environmentId], references: [id], onDelete: SetNull)

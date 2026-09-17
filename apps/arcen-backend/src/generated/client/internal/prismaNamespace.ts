@@ -5630,7 +5630,8 @@ export const InvoiceTemplateScalarFieldEnum = {
   name: 'name',
   description: 'description',
   config: 'config',
-  isActive: 'isActive'
+  isActive: 'isActive',
+  isProtected: 'isProtected'
 } as const
 
 export type InvoiceTemplateScalarFieldEnum = (typeof InvoiceTemplateScalarFieldEnum)[keyof typeof InvoiceTemplateScalarFieldEnum]

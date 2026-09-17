@@ -72,6 +72,7 @@ type TemplateMeta = {
   name: string;
   description: string | null;
   isActive: boolean;
+  isProtected?: boolean;
   environmentId: string | null;
   createdAt: string;
   updatedAt: string;
@@ -324,6 +325,11 @@ export function InvoiceBuilderSection() {
                               Active
                             </Badge>
                           )}
+                          {template.isProtected && (
+                            <Badge variant="outline" className="text-[11px] border-border text-muted-foreground">
+                              Default
+                            </Badge>
+                          )}
                         </div>
                         {template.description && (
                           <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
@@ -357,15 +363,17 @@ export function InvoiceBuilderSection() {
                       >
                         <Copy className="h-3.5 w-3.5" />
                       </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="text-destructive hover:text-destructive"
-                        disabled={busyId === template.id}
-                        onClick={() => remove(template)}
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
+                      {!template.isProtected && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="text-destructive hover:text-destructive"
+                          disabled={busyId === template.id}
+                          onClick={() => remove(template)}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      )}
                     </div>
                   </CardContent>
                 </Card>
@@ -404,7 +412,7 @@ function InvoiceBuilderEditor({
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewKind, setPreviewKind] = useState<"invoice" | "receipt">("invoice");
   const [previewLoading, setPreviewLoading] = useState(false);
-  const previewObjectUrls = useRef<string[]>([]);
+  const previewObjectUrls = useRef<string | null>(null);
 
   const configRef = useRef(config);
   configRef.current = config;
@@ -429,7 +437,10 @@ function InvoiceBuilderEditor({
       }
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
-      previewObjectUrls.current.push(url);
+      if (previewObjectUrls.current) {
+        URL.revokeObjectURL(previewObjectUrls.current);
+      }
+      previewObjectUrls.current = url;
       setPreviewUrl(url);
     } catch (err) {
       setPreviewUrl(null);
@@ -440,17 +451,24 @@ function InvoiceBuilderEditor({
   }, []);
 
   const debouncedPreview = useMemo(
-    () => debounce(() => runPreview(), 500),
+    () => debounce(() => runPreview(), 250),
     [runPreview],
   );
 
+  // Re-render the live preview whenever the design or kind changes (the
+  // preview pane is always visible on the right, so edits show immediately).
   useEffect(() => {
     debouncedPreview();
-    return () => {
-      previewObjectUrls.current.forEach((url) => URL.revokeObjectURL(url));
-      previewObjectUrls.current = [];
-    };
-  }, [debouncedPreview]);
+  }, [config, previewKind, debouncedPreview]);
+
+  useEffect(
+    () => () => {
+      if (previewObjectUrls.current) {
+        URL.revokeObjectURL(previewObjectUrls.current);
+      }
+    },
+    [],
+  );
 
   const save = async () => {
     setSaving(true);
@@ -538,12 +556,13 @@ function InvoiceBuilderEditor({
         </CardContent>
       </Card>
 
-      <Tabs defaultValue="design">
-        <TabsList className="grid w-full max-w-md grid-cols-3">
-          <TabsTrigger value="design">Design</TabsTrigger>
-          <TabsTrigger value="sections">Sections</TabsTrigger>
-          <TabsTrigger value="preview">PDF Preview</TabsTrigger>
-        </TabsList>
+      <div className="flex h-[calc(100vh-9rem)] min-h-[560px] flex-col gap-4 lg:flex-row">
+        <div className="min-w-0 flex-1 space-y-4 overflow-y-auto pr-1">
+          <Tabs defaultValue="design">
+            <TabsList className="grid w-full max-w-md grid-cols-2">
+              <TabsTrigger value="design">Design</TabsTrigger>
+              <TabsTrigger value="sections">Sections</TabsTrigger>
+            </TabsList>
 
         <TabsContent value="design" className="space-y-4 pt-4">
           <Card>
@@ -1003,42 +1022,49 @@ function InvoiceBuilderEditor({
           ))}
         </TabsContent>
 
-        <TabsContent value="preview" className="space-y-3 pt-4">
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-1.5">
-              {(["invoice", "receipt"] as const).map((kind) => (
-                <Button
-                  key={kind}
-                  size="sm"
-                  variant={previewKind === kind ? "default" : "outline"}
-                  onClick={() => setPreviewKind(kind)}
-                >
-                  {kind === "invoice" ? "Invoice" : "Receipt"}
-                </Button>
-              ))}
+          </Tabs>
+        </div>
+
+        <div className="min-w-0 w-full shrink-0 lg:w-[500px] xl:w-[540px]">
+          <Card className="h-full overflow-hidden border-border">
+            <div className="flex items-center justify-between gap-3 border-b border-border bg-muted/20 px-4 py-2.5">
+              <div className="flex items-center gap-2 min-w-0">
+                <Eye className="h-4 w-4 shrink-0 text-muted-foreground" />
+                <span className="truncate text-sm font-medium">
+                  {previewLoading ? "Rendering preview…" : "Live preview"}
+                </span>
+              </div>
+              <div className="flex shrink-0 items-center gap-1.5">
+                {(["invoice", "receipt"] as const).map((kind) => (
+                  <Button
+                    key={kind}
+                    size="sm"
+                    className="h-8 px-3"
+                    variant={previewKind === kind ? "default" : "outline"}
+                    onClick={() => setPreviewKind(kind)}
+                  >
+                    {kind === "invoice" ? "Invoice" : "Receipt"}
+                  </Button>
+                ))}
+              </div>
             </div>
-            <div className="text-xs text-muted-foreground">
-              {previewLoading ? "Rendering…" : "Live preview updates as you edit"}
-            </div>
-          </div>
-          <Card className="overflow-hidden">
-            <CardContent className="p-0 min-h-[420px] flex items-center justify-center bg-muted/30">
+            <div className="flex h-full min-h-[480px] items-start justify-center overflow-hidden bg-muted/30 p-6">
               {previewUrl ? (
                 <iframe
                   src={previewUrl}
                   title="Invoice preview"
-                  className="h-[720px] w-full max-w-[560px] bg-white"
+                  className="h-full w-full max-w-[520px] bg-white shadow-sm"
                 />
               ) : (
                 <div className="py-20 text-sm text-muted-foreground">
-                  <Rocket className="h-6 w-6 mx-auto mb-2 opacity-40" />
+                  <Rocket className="mx-auto mb-2 h-6 w-6 opacity-40" />
                   Adjust the design to generate the first preview.
                 </div>
               )}
-            </CardContent>
+            </div>
           </Card>
-        </TabsContent>
-      </Tabs>
+        </div>
+      </div>
     </div>
   );
 }

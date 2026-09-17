@@ -87,9 +87,11 @@ const quickActions: SearchItem[] = [
 interface CommandPaletteProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+
+  hideInvoiceBuilder?: boolean;
 }
 
-export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
+export function CommandPalette({ open, onOpenChange, hideInvoiceBuilder = false }: CommandPaletteProps) {
   const router = useRouter();
   const [query, setQuery] = useState("");
 
@@ -105,7 +107,9 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
     return () => document.removeEventListener("keydown", down);
   }, [onOpenChange]);
 
-  const allItems = [...searchItems, ...quickActions];
+  const allItems = [...searchItems, ...quickActions].filter(
+    (item) => !(hideInvoiceBuilder && item.id === "invoice-builder"),
+  );
 
   const handleSelect = (item: SearchItem) => {
     if (item.href.startsWith("http")) {

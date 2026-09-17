@@ -1,5 +1,5 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`invoice documents — default renderer golden output > matches the pre-refactor golden byte digest for invoices 1`] = `"fc7aef932a28c347365c6ed25b37b685ceea0ac5b49c598bfe1027161705bed4"`;
+exports[`invoice documents — default renderer golden output > matches the pre-refactor golden byte digest for invoices 1`] = `"154a5490ed973e9d09d8459f489d46199358c8ce9fea6fff77ee2737afaf123f"`;
 
-exports[`invoice documents — default renderer golden output > matches the pre-refactor golden byte digest for receipts 1`] = `"f1476e072ed62d4952aa9540616d1127a3409a7b46c1f5b9f655f73fc1dcf761"`;
+exports[`invoice documents — default renderer golden output > matches the pre-refactor golden byte digest for receipts 1`] = `"823d4902b9d4ebc824e7ed05956386d390664117e4b29e6cc7177757dd00f6ee"`;

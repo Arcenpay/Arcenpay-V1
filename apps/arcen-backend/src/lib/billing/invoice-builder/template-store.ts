@@ -2,6 +2,7 @@ import { db } from "../../../db.js";
 import { Prisma } from "../../../generated/client/client.js";
 import { toPrismaJson } from "../../../utils/prisma-json.js";
 import { asRecord } from "../utils.js";
+import { buildDefaultInvoiceTemplateConfig } from "./default-template.js";
 import { validateInvoiceTemplateConfig } from "./schema.js";
 import type { InvoiceTemplateConfig } from "./types.js";
 
@@ -58,6 +59,56 @@ export async function resolveTemplateConfigForTeam(input: {
   if (!config) return null;
   return { config, templateId: type.id };
 }
+// ── Default template seeding ─────────────────────────────────────────────────
+
+/**
+ * Idempotently seeds the stock "Classic" template for Plus/Pro teams and
+ * activates it immediately, so the builder starts with a working published
+ * design. No-op when the team already has any template.
+ */
+export async function ensureInvoiceBuilderDefaultTemplate(input: {
+  teamId: string;
+  environmentId: string | null;
+  tierAllowed: boolean;
+}): Promise<{ seeded: boolean; activated: boolean }> {
+  if (!input.tierAllowed) {
+    return { seeded: false, activated: false };
+  }
+
+  const existing = await db.invoiceTemplate.count({
+    where: {
+      teamId: input.teamId,
+      ...(input.environmentId
+        ? { environmentId: input.environmentId }
+        : { environmentId: null }),
+    },
+  });
+  if (existing > 0) {
+    // Self-heal any stock "Classic" seed that predates the isProtected
+    // column so the platform default can never be deleted.
+    await db.invoiceTemplate.updateMany({
+      where: { teamId: input.teamId, name: "Classic", isProtected: false },
+      data: { isProtected: true },
+    });
+    return { seeded: false, activated: false };
+  }
+
+  const config = buildDefaultInvoiceTemplateConfig();
+  const created = await db.invoiceTemplate.create({
+    data: {
+      teamId: input.teamId,
+      environmentId: input.environmentId ?? undefined,
+      name: config.meta.name,
+      description: config.meta.description ?? null,
+      config: toPrismaJson(config),
+      isActive: true,
+      isProtected: true,
+    },
+    select: { id: true },
+  });
+  return { seeded: true, activated: Boolean(created.id) };
+}
+
 // ── CRUD helpers (routes are thin; validation happens before these) ──────────
 
 export async function listInvoiceTemplates(input: {
@@ -67,7 +118,11 @@ export async function listInvoiceTemplates(input: {
   return db.invoiceTemplate.findMany({
     where: {
       teamId: input.teamId,
-      ...(input.environmentId ? { environmentId: input.environmentId } : {}),
+      // Show environment templates AND the shared global (null-env) baseline
+      // so switching environments never makes the builder look empty.
+      ...(input.environmentId
+        ? { OR: [{ environmentId: input.environmentId }, { environmentId: null }] }
+        : { environmentId: null }),
     },
     orderBy: [{ isActive: "desc" }, { updatedAt: "desc" }],
     select: {
@@ -75,6 +130,7 @@ export async function listInvoiceTemplates(input: {
       name: true,
       description: true,
       isActive: true,
+      isProtected: true,
       environmentId: true,
       createdAt: true,
       updatedAt: true,
@@ -139,14 +195,19 @@ export async function updateInvoiceTemplate(input: {
 export async function deleteInvoiceTemplate(input: {
   teamId: string;
   id: string;
-}): Promise<boolean> {
+}): Promise<{ deleted: boolean; protected?: boolean }> {
   const existing = await db.invoiceTemplate.findFirst({
     where: { id: input.id, teamId: input.teamId },
-    select: { id: true },
+    select: { id: true, isProtected: true },
   });
-  if (!existing) return false;
+  if (!existing) return { deleted: false };
+  if (existing.isProtected) {
+    // The seeded platform default is the Plus/Pro baseline design — it may
+    // be edited or deactivated but never deleted.
+    return { deleted: false, protected: true };
+  }
   await db.invoiceTemplate.delete({ where: { id: input.id } });
-  return true;
+  return { deleted: true };
 }
 
 /**

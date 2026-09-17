@@ -33,6 +33,7 @@ export type InvoiceTemplateMinAggregateOutputType = {
   name: string | null
   description: string | null
   isActive: boolean | null
+  isProtected: boolean | null
 }
 
 export type InvoiceTemplateMaxAggregateOutputType = {
@@ -44,6 +45,7 @@ export type InvoiceTemplateMaxAggregateOutputType = {
   name: string | null
   description: string | null
   isActive: boolean | null
+  isProtected: boolean | null
 }
 
 export type InvoiceTemplateCountAggregateOutputType = {
@@ -56,6 +58,7 @@ export type InvoiceTemplateCountAggregateOutputType = {
   description: number
   config: number
   isActive: number
+  isProtected: number
   _all: number
 }
 
@@ -69,6 +72,7 @@ export type InvoiceTemplateMinAggregateInputType = {
   name?: true
   description?: true
   isActive?: true
+  isProtected?: true
 }
 
 export type InvoiceTemplateMaxAggregateInputType = {
@@ -80,6 +84,7 @@ export type InvoiceTemplateMaxAggregateInputType = {
   name?: true
   description?: true
   isActive?: true
+  isProtected?: true
 }
 
 export type InvoiceTemplateCountAggregateInputType = {
@@ -92,6 +97,7 @@ export type InvoiceTemplateCountAggregateInputType = {
   description?: true
   config?: true
   isActive?: true
+  isProtected?: true
   _all?: true
 }
 
@@ -177,6 +183,7 @@ export type InvoiceTemplateGroupByOutputType = {
   description: string | null
   config: runtime.JsonValue
   isActive: boolean
+  isProtected: boolean
   _count: InvoiceTemplateCountAggregateOutputType | null
   _min: InvoiceTemplateMinAggregateOutputType | null
   _max: InvoiceTemplateMaxAggregateOutputType | null
@@ -210,6 +217,7 @@ export type InvoiceTemplateWhereInput = {
   description?: Prisma.StringNullableFilter<"InvoiceTemplate"> | string | null
   config?: Prisma.JsonFilter<"InvoiceTemplate">
   isActive?: Prisma.BoolFilter<"InvoiceTemplate"> | boolean
+  isProtected?: Prisma.BoolFilter<"InvoiceTemplate"> | boolean
   team?: Prisma.XOR<Prisma.TeamScalarRelationFilter, Prisma.TeamWhereInput>
   environment?: Prisma.XOR<Prisma.WorkspaceEnvironmentNullableScalarRelationFilter, Prisma.WorkspaceEnvironmentWhereInput> | null
   invoices?: Prisma.InvoiceListRelationFilter
@@ -225,6 +233,7 @@ export type InvoiceTemplateOrderByWithRelationInput = {
   description?: Prisma.SortOrderInput | Prisma.SortOrder
   config?: Prisma.SortOrder
   isActive?: Prisma.SortOrder
+  isProtected?: Prisma.SortOrder
   team?: Prisma.TeamOrderByWithRelationInput
   environment?: Prisma.WorkspaceEnvironmentOrderByWithRelationInput
   invoices?: Prisma.InvoiceOrderByRelationAggregateInput
@@ -244,6 +253,7 @@ export type InvoiceTemplateWhereUniqueInput = Prisma.AtLeast<{
   description?: Prisma.StringNullableFilter<"InvoiceTemplate"> | string | null
   config?: Prisma.JsonFilter<"InvoiceTemplate">
   isActive?: Prisma.BoolFilter<"InvoiceTemplate"> | boolean
+  isProtected?: Prisma.BoolFilter<"InvoiceTemplate"> | boolean
   team?: Prisma.XOR<Prisma.TeamScalarRelationFilter, Prisma.TeamWhereInput>
   environment?: Prisma.XOR<Prisma.WorkspaceEnvironmentNullableScalarRelationFilter, Prisma.WorkspaceEnvironmentWhereInput> | null
   invoices?: Prisma.InvoiceListRelationFilter
@@ -259,6 +269,7 @@ export type InvoiceTemplateOrderByWithAggregationInput = {
   description?: Prisma.SortOrderInput | Prisma.SortOrder
   config?: Prisma.SortOrder
   isActive?: Prisma.SortOrder
+  isProtected?: Prisma.SortOrder
   _count?: Prisma.InvoiceTemplateCountOrderByAggregateInput
   _max?: Prisma.InvoiceTemplateMaxOrderByAggregateInput
   _min?: Prisma.InvoiceTemplateMinOrderByAggregateInput
@@ -277,6 +288,7 @@ export type InvoiceTemplateScalarWhereWithAggregatesInput = {
   description?: Prisma.StringNullableWithAggregatesFilter<"InvoiceTemplate"> | string | null
   config?: Prisma.JsonWithAggregatesFilter<"InvoiceTemplate">
   isActive?: Prisma.BoolWithAggregatesFilter<"InvoiceTemplate"> | boolean
+  isProtected?: Prisma.BoolWithAggregatesFilter<"InvoiceTemplate"> | boolean
 }
 
 export type InvoiceTemplateCreateInput = {
@@ -287,6 +299,7 @@ export type InvoiceTemplateCreateInput = {
   description?: string | null
   config: Prisma.JsonNullValueInput | runtime.InputJsonValue
   isActive?: boolean
+  isProtected?: boolean
   team: Prisma.TeamCreateNestedOneWithoutInvoiceTemplatesInput
   environment?: Prisma.WorkspaceEnvironmentCreateNestedOneWithoutInvoiceTemplatesInput
   invoices?: Prisma.InvoiceCreateNestedManyWithoutTemplateInput
@@ -302,6 +315,7 @@ export type InvoiceTemplateUncheckedCreateInput = {
   description?: string | null
   config: Prisma.JsonNullValueInput | runtime.InputJsonValue
   isActive?: boolean
+  isProtected?: boolean
   invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutTemplateInput
 }
 
@@ -313,6 +327,7 @@ export type InvoiceTemplateUpdateInput = {
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   config?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  isProtected?: Prisma.BoolFieldUpdateOperationsInput | boolean
   team?: Prisma.TeamUpdateOneRequiredWithoutInvoiceTemplatesNestedInput
   environment?: Prisma.WorkspaceEnvironmentUpdateOneWithoutInvoiceTemplatesNestedInput
   invoices?: Prisma.InvoiceUpdateManyWithoutTemplateNestedInput
@@ -328,6 +343,7 @@ export type InvoiceTemplateUncheckedUpdateInput = {
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   config?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  isProtected?: Prisma.BoolFieldUpdateOperationsInput | boolean
   invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutTemplateNestedInput
 }
 
@@ -341,6 +357,7 @@ export type InvoiceTemplateCreateManyInput = {
   description?: string | null
   config: Prisma.JsonNullValueInput | runtime.InputJsonValue
   isActive?: boolean
+  isProtected?: boolean
 }
 
 export type InvoiceTemplateUpdateManyMutationInput = {
@@ -351,6 +368,7 @@ export type InvoiceTemplateUpdateManyMutationInput = {
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   config?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  isProtected?: Prisma.BoolFieldUpdateOperationsInput | boolean
 }
 
 export type InvoiceTemplateUncheckedUpdateManyInput = {
@@ -363,6 +381,7 @@ export type InvoiceTemplateUncheckedUpdateManyInput = {
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   config?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  isProtected?: Prisma.BoolFieldUpdateOperationsInput | boolean
 }
 
 export type InvoiceTemplateListRelationFilter = {
@@ -391,6 +410,7 @@ export type InvoiceTemplateCountOrderByAggregateInput = {
   description?: Prisma.SortOrder
   config?: Prisma.SortOrder
   isActive?: Prisma.SortOrder
+  isProtected?: Prisma.SortOrder
 }
 
 export type InvoiceTemplateMaxOrderByAggregateInput = {
@@ -402,6 +422,7 @@ export type InvoiceTemplateMaxOrderByAggregateInput = {
   name?: Prisma.SortOrder
   description?: Prisma.SortOrder
   isActive?: Prisma.SortOrder
+  isProtected?: Prisma.SortOrder
 }
 
 export type InvoiceTemplateMinOrderByAggregateInput = {
@@ -413,6 +434,7 @@ export type InvoiceTemplateMinOrderByAggregateInput = {
   name?: Prisma.SortOrder
   description?: Prisma.SortOrder
   isActive?: Prisma.SortOrder
+  isProtected?: Prisma.SortOrder
 }
 
 export type InvoiceTemplateNullableScalarRelationFilter = {
@@ -528,6 +550,7 @@ export type InvoiceTemplateCreateWithoutTeamInput = {
   description?: string | null
   config: Prisma.JsonNullValueInput | runtime.InputJsonValue
   isActive?: boolean
+  isProtected?: boolean
   environment?: Prisma.WorkspaceEnvironmentCreateNestedOneWithoutInvoiceTemplatesInput
   invoices?: Prisma.InvoiceCreateNestedManyWithoutTemplateInput
 }
@@ -541,6 +564,7 @@ export type InvoiceTemplateUncheckedCreateWithoutTeamInput = {
   description?: string | null
   config: Prisma.JsonNullValueInput | runtime.InputJsonValue
   isActive?: boolean
+  isProtected?: boolean
   invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutTemplateInput
 }
 
@@ -583,6 +607,7 @@ export type InvoiceTemplateScalarWhereInput = {
   description?: Prisma.StringNullableFilter<"InvoiceTemplate"> | string | null
   config?: Prisma.JsonFilter<"InvoiceTemplate">
   isActive?: Prisma.BoolFilter<"InvoiceTemplate"> | boolean
+  isProtected?: Prisma.BoolFilter<"InvoiceTemplate"> | boolean
 }
 
 export type InvoiceTemplateCreateWithoutEnvironmentInput = {
@@ -593,6 +618,7 @@ export type InvoiceTemplateCreateWithoutEnvironmentInput = {
   description?: string | null
   config: Prisma.JsonNullValueInput | runtime.InputJsonValue
   isActive?: boolean
+  isProtected?: boolean
   team: Prisma.TeamCreateNestedOneWithoutInvoiceTemplatesInput
   invoices?: Prisma.InvoiceCreateNestedManyWithoutTemplateInput
 }
@@ -606,6 +632,7 @@ export type InvoiceTemplateUncheckedCreateWithoutEnvironmentInput = {
   description?: string | null
   config: Prisma.JsonNullValueInput | runtime.InputJsonValue
   isActive?: boolean
+  isProtected?: boolean
   invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutTemplateInput
 }
 
@@ -643,6 +670,7 @@ export type InvoiceTemplateCreateWithoutInvoicesInput = {
   description?: string | null
   config: Prisma.JsonNullValueInput | runtime.InputJsonValue
   isActive?: boolean
+  isProtected?: boolean
   team: Prisma.TeamCreateNestedOneWithoutInvoiceTemplatesInput
   environment?: Prisma.WorkspaceEnvironmentCreateNestedOneWithoutInvoiceTemplatesInput
 }
@@ -657,6 +685,7 @@ export type InvoiceTemplateUncheckedCreateWithoutInvoicesInput = {
   description?: string | null
   config: Prisma.JsonNullValueInput | runtime.InputJsonValue
   isActive?: boolean
+  isProtected?: boolean
 }
 
 export type InvoiceTemplateCreateOrConnectWithoutInvoicesInput = {
@@ -683,6 +712,7 @@ export type InvoiceTemplateUpdateWithoutInvoicesInput = {
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   config?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  isProtected?: Prisma.BoolFieldUpdateOperationsInput | boolean
   team?: Prisma.TeamUpdateOneRequiredWithoutInvoiceTemplatesNestedInput
   environment?: Prisma.WorkspaceEnvironmentUpdateOneWithoutInvoiceTemplatesNestedInput
 }
@@ -697,6 +727,7 @@ export type InvoiceTemplateUncheckedUpdateWithoutInvoicesInput = {
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   config?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  isProtected?: Prisma.BoolFieldUpdateOperationsInput | boolean
 }
 
 export type InvoiceTemplateCreateManyTeamInput = {
@@ -708,6 +739,7 @@ export type InvoiceTemplateCreateManyTeamInput = {
   description?: string | null
   config: Prisma.JsonNullValueInput | runtime.InputJsonValue
   isActive?: boolean
+  isProtected?: boolean
 }
 
 export type InvoiceTemplateUpdateWithoutTeamInput = {
@@ -718,6 +750,7 @@ export type InvoiceTemplateUpdateWithoutTeamInput = {
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   config?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  isProtected?: Prisma.BoolFieldUpdateOperationsInput | boolean
   environment?: Prisma.WorkspaceEnvironmentUpdateOneWithoutInvoiceTemplatesNestedInput
   invoices?: Prisma.InvoiceUpdateManyWithoutTemplateNestedInput
 }
@@ -731,6 +764,7 @@ export type InvoiceTemplateUncheckedUpdateWithoutTeamInput = {
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   config?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  isProtected?: Prisma.BoolFieldUpdateOperationsInput | boolean
   invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutTemplateNestedInput
 }
 
@@ -743,6 +777,7 @@ export type InvoiceTemplateUncheckedUpdateManyWithoutTeamInput = {
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   config?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  isProtected?: Prisma.BoolFieldUpdateOperationsInput | boolean
 }
 
 export type InvoiceTemplateCreateManyEnvironmentInput = {
@@ -754,6 +789,7 @@ export type InvoiceTemplateCreateManyEnvironmentInput = {
   description?: string | null
   config: Prisma.JsonNullValueInput | runtime.InputJsonValue
   isActive?: boolean
+  isProtected?: boolean
 }
 
 export type InvoiceTemplateUpdateWithoutEnvironmentInput = {
@@ -764,6 +800,7 @@ export type InvoiceTemplateUpdateWithoutEnvironmentInput = {
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   config?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  isProtected?: Prisma.BoolFieldUpdateOperationsInput | boolean
   team?: Prisma.TeamUpdateOneRequiredWithoutInvoiceTemplatesNestedInput
   invoices?: Prisma.InvoiceUpdateManyWithoutTemplateNestedInput
 }
@@ -777,6 +814,7 @@ export type InvoiceTemplateUncheckedUpdateWithoutEnvironmentInput = {
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   config?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  isProtected?: Prisma.BoolFieldUpdateOperationsInput | boolean
   invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutTemplateNestedInput
 }
 
@@ -789,6 +827,7 @@ export type InvoiceTemplateUncheckedUpdateManyWithoutEnvironmentInput = {
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   config?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  isProtected?: Prisma.BoolFieldUpdateOperationsInput | boolean
 }
 
 
@@ -832,6 +871,7 @@ export type InvoiceTemplateSelect<ExtArgs extends runtime.Types.Extensions.Inter
   description?: boolean
   config?: boolean
   isActive?: boolean
+  isProtected?: boolean
   team?: boolean | Prisma.TeamDefaultArgs<ExtArgs>
   environment?: boolean | Prisma.InvoiceTemplate$environmentArgs<ExtArgs>
   invoices?: boolean | Prisma.InvoiceTemplate$invoicesArgs<ExtArgs>
@@ -848,6 +888,7 @@ export type InvoiceTemplateSelectCreateManyAndReturn<ExtArgs extends runtime.Typ
   description?: boolean
   config?: boolean
   isActive?: boolean
+  isProtected?: boolean
   team?: boolean | Prisma.TeamDefaultArgs<ExtArgs>
   environment?: boolean | Prisma.InvoiceTemplate$environmentArgs<ExtArgs>
 }, ExtArgs["result"]["invoiceTemplate"]>
@@ -862,6 +903,7 @@ export type InvoiceTemplateSelectUpdateManyAndReturn<ExtArgs extends runtime.Typ
   description?: boolean
   config?: boolean
   isActive?: boolean
+  isProtected?: boolean
   team?: boolean | Prisma.TeamDefaultArgs<ExtArgs>
   environment?: boolean | Prisma.InvoiceTemplate$environmentArgs<ExtArgs>
 }, ExtArgs["result"]["invoiceTemplate"]>
@@ -876,9 +918,10 @@ export type InvoiceTemplateSelectScalar = {
   description?: boolean
   config?: boolean
   isActive?: boolean
+  isProtected?: boolean
 }
 
-export type InvoiceTemplateOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "createdAt" | "updatedAt" | "teamId" | "environmentId" | "name" | "description" | "config" | "isActive", ExtArgs["result"]["invoiceTemplate"]>
+export type InvoiceTemplateOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "createdAt" | "updatedAt" | "teamId" | "environmentId" | "name" | "description" | "config" | "isActive" | "isProtected", ExtArgs["result"]["invoiceTemplate"]>
 export type InvoiceTemplateInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   team?: boolean | Prisma.TeamDefaultArgs<ExtArgs>
   environment?: boolean | Prisma.InvoiceTemplate$environmentArgs<ExtArgs>
@@ -911,6 +954,7 @@ export type $InvoiceTemplatePayload<ExtArgs extends runtime.Types.Extensions.Int
     description: string | null
     config: runtime.JsonValue
     isActive: boolean
+    isProtected: boolean
   }, ExtArgs["result"]["invoiceTemplate"]>
   composites: {}
 }
@@ -1346,6 +1390,7 @@ export interface InvoiceTemplateFieldRefs {
   readonly description: Prisma.FieldRef<"InvoiceTemplate", 'String'>
   readonly config: Prisma.FieldRef<"InvoiceTemplate", 'Json'>
   readonly isActive: Prisma.FieldRef<"InvoiceTemplate", 'Boolean'>
+  readonly isProtected: Prisma.FieldRef<"InvoiceTemplate", 'Boolean'>
 }
     
 

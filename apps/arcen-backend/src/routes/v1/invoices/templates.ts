@@ -1,9 +1,7 @@
 import { randomUUID } from "crypto";
-import { promises as fs } from "fs";
-import path from "path";
 import type { Context } from "hono";
 import { z } from "zod";
-import { INVOICE_STORAGE_DIR } from "../../../config.js";
+import { getStorage } from "../../../lib/storage/index.js";
 import {
   isErrorResponse,
   requirePermission,
@@ -15,6 +13,7 @@ import {
   createInvoiceTemplate,
   deleteInvoiceTemplate,
   duplicateInvoiceTemplate,
+  ensureInvoiceBuilderDefaultTemplate,
   getInvoiceTemplate,
   listInvoiceTemplates,
   updateInvoiceTemplate,
@@ -51,20 +50,42 @@ export async function uploadTemplateLogo(c: Context) {
   if (!file || !(file instanceof File)) {
     return c.json({ ok: false, error: "A file upload named 'file' is required" }, 422 as any);
   }
-  const isPng = file.type === "image/png";
-  const isJpeg = file.type === "image/jpeg" || file.type === "image/jpg";
-  if (!isPng && !isJpeg) {
-    return c.json({ ok: false, error: "Logo must be a PNG or JPEG image" }, 415 as any);
-  }
-  if (file.size > LOGO_MAX_BYTES) {
-    return c.json({ ok: false, error: "Logo must be 2MB or smaller" }, 413 as any);
+  const mimeOk =
+    file.type === "image/png" ||
+    file.type === "image/jpeg" ||
+    file.type === "image/jpg";
+  if (!mimeOk || file.size > LOGO_MAX_BYTES) {
+    return c.json(
+      { ok: false, error: "Logo must be a PNG/JPEG image up to 2MB" },
+      mimeOk ? 413 : 415 as any,
+    );
   }
 
+  // Cross-check the file MAGIC BYTES (MIME types are client-tamperable).
+  const head = Buffer.from(
+    (await file.arrayBuffer()).slice(0, 12),
+  );
+  const isPng =
+    head.length >= 8 &&
+    head[0] === 0x89 &&
+    head[1] === 0x50 &&
+    head[2] === 0x4e &&
+    head[3] === 0x47;
+  const isJpeg = head.length >= 3 && head[0] === 0xff && head[1] === 0xd8 && head[2] === 0xff;
+  if (!isPng && !isJpeg) {
+    return c.json(
+      { ok: false, error: "File does not look like a PNG or JPEG image" },
+      415 as any,
+    );
+  }
+
+  // Logos go to the configured object store (Cloudflare R2 in production,
+  // local filesystem under INVOICE_STORAGE_DIR as the dev fallback).
   const teamId = auth.team.teamId;
   const objectKey = `assets/${teamId}/${randomUUID()}.${isPng ? "png" : "jpg"}`;
-  const absPath = path.join(INVOICE_STORAGE_DIR, objectKey);
-  await fs.mkdir(path.dirname(absPath), { recursive: true });
-  await fs.writeFile(absPath, Buffer.from(await file.arrayBuffer()));
+  await getStorage().put(objectKey, Buffer.from(await file.arrayBuffer()), {
+    contentType: file.type,
+  });
 
   return c.json({ ok: true, data: { objectKey } }, 201 as any);
 }
@@ -100,16 +121,25 @@ export async function listTemplates(c: Context) {
   if (isErrorResponse(auth)) return c.json({ ok: false, error: auth.error }, auth.status as any);
 
   const environmentId = await resolveEnvironmentId(c, auth);
+  const builder = await assertTierFeature(auth.team.teamId, "invoiceBuilder");
+  // Auto-seed the stock Classic template (active) on first visit for Plus/Pro.
+  if (builder.allowed) {
+    await ensureInvoiceBuilderDefaultTemplate({
+      teamId: auth.team.teamId,
+      environmentId,
+      tierAllowed: true,
+    });
+  }
   const templates = await listInvoiceTemplates({
     teamId: auth.team.teamId,
     environmentId,
   });
-  const builder = await assertTierFeature(auth.team.teamId, "invoiceBuilder");
   return c.json({
     ok: true,
     data: templates,
     builderAvailable: builder.allowed,
     upgradeRequired: builder.allowed ? null : builder.upgradeRequired,
+    storage: { driver: getStorage().driver },
   });
 }
 
@@ -209,11 +239,24 @@ export async function deleteTemplate(c: Context) {
   const auth = await requirePermission(c, "invoices:write");
   if (isErrorResponse(auth)) return c.json({ ok: false, error: auth.error }, auth.status as any);
 
-  const deleted = await deleteInvoiceTemplate({
+  const result = await deleteInvoiceTemplate({
     teamId: auth.team.teamId,
     id: c.req.param("id")!,
   });
-  if (!deleted) return c.json({ ok: false, error: "Template not found" }, 404 as any);
+  if (!result.deleted) {
+    if (result.protected) {
+      return c.json(
+        {
+          ok: false,
+          error: "PROTECTED_TEMPLATE",
+          message:
+            "The default template is the baseline design for Plus/Pro and cannot be deleted. Create and activate a new template instead.",
+        },
+        403 as any,
+      );
+    }
+    return c.json({ ok: false, error: "Template not found" }, 404 as any);
+  }
   return c.json({ ok: true });
 }
 

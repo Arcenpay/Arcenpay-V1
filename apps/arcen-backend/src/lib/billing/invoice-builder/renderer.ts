@@ -9,6 +9,7 @@ import {
   type LoadedInvoiceContext,
 } from "../invoice-context.js";
 import { readObject } from "../invoice-documents.js";
+import { wrapColumnText } from "../utils.js";
 import type {
   InvoiceSection,
   InvoiceTemplateConfig,
@@ -276,8 +277,14 @@ function drawAddresses(ctx: RenderCtx): number {
     ...getProviderAddressLines(ctx.context).filter((line) => line !== providerName),
   ];
   const toLines = getCustomerAddressLines(ctx.context);
-  const wrappedFrom = fromLines.flatMap((line) => (line ? wrapText(line, 44) : []));
-  const wrappedTo = toLines.flatMap((line) => (line ? wrapText(line, 44) : []));
+  // Column-aware wrapping keeps long values (wallets, emails) inside the
+  // portrait page edges instead of overflowing.
+  const wrappedFrom = fromLines.flatMap((line) =>
+    line ? wrapColumnText(line, 46) : [],
+  );
+  const wrappedTo = toLines.flatMap((line) =>
+    line ? wrapColumnText(line, 30) : [],
+  );
   const rows = Math.max(wrappedFrom.length, wrappedTo.length, 1);
   let y = ctx.y;
 
