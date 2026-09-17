@@ -41,6 +41,12 @@ export interface ArcenPayContextValue {
   componentId: string;
   /** Smart-account infrastructure config (fetched from ArcenPay backend). */
   smartAccount: SmartAccountInfra;
+  /**
+   * Publishable key (pk_live_/pk_test_) — safe to expose in the browser.
+   * Used as the Authorization credential for client-safe, customer-scoped
+   * reads when no identify() session token exists.
+   */
+  publishableKey: string;
 }
 
 export interface SmartAccountInfra {
@@ -590,8 +596,9 @@ function ArcenPayRuntime({
       isTestnet: manifest.isTestnet,
       componentId,
       smartAccount,
+      publishableKey,
     };
-  }, [baseUrl, chainId, componentId, session, userConfig, smartAccount]);
+  }, [baseUrl, chainId, componentId, session, userConfig, smartAccount, publishableKey]);
 
   return (
     <ArcenPayContext.Provider value={contextValue}>
