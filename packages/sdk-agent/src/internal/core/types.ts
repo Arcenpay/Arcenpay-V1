@@ -482,10 +482,15 @@ export interface ComponentRenderData {
   recentInvoices?: ComponentInvoiceSummary[];
   subscriptionTransition?: ComponentSubscriptionTransition | null;
   /**
-   * Server-enforced branding policy for the embed. hides the ArcenPay
-   * footer only when the provider tier allows it (PLUS/PRO).
+   * Server-enforced branding policy for the embed.
+   * `hideBrandingAllowed === true` when the provider's platform tier
+   * (PLUS/PRO) permits removing the "Secured by ArcenPay" footer. The SDK
+   * combines this with the client `hideBranding` prop; FREE tier always
+   * keeps the ArcenPay badge.
    */
-  branding?: { hideBrandingAllowed: boolean } | null;
+  branding?: {
+    hideBrandingAllowed: boolean;
+  } | null;
 }
 
 // --- SDK Config ---
