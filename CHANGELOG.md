@@ -37,6 +37,7 @@ All notable changes to ArcenPay are documented here.
 - Redesigned invoice/receipt emails around a shared on-brand email shell
 - Billing & Plan "What's included" feature matrix (invoice builder, white-label,
   support, cross-chain, ZK, x402 per tier)
+- Agent pre-approval/funding fix: dashboard Step 2 funds the ZKVUB session vault on EVM (approve vault to fundSession) instead of approving the bare agent EOA, records funding via a durable preApprovals ledger (POST /api/v1/agent/fund), and properly resets the Stellar transfer flow (previously stuck).
 - Platform tiers (FREE / PLUS / PRO) with limits
 - Gas sponsorship via hosted paymaster
 - Tableland flag mirroring (optional)
