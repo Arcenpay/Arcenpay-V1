@@ -38,6 +38,8 @@ All notable changes to ArcenPay are documented here.
 - Billing & Plan "What's included" feature matrix (invoice builder, white-label,
   support, cross-chain, ZK, x402 per tier)
 - Agent pre-approval/funding fix: dashboard Step 2 funds the ZKVUB session vault on EVM (approve vault to fundSession) instead of approving the bare agent EOA, records funding via a durable preApprovals ledger (POST /api/v1/agent/fund), and properly resets the Stellar transfer flow (previously stuck).
+- Agent multi-chain + funding reliability: wagmi-receipt-driven approval state machine (approve → fund → record) so Step 2 never hangs waiting for a receipt; chain-mismatch guard with in-UI "Switch network"; per-chain agent wallets (ArcenAgentConfig.agentWallets JSON map, migration 20260916000004) so each EVM/Stellar chain keeps its own agent wallet.
+
 - Platform tiers (FREE / PLUS / PRO) with limits
 - Gas sponsorship via hosted paymaster
 - Tableland flag mirroring (optional)

@@ -1963,6 +1963,8 @@ model ArcenAgentConfig {
   dispatch           Json    @default("{\"enabled\":false,\"providers\":[],\"cooldownSeconds\":120,\"maxRetries\":3}")
   // Agent pre-funding ledger: [{ amount, txHash, chainId, mode, createdAt, sessionId? }]
   preApprovals       Json    @default("[]")
+  // Per-chain agent wallets: { [chainId]: { address, createdAt } }
+  agentWallets       Json    @default("{}")
   agentWalletAddress String?
   chainId            Int?
   chainFamily        ChainFamily @default(EVM)

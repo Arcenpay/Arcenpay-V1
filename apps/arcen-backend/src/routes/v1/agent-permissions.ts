@@ -14,6 +14,27 @@ import { resolveChainFamilyForPrisma } from "../../lib/platform/chain-family.js"
 import { toPrismaJson } from "../../utils/prisma-json.js";
 import { asRecord, readString } from "../../lib/billing/utils.js";
 
+function readWalletsMap(value: unknown): Record<string, { address: string; createdAt: string }> {
+  // Accepts { [chainId]: address } (string) or { [chainId]: { address } }
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  const out: Record<string, { address: string; createdAt: string }> = {};
+  for (const [chainId, raw] of Object.entries(value as Record<string, unknown>)) {
+    const key = chainId.replace(/\D/g, "");
+    if (!key) continue;
+    const num = Number(key);
+    const entry =
+      typeof raw === "string"
+        ? { address: raw }
+        : typeof raw === "object" && raw !== null && typeof (raw as any).address === "string"
+          ? { address: (raw as any).address }
+          : null;
+    if (!entry || !entry.address.trim()) continue;
+    if (!isValidAddressForChain(entry.address.trim(), num)) continue;
+    out[key] = { address: entry.address.trim(), createdAt: new Date().toISOString() };
+  }
+  return out;
+}
+
 function readChainContext(
   body: Record<string, unknown>,
 ): { chainId?: number; chainFamily?: "EVM" | "STELLAR" } {
@@ -46,6 +67,7 @@ export async function GET(c: Context) {
           chainId: null,
           chainFamily: "EVM",
           preApprovals: [],
+          agentWallets: {},
         },
       });
     }
@@ -54,10 +76,18 @@ export async function GET(c: Context) {
       data: {
         autoTopUp: config.autoTopUp,
         dispatch: config.dispatch,
-        agentWalletAddress: config.agentWalletAddress || "",
         chainId: config.chainId ?? null,
         chainFamily: config.chainFamily ?? "EVM",
         preApprovals: asRecord(config.preApprovals),
+        agentWallets: readWalletsMap(asRecord(config.agentWallets)),
+        agentWalletAddress: (() => {
+          // Prefer the wallet for the persisted chainId; fall back to the
+          // legacy single-wallet field for backward compatibility.
+          const wallets = readWalletsMap(asRecord(config.agentWallets));
+          const key = config.chainId ? String(config.chainId) : null;
+          if (key && wallets[key]?.address) return wallets[key].address;
+          return config.agentWalletAddress || "";
+        })(),
       },
     });
   } catch (err: any) {
@@ -93,26 +123,53 @@ export async function PUT(c: Context) {
       data.chainId = chainContext.chainId;
       data.chainFamily = chainContext.chainFamily;
     }
+    // Read the existing row so per-chain wallets merge instead of clobbering.
+    const existing = await db.arcenAgentConfig.findUnique({
+      where: { teamId: team.teamId },
+    });
+    const existingWallets = readWalletsMap(
+      existing ? asRecord(existing.agentWallets) : {},
+    );
+
+    const effectiveChainId =
+      typeof data.chainId === "number" ? data.chainId
+      : existing?.chainId ?? 84532;
+    const family = resolveChainFamilyForPrisma(effectiveChainId);
+
+    if (body.agentWallets && typeof body.agentWallets === "object") {
+      // Merge the per-chain map the client sent into the existing map.
+      const incoming = readWalletsMap(body.agentWallets);
+      const merged = { ...existingWallets };
+      for (const [chain, entry] of Object.entries(incoming)) {
+        if (entry.address && isValidAddressForChain(entry.address, Number(chain))) {
+          merged[chain] = entry;
+        }
+      }
+      data.agentWallets = toPrismaJson(merged);
+      // Keep the legacy single-wallet alias pointed at the active chain.
+      const active = merged[String(effectiveChainId)];
+      if (active?.address) {
+        data.agentWalletAddress = active.address;
+      }
+    }
+
     if (typeof body.agentWalletAddress === "string" && body.agentWalletAddress) {
       const wallet = body.agentWalletAddress;
-      const family =
-        data.chainFamily ??
-        resolveChainFamilyForPrisma(
-          typeof data.chainId === "number" ? data.chainId : 84532,
-        );
-      const effectiveChainId =
-        typeof data.chainId === "number" ? data.chainId : 84532;
       if (!isValidAddressForChain(wallet, effectiveChainId)) {
         return c.json({
           error: `Agent wallet is not a valid ${family} address for chain ${effectiveChainId}.`,
         }, 400 as any);
       }
       data.agentWalletAddress = wallet;
+      // Sync the new wallet into the per-chain map too.
+      data.agentWallets = toPrismaJson({
+        ...existingWallets,
+        [String(effectiveChainId)]: {
+          address: wallet,
+          createdAt: new Date().toISOString(),
+        },
+      });
     }
-
-    const existing = await db.arcenAgentConfig.findUnique({
-      where: { teamId: team.teamId },
-    });
 
     let config;
     if (existing) {
@@ -134,6 +191,7 @@ export async function PUT(c: Context) {
         chainId: config.chainId ?? null,
         chainFamily: config.chainFamily ?? "EVM",
         preApprovals: asRecord(config.preApprovals),
+        agentWallets: readWalletsMap(asRecord(config.agentWallets)),
       },
     });
   } catch (err: any) {

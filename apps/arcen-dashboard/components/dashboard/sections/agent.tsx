@@ -2,7 +2,7 @@
 import { apiFetch } from "@/lib/api-client";
 
 import React, { useCallback, useState, useEffect } from "react";
-import { useAccount, usePublicClient, useWriteContract } from "wagmi";
+import { useAccount, usePublicClient, useSwitchChain, useWaitForTransactionReceipt, useWriteContract } from "wagmi";
 import { parseUnits } from "viem";
 import { generatePrivateKey, privateKeyToAddress } from "viem/accounts";
 import { toast } from "sonner";
@@ -40,7 +40,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { SessionVaultABI, getContractAddresses, getUsdcAddress } from "@/lib/contracts";
-import { resolveEnvironmentChainId } from "@/lib/default-chain";
+import { getChainLabel, resolveEnvironmentChainId } from "@/lib/default-chain";
 import { useEnvironment } from "@/contexts/environment-context";
 import { SkeletonList, SkeletonTable } from "@/components/ui/skeleton";
 import { useStellarWallet } from "@/hooks/use-stellar-wallet";
@@ -656,10 +656,12 @@ function PermissionsTab() {
     autoTopUp: { mode: "off", dailyLimit: "5.00", perTxnLimit: "1.00", threshold: "0.50" },
     dispatch: { enabled: false, providers: [], cooldownSeconds: 120, maxRetries: 3 },
   });
-  const [agentWallet, setAgentWallet] = useState<string>("");
+  const [agentWalletAddress, setAgentWalletAddress] = useState<string>("");
   const [approveAmount, setApproveAmount] = useState<string>("100");
-  const [approveTxHash, setApproveTxHash] = useState<string>("");
+  const [approveHash, setApproveHash] = useState<`0x${string}` | null>(null);
+  const [fundHash, setFundHash] = useState<`0x${string}` | null>(null);
   const [approveStep, setApproveStep] = useState<"approve" | "fund" | null>(null);
+  const [agentWallets, setAgentWallets] = useState<Record<string, string>>({});
   const [preApprovals, setPreApprovals] = useState<Array<{ amount: string; txHash: string; chainId: number; mode: string; createdAt: string }>>([]);
   const [approving, setApproving] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -682,6 +684,19 @@ function PermissionsTab() {
   const [testResult, setTestResult] = useState<{ ok: boolean; message: string } | null>(null);
 
   const publicClient = usePublicClient();
+  const { switchChainAsync, isPending: isSwitchingNetwork } = useSwitchChain();
+
+  // Active-chain agent wallet: per-chain map wins, legacy field falls back.
+  const agentWallet =
+    (agentWallets && agentWallets[String(configuredChainId)]) || agentWalletAddress || "";
+
+  // EVM funding must happen on the same chain the environment targets.
+  // Without this, an approve/fund on a mismatched network waits forever.
+  const chainMismatch =
+    !isStellar &&
+    typeof evmChainId === "number" &&
+    typeof configuredChainId === "number" &&
+    evmChainId !== configuredChainId;
 
   const recordApproval = useCallback(
     async (input: {
@@ -708,6 +723,112 @@ function PermissionsTab() {
     },
     [],
   );
+
+  // ── EVM funding state machine (wagmi-receipt driven, never hangs) ──────
+  // approveHash confirmed → auto-fire fundSession; fundHash confirmed → record.
+  const approveReceipt = useWaitForTransactionReceipt({
+    hash: approveHash ?? undefined,
+    query: { enabled: !!approveHash && !isStellar },
+  });
+  const fundReceipt = useWaitForTransactionReceipt({
+    hash: fundHash ?? undefined,
+    query: { enabled: !!fundHash && !isStellar },
+  });
+
+  const sendFundTx = useCallback(
+    async () => {
+      if (!approveAmount || !publicClient || !evmChainId) return;
+      setApproveStep("fund");
+      try {
+        const usdcAddress = getUsdcAddress(evmChainId);
+        const vault = getContractAddresses(evmChainId).sessionVault;
+        if (!vault) throw new Error("Session vault is not configured for this chain");
+        const amountAtomic = parseUnits(approveAmount || "0", 6);
+        const hash = await writeContractAsync({
+          address: vault as `0x${string}`,
+          abi: SessionVaultABI,
+          functionName: "fundSession",
+          args: [amountAtomic, usdcAddress as `0x${string}`],
+        });
+        setFundHash(hash as `0x${string}`);
+      } catch (err: unknown) {
+        toast.error(err instanceof Error ? err.message : "Funding failed");
+        setApproving(false);
+        setApproveStep(null);
+        setApproveHash(null);
+        setFundHash(null);
+      }
+    },
+    [approveAmount, publicClient, evmChainId, writeContractAsync],
+  );
+
+  // Approve confirmed → fund.
+  useEffect(() => {
+    if (
+      approveStep === "approve" &&
+      approveReceipt.status === "success" &&
+      !isStellar
+    ) {
+      void sendFundTx();
+    }
+  }, [approveStep, approveReceipt.status, isStellar, sendFundTx]);
+
+  // Fund confirmed → record durable pre-approval + reset.
+  useEffect(() => {
+    if (
+      approveStep !== "fund" ||
+      fundReceipt.status !== "success" ||
+      !fundHash ||
+      !evmChainId
+    )
+      return;
+    const amount = approveAmount || "0";
+    void recordApproval({
+      amount,
+      txHash: fundHash,
+      chainId: evmChainId,
+      mode: "approve_and_fund",
+    }).then((recorded) => {
+      if (recorded) {
+        toast.success(`Session vault funded with $${amount} USDC for agent ${agentWallet.slice(0, 8)}…`);
+      } else {
+        toast.success(`Session funded on-chain ($${amount} USDC)`);
+      }
+    });
+    setApproveAmount("100");
+    setApproveHash(null);
+    setFundHash(null);
+    setApproveStep(null);
+    setApproving(false);
+  }, [
+    approveStep,
+    fundReceipt.status,
+    fundHash,
+    evmChainId,
+    approveAmount,
+    agentWallet,
+    recordApproval,
+  ]);
+
+  // Approve failed → let the user retry cleanly.
+  useEffect(() => {
+    if (approveStep === "approve" && approveReceipt.status === "error") {
+      toast.error("Approval transaction failed — check your wallet and try again.");
+      setApproveHash(null);
+      setApproveStep(null);
+      setApproving(false);
+    }
+  }, [approveStep, approveReceipt.status]);
+
+  // Fund failed → reset for retry.
+  useEffect(() => {
+    if (approveStep === "fund" && fundReceipt.status === "error") {
+      toast.error("Funding transaction failed — your approval was consumed; try again.");
+      setFundHash(null);
+      setApproveStep(null);
+      setApproving(false);
+    }
+  }, [approveStep, fundReceipt.status]);
 
   const handlePreApprove = async () => {
     if (isStellar) {
@@ -748,7 +869,6 @@ function PermissionsTab() {
         });
         const signedTx = TransactionBuilder.fromXDR(signedTxXdr, passphrase);
         const submitted = await server.submitTransaction(signedTx);
-        setApproveTxHash(submitted.hash);
         await recordApproval({
           amount: approveAmount || "1",
           txHash: submitted.hash,
@@ -764,9 +884,17 @@ function PermissionsTab() {
       return;
     }
 
+    if (chainMismatch) {
+      toast.error(
+        `Your wallet is on network ${evmChainId}; switch to ${configuredChainId} before funding the agent.`,
+      );
+      return;
+    }
     if (!isConnected || !agentWallet || !evmChainId || !publicClient) return;
     setApproving(true);
     setApproveStep("approve");
+    setApproveHash(null);
+    setFundHash(null);
     try {
       const usdcAddress = getUsdcAddress(evmChainId);
       const vault = getContractAddresses(evmChainId).sessionVault;
@@ -780,37 +908,11 @@ function PermissionsTab() {
         functionName: "approve",
         args: [vault as `0x${string}`, amountAtomic],
       });
-      setApproveTxHash(approveHash);
-      await publicClient.waitForTransactionReceipt({ hash: approveHash as `0x${string}` });
-
-      // 2) Fund the session vault — creates/renews the ZKVUB session.
-      setApproveStep("fund");
-      const fundHash = await writeContractAsync({
-        address: vault as `0x${string}`,
-        abi: SessionVaultABI,
-        functionName: "fundSession",
-        args: [amountAtomic, usdcAddress as `0x${string}`],
-      });
-      await publicClient.waitForTransactionReceipt({ hash: fundHash });
-      setApproveTxHash(fundHash);
-
-      const recorded = await recordApproval({
-        amount: approveAmount || "0",
-        txHash: fundHash,
-        chainId: evmChainId,
-        mode: "approve_and_fund",
-      });
-      if (recorded) {
-        toast.success(`Session vault funded with $${approveAmount} USDC for agent ${agentWallet.slice(0, 8)}…`);
-      } else {
-        toast.success(`Session funded on-chain ($${approveAmount} USDC)`);
-      }
-      setApproveAmount("100");
+      setApproveHash(approveHash as `0x${string}`);
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Transaction failed");
-    } finally {
-      setApproving(false);
       setApproveStep(null);
+      setApproving(false);
     }
   };
 
@@ -843,6 +945,7 @@ function PermissionsTab() {
           dispatch: permissions.dispatch,
           chainId: configuredChainId,
           agentWalletAddress: generatedAddress,
+          agentWallets: { [String(configuredChainId)]: generatedAddress },
         }),
       });
       if (!res.ok) {
@@ -854,7 +957,11 @@ function PermissionsTab() {
         setSaveError(`Failed to save wallet: ${errMsg}`);
         return;
       }
-      setAgentWallet(generatedAddress);
+      setAgentWalletAddress(generatedAddress);
+      setAgentWallets((prev) => ({
+        ...prev,
+        [String(configuredChainId)]: generatedAddress,
+      }));
       setGeneratedKey(null);
       setGeneratedAddress(null);
       toast.success("Agent wallet created! Copy your private key now — it won't be shown again.");
@@ -878,7 +985,14 @@ function PermissionsTab() {
             dispatch: d.data.dispatch || permissions.dispatch,
           });
           if (d.data.agentWalletAddress) {
-            setAgentWallet(d.data.agentWalletAddress);
+            setAgentWalletAddress(d.data.agentWalletAddress);
+          }
+          if (d.data.agentWallets && typeof d.data.agentWallets === "object") {
+            const map: Record<string, string> = {}
+            for (const [k, v] of Object.entries(d.data.agentWallets)) {
+              if (typeof v === "string") map[k] = v;
+            }
+            if (Object.keys(map).length > 0) setAgentWallets(map);
           }
           if (Array.isArray(d.data.preApprovals)) {
             setPreApprovals(d.data.preApprovals);
@@ -1040,15 +1154,30 @@ function PermissionsTab() {
         </p>
 
         {agentWallet ? (
-          <div className="flex items-center gap-3 p-3 rounded border border-border bg-secondary">
-            <Wallet className="w-4 h-4 text-foreground shrink-0" />
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-foreground">Agent Wallet Active</p>
-              <code className="text-xs font-mono text-foreground block truncate">{agentWallet}</code>
+          <div className="space-y-2">
+            <div className="flex items-center gap-3 p-3 rounded border border-border bg-secondary">
+              <Wallet className="w-4 h-4 text-foreground shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-foreground">Agent Wallet Active</p>
+                <code className="text-xs font-mono text-foreground block truncate">{agentWallet}</code>
+              </div>
+              <Badge variant="outline" className="text-xs text-foreground border-border bg-secondary shrink-0">
+                {getChainLabel(configuredChainId)}
+              </Badge>
             </div>
-            <Badge variant="outline" className="text-xs text-foreground border-border bg-secondary shrink-0">
-              Active
-            </Badge>
+            {Object.keys(agentWallets).length > 1 && (
+              <div className="rounded border border-border/60 bg-secondary/40 p-2 space-y-1">
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  Wallets by chain
+                </p>
+                {Object.entries(agentWallets).map(([chainId, addr]) => (
+                  <div key={chainId} className="flex items-center justify-between gap-3 text-xs">
+                    <span className="text-muted-foreground shrink-0">{getChainLabel(Number(chainId))}</span>
+                    <code className="font-mono text-foreground truncate">{addr}</code>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         ) : generatedAddress ? (
           <div className="space-y-3">
@@ -1175,6 +1304,37 @@ function PermissionsTab() {
         )}
       </div>
 
+      {chainMismatch && (
+        <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-4">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-sm font-semibold text-amber-600">Wrong network — funding blocked</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Your wallet is on{" "}
+                <span className="font-mono">
+                  {evmChainId} ({getChainLabel(evmChainId || 0)})
+                </span>{" "}
+                but this agent is configured for{" "}
+                <span className="font-mono">
+                  {configuredChainId} ({getChainLabel(configuredChainId)})
+                </span>
+                . Switch your wallet so the agent funds the correct network.
+              </p>
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={isSwitchingNetwork}
+              onClick={() => void switchChainAsync({ chainId: configuredChainId })}
+              className="shrink-0 gap-1.5"
+            >
+              <ArrowRightLeft className="w-3.5 h-3.5" />
+              {isSwitchingNetwork ? "Switching…" : "Switch network"}
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* Pre-Approve Agent Wallet */}
       <div className="space-y-4 p-5 rounded-lg border border-border bg-secondary/10">
         <div>
@@ -1182,7 +1342,7 @@ function PermissionsTab() {
           <p className="text-xs text-muted-foreground mt-0.5">
             {isStellar
               ? `Fund your agent wallet (${agentWallet.slice(0, 4)}…) with USDC from your connected wallet. Required once.`
-              : `Fund the ZKVUB session vault for your agent (${agentWallet.slice(0, 8)}…). Two quick wallet confirmations: approve USDC, then fund the vault. Required once.`}
+              : `Fund the ZKVUB session vault on ${getChainLabel(configuredChainId)} for your agent (${agentWallet.slice(0, 8)}…). Two quick wallet confirmations: approve USDC, then fund the vault. Required once.`}
           </p>
         </div>
         <div className="flex items-end gap-4">
@@ -1204,11 +1364,11 @@ function PermissionsTab() {
             stellar.isConnected && stellar.address ? (
               <Button
                 onClick={handlePreApprove}
-                disabled={!approveAmount || approving || !!approveTxHash}
+                disabled={!approveAmount || approving}
                 className="gap-1.5"
               >
                 <ArrowRightLeft className="w-3.5 h-3.5" />
-                {approving || approveTxHash ? "Transferring…" : `Transfer $${approveAmount} USDC`}
+                {approving ? `Transferring $${approveAmount} USDC…` : `Transfer $${approveAmount} USDC`}
               </Button>
             ) : (
               <Button onClick={() => void stellar.connect()} className="gap-1.5">
@@ -1219,14 +1379,16 @@ function PermissionsTab() {
           ) : isConnected && userWallet ? (
             <Button
               onClick={handlePreApprove}
-              disabled={!approveAmount || approving || !!approveTxHash}
+              disabled={!approveAmount || approving || !!approveHash || !!fundHash}
               className="gap-1.5"
             >
               <ArrowRightLeft className="w-3.5 h-3.5" />
-              {approving || approveTxHash
+              {approving
                 ? approveStep === "fund"
                   ? "Funding vault… (confirm 2/2)"
-                  : "Approving USDC… (confirm 1/2)"
+                  : approveStep === "approve" && approveHash
+                    ? "Awaiting approval confirm… (1/2)"
+                    : "Approving USDC… (confirm 1/2)"
                 : `Approve & fund $${approveAmount} USDC`}
             </Button>
           ) : (
