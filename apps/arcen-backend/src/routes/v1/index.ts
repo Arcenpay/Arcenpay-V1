@@ -53,6 +53,7 @@ import { GET as listApiKeys, POST as createApiKeySdk, DELETE as revokeApiKey } f
 import { createTempToken } from "./api-keys.js";
 import { GET as getZkTlsProofs, POST as createZkTlsProof } from "./proofs-zktls.js";
 import { GET as getAgentPermissions, PUT as updateAgentPermissions } from "./agent-permissions.js";
+import { recordAgentFunding } from "./agent-permissions.js";
 import { GET as getAgentDispatch, POST as createAgentDispatch } from "./agent-dispatch.js";
 import { POST as testAgentDispatch } from "./agent-dispatch-test.js";
 
@@ -147,4 +148,5 @@ export const v1Router = new Hono()
   .put("/agent/permissions", updateAgentPermissions)
   .get("/agent/dispatch", getAgentDispatch)
   .post("/agent/dispatch", createAgentDispatch)
-  .post("/agent/dispatch/test", testAgentDispatch);
+  .post("/agent/dispatch/test", testAgentDispatch)
+  .post("/agent/fund", recordAgentFunding);

@@ -6416,6 +6416,7 @@ export const ArcenAgentConfigScalarFieldEnum = {
   teamId: 'teamId',
   autoTopUp: 'autoTopUp',
   dispatch: 'dispatch',
+  preApprovals: 'preApprovals',
   agentWalletAddress: 'agentWalletAddress',
   chainId: 'chainId',
   chainFamily: 'chainFamily'

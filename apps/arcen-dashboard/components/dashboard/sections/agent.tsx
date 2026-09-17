@@ -1,8 +1,8 @@
 "use client";
 import { apiFetch } from "@/lib/api-client";
 
-import React, { useState, useEffect } from "react";
-import { useAccount, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
+import React, { useCallback, useState, useEffect } from "react";
+import { useAccount, usePublicClient, useWriteContract } from "wagmi";
 import { parseUnits } from "viem";
 import { generatePrivateKey, privateKeyToAddress } from "viem/accounts";
 import { toast } from "sonner";
@@ -39,7 +39,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { getUsdcAddress } from "@/lib/contracts";
+import { SessionVaultABI, getContractAddresses, getUsdcAddress } from "@/lib/contracts";
 import { resolveEnvironmentChainId } from "@/lib/default-chain";
 import { useEnvironment } from "@/contexts/environment-context";
 import { SkeletonList, SkeletonTable } from "@/components/ui/skeleton";
@@ -659,6 +659,8 @@ function PermissionsTab() {
   const [agentWallet, setAgentWallet] = useState<string>("");
   const [approveAmount, setApproveAmount] = useState<string>("100");
   const [approveTxHash, setApproveTxHash] = useState<string>("");
+  const [approveStep, setApproveStep] = useState<"approve" | "fund" | null>(null);
+  const [preApprovals, setPreApprovals] = useState<Array<{ amount: string; txHash: string; chainId: number; mode: string; createdAt: string }>>([]);
   const [approving, setApproving] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -679,22 +681,33 @@ function PermissionsTab() {
   const [testingIdx, setTestingIdx] = useState<number | null>(null);
   const [testResult, setTestResult] = useState<{ ok: boolean; message: string } | null>(null);
 
-  const { data: approveReceipt } = useWaitForTransactionReceipt({
-    hash: approveTxHash as `0x${string}` | undefined,
-    // Stellar hashes are 64-hex without an 0x prefix — wagmi's receipt watcher
-    // only understands EVM hashes, so disable it on Stellar (the Stellar path
-    // toasts its own success).
-    query: { enabled: !!approveTxHash && !isStellar },
-  });
+  const publicClient = usePublicClient();
 
-  useEffect(() => {
-    if (approveReceipt) {
-      toast.success(`Agent pre-approved to pull up to $${approveAmount} USDC`);
-      setApproveTxHash("");
-      setApproving(false);
-      setApproveAmount("100");
-    }
-  }, [approveReceipt, approveAmount]);
+  const recordApproval = useCallback(
+    async (input: {
+      amount: string;
+      txHash: string;
+      chainId: number;
+      mode: "approve_and_fund" | "transfer";
+    }) => {
+      try {
+        const res = await apiFetch("/api/v1/agent/fund", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(input),
+        });
+        const body = await res.json().catch(() => ({}));
+        if (res.ok && Array.isArray(body?.data?.preApprovals)) {
+          setPreApprovals(body.data.preApprovals);
+          return true;
+        }
+        return false;
+      } catch {
+        return false;
+      }
+    },
+    [],
+  );
 
   const handlePreApprove = async () => {
     if (isStellar) {
@@ -736,30 +749,68 @@ function PermissionsTab() {
         const signedTx = TransactionBuilder.fromXDR(signedTxXdr, passphrase);
         const submitted = await server.submitTransaction(signedTx);
         setApproveTxHash(submitted.hash);
-        toast.info("Transfer submitted...");
+        await recordApproval({
+          amount: approveAmount || "1",
+          txHash: submitted.hash,
+          chainId: configuredChainId,
+          mode: "transfer",
+        });
+        toast.success(`Agent wallet funded with ${approveAmount || "1"} USDC`);
       } catch (err: unknown) {
         toast.error(err instanceof Error ? err.message : "Transfer failed");
+      } finally {
         setApproving(false);
       }
       return;
     }
 
-    if (!isConnected || !agentWallet || !evmChainId) return;
+    if (!isConnected || !agentWallet || !evmChainId || !publicClient) return;
     setApproving(true);
+    setApproveStep("approve");
     try {
       const usdcAddress = getUsdcAddress(evmChainId);
+      const vault = getContractAddresses(evmChainId).sessionVault;
+      if (!vault) throw new Error("Session vault is not configured for this chain");
       const amountAtomic = parseUnits(approveAmount || "0", 6);
-      const hash = await writeContractAsync({
+
+      // 1) Approve the SessionVault (not the agent EOA) to spend USDC.
+      const approveHash = await writeContractAsync({
         address: usdcAddress as `0x${string}`,
         abi: ERC20_APPROVE_ABI,
         functionName: "approve",
-        args: [agentWallet as `0x${string}`, amountAtomic],
+        args: [vault as `0x${string}`, amountAtomic],
       });
-      setApproveTxHash(hash);
-      toast.info("Transaction submitted...");
+      setApproveTxHash(approveHash);
+      await publicClient.waitForTransactionReceipt({ hash: approveHash as `0x${string}` });
+
+      // 2) Fund the session vault — creates/renews the ZKVUB session.
+      setApproveStep("fund");
+      const fundHash = await writeContractAsync({
+        address: vault as `0x${string}`,
+        abi: SessionVaultABI,
+        functionName: "fundSession",
+        args: [amountAtomic, usdcAddress as `0x${string}`],
+      });
+      await publicClient.waitForTransactionReceipt({ hash: fundHash });
+      setApproveTxHash(fundHash);
+
+      const recorded = await recordApproval({
+        amount: approveAmount || "0",
+        txHash: fundHash,
+        chainId: evmChainId,
+        mode: "approve_and_fund",
+      });
+      if (recorded) {
+        toast.success(`Session vault funded with $${approveAmount} USDC for agent ${agentWallet.slice(0, 8)}…`);
+      } else {
+        toast.success(`Session funded on-chain ($${approveAmount} USDC)`);
+      }
+      setApproveAmount("100");
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Transaction failed");
+    } finally {
       setApproving(false);
+      setApproveStep(null);
     }
   };
 
@@ -828,6 +879,9 @@ function PermissionsTab() {
           });
           if (d.data.agentWalletAddress) {
             setAgentWallet(d.data.agentWalletAddress);
+          }
+          if (Array.isArray(d.data.preApprovals)) {
+            setPreApprovals(d.data.preApprovals);
           }
         }
       })
@@ -1128,7 +1182,7 @@ function PermissionsTab() {
           <p className="text-xs text-muted-foreground mt-0.5">
             {isStellar
               ? `Fund your agent wallet (${agentWallet.slice(0, 4)}…) with USDC from your connected wallet. Required once.`
-              : `Authorize your agent wallet (${agentWallet.slice(0, 8)}…) to pull USDC from your connected wallet. Required once.`}
+              : `Fund the ZKVUB session vault for your agent (${agentWallet.slice(0, 8)}…). Two quick wallet confirmations: approve USDC, then fund the vault. Required once.`}
           </p>
         </div>
         <div className="flex items-end gap-4">
@@ -1169,7 +1223,11 @@ function PermissionsTab() {
               className="gap-1.5"
             >
               <ArrowRightLeft className="w-3.5 h-3.5" />
-              {approving || approveTxHash ? "Approving…" : `Approve $${approveAmount} USDC`}
+              {approving || approveTxHash
+                ? approveStep === "fund"
+                  ? "Funding vault… (confirm 2/2)"
+                  : "Approving USDC… (confirm 1/2)"
+                : `Approve & fund $${approveAmount} USDC`}
             </Button>
           ) : (
             <p className="text-xs text-foreground pb-1">Connect your wallet to approve</p>
@@ -1190,6 +1248,25 @@ function PermissionsTab() {
             <span>To: {agentWallet.slice(0, 8)}…{agentWallet.slice(-4)}</span>
           </div>
         ) : null}
+        {preApprovals.length > 0 && (
+          <div className="mt-3 pt-3 border-t border-border/50">
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">
+              Recent funding
+            </p>
+            <div className="space-y-1 max-h-28 overflow-y-auto">
+              {[...preApprovals].reverse().map((entry, i) => (
+                <div key={`${entry.txHash}-${i}`} className="flex items-center justify-between gap-3 text-xs">
+                  <span className="font-mono text-muted-foreground truncate">
+                    ${entry.amount} USDC · {entry.mode === "transfer" ? "wallet transfer" : "vault fund"}
+                  </span>
+                  <span className="text-muted-foreground/70 shrink-0">
+                    {new Date(entry.createdAt).toLocaleDateString()}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Dispatch Providers */}
