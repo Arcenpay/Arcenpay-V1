@@ -50,6 +50,9 @@ export async function GET(c: Context) {
   if (bearerToken.startsWith("api_")) {
     const ctx = await requireApiKey(c.req.raw, {
       rateLimit: { limit: 500, windowMs: 60_000 },
+      // Entitlement reads are client-safe: publishable, secret and restricted
+      // keys all work (publishable keys are implicitly read-only).
+      allow: ["PUBLISHABLE", "SECRET", "RESTRICTED"],
     });
     if (isApiKeyError(ctx)) {
       return c.json({ ok: false, error: ctx.error }, ctx.status as any);

@@ -1868,6 +1868,12 @@ model EmbedAccessToken {
 }
 
 // External API keys for ArcenPay developer access
+
+enum ApiKeyType {
+  SECRET
+  PUBLISHABLE
+  RESTRICTED
+}
 model ArcenApiKey {
   id            String    @id @default(cuid())
   createdAt     DateTime  @default(now())
@@ -1875,9 +1881,23 @@ model ArcenApiKey {
   teamId        String
   environmentId String?
 
+  // Stripe-style credential model.
+  //   SECRET      — sk_live_/sk_test_, used server-side (Node SDK)
+  //   PUBLISHABLE — pk_live_/pk_test_, safe in the browser (React SDK)
+  //   RESTRICTED  — rk_live_/rk_test_, limited server-side keys
+  type ApiKeyType @default(SECRET)
+  // Fine-grained permissions ("payments.write", "entitlements.read", ...).
+  // Empty = full access for SECRET keys; REQUIRED for RESTRICTED keys;
+  // ignored for PUBLISHABLE keys (implicitly read-only).
+  permissions String[] @default([])
+  expiresAt       DateTime?
+  revokedAt       DateTime?
+  // Development -> _test_ prefix; Production -> _live_ prefix.
+  environmentMode EnvironmentMode @default(DEVELOPMENT)
+
   name        String
-  keyHash     String  @unique // argon2 hash of the actual key
-  prefix      String // first 12 chars for display (e.g., api_abc12345..)
+  keyHash     String  @unique // sha-256 hash of the actual key (never stored plaintext)
+  prefix      String // display prefix (e.g., sk_live_8f92…)
   description String?
 
   team        Team                  @relation(fields: [teamId], references: [id], onDelete: Cascade)

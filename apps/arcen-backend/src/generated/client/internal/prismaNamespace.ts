@@ -6365,6 +6365,11 @@ export const ArcenApiKeyScalarFieldEnum = {
   lastUsedAt: 'lastUsedAt',
   teamId: 'teamId',
   environmentId: 'environmentId',
+  type: 'type',
+  permissions: 'permissions',
+  expiresAt: 'expiresAt',
+  revokedAt: 'revokedAt',
+  environmentMode: 'environmentMode',
   name: 'name',
   keyHash: 'keyHash',
   prefix: 'prefix',
@@ -7137,6 +7142,20 @@ export type FloatFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, '
  * Reference to a field of type 'Float[]'
  */
 export type ListFloatFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Float[]'>
+    
+
+
+/**
+ * Reference to a field of type 'ApiKeyType'
+ */
+export type EnumApiKeyTypeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'ApiKeyType'>
+    
+
+
+/**
+ * Reference to a field of type 'ApiKeyType[]'
+ */
+export type ListEnumApiKeyTypeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'ApiKeyType[]'>
     
 
 

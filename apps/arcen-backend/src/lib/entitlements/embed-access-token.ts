@@ -88,6 +88,44 @@ export async function resolveEmbedAccessToken(
 ): Promise<EmbedAccessTokenContext | null> {
   if (!token) return null;
 
+  // arc_tok_… tokens are pure DB-backed, short-lived customer tokens minted
+  // with a SECRET/RESTRICTED key (POST /api/v1/api-keys/tokens). No HMAC.
+  if (token.startsWith("arc_tok_")) {
+    const tokenHash = createHash("sha256").update(token).digest("hex");
+    const record = await db.embedAccessToken.findFirst({
+      where: { tokenHash, expiresAt: { gt: new Date() } },
+      select: {
+        teamId: true,
+        environmentId: true,
+        companyId: true,
+        userId: true,
+      },
+    });
+    if (!record) return null;
+    if (record.companyId) {
+      const company = await db.arcenCompany.findFirst({
+        where: {
+          id: record.companyId,
+          teamId: record.teamId,
+          ...(record.environmentId ? { environmentId: record.environmentId } : {}),
+        },
+        select: { id: true },
+      });
+      if (!company) return null;
+    }
+    return {
+      teamId: record.teamId,
+      workspaceTeamId: null,
+      environmentId: record.environmentId ?? null,
+      companyId: record.companyId,
+      userId: record.userId,
+      componentId: null,
+      teamRole: null,
+      platformBilling: false,
+      preview: false,
+    };
+  }
+
   if (!ACCESS_TOKEN_SECRET) return null;
 
   const verified = verifySignedEmbedAccessToken(token, ACCESS_TOKEN_SECRET);

@@ -306,8 +306,19 @@ export class ArcenClient {
   } | null = null;
 
   constructor(config: ArcenClientConfig) {
-    if (!config.apiKey.startsWith("api_")) {
-      throw new Error('ArcenClient: apiKey must start with "api_"');
+    const supportedPrefixes = [
+      "sk_live_",
+      "sk_test_",
+      "pk_live_",
+      "pk_test_",
+      "rk_live_",
+      "rk_test_",
+      "api_",
+    ];
+    if (!supportedPrefixes.some((prefix) => config.apiKey.startsWith(prefix))) {
+      throw new Error(
+        'ArcenClient: apiKey must start with sk_live_, sk_test_, pk_live_, pk_test_, rk_live_, rk_test_ or api_',
+      );
     }
     this.apiKey = config.apiKey;
     this.baseUrl = resolveArcenPayBaseUrl({ explicit: config.baseUrl });
