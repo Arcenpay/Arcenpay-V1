@@ -26,6 +26,17 @@ All notable changes to ArcenPay are documented here.
   immutable per-invoice design snapshots (Plus/Pro)
 - White-label embed branding: "Secured by ArcenPay" can be removed only on
   Plus/Pro (server-enforced via `component-render` branding policy)
+- On-demand (Stripe-style) invoice PDFs: signed render URLs, never stored;
+  immutable per-invoice design snapshots; Tax ID/GSTIN + wallet-safe wrapping
+- Cloudflare R2 object storage (SigV4, zero SDK deps) for logos/assets with a
+  local filesystem dev fallback (`STORAGE_DRIVER=r2|local`)
+- Stripe-style credentials: secret/publishable/restricted keys
+  (`sk_/pk_/rk_` + `_live_/_test_`), permissions, expiry/revocation, show-once
+  hashed storage, and company-scoped `arc_tok_` temporary access tokens
+- React SDK publishable-key client-safe reads (`pk_` + `X-Arcen-Company-Keys`)
+- Redesigned invoice/receipt emails around a shared on-brand email shell
+- Billing & Plan "What's included" feature matrix (invoice builder, white-label,
+  support, cross-chain, ZK, x402 per tier)
 - Platform tiers (FREE / PLUS / PRO) with limits
 - Gas sponsorship via hosted paymaster
 - Tableland flag mirroring (optional)
