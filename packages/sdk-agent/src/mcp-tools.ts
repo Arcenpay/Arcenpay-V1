@@ -355,6 +355,94 @@ export function createArcenAgentMcpTools(agent: ArcenAgent) {
     async handleToolCall(name: string, args: Record<string, unknown>): Promise<McpToolResponse> {
       try {
         switch (name) {
+          case "arcenpay_check_balance": {
+            const balance = await agent.getBalance();
+            return {
+              content: [
+                {
+                  type: "text",
+                  text: JSON.stringify(
+                    {
+                      balanceAtomic: balance.toString(),
+                      balanceUsdc: (Number(balance) / 1e6).toFixed(6),
+                      address: agent.address,
+                      isStellar: agent.isStellar,
+                    },
+                    null,
+                    2,
+                  ),
+                },
+              ],
+            };
+          }
+
+          case "arcenpay_fund_session": {
+            const amount = String(args.amount ?? "");
+            if (!amount) {
+              return {
+                isError: true,
+                content: [{ type: "text", text: "Missing required argument: amount" }],
+              };
+            }
+            const sessionId = await agent.fundSession(amount);
+            return {
+              content: [
+                {
+                  type: "text",
+                  text: JSON.stringify(
+                    {
+                      sessionId,
+                      fundedAmountUsdc: amount,
+                      address: agent.address,
+                    },
+                    null,
+                    2,
+                  ),
+                },
+              ],
+            };
+          }
+
+          case "arcenpay_fetch": {
+            const url = String(args.url ?? "");
+            if (!url) {
+              return {
+                isError: true,
+                content: [{ type: "text", text: "Missing required argument: url" }],
+              };
+            }
+            const res = await agent.fetch(url, {
+              maxPrice: args.maxPrice ? String(args.maxPrice) : undefined,
+              autoApprove: true,
+              method: args.method ? String(args.method) : "GET",
+              headers: args.headers as Record<string, string> | undefined,
+              body: args.body ? String(args.body) : undefined,
+            });
+            const contentType = res.headers.get("content-type") || "";
+            let body: any;
+            if (contentType.includes("application/json")) {
+              try { body = await res.json(); } catch { body = null; }
+            } else {
+              try { body = await res.text(); } catch { body = null; }
+            }
+            return {
+              content: [
+                {
+                  type: "text",
+                  text: JSON.stringify(
+                    {
+                      status: res.status,
+                      ok: res.ok,
+                      body,
+                    },
+                    null,
+                    2,
+                  ),
+                },
+              ],
+            };
+          }
+
           case "arcenpay_resolve_payment_link": {
             const urlOrSlug = String(args.urlOrSlug ?? "");
             if (!urlOrSlug) {

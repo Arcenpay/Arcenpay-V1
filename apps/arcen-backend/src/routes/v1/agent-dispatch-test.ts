@@ -7,6 +7,10 @@
 import type { Context } from "hono";
 import { requirePermission, isErrorResponse } from "../../lib/auth/api-auth.js";
 import { db } from "../../db.js";
+import {
+  isEmailDeliveryConfigured,
+  sendDispatchTestEmail,
+} from "../../lib/billing/email.js";
 
 export async function POST(c: Context) {
   const ctx = await requirePermission(c, "catalog:write");
@@ -116,6 +120,26 @@ export async function POST(c: Context) {
         }
 
         return c.json({ message: "Test message sent successfully to Slack!" });
+      }
+
+      case "email": {
+        const email = provider.email?.trim();
+        if (!email || !email.includes("@")) {
+          return c.json({ message: "A valid email address is required for Email provider" }, 400 as any);
+        }
+
+        if (isEmailDeliveryConfigured()) {
+          try {
+            await sendDispatchTestEmail(email);
+            return c.json({ message: `Test email sent to ${email}! Check your inbox.` });
+          } catch (mailErr: any) {
+            return c.json({ message: `Failed to deliver email: ${mailErr?.message || mailErr}` }, 502 as any);
+          }
+        } else {
+          return c.json({
+            message: `Email dispatch configured for ${email}. (Development mode: RESEND_API_KEY is not set, mock test verified).`,
+          });
+        }
       }
 
       default:

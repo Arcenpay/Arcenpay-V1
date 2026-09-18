@@ -29,8 +29,10 @@ import {
   createPublicClient,
   http,
   recoverTypedDataAddress,
+  getAddress,
   isAddress,
   parseUnits,
+  defineChain,
 } from "viem";
 import { sepolia, baseSepolia, base } from "viem/chains";
 
@@ -123,6 +125,18 @@ const CHAIN_MAP: Record<number, any> = {
   677: botMainnet,
   968: botTestnet,
 };
+
+function resolveEvmChain(chainId: number, rpcUrl?: string): any {
+  if (CHAIN_MAP[chainId]) return CHAIN_MAP[chainId];
+  return defineChain({
+    id: chainId,
+    name: `EVM Chain ${chainId}`,
+    nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
+    rpcUrls: {
+      default: { http: [rpcUrl || "http://127.0.0.1:8545"] },
+    },
+  });
+}
 
 const CHAIN_ID_TO_NETWORK: Record<number, string> = {
   11155111: "ethereum-sepolia",
@@ -288,7 +302,10 @@ export function x402Middleware(options: X402MiddlewareOptions) {
     : null;
 
   // Create viem public client for on-chain reads (EVM only)
-  const chain = CHAIN_MAP[chainId] || sepolia;
+  const chain = resolveEvmChain(
+    chainId,
+    rpcUrl || chainEnv.services.rpcUrl,
+  );
   const publicClient = isStellar
     ? null
     : createPublicClient({
@@ -578,11 +595,13 @@ export function x402Middleware(options: X402MiddlewareOptions) {
             if (stellarBalance === null) throw new Error("Stellar balance check failed");
             balance = stellarBalance;
           } else {
+            const safeVault = isAddress(contracts.sessionVault) ? getAddress(contracts.sessionVault) : (contracts.sessionVault as `0x${string}`);
+            const safeSigner = isAddress(verifiedSigner) ? getAddress(verifiedSigner) : (verifiedSigner as `0x${string}`);
             balance = (await publicClient!.readContract({
-              address: contracts.sessionVault as `0x${string}`,
+              address: safeVault,
               abi: SessionVaultABI,
               functionName: "getAgentBalance",
-              args: [verifiedSigner as `0x${string}`],
+              args: [safeSigner],
             })) as bigint;
           }
 

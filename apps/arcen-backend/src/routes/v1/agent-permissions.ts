@@ -9,9 +9,15 @@ import { db } from "../../db.js";
 import {
   getChainFamily,
   isValidAddressForChain,
+  getChainDescriptor,
+  getTokenAddress,
+  getContractAddresses,
+  getStellarNetworkPassphrase,
+  SessionVaultABI,
 } from "@arcenpay/internal-core";
 import { resolveChainFamilyForPrisma } from "../../lib/platform/chain-family.js";
 import { toPrismaJson } from "../../utils/prisma-json.js";
+import { createPublicClient, http, getAddress, isAddress } from "viem";
 import { asRecord, readString } from "../../lib/billing/utils.js";
 
 function readWalletsMap(value: unknown): Record<string, { address: string; createdAt: string }> {
@@ -29,8 +35,15 @@ function readWalletsMap(value: unknown): Record<string, { address: string; creat
           ? { address: (raw as any).address }
           : null;
     if (!entry || !entry.address.trim()) continue;
-    if (!isValidAddressForChain(entry.address.trim(), num)) continue;
-    out[key] = { address: entry.address.trim(), createdAt: new Date().toISOString() };
+    let clean = entry.address.trim();
+    if (!isValidAddressForChain(clean, num)) continue;
+    const fam = getChainFamily(num);
+    if (fam === "evm" && isAddress(clean, { strict: false })) {
+      try {
+        clean = getAddress(clean.toLowerCase());
+      } catch {}
+    }
+    out[key] = { address: clean, createdAt: new Date().toISOString() };
   }
   return out;
 }
@@ -85,8 +98,13 @@ export async function GET(c: Context) {
           // legacy single-wallet field for backward compatibility.
           const wallets = readWalletsMap(asRecord(config.agentWallets));
           const key = config.chainId ? String(config.chainId) : null;
-          if (key && wallets[key]?.address) return wallets[key].address;
-          return config.agentWalletAddress || "";
+          let addr = (key && wallets[key]?.address) ? wallets[key].address : (config.agentWalletAddress || "");
+          if (addr && config.chainFamily === "EVM" && isAddress(addr, { strict: false })) {
+            try {
+              addr = getAddress(addr.toLowerCase());
+            } catch {}
+          }
+          return addr;
         })(),
       },
     });
@@ -136,39 +154,62 @@ export async function PUT(c: Context) {
       : existing?.chainId ?? 84532;
     const family = resolveChainFamilyForPrisma(effectiveChainId);
 
-    if (body.agentWallets && typeof body.agentWallets === "object") {
-      // Merge the per-chain map the client sent into the existing map.
-      const incoming = readWalletsMap(body.agentWallets);
+    if (body.resetWallets === true) {
+      data.agentWalletAddress = "";
+      data.agentWallets = toPrismaJson({});
+    } else if (body.resetCurrentWallet === true) {
       const merged = { ...existingWallets };
-      for (const [chain, entry] of Object.entries(incoming)) {
-        if (entry.address && isValidAddressForChain(entry.address, Number(chain))) {
-          merged[chain] = entry;
+      delete merged[String(effectiveChainId)];
+      data.agentWallets = toPrismaJson(merged);
+      const remaining = Object.values(merged)[0]?.address || "";
+      data.agentWalletAddress = remaining;
+    } else {
+      if (body.agentWallets && typeof body.agentWallets === "object") {
+        // Merge the per-chain map the client sent into the existing map.
+        const incoming = readWalletsMap(body.agentWallets);
+        const merged = { ...existingWallets };
+        for (const [chain, entry] of Object.entries(incoming)) {
+          if (entry.address && isValidAddressForChain(entry.address, Number(chain))) {
+            merged[chain] = entry;
+          }
+        }
+        data.agentWallets = toPrismaJson(merged);
+        // Keep the legacy single-wallet alias pointed at the active chain.
+        const active = merged[String(effectiveChainId)];
+        if (active?.address) {
+          data.agentWalletAddress = active.address;
         }
       }
-      data.agentWallets = toPrismaJson(merged);
-      // Keep the legacy single-wallet alias pointed at the active chain.
-      const active = merged[String(effectiveChainId)];
-      if (active?.address) {
-        data.agentWalletAddress = active.address;
-      }
-    }
 
-    if (typeof body.agentWalletAddress === "string" && body.agentWalletAddress) {
-      const wallet = body.agentWalletAddress;
-      if (!isValidAddressForChain(wallet, effectiveChainId)) {
-        return c.json({
-          error: `Agent wallet is not a valid ${family} address for chain ${effectiveChainId}.`,
-        }, 400 as any);
+      if (typeof body.agentWalletAddress === "string") {
+        if (!body.agentWalletAddress.trim()) {
+          data.agentWalletAddress = "";
+          const merged = { ...existingWallets };
+          delete merged[String(effectiveChainId)];
+          data.agentWallets = toPrismaJson(merged);
+        } else {
+          let wallet = body.agentWalletAddress.trim();
+          if (!isValidAddressForChain(wallet, effectiveChainId)) {
+            return c.json({
+              error: `Agent wallet is not a valid ${family} address for chain ${effectiveChainId}.`,
+            }, 400 as any);
+          }
+          if (family === "EVM" && isAddress(wallet, { strict: false })) {
+            try {
+              wallet = getAddress(wallet.toLowerCase());
+            } catch {}
+          }
+          data.agentWalletAddress = wallet;
+          // Sync the new wallet into the per-chain map too.
+          data.agentWallets = toPrismaJson({
+            ...existingWallets,
+            [String(effectiveChainId)]: {
+              address: wallet,
+              createdAt: new Date().toISOString(),
+            },
+          });
+        }
       }
-      data.agentWalletAddress = wallet;
-      // Sync the new wallet into the per-chain map too.
-      data.agentWallets = toPrismaJson({
-        ...existingWallets,
-        [String(effectiveChainId)]: {
-          address: wallet,
-          createdAt: new Date().toISOString(),
-        },
-      });
     }
 
     let config;
@@ -288,4 +329,235 @@ export async function recordAgentFunding(c: Context) {
   }
 
   return c.json({ ok: true, data: { preApprovals: next } }, 201 as any);
+}
+
+export async function getAgentBalance(c: Context) {
+  try {
+    const ctx = await requirePermission(c, "catalog:read");
+    if (isErrorResponse(ctx)) return c.json({ ok: false, error: ctx.error }, ctx.status as any);
+
+    const { team } = ctx;
+    const config = await db.arcenAgentConfig.findUnique({
+      where: { teamId: team.teamId },
+    });
+
+    if (!config) {
+      return c.json({
+        data: {
+          address: null,
+          chainId: null,
+          chainFamily: "evm",
+          walletBalanceUsdc: "0.00",
+          vaultBalanceUsdc: "0.00",
+          totalUsdc: "0.00",
+          preApprovals: [],
+        },
+      });
+    }
+
+    const queryChainId = c.req.query("chainId");
+    const queryUserAddress = c.req.query("userAddress")?.trim() || "";
+    const queryAgentAddress = c.req.query("agentAddress")?.trim() || "";
+    const activeChainId = queryChainId ? Number(queryChainId) : (config.chainId ?? 84532);
+    const wallets = readWalletsMap(asRecord(config.agentWallets));
+    const rawWallet = queryAgentAddress || wallets[String(activeChainId)]?.address || config.agentWalletAddress || "";
+    const agentWallet = rawWallet.trim();
+    const preApprovals = Array.isArray(config.preApprovals) ? (config.preApprovals as any[]) : [];
+
+    let userWalletBalanceUsdc = "0.00";
+    let walletBalanceUsdc = "0.00";
+    let vaultBalanceUsdc = "0.00";
+
+    const fam = getChainFamily(activeChainId);
+    if (fam === "evm") {
+      try {
+        const desc = getChainDescriptor(activeChainId);
+        const rpcUrl = desc?.rpcUrl || (activeChainId === 5042002 ? "https://rpc.testnet.arc.network" : undefined);
+        if (rpcUrl) {
+          const client = createPublicClient({
+            transport: http(rpcUrl, { timeout: 15_000 }),
+          });
+          const safeAgent = agentWallet && isAddress(agentWallet, { strict: false }) ? getAddress(agentWallet.toLowerCase()) : null;
+          const safeUser = queryUserAddress && isAddress(queryUserAddress, { strict: false }) ? getAddress(queryUserAddress.toLowerCase()) : null;
+          const usdcAddr = getTokenAddress(activeChainId, "USDC");
+          const safeUsdc = usdcAddr && isAddress(usdcAddr, { strict: false }) ? getAddress(usdcAddr.toLowerCase()) : null;
+          const contracts = getContractAddresses(activeChainId);
+          const safeVault = contracts.sessionVault && isAddress(contracts.sessionVault, { strict: false }) ? getAddress(contracts.sessionVault.toLowerCase()) : null;
+
+          const isNativeUsdc = desc?.nativeCurrencySymbol === "USDC";
+
+          // 1. User wallet balance
+          if (safeUser) {
+            let uBal = 0n;
+            if (safeUsdc) {
+              uBal = await client.readContract({
+                address: safeUsdc,
+                abi: [{
+                  type: "function",
+                  name: "balanceOf",
+                  inputs: [{ name: "account", type: "address" }],
+                  outputs: [{ name: "", type: "uint256" }],
+                  stateMutability: "view",
+                }] as const,
+                functionName: "balanceOf",
+                args: [safeUser],
+              }).catch(() => 0n);
+            }
+            if (uBal === 0n && isNativeUsdc) {
+              const nativeBal = await client.getBalance({ address: safeUser }).catch(() => 0n);
+              if (nativeBal > 0n) {
+                userWalletBalanceUsdc = (Number(nativeBal) / 1e18).toFixed(2);
+              }
+            } else if (uBal > 0n) {
+              userWalletBalanceUsdc = (Number(uBal) / 1e6).toFixed(2);
+            }
+          }
+
+          // 2. Agent wallet balance
+          if (safeAgent) {
+            let bal = 0n;
+            if (safeUsdc) {
+              bal = await client.readContract({
+                address: safeUsdc,
+                abi: [{
+                  type: "function",
+                  name: "balanceOf",
+                  inputs: [{ name: "account", type: "address" }],
+                  outputs: [{ name: "", type: "uint256" }],
+                  stateMutability: "view",
+                }] as const,
+                functionName: "balanceOf",
+                args: [safeAgent],
+              }).catch(() => 0n);
+            }
+            if (bal === 0n && isNativeUsdc) {
+              const nativeBal = await client.getBalance({ address: safeAgent }).catch(() => 0n);
+              if (nativeBal > 0n) {
+                walletBalanceUsdc = (Number(nativeBal) / 1e18).toFixed(2);
+              }
+            } else if (bal > 0n) {
+              walletBalanceUsdc = (Number(bal) / 1e6).toFixed(2);
+            }
+          }
+
+          // 3. Vault balance (multi-source: safeAgent, safeUser, sessionIds)
+          if (safeVault) {
+            let maxVaultBal = 0n;
+            if (safeAgent) {
+              const vBalAgent = await client.readContract({
+                address: safeVault,
+                abi: SessionVaultABI,
+                functionName: "getAgentBalance",
+                args: [safeAgent],
+              }).catch(() => 0n);
+              if (vBalAgent > maxVaultBal) maxVaultBal = vBalAgent;
+            }
+
+            if (safeUser) {
+              const vBalUser = await client.readContract({
+                address: safeVault,
+                abi: SessionVaultABI,
+                functionName: "getAgentBalance",
+                args: [safeUser],
+              }).catch(() => 0n);
+              if (vBalUser > maxVaultBal) maxVaultBal = vBalUser;
+            }
+
+            // Check specific session IDs from preApprovals
+            let sessionSum = 0n;
+            for (const pa of preApprovals) {
+              const sId = typeof pa.sessionId === "string" ? pa.sessionId : null;
+              if (sId && sId.startsWith("0x") && sId.length === 66) {
+                const sBal = await client.readContract({
+                  address: safeVault,
+                  abi: SessionVaultABI,
+                  functionName: "getBalance",
+                  args: [sId as `0x${string}`],
+                }).catch(() => 0n);
+                if (sBal > 0n) {
+                  sessionSum += sBal;
+                }
+              }
+            }
+            if (sessionSum > maxVaultBal) maxVaultBal = sessionSum;
+
+            if (maxVaultBal > 0n) {
+              vaultBalanceUsdc = (Number(maxVaultBal) / 1e6).toFixed(2);
+            }
+          }
+        }
+      } catch (e) {
+        console.warn("[getAgentBalance EVM]", e);
+      }
+    } else if (fam === "stellar") {
+      try {
+        const { Horizon } = await import("@stellar/stellar-sdk");
+        const passphrase = getStellarNetworkPassphrase(activeChainId);
+        const horizonUrl = passphrase.includes("Test")
+          ? "https://horizon-testnet.stellar.org"
+          : "https://horizon.stellar.org";
+        const server = new Horizon.Server(horizonUrl);
+
+        if (queryUserAddress) {
+          try {
+            const userAcc = await server.loadAccount(queryUserAddress);
+            const uLine = userAcc.balances.find((b: any) => b.asset_code === "USDC");
+            if (uLine && "balance" in uLine) {
+              userWalletBalanceUsdc = parseFloat(uLine.balance).toFixed(2);
+            }
+          } catch {}
+        }
+
+        if (agentWallet) {
+          try {
+            const account = await server.loadAccount(agentWallet);
+            const usdcLine = account.balances.find((b: any) => b.asset_code === "USDC");
+            if (usdcLine && "balance" in usdcLine) {
+              walletBalanceUsdc = parseFloat(usdcLine.balance).toFixed(2);
+            }
+          } catch {}
+        }
+      } catch (e) {
+        console.warn("[getAgentBalance Stellar]", e);
+      }
+    }
+
+    // Recorded preApprovals reconciliation fallback
+    if (parseFloat(vaultBalanceUsdc) <= 0) {
+      const preVault = preApprovals
+        .filter((p: any) => p.mode === "approve_and_fund" && Number(p.amount) > 0)
+        .reduce((sum: number, p: any) => sum + Number(p.amount), 0);
+      if (preVault > 0) {
+        vaultBalanceUsdc = preVault.toFixed(2);
+      }
+    }
+
+    if (parseFloat(walletBalanceUsdc) <= 0) {
+      const preTransfer = preApprovals
+        .filter((p: any) => p.mode === "transfer" && Number(p.amount) > 0)
+        .reduce((sum: number, p: any) => sum + Number(p.amount), 0);
+      if (preTransfer > 0) {
+        walletBalanceUsdc = preTransfer.toFixed(2);
+      }
+    }
+
+    const totalUsdc = (parseFloat(walletBalanceUsdc) + parseFloat(vaultBalanceUsdc)).toFixed(2);
+
+    return c.json({
+      data: {
+        address: agentWallet,
+        userAddress: queryUserAddress || null,
+        chainId: activeChainId,
+        chainFamily: getChainFamily(activeChainId) || "evm",
+        userWalletBalanceUsdc,
+        walletBalanceUsdc,
+        vaultBalanceUsdc,
+        totalUsdc,
+        preApprovals,
+      },
+    });
+  } catch (err: any) {
+    console.error("[getAgentBalance]", err);
+    return c.json({ error: err.message || "Internal error" }, 500 as any);
+  }
 }

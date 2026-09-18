@@ -730,3 +730,48 @@ export async function sendWelcomeEmail(
  </html>`,
   });
 }
+
+/** Sends a test notification email to confirm dispatch provider configuration */
+export async function sendDispatchTestEmail(email: string): Promise<void> {
+  await sendWithResend({
+    to: email,
+    subject: "✅ ArcenPay Agent — Dispatch Test Message",
+    html: `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ArcenPay Agent Dispatch Test</title>
+</head>
+<body style="margin:0;padding:0;background:#0a0a0a;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="padding:40px 16px;">
+    <tr><td align="center">
+      <table width="480" cellpadding="0" cellspacing="0"
+             style="background:#111113;border:1px solid #222225;border-radius:12px;padding:40px;">
+        <tr><td>
+          <p style="margin:0 0 24px;font-size:22px;font-weight:700;color:#ffffff;">ArcenPay</p>
+          <h1 style="margin:0 0 12px;font-size:18px;font-weight:600;color:#10b981;">✅ Dispatch Provider Connected</h1>
+          <p style="margin:0 0 16px;font-size:14px;color:#888;line-height:1.6;">
+            This email confirms that your ArcenPay Agent dispatch provider is working correctly.
+          </p>
+          <p style="margin:0 0 24px;font-size:14px;color:#888;line-height:1.6;">
+            When your AI agent needs funds or requires top-up approval, requests will be delivered directly to this inbox.
+          </p>
+          <div style="background:#18181b;border:1px solid #27272a;border-radius:8px;padding:12px 16px;font-size:12px;color:#a1a1aa;margin-bottom:24px;">
+            <strong>Recipient:</strong> ${email}<br/>
+            <strong>Timestamp:</strong> ${new Date().toUTCString()}
+          </div>
+          <hr style="margin:24px 0;border:none;border-top:1px solid #222225;" />
+          <p style="margin:0;font-size:12px;color:#52525b;">
+            ArcenPay Autonomous Agent Infrastructure
+          </p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`,
+  });
+}
+
