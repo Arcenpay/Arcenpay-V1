@@ -22,7 +22,7 @@ import {
   useDashboardWallet,
 } from "@/hooks/use-dashboard-wallet";
 import { useStellarWallet } from "@/hooks/use-stellar-wallet";
-import { getOnboardingChainFamily } from "@/lib/onboarding-chain-family";
+import { getOnboardingChainFamily, setOnboardingChainFamily } from "@/lib/onboarding-chain-family";
 import { getChainFamily } from "@arcenpay/internal-core";
 import { toast } from "sonner";
 import { OnboardingShell } from "@/components/onboarding/onboarding-shell";
@@ -103,6 +103,7 @@ function EvmWalletConnect() {
           throw new Error(`This wallet is already linked to another account (${err.maskedOwnerEmail}).`);
         throw new Error(err.error || "Failed to link wallet");
       }
+      setOnboardingChainFamily("evm");
       toast.success("Wallet linked successfully");
       await routeAfterWalletLink();
     } catch (err: unknown) {
@@ -264,6 +265,7 @@ function StellarWalletConnect({ onLinked }: { onLinked: (address: string) => voi
         const err = await res.json().catch(() => ({}));
         throw new Error(err.error || "Failed to link wallet");
       }
+      setOnboardingChainFamily("stellar");
       toast.success("Stellar wallet linked");
       onLinked(wallet.address);
     } catch (err: unknown) {
@@ -326,13 +328,26 @@ function StellarWalletConnect({ onLinked }: { onLinked: (address: string) => voi
 export default function ConnectWalletPage() {
   const router = useRouter();
   const [storedWallet, setStoredWallet] = useState<string | null | undefined>(undefined);
-  const [family] = useState<ChainFamily | null>(() => getOnboardingChainFamily());
+  const [family, setFamily] = useState<ChainFamily | null>(() => getOnboardingChainFamily());
 
   // Check if wallet is already linked (skip chain-family choice for existing users)
   useEffect(() => {
     apiFetch("/api/auth/wallet-status")
       .then((res) => (res.ok ? res.json() : null))
-      .then((data) => setStoredWallet(data?.storedWallet ?? null))
+      .then((data) => {
+        const wallet = data?.storedWallet ?? null;
+        setStoredWallet(wallet);
+        if (data?.chainFamily === "evm" || data?.chainFamily === "stellar") {
+          setFamily(data.chainFamily);
+          setOnboardingChainFamily(data.chainFamily);
+        } else if (wallet?.startsWith("0x")) {
+          setFamily("evm");
+          setOnboardingChainFamily("evm");
+        } else if (wallet?.startsWith("G")) {
+          setFamily("stellar");
+          setOnboardingChainFamily("stellar");
+        }
+      })
       .catch(() => setStoredWallet(null));
   }, []);
 

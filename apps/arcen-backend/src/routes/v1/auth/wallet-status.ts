@@ -10,8 +10,20 @@ export async function walletStatus(c: Context) {
 
   const user = await db.user.findUnique({
     where: { id: session.userId },
-    select: { walletAddress: true },
+    select: { walletAddress: true, stellarWalletAddress: true },
   });
 
-  return c.json({ storedWallet: user?.walletAddress ?? null });
+  const chainFamily =
+    user?.stellarWalletAddress && !user?.walletAddress
+      ? "stellar"
+      : user?.walletAddress
+      ? "evm"
+      : null;
+
+  return c.json({
+    storedWallet: user?.walletAddress ?? user?.stellarWalletAddress ?? null,
+    walletAddress: user?.walletAddress ?? null,
+    stellarWalletAddress: user?.stellarWalletAddress ?? null,
+    chainFamily,
+  });
 }

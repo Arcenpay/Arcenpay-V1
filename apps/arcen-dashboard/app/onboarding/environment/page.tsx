@@ -2,8 +2,10 @@
 import { apiFetch } from "@/lib/api-client";
 
 import { useEffect, useMemo, useState } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Building2, CheckCircle2, Loader2, PlusCircle } from "lucide-react";
+import { NetworkIcon } from "@web3icons/react/dynamic";
 import { Web3Icon } from "@/components/web3-icon";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,18 +26,22 @@ import {
   type EnvironmentMode,
 } from "@/lib/default-chain";
 import { getChainFamily } from "@arcenpay/internal-core";
-import { getOnboardingChainFamily } from "@/lib/onboarding-chain-family";
+import {
+  getOnboardingChainFamily,
+  setOnboardingChainFamily,
+  resolveEffectiveChainFamily,
+} from "@/lib/onboarding-chain-family";
 import { useDashboardSession } from "@/hooks/use-dashboard-session";
 import { OnboardingShell } from "@/components/onboarding/onboarding-shell";
 import type { ChainFamily } from "@arcenpay/internal-core";
 
-// Chain picker filtered to only the selected family — EVM users see
-// BOT/Base/Arc/Sepolia; Stellar users see Stellar Testnet/Mainnet/Futurenet.
-function buildChainOptions(mode: EnvironmentMode, family: ChainFamily | null) {
+// Chain picker strictly filtered to the selected family:
+// EVM users see only EVM networks (BOT/Base/Arc/Sepolia).
+// Stellar users see only Stellar networks (Stellar Testnet/Mainnet/Futurenet).
+function buildChainOptions(mode: EnvironmentMode, family: ChainFamily) {
   return getChainIdsForEnvironment(mode)
     .filter((chainId) => {
       if (mode === "PRODUCTION") return true;
-      if (!family) return true;
       return getChainFamily(chainId) === family;
     })
     .map((chainId) => ({
@@ -46,7 +52,7 @@ function buildChainOptions(mode: EnvironmentMode, family: ChainFamily | null) {
 
 function defaultChainIdForFamily(
   mode: EnvironmentMode,
-  family: ChainFamily | null,
+  family: ChainFamily,
 ): number {
   if (mode === "PRODUCTION") return BOT_MAINNET_CHAIN_ID;
   if (family === "stellar") return STELLAR_TESTNET_CHAIN_ID;
@@ -56,10 +62,14 @@ function defaultChainIdForFamily(
 export default function EnvironmentOnboardingPage() {
   const router = useRouter();
   const { data, isLoading, refresh } = useDashboardSession();
-  const [selectedFamily, setSelectedFamily] = useState<ChainFamily | null>(null);
+  const [selectedFamily, setSelectedFamily] = useState<ChainFamily>(() => {
+    return getOnboardingChainFamily() ?? "evm";
+  });
   const [name, setName] = useState("");
   const [mode, setMode] = useState<EnvironmentMode>("DEVELOPMENT");
-  const [chainId, setChainId] = useState<number>(BASE_SEPOLIA_CHAIN_ID);
+  const [chainId, setChainId] = useState<number>(() => {
+    return defaultChainIdForFamily("DEVELOPMENT", getOnboardingChainFamily() ?? "evm");
+  });
   const [productionEnabled, setProductionEnabled] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -67,11 +77,17 @@ export default function EnvironmentOnboardingPage() {
   const canManage =
     data?.currentTeam?.role === "OWNER" || data?.currentTeam?.role === "ADMIN";
 
+  // When session data arrives, ensure family matches the user's linked wallet
   useEffect(() => {
-    const family = getOnboardingChainFamily();
-    setSelectedFamily(family);
-    setChainId(defaultChainIdForFamily(mode, family));
-  }, []);
+    if (!data?.user) return;
+    const resolved = resolveEffectiveChainFamily(
+      getOnboardingChainFamily(),
+      data.user.walletAddress,
+      data.user.stellarWalletAddress,
+    );
+    setSelectedFamily(resolved);
+    setOnboardingChainFamily(resolved);
+  }, [data?.user?.walletAddress, data?.user?.stellarWalletAddress]);
 
   const chainOptions = useMemo(
     () => buildChainOptions(mode, selectedFamily),
@@ -81,10 +97,12 @@ export default function EnvironmentOnboardingPage() {
   const hasExistingEnvironments = existingEnvironments.length > 0;
 
   useEffect(() => {
-    setChainId(
-      chainOptions[0]?.chainId ?? defaultChainIdForFamily(mode, selectedFamily),
-    );
-  }, [chainOptions, mode, selectedFamily]);
+    if (!chainOptions.some((opt) => opt.chainId === chainId)) {
+      setChainId(
+        chainOptions[0]?.chainId ?? defaultChainIdForFamily(mode, selectedFamily),
+      );
+    }
+  }, [chainOptions, mode, selectedFamily, chainId]);
 
   useEffect(() => {
     apiFetch("/api/environments", { cache: "no-store" })
@@ -246,13 +264,64 @@ export default function EnvironmentOnboardingPage() {
 
           {/* Type & Chain Grid */}
           <div className="grid gap-4 sm:grid-cols-2">
+            {/* Blockchain Ecosystem */}
+            <div className="space-y-2">
+              <Label htmlFor="environment-family" className="text-sm font-medium text-foreground">
+                Blockchain Ecosystem
+              </Label>
+              <Select
+                value={selectedFamily}
+                onValueChange={(val) => {
+                  const fam = val as ChainFamily;
+                  setSelectedFamily(fam);
+                  setOnboardingChainFamily(fam);
+                  setChainId(defaultChainIdForFamily(mode, fam));
+                }}
+              >
+                <SelectTrigger id="environment-family" className="bg-background border-input text-foreground h-11 focus:ring-brand">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-popover border-border text-popover-foreground">
+                  <SelectItem value="evm">
+                    <span className="flex items-center gap-2">
+                      <span className="w-4 h-4 rounded-full overflow-hidden flex items-center justify-center shrink-0">
+                        <Image
+                          src="/botchain.jpg"
+                          alt="BOT Chain"
+                          width={18}
+                          height={18}
+                          className="rounded-full object-cover shrink-0"
+                          unoptimized
+                        />
+                      </span>
+                      EVM Networks
+                    </span>
+                  </SelectItem>
+                  <SelectItem value="stellar" disabled={mode === "PRODUCTION"}>
+                    <span className="flex items-center gap-2">
+                      <NetworkIcon name="stellar" variant="branded" size={18} className="rounded-full bg-white dark:bg-white p-px" />
+                      Stellar Networks{mode === "PRODUCTION" ? " — Coming soon" : ""}
+                    </span>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Environment Mode */}
             <div className="space-y-2">
               <Label htmlFor="environment-type" className="text-sm font-medium text-foreground">
                 Environment Mode
               </Label>
               <Select
                 value={mode}
-                onValueChange={(value) => setMode(value as EnvironmentMode)}
+                onValueChange={(value) => {
+                  const newMode = value as EnvironmentMode;
+                  setMode(newMode);
+                  if (newMode === "PRODUCTION" && selectedFamily === "stellar") {
+                    setSelectedFamily("evm");
+                    setOnboardingChainFamily("evm");
+                  }
+                }}
               >
                 <SelectTrigger id="environment-type" className="bg-background border-input text-foreground h-11 focus:ring-brand">
                   <SelectValue />
@@ -268,7 +337,8 @@ export default function EnvironmentOnboardingPage() {
               </Select>
             </div>
 
-            <div className="space-y-2">
+            {/* Target Blockchain Network */}
+            <div className="space-y-2 sm:col-span-2">
               <Label htmlFor="environment-chain" className="text-sm font-medium text-foreground">
                 Target Blockchain Network
               </Label>

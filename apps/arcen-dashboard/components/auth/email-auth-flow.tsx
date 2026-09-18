@@ -326,6 +326,7 @@ export function EmailAuthFlow({
             );
           throw new Error(linkPayload.error || "Could not link this wallet.");
         }
+        setOnboardingChainFamily("stellar");
         await navigatePostAuth();
         return true;
       } catch (err) {
@@ -401,7 +402,7 @@ export function EmailAuthFlow({
         }
         throw new Error(linkPayload.error || "Could not link this wallet.");
       }
-
+      setOnboardingChainFamily("evm");
       await navigatePostAuth();
       return true;
     } catch (linkError) {
