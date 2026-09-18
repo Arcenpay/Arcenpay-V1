@@ -67,65 +67,269 @@ async function sendWithResend(input: {
 }
 
 /** Sends a 6-digit email auth code for the dashboard login flow (automated from noreply) */
-export async function sendEmailAuthCode(
-  email: string,
-  code: string,
-): Promise<void> {
-  await sendWithResend({
-    to: email,
-    subject: "Your ArcenPay Verification Code",
-    html: `
-<!DOCTYPE html>
+const LOGO_IMAGE_URL = "https://files.catbox.moe/dzpc14.png";
+const HERO_IMAGE_URL = "https://files.catbox.moe/oe5jl5.jpg";
+
+function escapeHtml(value: string): string {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
+interface ArcenpayEmailLayoutInput {
+  title: string;
+  recipientEmail?: string | null;
+  children: string;
+  dashboardUrl?: string;
+}
+
+function renderArcenpayEmailLayout(input: ArcenpayEmailLayoutInput): string {
+  const title = escapeHtml(input.title);
+  const dashUrl = input.dashboardUrl ?? (APP_URL || "https://app.arcenpay.com");
+  const recipientEmail = input.recipientEmail?.trim();
+  const escapedRecipient = recipientEmail ? escapeHtml(recipientEmail) : null;
+  const preferencesUrl = `${dashUrl}/settings/notifications`;
+  const xUrl = "https://x.com/arcenpayhq";
+  const linkedInUrl = "https://www.linkedin.com/company/arcenpay";
+  const githubUrl = "https://github.com/arcenpay";
+
+  return `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="color-scheme" content="light" />
   <meta name="supported-color-schemes" content="light" />
-  <title>Your ArcenPay Verification Code</title>
+  <title>${title}</title>
 </head>
-<body style="margin:0;padding:0;background-color:#f8fafc;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased;">
-  <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="padding:48px 16px;background-color:#f8fafc;">
-    <tr><td align="center">
-      <table width="100%" cellpadding="0" cellspacing="0" role="presentation"
-             style="max-width:480px;background-color:#ffffff;border:1px solid #e2e8f0;border-radius:16px;box-shadow:0 4px 6px -1px rgba(0,0,0,0.05),0 2px 4px -2px rgba(0,0,0,0.05);overflow:hidden;">
-        <!-- Top accent banner -->
-        <tr><td style="height:4px;background-color:#4f46e5;"></td></tr>
-        <tr><td style="padding:40px 36px;">
-          <!-- Brand header -->
-          <div style="margin-bottom:28px;">
-            <span style="font-size:20px;font-weight:800;letter-spacing:-0.5px;color:#0f172a;text-transform:none;">Arcen<span style="color:#4f46e5;">Pay</span></span>
-            <span style="display:inline-block;margin-left:8px;padding:2px 8px;background-color:#eef2ff;color:#4f46e5;font-size:11px;font-weight:600;border-radius:9999px;vertical-align:middle;">Verification</span>
-          </div>
+<body style="margin:0;padding:0;background-color:#fafafa;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Segoe UI',Roboto,Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased;color:#0a0a0a;">
+  <!-- Outer Table Canvas -->
+  <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="background-color:#fafafa;margin:0;padding:40px 16px 60px;">
+    <tr>
+      <td align="center" style="margin:0;padding:0;">
+        <!-- Centered Email Container Card (max 560px) -->
+        <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="max-width:560px;width:100%;background-color:#ffffff;border:1px solid #e4e4e7;border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.04),0 8px 24px -4px rgba(0,0,0,0.03);text-align:left;">
+          
+          <!-- Brand Header: Official ArcenPay Logo -->
+          <tr>
+            <td style="padding:28px 36px 20px 36px;background-color:#ffffff;">
+              <table cellpadding="0" cellspacing="0" role="presentation">
+                <tr>
+                  <td style="vertical-align:middle;line-height:0;">
+                    <a href="${dashUrl}" style="text-decoration:none;display:inline-block;">
+                      <img src="${LOGO_IMAGE_URL}" alt="ArcenPay" width="138" height="34" style="display:block;height:32px;width:auto;border:0;outline:none;" />
+                    </a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
 
-          <h1 style="margin:0 0 12px;font-size:22px;font-weight:700;color:#0f172a;line-height:1.3;letter-spacing:-0.3px;">
-            Your verification code
-          </h1>
-          <p style="margin:0 0 28px;font-size:14px;color:#475569;line-height:1.6;">
-            Enter this 6-digit code in the ArcenPay dashboard to complete your sign-in. This code will expire in <strong style="color:#0f172a;">10 minutes</strong>.
-          </p>
+          <!-- Subtle Divider -->
+          <tr>
+            <td style="padding:0 36px;">
+              <div style="height:1px;background-color:#f4f4f5;line-height:1px;">&nbsp;</div>
+            </td>
+          </tr>
 
-          <!-- OTP Code Box -->
-          <div style="background-color:#f8fafc;border:2px solid #e2e8f0;border-radius:12px;padding:20px 24px;margin:24px 0;text-align:center;">
-            <span style="display:block;font-size:36px;letter-spacing:0.25em;font-weight:800;color:#0f172a;font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;">
-              ${code}
-            </span>
-          </div>
+          <!-- Main Email Content Slot -->
+          <tr>
+            <td style="padding:28px 36px 32px 36px;background-color:#ffffff;">
+              <table width="100%" cellpadding="0" cellspacing="0" role="presentation">
+                ${input.children}
+              </table>
+            </td>
+          </tr>
 
-          <p style="margin:24px 0 0;font-size:13px;color:#64748b;line-height:1.5;">
-            If you did not request this sign-in code, someone may have typed your email address by mistake. You can safely ignore this message.
-          </p>
+          <!-- Footer Divider -->
+          <tr>
+            <td style="padding:0 36px;">
+              <div style="height:1px;background-color:#f4f4f5;line-height:1px;">&nbsp;</div>
+            </td>
+          </tr>
 
-          <hr style="margin:32px 0 20px;border:none;border-top:1px solid #f1f5f9;" />
-          <p style="margin:0;font-size:12px;color:#94a3b8;line-height:1.5;">
-            ArcenPay will never ask you to share your verification code or keys over chat or email.
-          </p>
-        </td></tr>
-      </table>
-    </td></tr>
+          <!-- Footer Area -->
+          <tr>
+            <td style="padding:24px 36px 32px 36px;background-color:#fafafa;">
+              <table width="100%" cellpadding="0" cellspacing="0" role="presentation">
+                <tr>
+                  <td style="padding:0 0 10px 0;font-size:12px;line-height:18px;color:#71717a;">
+                    ${
+                      escapedRecipient
+                        ? `This email was sent to <a href="mailto:${escapedRecipient}" style="color:#71717a;text-decoration:underline;">${escapedRecipient}</a>. To change which emails you receive, <a href="${preferencesUrl}" style="color:#71717a;text-decoration:underline;">manage your notification settings</a>.`
+                        : `To manage your email preferences, visit your <a href="${preferencesUrl}" style="color:#71717a;text-decoration:underline;">notification settings</a>.`
+                    }
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:0 0 20px 0;font-size:12px;line-height:18px;color:#71717a;">
+                    &copy; 2026 ArcenPay Protocol. All rights reserved.
+                  </td>
+                </tr>
+                <tr>
+                  <td>
+                    <table width="100%" cellpadding="0" cellspacing="0" role="presentation">
+                      <tr>
+                        <!-- Left: Mini Brand Logo -->
+                        <td align="left" style="vertical-align:middle;">
+                          <a href="${dashUrl}" style="text-decoration:none;display:inline-block;">
+                            <img src="${LOGO_IMAGE_URL}" alt="ArcenPay" width="92" height="23" style="display:block;height:22px;width:auto;border:0;outline:none;opacity:0.85;" />
+                          </a>
+                        </td>
+
+                        <!-- Right: Clean Social Icons (X, LinkedIn, GitHub) -->
+                        <td align="right" style="vertical-align:middle;">
+                          <table cellpadding="0" cellspacing="0" role="presentation">
+                            <tr>
+                              <!-- X (Twitter) -->
+                              <td style="padding-left:14px;">
+                                <a href="${xUrl}" style="display:inline-block;color:#71717a;text-decoration:none;" title="X (Twitter)">
+                                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block;color:#71717a;">
+                                    <path d="M4 4l11.733 16h4.267l-11.733 -16z"></path>
+                                    <path d="M4 20l6.768 -6.768m2.46 -2.46l6.772 -6.772"></path>
+                                  </svg>
+                                </a>
+                              </td>
+                              <!-- LinkedIn -->
+                              <td style="padding-left:14px;">
+                                <a href="${linkedInUrl}" style="display:inline-block;color:#71717a;text-decoration:none;" title="LinkedIn">
+                                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block;color:#71717a;">
+                                    <path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"></path>
+                                    <rect x="2" y="9" width="4" height="12"></rect>
+                                    <circle cx="4" cy="4" r="2"></circle>
+                                  </svg>
+                                </a>
+                              </td>
+                              <!-- GitHub -->
+                              <td style="padding-left:14px;">
+                                <a href="${githubUrl}" style="display:inline-block;color:#71717a;text-decoration:none;" title="GitHub">
+                                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block;color:#71717a;">
+                                    <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path>
+                                  </svg>
+                                </a>
+                              </td>
+                            </tr>
+                          </table>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
   </table>
 </body>
-</html>`,
+</html>`;
+}
+
+/** Backwards-compatible alias */
+const renderUntitledEmailLayout = renderArcenpayEmailLayout;
+
+/** Sends a 6-digit email auth code for the dashboard login flow (automated from noreply) */
+export async function sendEmailAuthCode(
+  email: string,
+  code: string,
+): Promise<void> {
+  const dashUrl = APP_URL || "https://app.arcenpay.com";
+  const loginUrl = `${dashUrl}/login`;
+  const digits = code.trim().split("");
+
+  const digitBoxesHtml = digits
+    .map(
+      (digit) => `
+      <td style="padding:0 4px;">
+        <table cellpadding="0" cellspacing="0" role="presentation" style="border:1.5px solid #e4e4e7;border-radius:8px;background-color:#fafafa;width:50px;height:56px;text-align:center;">
+          <tr>
+            <td align="center" valign="middle" style="font-size:28px;font-weight:800;color:#0a0a0a;font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;line-height:56px;width:50px;height:56px;">
+              ${escapeHtml(digit)}
+            </td>
+          </tr>
+        </table>
+      </td>`,
+    )
+    .join("");
+
+  const bodyHtml = `
+    <!-- Heading -->
+    <tr>
+      <td style="padding:0 0 10px 0;">
+        <h1 style="margin:0;font-size:22px;line-height:30px;font-weight:700;color:#0a0a0a;letter-spacing:-0.02em;">
+          Your verification code
+        </h1>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding:0 0 24px 0;font-size:14px;line-height:22px;color:#3f3f46;">
+        Enter the 6-digit code below to sign in to your ArcenPay workspace:
+      </td>
+    </tr>
+
+    <!-- Digit Boxes -->
+    <tr>
+      <td style="padding:0 0 24px 0;">
+        <table cellpadding="0" cellspacing="0" role="presentation">
+          <tr>
+            ${digitBoxesHtml}
+          </tr>
+        </table>
+      </td>
+    </tr>
+
+    <!-- Expiration & Explanation -->
+    <tr>
+      <td style="padding:0 0 20px 0;font-size:13px;line-height:20px;color:#71717a;">
+        This code is valid for <strong>10 minutes</strong>. If you did not request this login code, you can safely ignore this email.
+      </td>
+    </tr>
+
+    <!-- Security advisory -->
+    <tr>
+      <td style="padding:0 0 24px 0;">
+        <div style="background-color:#fafafa;border:1px solid #e4e4e7;border-left:3px solid #0001fd;padding:12px 16px;border-radius:0 8px 8px 0;font-size:13px;color:#3f3f46;line-height:20px;">
+          Never share this code with anyone. ArcenPay will never ask for your verification code.
+        </div>
+      </td>
+    </tr>
+
+    <!-- CTA Button -->
+    <tr>
+      <td style="padding:0 0 24px 0;">
+        <table cellpadding="0" cellspacing="0" role="presentation">
+          <tr>
+            <td style="border-radius:8px;background-color:#0a0a0a;">
+              <a href="${loginUrl}" style="display:inline-block;padding:12px 24px;color:#ffffff;background-color:#0a0a0a;border:1px solid #0a0a0a;border-radius:8px;font-size:14px;font-weight:600;text-decoration:none;text-align:center;">
+                Sign in to dashboard &rarr;
+              </a>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+
+    <!-- Sign-off -->
+    <tr>
+      <td style="padding:0;font-size:14px;line-height:22px;color:#71717a;">
+        The ArcenPay team
+      </td>
+    </tr>`;
+
+  await sendWithResend({
+    to: email,
+    subject: `${code} is your ArcenPay verification code`,
+    html: renderArcenpayEmailLayout({
+      title: "Your ArcenPay Verification Code",
+      recipientEmail: email,
+      children: bodyHtml,
+      dashboardUrl: dashUrl,
+    }),
   });
 }
 
@@ -136,60 +340,83 @@ export async function sendTeamInviteEmail(
   teamName: string,
   inviterEmail: string | null,
 ): Promise<void> {
-  const url = `${APP_URL}/invite?token=${encodeURIComponent(token)}`;
-  const inviterText = inviterEmail
-    ? `<strong style="color:#ccc">${inviterEmail}</strong>`
-    : "A team admin";
+  const dashUrl = APP_URL || "https://app.arcenpay.com";
+  const url = `${dashUrl}/invite?token=${encodeURIComponent(token)}`;
+  const inviterText = inviterEmail ? escapeHtml(inviterEmail) : "A team administrator";
+  const escapedTeamName = escapeHtml(teamName);
+
+  const bodyHtml = `
+    <!-- Heading -->
+    <tr>
+      <td style="padding:0 0 10px 0;">
+        <h1 style="margin:0;font-size:22px;line-height:30px;font-weight:700;color:#0a0a0a;letter-spacing:-0.02em;">
+          You&#39;ve been invited to join ${escapedTeamName}
+        </h1>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding:0 0 20px 0;font-size:14px;line-height:22px;color:#3f3f46;">
+        <strong>${inviterText}</strong> has invited you to join the team on <strong>${escapedTeamName}</strong> on ArcenPay.
+      </td>
+    </tr>
+
+    <!-- Team Invite Card -->
+    <tr>
+      <td style="padding:0 0 24px 0;">
+        <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="border:1px solid #e4e4e7;border-radius:10px;background-color:#fafafa;padding:18px 20px;">
+          <tr>
+            <td style="vertical-align:middle;">
+              <div style="font-size:11px;font-weight:700;color:#71717a;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">Workspace</div>
+              <div style="font-size:16px;font-weight:700;color:#0a0a0a;">${escapedTeamName}</div>
+            </td>
+            <td align="right" style="vertical-align:middle;">
+              <span style="display:inline-block;padding:3px 8px;background-color:#ffffff;border:1px solid #e4e4e7;border-radius:6px;font-size:11px;font-weight:600;color:#0a0a0a;">
+                Pending Invite
+              </span>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+
+    <!-- CTA Button -->
+    <tr>
+      <td style="padding:0 0 24px 0;">
+        <table cellpadding="0" cellspacing="0" role="presentation">
+          <tr>
+            <td style="border-radius:8px;background-color:#0a0a0a;">
+              <a href="${url}" target="_blank" rel="noopener noreferrer" style="display:inline-block;padding:12px 26px;color:#ffffff;background-color:#0a0a0a;border:1px solid #0a0a0a;border-radius:8px;font-size:14px;font-weight:600;text-decoration:none;text-align:center;">
+                Accept invitation &rarr;
+              </a>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+
+    <!-- Expiry info -->
+    <tr>
+      <td style="padding:0 0 20px 0;font-size:13px;line-height:20px;color:#71717a;">
+        This invitation link will expire in 7 days. If you weren&#39;t expecting this invitation, you can safely ignore this email.
+      </td>
+    </tr>
+
+    <!-- Sign-off -->
+    <tr>
+      <td style="padding:0;font-size:14px;line-height:22px;color:#71717a;">
+        The ArcenPay team
+      </td>
+    </tr>`;
 
   await sendWithResend({
     to: email,
-    subject: `You've been invited to ${teamName} on ArcenPay`,
-    html: `
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>You've been invited to ${teamName}</title>
-</head>
-<body style="margin:0;padding:0;background:#0a0a0a;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="padding:40px 16px;">
-    <tr><td align="center">
-      <table width="480" cellpadding="0" cellspacing="0"
-             style="background:#111113;border:1px solid #222225;border-radius:12px;padding:40px;">
-        <tr><td>
-          <p style="margin:0 0 32px;font-size:22px;font-weight:700;color:#ffffff;">ArcenPay</p>
-
-          <h1 style="margin:0 0 12px;font-size:20px;font-weight:600;color:#ffffff;">
-            You've been invited to join <span style="color:#6366f1;">${teamName}</span>
-          </h1>
-          <p style="margin:0 0 28px;font-size:14px;color:#888;">
-            ${inviterText} has added you to the <strong style="color:#ccc">${teamName}</strong>
-            workspace on ArcenPay. Click the button below, verify your email, and we'll add you automatically.
-            This invite expires in <strong style="color:#ccc">7 days</strong>.
-          </p>
-
-          <a href="${url}"
-             style="display:inline-block;padding:12px 28px;background:#6366f1;color:#fff;
-                    text-decoration:none;border-radius:8px;font-size:14px;font-weight:600;">
-            Accept Invitation
-          </a>
-
-          <p style="margin:28px 0 0;font-size:12px;color:#555;">
-            Or copy and paste this URL into your browser:<br />
-            <a href="${url}" style="color:#6366f1;word-break:break-all;">${url}</a>
-          </p>
-
-          <hr style="margin:32px 0;border:none;border-top:1px solid #222225;" />
-          <p style="margin:0;font-size:12px;color:#444;">
-            If you weren't expecting this invitation, you can safely ignore this email.
-          </p>
-        </td></tr>
-      </table>
-    </td></tr>
-  </table>
-</body>
- </html>`,
+    subject: `You've been invited to join ${teamName} on ArcenPay`,
+    html: renderArcenpayEmailLayout({
+      title: `Invitation to join ${teamName}`,
+      recipientEmail: email,
+      children: bodyHtml,
+      dashboardUrl: dashUrl,
+    }),
   });
 }
 
@@ -256,15 +483,6 @@ type SubscriptionPlanChangeEmailInput = {
   targetPlanName?: string | null;
   effectiveAt?: string | null;
 };
-
-function escapeHtml(value: string): string {
-  return value
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#39;");
-}
 
 function formatEmailDate(value?: string | null): string {
   if (!value) {
@@ -409,83 +627,129 @@ function buildSubscriptionPlanChangeCopy(
 export async function sendSubscriptionPlanChangeEmail(
   input: SubscriptionPlanChangeEmailInput,
 ): Promise<void> {
+  const dashUrl = APP_URL ?? "https://app.arcenpay.com";
   const copy = buildSubscriptionPlanChangeCopy(input);
+
+  const bodyHtml = `
+    <!-- Main Heading -->
+    <tr>
+      <td style="padding:0 0 10px 0;">
+        <h1 style="margin:0;font-size:22px;line-height:30px;font-weight:700;color:#0a0a0a;letter-spacing:-0.02em;">
+          ${escapeHtml(copy.heading)}
+        </h1>
+      </td>
+    </tr>
+
+    <!-- Body Copy -->
+    <tr>
+      <td style="padding:0 0 20px 0;font-size:14px;line-height:22px;color:#3f3f46;">
+        ${copy.message}
+      </td>
+    </tr>
+
+    <!-- CTA to Manage Subscription -->
+    <tr>
+      <td style="padding:0 0 24px 0;">
+        <table cellpadding="0" cellspacing="0" role="presentation">
+          <tr>
+            <td style="border-radius:8px;background-color:#0a0a0a;">
+              <a href="${dashUrl}" style="display:inline-block;padding:12px 24px;color:#ffffff;background-color:#0a0a0a;border:1px solid #0a0a0a;border-radius:8px;font-size:14px;font-weight:600;text-decoration:none;text-align:center;">
+                Manage subscription &rarr;
+              </a>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+
+    <!-- Support Sign-off -->
+    <tr>
+      <td style="padding:0;font-size:13px;line-height:20px;color:#71717a;">
+        If you have any questions or did not authorize this change, please reach out to <a href="mailto:support@arcenpay.com" style="color:#0001fd;text-decoration:underline;font-weight:600;">support@arcenpay.com</a>.
+      </td>
+    </tr>`;
 
   await sendWithResend({
     to: input.to,
     subject: copy.subject,
-    html: `
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>${copy.heading}</title>
-</head>
-<body style="margin:0;padding:0;background:#f5f7fa;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="padding:40px 16px;">
-    <tr><td align="center">
-      <table width="520" cellpadding="0" cellspacing="0"
-             style="background:#ffffff;border:1px solid #d8dde6;border-radius:12px;padding:32px;">
-        <tr><td>
-          <p style="margin:0 0 24px;font-size:22px;font-weight:700;color:#0f172a;">ArcenPay</p>
-          <h1 style="margin:0 0 10px;font-size:20px;font-weight:600;color:#111827;">
-            ${copy.heading}
-          </h1>
-          <p style="margin:0 0 20px;font-size:14px;line-height:1.7;color:#4b5563;">
-            ${copy.message}
-          </p>
-          <p style="margin:18px 0 0;font-size:12px;color:#6b7280;">
-            If you have any questions, please contact your service provider or reply to your usual billing support channel.
-          </p>
-        </td></tr>
-      </table>
-    </td></tr>
-  </table>
-</body>
-</html>`,
+    html: renderArcenpayEmailLayout({
+      title: copy.heading,
+      recipientEmail: input.to,
+      children: bodyHtml,
+      dashboardUrl: dashUrl,
+    }),
   });
 }
 
 /** Sends a credit note notification email to a subscriber/customer */
 export async function sendCreditNoteEmail(input: CreditNoteEmailInput): Promise<void> {
+  const dashUrl = APP_URL ?? "https://app.arcenpay.com";
+  const formattedAmount = formatMoneyWithCurrency(input.amount, input.currency);
+
+  const bodyHtml = `
+    <!-- Main Heading -->
+    <tr>
+      <td style="padding:0 0 10px 0;">
+        <h1 style="margin:0;font-size:22px;line-height:30px;font-weight:700;color:#0a0a0a;letter-spacing:-0.02em;">
+          Credit note issued
+        </h1>
+      </td>
+    </tr>
+
+    <!-- Summary Paragraph -->
+    <tr>
+      <td style="padding:0 0 20px 0;font-size:14px;line-height:22px;color:#3f3f46;">
+        A credit note has been applied to your invoice <strong>${escapeHtml(input.invoiceNumber)}</strong>.
+      </td>
+    </tr>
+
+    <!-- Credit Note Details Card -->
+    <tr>
+      <td style="padding:0 0 24px 0;">
+        <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="border:1px solid #e4e4e7;border-radius:10px;background-color:#fafafa;padding:18px 20px;">
+          <tr>
+            <td style="font-size:13px;line-height:22px;color:#3f3f46;">
+              <div style="margin-bottom:6px;"><strong style="color:#0a0a0a;">Credit Note:</strong> ${escapeHtml(input.noteNumber)}</div>
+              <div style="margin-bottom:6px;"><strong style="color:#0a0a0a;">Invoice:</strong> ${escapeHtml(input.invoiceNumber)}</div>
+              <div style="margin-bottom:6px;"><strong style="color:#0a0a0a;">Amount Credited:</strong> <span style="font-weight:700;color:#0a0a0a;">${formattedAmount}</span></div>
+              <div><strong style="color:#0a0a0a;">Reason:</strong> ${escapeHtml(input.reason)}</div>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+
+    <!-- CTA Button -->
+    <tr>
+      <td style="padding:0 0 24px 0;">
+        <table cellpadding="0" cellspacing="0" role="presentation">
+          <tr>
+            <td style="border-radius:8px;background-color:#0a0a0a;">
+              <a href="${dashUrl}" style="display:inline-block;padding:12px 24px;color:#ffffff;background-color:#0a0a0a;border:1px solid #0a0a0a;border-radius:8px;font-size:14px;font-weight:600;text-decoration:none;text-align:center;">
+                View in dashboard &rarr;
+              </a>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+
+    <!-- Sign-off -->
+    <tr>
+      <td style="padding:0;font-size:13px;line-height:20px;color:#71717a;">
+        Questions? Contact us at <a href="mailto:support@arcenpay.com" style="color:#0001fd;text-decoration:underline;font-weight:600;">support@arcenpay.com</a>.
+      </td>
+    </tr>`;
+
   await sendWithResend({
     to: input.to,
     subject: `Credit Note ${input.noteNumber} issued for Invoice ${input.invoiceNumber}`,
-    html: `
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Credit Note ${input.noteNumber}</title>
-</head>
-<body style="margin:0;padding:0;background:#f5f7fa;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="padding:40px 16px;">
-    <tr><td align="center">
-      <table width="520" cellpadding="0" cellspacing="0"
-             style="background:#ffffff;border:1px solid #d8dde6;border-radius:12px;padding:32px;">
-        <tr><td>
-          <p style="margin:0 0 24px;font-size:22px;font-weight:700;color:#0f172a;">ArcenPay</p>
-          <h1 style="margin:0 0 10px;font-size:20px;font-weight:600;color:#111827;">
-            Credit Note Issued
-          </h1>
-          <p style="margin:0 0 20px;font-size:14px;color:#4b5563;">
-            A credit note has been applied to your invoice
-            <strong>${input.invoiceNumber}</strong>.<br /><br />
-            Credit Note #: <strong>${input.noteNumber}</strong><br />
-            Amount credited: <strong>${input.amount} ${input.currency}</strong><br />
-            Reason: ${input.reason}
-          </p>
-          <p style="margin:18px 0 0;font-size:12px;color:#6b7280;">
-            If you have any questions, please contact your service provider.
-          </p>
-        </td></tr>
-      </table>
-    </td></tr>
-  </table>
-</body>
- </html>`,
+    html: renderArcenpayEmailLayout({
+      title: `Credit Note ${input.noteNumber}`,
+      recipientEmail: input.to,
+      children: bodyHtml,
+      dashboardUrl: dashUrl,
+    }),
   });
 }
 
@@ -499,28 +763,65 @@ export async function sendInvoiceEmail(input: InvoiceEmailInput): Promise<void> 
     `${APP_URL}/invoices/${encodeURIComponent(input.invoiceNumber)}`;
 
   const bodyHtml = `
-    <h1 style="margin:0 0 10px;font-size:22px;line-height:28px;font-weight:700;color:#0a0a0a;">Invoice ${escapeHtml(input.invoiceNumber)}</h1>
-    <p style="margin:0 0 24px;font-size:14px;line-height:22px;color:#5b6472;">
-      Amount due <strong style="color:#0a0a0a;">${formatMoneyWithCurrency(input.total, input.currency)}</strong>
-      &nbsp;&middot;&nbsp; Due ${escapeHtml(dueDate)}
-    </p>
-    <a href="${downloadUrl}"
-       style="display:inline-block;padding:12px 26px;background:#0a0a0a;color:#ffffff;text-decoration:none;border-radius:10px;font-size:14px;font-weight:600;">
-      View invoice
-    </a>
-    <p style="margin:20px 0 0;font-size:12px;line-height:18px;color:#8b8f98;">
-      Button not working? Open
-      <a href="${downloadUrl}" style="color:#0a0a0a;text-decoration:underline;">${escapeHtml(downloadUrl)}</a> directly.
-    </p>`;
+    <!-- Main Heading -->
+    <tr>
+      <td style="padding:0 0 10px 0;">
+        <h1 style="margin:0;font-size:22px;line-height:30px;font-weight:700;color:#0a0a0a;letter-spacing:-0.02em;">
+          Invoice ${escapeHtml(input.invoiceNumber)}
+        </h1>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding:0 0 20px 0;font-size:14px;line-height:22px;color:#3f3f46;">
+        A new invoice has been issued for your subscription.
+      </td>
+    </tr>
+
+    <!-- Amount Due Card -->
+    <tr>
+      <td style="padding:0 0 24px 0;">
+        <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="border:1px solid #e4e4e7;border-radius:10px;background-color:#fafafa;padding:22px 20px;">
+          <tr>
+            <td>
+              <div style="font-size:11px;font-weight:700;color:#71717a;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Amount Due</div>
+              <div style="font-size:32px;line-height:38px;font-weight:800;color:#0a0a0a;letter-spacing:-0.03em;margin-bottom:8px;">${formatMoneyWithCurrency(input.total, input.currency)}</div>
+              <div style="font-size:13px;color:#71717a;">Due date: <strong style="color:#0a0a0a;">${escapeHtml(dueDate)}</strong></div>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+
+    <!-- CTA Button -->
+    <tr>
+      <td style="padding:0 0 20px 0;">
+        <table cellpadding="0" cellspacing="0" role="presentation">
+          <tr>
+            <td style="border-radius:8px;background-color:#0a0a0a;">
+              <a href="${downloadUrl}" style="display:inline-block;padding:12px 26px;color:#ffffff;background-color:#0a0a0a;border:1px solid #0a0a0a;border-radius:8px;font-size:14px;font-weight:600;text-decoration:none;text-align:center;">
+                View invoice &rarr;
+              </a>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+
+    <!-- Direct link info -->
+    <tr>
+      <td style="padding:0;font-size:12px;line-height:18px;color:#71717a;">
+        Button not working? Open <a href="${downloadUrl}" style="color:#0001fd;text-decoration:underline;">${escapeHtml(downloadUrl)}</a> directly in your browser.
+      </td>
+    </tr>`;
 
   await sendWithResend({
     to: input.to,
     subject: `Invoice ${input.invoiceNumber} from ArcenPay`,
-    html: arcenpayEmailShell({
+    html: renderArcenpayEmailLayout({
       title: `Invoice ${input.invoiceNumber}`,
-      headerLeft: "ArcenPay",
-      headerRight: "Invoice",
+      recipientEmail: input.to,
       children: bodyHtml,
+      dashboardUrl: APP_URL,
     }),
   });
 }
@@ -560,11 +861,11 @@ export async function sendPaymentReceiptEmail(
 
       return `
         <tr>
-          <td style="padding:0 0 18px;vertical-align:top;">
-            <div style="font-size:15px;line-height:22px;font-weight:600;color:#1f2937;">${description}</div>
-            <div style="margin-top:4px;font-size:13px;line-height:20px;color:#6b7280;">Qty ${quantity} &middot; ${unitAmount}</div>
+          <td style="padding:0 0 16px;vertical-align:top;">
+            <div style="font-size:14px;line-height:20px;font-weight:600;color:#0a0a0a;">${description}</div>
+            <div style="margin-top:2px;font-size:12px;line-height:18px;color:#71717a;">Qty ${quantity} &middot; ${unitAmount}</div>
           </td>
-          <td align="right" style="padding:0 0 18px;vertical-align:top;font-size:15px;line-height:22px;font-weight:600;color:#111827;white-space:nowrap;">
+          <td align="right" style="padding:0 0 16px;vertical-align:top;font-size:14px;line-height:20px;font-weight:600;color:#0a0a0a;white-space:nowrap;">
             ${total}
           </td>
         </tr>`;
@@ -574,86 +875,139 @@ export async function sendPaymentReceiptEmail(
     Number(input.taxTotal) > 0
       ? `
         <tr>
-          <td style="padding:16px 0 0;font-size:14px;line-height:22px;color:#6b7280;">Tax</td>
-          <td align="right" style="padding:16px 0 0;font-size:14px;line-height:22px;color:#111827;">${taxLabel}</td>
+          <td style="padding:4px 0;font-size:13px;color:#71717a;">Tax</td>
+          <td align="right" style="padding:4px 0;font-size:13px;color:#0a0a0a;">${taxLabel}</td>
         </tr>`
       : "";
   const supportLine = input.supportUrl
-    ? `Questions? Contact us at <a href="${input.supportUrl}" style="color:#635bff;text-decoration:none;font-weight:600;">support</a>${input.supportEmail ? ` or <a href="mailto:${encodedSupportEmail}" style="color:#635bff;text-decoration:none;font-weight:600;">${escapeHtml(input.supportEmail)}</a>` : ""}${input.supportPhone ? ` or call us at ${escapeHtml(input.supportPhone)}` : ""}.`
+    ? `Questions? Contact us at <a href="${input.supportUrl}" style="color:#0001fd;text-decoration:underline;font-weight:600;">support</a>${input.supportEmail ? ` or <a href="mailto:${encodedSupportEmail}" style="color:#0001fd;text-decoration:underline;font-weight:600;">${escapeHtml(input.supportEmail)}</a>` : ""}${input.supportPhone ? ` or call us at ${escapeHtml(input.supportPhone)}` : ""}.`
     : input.supportEmail
-      ? `Questions? Contact us at <a href="mailto:${encodedSupportEmail}" style="color:#635bff;text-decoration:none;font-weight:600;">${escapeHtml(input.supportEmail)}</a>${input.supportPhone ? ` or call us at ${escapeHtml(input.supportPhone)}` : ""}.`
+      ? `Questions? Contact us at <a href="mailto:${encodedSupportEmail}" style="color:#0001fd;text-decoration:underline;font-weight:600;">${escapeHtml(input.supportEmail)}</a>${input.supportPhone ? ` or call us at ${escapeHtml(input.supportPhone)}` : ""}.`
       : input.supportPhone
         ? `Questions? Call us at ${escapeHtml(input.supportPhone)}.`
         : "Need help? Reply to this email and our team will take it from there.";
-  const downloadActionsHtml = `
-            <tr>
-              <td style="padding:16px 0 0;font-size:14px;line-height:22px;color:#6b7280;">
-                ${input.invoiceDownloadUrl
-                  ? `<a href="${input.invoiceDownloadUrl}" style="color:#6b7280;text-decoration:none;font-weight:600;">Download invoice</a>`
-                  : `<span style="color:#9ca3af;">Invoice attached</span>`}
-              </td>
-              <td style="padding:16px 0 0 20px;font-size:14px;line-height:22px;color:#6b7280;">
-                ${input.receiptDownloadUrl
-                  ? `<a href="${input.receiptDownloadUrl}" style="color:#6b7280;text-decoration:none;font-weight:600;">Download receipt</a>`
-                  : `<span style="color:#9ca3af;">Receipt attached</span>`}
-              </td>
-            </tr>`;
+
+  const bodyHtml = `
+    <!-- Category Eyebrow -->
+    <tr>
+      <td style="padding:0 0 8px 0;">
+        <div style="font-size:11px;font-weight:700;color:#71717a;text-transform:uppercase;letter-spacing:0.06em;">
+          Payment Receipt
+        </div>
+      </td>
+    </tr>
+
+    <!-- Headline Amount -->
+    <tr>
+      <td style="padding:0 0 4px 0;">
+        <div style="font-size:32px;line-height:38px;font-weight:800;letter-spacing:-0.03em;color:#0a0a0a;">
+          ${amountPaidLabel}
+        </div>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding:0 0 24px 0;font-size:14px;line-height:20px;color:#71717a;">
+        Paid on ${escapeHtml(paidAt)} &middot; ${escapedPaymentMethod}
+      </td>
+    </tr>
+
+    <!-- Receipt Meta Table Card -->
+    <tr>
+      <td style="padding:0 0 24px 0;">
+        <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="border:1px solid #e4e4e7;border-radius:10px;background-color:#fafafa;padding:16px 20px;">
+          <tr>
+            <td style="padding:4px 0;font-size:13px;color:#71717a;">Receipt Number</td>
+            <td align="right" style="padding:4px 0;font-size:13px;font-weight:600;color:#0a0a0a;">${escapedReceiptNumber}</td>
+          </tr>
+          ${
+            input.invoiceNumber
+              ? `<tr>
+            <td style="padding:4px 0;font-size:13px;color:#71717a;">Invoice Reference</td>
+            <td align="right" style="padding:4px 0;font-size:13px;font-weight:600;color:#0a0a0a;">${escapeHtml(input.invoiceNumber)}</td>
+          </tr>`
+              : ""
+          }
+          <tr>
+            <td style="padding:4px 0;font-size:13px;color:#71717a;">Payment Method</td>
+            <td align="right" style="padding:4px 0;font-size:13px;font-weight:600;color:#0a0a0a;">${escapedPaymentMethod}</td>
+          </tr>
+          <tr>
+            <td style="padding:4px 0;font-size:13px;color:#71717a;">Merchant</td>
+            <td align="right" style="padding:4px 0;font-size:13px;font-weight:600;color:#0a0a0a;">${escapedProviderName}</td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+
+    <!-- Line Items Table -->
+    <tr>
+      <td style="padding:0 0 20px 0;">
+        <div style="font-size:11px;font-weight:700;color:#71717a;text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;">Items</div>
+        <table width="100%" cellpadding="0" cellspacing="0" role="presentation">
+          ${lineItemsHtml}
+          <tr>
+            <td colspan="2" style="padding:6px 0 0 0;"><div style="height:1px;background-color:#e4e4e7;line-height:1px;">&nbsp;</div></td>
+          </tr>
+          <tr>
+            <td style="padding:10px 0 4px 0;font-size:13px;color:#71717a;">Subtotal</td>
+            <td align="right" style="padding:10px 0 4px 0;font-size:13px;color:#0a0a0a;">${subtotalLabel}</td>
+          </tr>
+          ${taxRow}
+          <tr>
+            <td style="padding:8px 0 0 0;font-size:14px;font-weight:700;color:#0a0a0a;">Total Paid</td>
+            <td align="right" style="padding:8px 0 0 0;font-size:14px;font-weight:700;color:#0a0a0a;">${amountPaidLabel}</td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+
+    <!-- Download Actions -->
+    <tr>
+      <td style="padding:0 0 24px 0;">
+        <table cellpadding="0" cellspacing="0" role="presentation">
+          <tr>
+            ${
+              input.receiptDownloadUrl
+                ? `<td style="padding-right:12px;border-radius:8px;background-color:#0a0a0a;">
+                    <a href="${input.receiptDownloadUrl}" target="_blank" rel="noopener noreferrer" style="display:inline-block;padding:10px 20px;color:#ffffff;background-color:#0a0a0a;border:1px solid #0a0a0a;border-radius:8px;font-size:13px;font-weight:600;text-decoration:none;text-align:center;">
+                      Download receipt PDF &rarr;
+                    </a>
+                   </td>`
+                : `<td style="padding-right:12px;border-radius:8px;background-color:#0a0a0a;">
+                    <a href="${APP_URL || "https://app.arcenpay.com"}/settings/billing" target="_blank" rel="noopener noreferrer" style="display:inline-block;padding:10px 20px;color:#ffffff;background-color:#0a0a0a;border:1px solid #0a0a0a;border-radius:8px;font-size:13px;font-weight:600;text-decoration:none;text-align:center;">
+                      View billing dashboard &rarr;
+                    </a>
+                   </td>`
+            }
+            ${
+              input.invoiceDownloadUrl
+                ? `<td>
+                    <a href="${input.invoiceDownloadUrl}" target="_blank" rel="noopener noreferrer" style="display:inline-block;padding:10px 16px;color:#0001fd;font-size:13px;font-weight:600;text-decoration:underline;">
+                      Download invoice PDF
+                    </a>
+                   </td>`
+                : ""
+            }
+          </tr>
+        </table>
+      </td>
+    </tr>
+
+    <!-- Support Sign-off -->
+    <tr>
+      <td style="padding:0;font-size:13px;line-height:20px;color:#71717a;">
+        ${supportLine}
+      </td>
+    </tr>`;
 
   const result = await sendWithResend({
     to: input.to,
     subject: `Your receipt from ${input.providerName} #${input.receiptNumber}`,
-    html: arcenpayEmailShell({
+    html: renderArcenpayEmailLayout({
       title: `Receipt ${input.receiptNumber}`,
-      headerLeft: input.providerName,
-      headerRight: "Receipt",
-      children: `
-          <div style="padding-bottom:22px;border-bottom:1px solid #eceef3;">
-            <div style="font-size:13px;line-height:20px;font-weight:600;color:#5b6472;">Payment received</div>
-            <div style="margin-top:6px;font-size:32px;line-height:38px;font-weight:700;letter-spacing:-0.02em;color:#0a0a0a;">${amountPaidLabel}</div>
-            <div style="margin-top:8px;font-size:13px;line-height:20px;color:#5b6472;">Paid ${escapeHtml(paidAt)} &middot; ${escapedPaymentMethod}</div>
-          </div>
-          <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="margin-top:20px;">
-            <tr>
-              <td style="padding:0 0 10px;font-size:13px;line-height:20px;color:#5b6472;">Receipt number</td>
-              <td align="right" style="padding:0 0 10px;font-size:13px;line-height:20px;font-weight:600;color:#0a0a0a;">${escapedReceiptNumber}</td>
-            </tr>
-            <tr>
-              <td style="padding:0 0 10px;font-size:13px;line-height:20px;color:#5b6472;">Invoice number</td>
-              <td align="right" style="padding:0 0 10px;font-size:13px;line-height:20px;font-weight:600;color:#0a0a0a;">${escapedInvoiceNumber}</td>
-            </tr>
-            <tr>
-              <td style="padding:0 0 10px;font-size:13px;line-height:20px;color:#5b6472;">Date paid</td>
-              <td align="right" style="padding:0 0 10px;font-size:13px;line-height:20px;font-weight:600;color:#0a0a0a;">${escapeHtml(paidAt)}</td>
-            </tr>
-            <tr>
-              <td style="padding:0;font-size:13px;line-height:20px;color:#5b6472;">Payment method</td>
-              <td align="right" style="padding:0;font-size:13px;line-height:20px;font-weight:600;color:#0a0a0a;">${escapedPaymentMethod}</td>
-            </tr>
-          </table>
-          <div style="margin-top:26px;padding-top:18px;border-top:1px solid #eceef3;">
-            <div style="margin-bottom:16px;font-size:13px;font-weight:700;color:#0a0a0a;">Line items</div>
-            ${lineItemsHtml}
-          </div>
-          <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="border-top:1px solid #eceef3;margin-top:8px;">
-            <tr>
-              <td style="padding:16px 0 0;font-size:13px;line-height:20px;color:#5b6472;">Subtotal</td>
-              <td align="right" style="padding:16px 0 0;font-size:13px;line-height:20px;color:#0a0a0a;">${subtotalLabel}</td>
-            </tr>
-            ${taxRow}
-            <tr>
-              <td style="padding:14px 0 0;font-size:13px;line-height:20px;font-weight:700;color:#0a0a0a;">Total</td>
-              <td align="right" style="padding:14px 0 0;font-size:13px;line-height:20px;font-weight:700;color:#0a0a0a;">${totalLabel}</td>
-            </tr>
-            <tr>
-              <td style="padding:16px 0 0;font-size:15px;line-height:22px;font-weight:700;color:#0a0a0a;">Amount paid</td>
-              <td align="right" style="padding:16px 0 0;font-size:15px;line-height:22px;font-weight:700;color:#0a0a0a;">${amountPaidLabel}</td>
-            </tr>
-          </table>
-          <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="margin-top:22px;border-top:1px solid #eceef3;">
-            ${downloadActionsHtml}
-          </table>
-          <div style="margin-top:22px;font-size:13px;line-height:20px;color:#5b6472;">${supportLine}</div>
-        `,
+      recipientEmail: input.to,
+      children: bodyHtml,
+      dashboardUrl: APP_URL,
     }),
     attachments: [
       {
@@ -677,101 +1031,230 @@ export async function sendWelcomeEmail(
   email: string,
   firstName?: string,
 ): Promise<void> {
-  const greeting = firstName ? `Welcome, ${firstName}!` : "Welcome to ArcenPay!";
-  const dashboardUrl = APP_URL ?? "https://app.arcenpay.xyz";
+  const dashUrl = APP_URL ?? "https://app.arcenpay.com";
+  const greeting = firstName ? `Hi ${escapeHtml(firstName)},` : "Hi there,";
+
+  const bodyHtml = `
+    <!-- Hero Image Artwork Card -->
+    <tr>
+      <td style="padding:0 0 28px 0;">
+        <div style="border-radius:10px;overflow:hidden;border:1px solid #e4e4e7;line-height:0;background-color:#050508;box-shadow:0 2px 10px rgba(0,0,0,0.04);">
+          <a href="${dashUrl}" style="display:block;text-decoration:none;">
+            <img src="${HERO_IMAGE_URL}" alt="ArcenPay — Web3 Entitlement Layer" width="540" style="display:block;width:100%;height:auto;border:0;outline:none;" />
+          </a>
+        </div>
+      </td>
+    </tr>
+
+    <!-- Main Title -->
+    <tr>
+      <td style="padding:0 0 14px 0;">
+        <h1 style="margin:0;font-size:24px;line-height:32px;font-weight:800;color:#0a0a0a;letter-spacing:-0.025em;">
+          Welcome to ArcenPay
+        </h1>
+      </td>
+    </tr>
+
+    <!-- Introductory Paragraphs -->
+    <tr>
+      <td style="padding:0 0 10px 0;font-size:14px;line-height:22px;color:#3f3f46;">
+        ${greeting}
+      </td>
+    </tr>
+    <tr>
+      <td style="padding:0 0 12px 0;font-size:14px;line-height:22px;color:#3f3f46;">
+        We&#39;re thrilled to welcome you to ArcenPay. You&#39;re now ready to deploy programmable subscriptions, real-time credit metering, and autonomous agent payments with zero custody complexity.
+      </td>
+    </tr>
+    <tr>
+      <td style="padding:0 0 24px 0;font-size:14px;line-height:22px;color:#3f3f46;">
+        Whether you&#39;re building a SaaS platform, consumer Web3 app, or multi-agent service—welcome aboard! If there&#39;s anything you need, our team is right here.
+      </td>
+    </tr>
+
+    <!-- Thin Divider -->
+    <tr>
+      <td style="padding:0 0 16px 0;">
+        <div style="height:1px;background-color:#f4f4f5;line-height:1px;">&nbsp;</div>
+      </td>
+    </tr>
+
+    <!-- Resource 1: Changelog -->
+    <tr>
+      <td style="padding:0 0 16px 0;">
+        <div style="margin-bottom:3px;">
+          <a href="https://docs.arcenpay.com/changelog" style="color:#0001fd;font-size:14px;font-weight:600;text-decoration:none;">
+            ArcenPay changelog &rarr;
+          </a>
+        </div>
+        <div style="font-size:13px;line-height:19px;color:#71717a;">
+          Weekly new updates, protocol improvements, and SDK releases.
+        </div>
+      </td>
+    </tr>
+
+    <!-- Thin Divider -->
+    <tr>
+      <td style="padding:0 0 16px 0;">
+        <div style="height:1px;background-color:#f4f4f5;line-height:1px;">&nbsp;</div>
+      </td>
+    </tr>
+
+    <!-- Resource 2: Follow us on X (Twitter) -->
+    <tr>
+      <td style="padding:0 0 16px 0;">
+        <div style="margin-bottom:3px;">
+          <a href="https://x.com/arcenpayhq" style="color:#0001fd;font-size:14px;font-weight:600;text-decoration:none;">
+            Follow us on X (@arcenpayhq) &rarr;
+          </a>
+        </div>
+        <div style="font-size:13px;line-height:19px;color:#71717a;">
+          Stay up-to-date with product announcements and tutorials.
+        </div>
+      </td>
+    </tr>
+
+    <!-- Thin Divider -->
+    <tr>
+      <td style="padding:0 0 16px 0;">
+        <div style="height:1px;background-color:#f4f4f5;line-height:1px;">&nbsp;</div>
+      </td>
+    </tr>
+
+    <!-- Resource 3: Why we're building ArcenPay -->
+    <tr>
+      <td style="padding:0 0 24px 0;">
+        <div style="margin-bottom:3px;">
+          <a href="https://docs.arcenpay.com/introduction" style="color:#0001fd;font-size:14px;font-weight:600;text-decoration:none;">
+            Why we&#39;re building ArcenPay &rarr;
+          </a>
+        </div>
+        <div style="font-size:13px;line-height:19px;color:#71717a;">
+          Explore our architecture for programmable entitlements and agent commerce.
+        </div>
+      </td>
+    </tr>
+
+    <!-- Support Notice -->
+    <tr>
+      <td style="padding:0 0 14px 0;font-size:14px;line-height:22px;color:#3f3f46;">
+        Thanks for signing up. If you have any questions, reach out at <a href="mailto:support@arcenpay.com" style="color:#0001fd;text-decoration:underline;font-weight:600;">support@arcenpay.com</a> or on <a href="https://x.com/arcenpayhq" style="color:#0001fd;text-decoration:underline;font-weight:600;">X (@arcenpayhq)</a>.
+      </td>
+    </tr>
+    <tr>
+      <td style="padding:0 0 24px 0;font-size:14px;line-height:22px;color:#71717a;">
+        &mdash; The ArcenPay team
+      </td>
+    </tr>
+
+    <!-- CTA Button -->
+    <tr>
+      <td style="padding:0 0 10px 0;">
+        <table cellpadding="0" cellspacing="0" role="presentation">
+          <tr>
+            <td style="border-radius:8px;background-color:#0a0a0a;">
+              <a href="${dashUrl}" style="display:inline-block;padding:12px 28px;color:#ffffff;background-color:#0a0a0a;border:1px solid #0a0a0a;border-radius:8px;font-size:14px;font-weight:600;text-decoration:none;text-align:center;">
+                Open your dashboard &rarr;
+              </a>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>`;
 
   await sendWithResend({
     to: email,
     subject: "Welcome to ArcenPay — your billing infrastructure is ready",
-    html: `
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Welcome to ArcenPay</title>
-</head>
-<body style="margin:0;padding:0;background:#0a0a0a;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="padding:40px 16px;">
-    <tr><td align="center">
-      <table width="480" cellpadding="0" cellspacing="0"
-             style="background:#111113;border:1px solid #222225;border-radius:12px;padding:40px;">
-        <tr><td>
-          <p style="margin:0 0 32px;font-size:22px;font-weight:700;color:#ffffff;">ArcenPay</p>
-
-          <h1 style="margin:0 0 12px;font-size:20px;font-weight:600;color:#ffffff;">${greeting}</h1>
-          <p style="margin:0 0 20px;font-size:14px;color:#888;line-height:1.6;">
-            Your ArcenPay provider account is ready. You can now set up plans, feature flags,
-            and embed a billing portal directly into your product — no backend required.
-          </p>
-
-          <p style="margin:0 0 8px;font-size:13px;font-weight:600;color:#ccc;">Get started in 3 steps:</p>
-          <ol style="margin:0 0 28px;padding-left:20px;font-size:13px;color:#888;line-height:2;">
-            <li>Create an API key in your dashboard</li>
-            <li>Call <code style="color:#6366f1;font-size:12px;">/api/v1/access-tokens</code> from your backend to identify customers</li>
-            <li>Embed <code style="color:#6366f1;font-size:12px;">&lt;ArcenEmbed /&gt;</code> in your product</li>
-          </ol>
-
-          <a href="${dashboardUrl}"
-             style="display:inline-block;padding:12px 28px;background:#6366f1;color:#fff;
-                    text-decoration:none;border-radius:8px;font-size:14px;font-weight:600;">
-            Open Dashboard
-          </a>
-
-          <hr style="margin:32px 0;border:none;border-top:1px solid #222225;" />
-          <p style="margin:0;font-size:12px;color:#444;">
-            Questions? Reply to this email — we read every one.
-          </p>
-        </td></tr>
-      </table>
-    </td></tr>
-  </table>
-</body>
- </html>`,
+    html: renderArcenpayEmailLayout({
+      title: "Welcome to ArcenPay",
+      recipientEmail: email,
+      children: bodyHtml,
+      dashboardUrl: dashUrl,
+    }),
   });
 }
 
 /** Sends a test notification email to confirm dispatch provider configuration */
 export async function sendDispatchTestEmail(email: string): Promise<void> {
+  const dashUrl = APP_URL ?? "https://app.arcenpay.com";
+
+  const bodyHtml = `
+    <!-- Status Eyebrow -->
+    <tr>
+      <td style="padding:0 0 10px 0;">
+        <div style="font-size:11px;font-weight:700;color:#71717a;text-transform:uppercase;letter-spacing:0.06em;">
+          Agent Dispatch Notification
+        </div>
+      </td>
+    </tr>
+
+    <!-- Main Title -->
+    <tr>
+      <td style="padding:0 0 12px 0;">
+        <h1 style="margin:0;font-size:22px;line-height:30px;font-weight:700;color:#0a0a0a;letter-spacing:-0.02em;">
+          Dispatch test successful
+        </h1>
+      </td>
+    </tr>
+
+    <!-- Content -->
+    <tr>
+      <td style="padding:0 0 12px 0;font-size:14px;line-height:22px;color:#3f3f46;">
+        This test message confirms that your ArcenPay Agent dispatch provider is configured correctly and ready to deliver agent alerts.
+      </td>
+    </tr>
+    <tr>
+      <td style="padding:0 0 24px 0;font-size:14px;line-height:22px;color:#3f3f46;">
+        When your autonomous AI agent requests funds, encounters budget limits, or requires authorization, notifications will arrive directly in this inbox.
+      </td>
+    </tr>
+
+    <!-- Details Card -->
+    <tr>
+      <td style="padding:0 0 24px 0;">
+        <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="border:1px solid #e4e4e7;border-radius:10px;background-color:#fafafa;padding:16px 20px;">
+          <tr>
+            <td style="font-size:13px;line-height:20px;color:#3f3f46;">
+              <strong style="color:#0a0a0a;">Recipient:</strong> ${escapeHtml(email)}<br />
+              <strong style="color:#0a0a0a;">Timestamp:</strong> ${new Date().toUTCString()}<br />
+              <strong style="color:#0a0a0a;">Provider:</strong> Resend API
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+
+    <!-- CTA Button -->
+    <tr>
+      <td style="padding:0 0 24px 0;">
+        <table cellpadding="0" cellspacing="0" role="presentation">
+          <tr>
+            <td style="border-radius:8px;background-color:#0a0a0a;">
+              <a href="${dashUrl}/agents" target="_blank" rel="noopener noreferrer" style="display:inline-block;padding:12px 24px;color:#ffffff;background-color:#0a0a0a;border:1px solid #0a0a0a;border-radius:8px;font-size:14px;font-weight:600;text-decoration:none;text-align:center;">
+                Open agent dashboard &rarr;
+              </a>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+
+    <!-- Sign-off -->
+    <tr>
+      <td style="padding:0;font-size:13px;line-height:20px;color:#71717a;">
+        The ArcenPay Agent team
+      </td>
+    </tr>`;
+
   await sendWithResend({
     to: email,
     subject: "✅ ArcenPay Agent — Dispatch Test Message",
-    html: `
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ArcenPay Agent Dispatch Test</title>
-</head>
-<body style="margin:0;padding:0;background:#0a0a0a;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="padding:40px 16px;">
-    <tr><td align="center">
-      <table width="480" cellpadding="0" cellspacing="0"
-             style="background:#111113;border:1px solid #222225;border-radius:12px;padding:40px;">
-        <tr><td>
-          <p style="margin:0 0 24px;font-size:22px;font-weight:700;color:#ffffff;">ArcenPay</p>
-          <h1 style="margin:0 0 12px;font-size:18px;font-weight:600;color:#10b981;">✅ Dispatch Provider Connected</h1>
-          <p style="margin:0 0 16px;font-size:14px;color:#888;line-height:1.6;">
-            This email confirms that your ArcenPay Agent dispatch provider is working correctly.
-          </p>
-          <p style="margin:0 0 24px;font-size:14px;color:#888;line-height:1.6;">
-            When your AI agent needs funds or requires top-up approval, requests will be delivered directly to this inbox.
-          </p>
-          <div style="background:#18181b;border:1px solid #27272a;border-radius:8px;padding:12px 16px;font-size:12px;color:#a1a1aa;margin-bottom:24px;">
-            <strong>Recipient:</strong> ${email}<br/>
-            <strong>Timestamp:</strong> ${new Date().toUTCString()}
-          </div>
-          <hr style="margin:24px 0;border:none;border-top:1px solid #222225;" />
-          <p style="margin:0;font-size:12px;color:#52525b;">
-            ArcenPay Autonomous Agent Infrastructure
-          </p>
-        </td></tr>
-      </table>
-    </td></tr>
-  </table>
-</body>
-</html>`,
+    html: renderArcenpayEmailLayout({
+      title: "ArcenPay Agent Dispatch Test",
+      recipientEmail: email,
+      children: bodyHtml,
+      dashboardUrl: dashUrl,
+    }),
   });
 }
 
