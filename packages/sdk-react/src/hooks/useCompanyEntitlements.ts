@@ -19,11 +19,33 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import type { EntitlementResult } from "../sdk";
 import { useArcenPay } from "../providers/ArcenPayProvider";
 
+export interface CompanyKeys {
+  id?: string;
+  wallet?: string;
+  email?: string;
+}
+
 export interface UseCompanyEntitlementsOptions {
   /** Cache duration in ms (default: 30_000) */
   cacheTtlMs?: number;
   /** Skip the fetch entirely (returns empty entitlements) */
   skip?: boolean;
+  /**
+   * Company identity for publishable-key reads. When no identify() session
+   * token exists, the hook authenticates with the configured publishable key
+   * (pk_live_/pk_test_) plus these keys via X-Arcen-Company-Keys.
+   */
+  companyKeys?: CompanyKeys | null;
+}
+
+function serializeCompanyKeys(keys: CompanyKeys): string {
+  return ["id", "wallet", "email"]
+    .map((key) => {
+      const value = keys[key as keyof CompanyKeys]?.trim();
+      return value ? `${key}=${value}` : "";
+    })
+    .filter(Boolean)
+    .join(",");
 }
 
 export interface UseCompanyEntitlementsReturn {
@@ -52,8 +74,9 @@ const cache = new Map<
 export function useCompanyEntitlements(
   options: UseCompanyEntitlementsOptions = {},
 ): UseCompanyEntitlementsReturn {
-  const { session, baseUrl } = useArcenPay();
+  const { session, baseUrl, publishableKey } = useArcenPay();
   const cacheTtlMs = options.cacheTtlMs ?? 30_000;
+  const companyKeysValue = serializeCompanyKeys(options.companyKeys ?? {});
 
   const [entitlements, setEntitlements] = useState<
     Record<string, EntitlementResult>
@@ -65,7 +88,12 @@ export function useCompanyEntitlements(
 
   const fetchEntitlements = useCallback(
     async (bustCache = false) => {
-      if (options.skip || !session.token) {
+      // Publishable-key mode: no session token, but a pk_ + company keys let
+      // us read entitlements client-side (the backend accepts publishable
+      // keys and resolves the company from X-Arcen-Company-Keys).
+      const canUsePublishable =
+        !session.token && Boolean(publishableKey && companyKeysValue);
+      if (options.skip || (!session.token && !canUsePublishable)) {
         setEntitlements({});
         setUpdatedAt(null);
         setError(null);
@@ -73,7 +101,10 @@ export function useCompanyEntitlements(
         return;
       }
 
-      const cacheKey = `company_entitlements:${session.token}`;
+      const authToken = session.token ?? (canUsePublishable ? publishableKey : null);
+      const cacheKey = canUsePublishable
+        ? `company_entitlements:pk:${companyKeysValue}`
+        : `company_entitlements:${session.token}`;
 
       if (!bustCache) {
         const cached = cache.get(cacheKey);
@@ -93,11 +124,15 @@ export function useCompanyEntitlements(
       setError(null);
 
       try {
+        const headers: Record<string, string> = {
+          "Content-Type": "application/json",
+        };
+        if (authToken) headers["Authorization"] = `Bearer ${authToken}`;
+        if (canUsePublishable && companyKeysValue) {
+          headers["X-Arcen-Company-Keys"] = companyKeysValue;
+        }
         const res = await fetch(`${baseUrl}/api/v1/entitlements`, {
-          headers: {
-            Authorization: `Bearer ${session.token}`,
-            "Content-Type": "application/json",
-          },
+          headers,
           cache: "no-store",
           signal: controller.signal,
         });
@@ -137,7 +172,7 @@ export function useCompanyEntitlements(
         setLoading(false);
       }
     },
-    [session.token, baseUrl, cacheTtlMs, options.skip],
+    [session.token, baseUrl, cacheTtlMs, options.skip, publishableKey, companyKeysValue],
   );
 
   useEffect(() => {

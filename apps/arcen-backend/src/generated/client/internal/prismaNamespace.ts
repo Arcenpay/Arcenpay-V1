@@ -404,6 +404,7 @@ export const ModelName = {
   BillingTemplateVersion: 'BillingTemplateVersion',
   TemplateInstall: 'TemplateInstall',
   TaxProfile: 'TaxProfile',
+  InvoiceTemplate: 'InvoiceTemplate',
   InvoiceSequence: 'InvoiceSequence',
   Invoice: 'Invoice',
   InvoiceLine: 'InvoiceLine',
@@ -462,7 +463,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "user" | "authSession" | "emailAuthCode" | "team" | "workspaceEnvironment" | "teamMember" | "teamInvitation" | "providerProfile" | "subscriberEmail" | "authNonce" | "catalogPlan" | "catalogAddOn" | "catalogCreditType" | "catalogVersion" | "catalogConfig" | "catalogCoupon" | "billingTemplate" | "billingTemplateVersion" | "templateInstall" | "taxProfile" | "invoiceSequence" | "invoice" | "invoiceLine" | "invoiceDelivery" | "creditNote" | "auditEvent" | "billingEvent" | "subscriptionState" | "subscriptionChangeRequest" | "payment" | "paymentAttempt" | "billingAdjustment" | "billingBalance" | "refund" | "billingRecoveryTask" | "webhookDelivery" | "platformTierConfig" | "platformBillingPlan" | "platformBillingAccount" | "platformBillingCustomer" | "gasSpend" | "tierUpgradeHistory" | "supportTicket" | "arcenCompany" | "arcenUser" | "arcenEvent" | "companyAddOnGrant" | "companyCreditGrant" | "creditLedgerEntry" | "paymentLink" | "checkoutSession" | "catalogFeatureFlag" | "flagRule" | "flagRuleCondition" | "companyOverride" | "embedAccessToken" | "arcenApiKey" | "zkTlsProof" | "embedComponent" | "arcenAgentConfig" | "arcenDispatchRequest" | "platformActivationKey" | "platformActivationRedemption"
+    modelProps: "user" | "authSession" | "emailAuthCode" | "team" | "workspaceEnvironment" | "teamMember" | "teamInvitation" | "providerProfile" | "subscriberEmail" | "authNonce" | "catalogPlan" | "catalogAddOn" | "catalogCreditType" | "catalogVersion" | "catalogConfig" | "catalogCoupon" | "billingTemplate" | "billingTemplateVersion" | "templateInstall" | "taxProfile" | "invoiceTemplate" | "invoiceSequence" | "invoice" | "invoiceLine" | "invoiceDelivery" | "creditNote" | "auditEvent" | "billingEvent" | "subscriptionState" | "subscriptionChangeRequest" | "payment" | "paymentAttempt" | "billingAdjustment" | "billingBalance" | "refund" | "billingRecoveryTask" | "webhookDelivery" | "platformTierConfig" | "platformBillingPlan" | "platformBillingAccount" | "platformBillingCustomer" | "gasSpend" | "tierUpgradeHistory" | "supportTicket" | "arcenCompany" | "arcenUser" | "arcenEvent" | "companyAddOnGrant" | "companyCreditGrant" | "creditLedgerEntry" | "paymentLink" | "checkoutSession" | "catalogFeatureFlag" | "flagRule" | "flagRuleCondition" | "companyOverride" | "embedAccessToken" | "arcenApiKey" | "zkTlsProof" | "embedComponent" | "arcenAgentConfig" | "arcenDispatchRequest" | "platformActivationKey" | "platformActivationRedemption"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -1943,6 +1944,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         count: {
           args: Prisma.TaxProfileCountArgs<ExtArgs>
           result: runtime.Types.Utils.Optional<Prisma.TaxProfileCountAggregateOutputType> | number
+        }
+      }
+    }
+    InvoiceTemplate: {
+      payload: Prisma.$InvoiceTemplatePayload<ExtArgs>
+      fields: Prisma.InvoiceTemplateFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.InvoiceTemplateFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$InvoiceTemplatePayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.InvoiceTemplateFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$InvoiceTemplatePayload>
+        }
+        findFirst: {
+          args: Prisma.InvoiceTemplateFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$InvoiceTemplatePayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.InvoiceTemplateFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$InvoiceTemplatePayload>
+        }
+        findMany: {
+          args: Prisma.InvoiceTemplateFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$InvoiceTemplatePayload>[]
+        }
+        create: {
+          args: Prisma.InvoiceTemplateCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$InvoiceTemplatePayload>
+        }
+        createMany: {
+          args: Prisma.InvoiceTemplateCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.InvoiceTemplateCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$InvoiceTemplatePayload>[]
+        }
+        delete: {
+          args: Prisma.InvoiceTemplateDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$InvoiceTemplatePayload>
+        }
+        update: {
+          args: Prisma.InvoiceTemplateUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$InvoiceTemplatePayload>
+        }
+        deleteMany: {
+          args: Prisma.InvoiceTemplateDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.InvoiceTemplateUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.InvoiceTemplateUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$InvoiceTemplatePayload>[]
+        }
+        upsert: {
+          args: Prisma.InvoiceTemplateUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$InvoiceTemplatePayload>
+        }
+        aggregate: {
+          args: Prisma.InvoiceTemplateAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateInvoiceTemplate>
+        }
+        groupBy: {
+          args: Prisma.InvoiceTemplateGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.InvoiceTemplateGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.InvoiceTemplateCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.InvoiceTemplateCountAggregateOutputType> | number
         }
       }
     }
@@ -5546,6 +5621,22 @@ export const TaxProfileScalarFieldEnum = {
 export type TaxProfileScalarFieldEnum = (typeof TaxProfileScalarFieldEnum)[keyof typeof TaxProfileScalarFieldEnum]
 
 
+export const InvoiceTemplateScalarFieldEnum = {
+  id: 'id',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt',
+  teamId: 'teamId',
+  environmentId: 'environmentId',
+  name: 'name',
+  description: 'description',
+  config: 'config',
+  isActive: 'isActive',
+  isProtected: 'isProtected'
+} as const
+
+export type InvoiceTemplateScalarFieldEnum = (typeof InvoiceTemplateScalarFieldEnum)[keyof typeof InvoiceTemplateScalarFieldEnum]
+
+
 export const InvoiceSequenceScalarFieldEnum = {
   id: 'id',
   createdAt: 'createdAt',
@@ -5582,7 +5673,9 @@ export const InvoiceScalarFieldEnum = {
   externalRef: 'externalRef',
   planId: 'planId',
   companyId: 'companyId',
-  metadata: 'metadata'
+  metadata: 'metadata',
+  templateId: 'templateId',
+  templateSnapshot: 'templateSnapshot'
 } as const
 
 export type InvoiceScalarFieldEnum = (typeof InvoiceScalarFieldEnum)[keyof typeof InvoiceScalarFieldEnum]
@@ -6272,6 +6365,11 @@ export const ArcenApiKeyScalarFieldEnum = {
   lastUsedAt: 'lastUsedAt',
   teamId: 'teamId',
   environmentId: 'environmentId',
+  type: 'type',
+  permissions: 'permissions',
+  expiresAt: 'expiresAt',
+  revokedAt: 'revokedAt',
+  environmentMode: 'environmentMode',
   name: 'name',
   keyHash: 'keyHash',
   prefix: 'prefix',
@@ -6318,6 +6416,8 @@ export const ArcenAgentConfigScalarFieldEnum = {
   teamId: 'teamId',
   autoTopUp: 'autoTopUp',
   dispatch: 'dispatch',
+  preApprovals: 'preApprovals',
+  agentWallets: 'agentWallets',
   agentWalletAddress: 'agentWalletAddress',
   chainId: 'chainId',
   chainFamily: 'chainFamily'
@@ -7048,6 +7148,20 @@ export type ListFloatFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaMode
 
 
 /**
+ * Reference to a field of type 'ApiKeyType'
+ */
+export type EnumApiKeyTypeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'ApiKeyType'>
+    
+
+
+/**
+ * Reference to a field of type 'ApiKeyType[]'
+ */
+export type ListEnumApiKeyTypeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'ApiKeyType[]'>
+    
+
+
+/**
  * Reference to a field of type 'ActivationKeyStatus'
  */
 export type EnumActivationKeyStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'ActivationKeyStatus'>
@@ -7175,6 +7289,7 @@ export type GlobalOmitConfig = {
   billingTemplateVersion?: Prisma.BillingTemplateVersionOmit
   templateInstall?: Prisma.TemplateInstallOmit
   taxProfile?: Prisma.TaxProfileOmit
+  invoiceTemplate?: Prisma.InvoiceTemplateOmit
   invoiceSequence?: Prisma.InvoiceSequenceOmit
   invoice?: Prisma.InvoiceOmit
   invoiceLine?: Prisma.InvoiceLineOmit

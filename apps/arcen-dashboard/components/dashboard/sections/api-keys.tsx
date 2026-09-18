@@ -8,6 +8,13 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Sheet,
   SheetContent,
   SheetHeader,
@@ -18,11 +25,34 @@ import {
 import { SkeletonTable } from "@/components/ui/skeleton";
 import { formatRelativeTime } from "@/lib/format";
 
+type ApiKeyType = "SECRET" | "PUBLISHABLE" | "RESTRICTED";
+
+const KEY_TYPE_OPTIONS: Array<{ value: ApiKeyType; label: string; hint: string }> = [
+  { value: "SECRET", label: "Secret key", hint: "sk_live_/sk_test_ — server-side (Node SDK). Full access." },
+  { value: "PUBLISHABLE", label: "Publishable key", hint: "pk_live_/pk_test_ — safe in the browser (React SDK). Read-only." },
+  { value: "RESTRICTED", label: "Restricted key", hint: "rk_live_/rk_test_ — server-side with limited permissions." },
+];
+
+const PERMISSION_OPTIONS = [
+  "entitlements.read",
+  "usage.consume",
+  "customers.read",
+  "companies.write",
+  "payments.write",
+  "subscriptions.write",
+  "tokens.create",
+] as const;
+
 interface ApiKey {
   id: string;
   name: string;
   prefix: string;
   description: string | null;
+  type?: ApiKeyType;
+  permissions?: string[];
+  environmentMode?: "DEVELOPMENT" | "PRODUCTION";
+  expiresAt?: string | null;
+  revokedAt?: string | null;
   lastUsedAt: string | null;
   createdAt: string;
 }
@@ -32,7 +62,29 @@ interface NewKeyResult {
   name: string;
   prefix: string;
   key: string;
+  type: ApiKeyType;
+  environmentMode: string;
+  expiresAt: string | null;
   createdAt: string;
+}
+
+interface CreateForm {
+  name: string;
+  description: string;
+  type: ApiKeyType;
+  permissions: string[];
+  expiresInDays: string;
+}
+
+function typeBadge(type?: ApiKeyType) {
+  if (type === "PUBLISHABLE") return { label: "Publishable", cls: "border-sky-500/30 bg-sky-500/10 text-sky-600 dark:text-sky-300" };
+  if (type === "RESTRICTED") return { label: "Restricted", cls: "border-violet-500/30 bg-violet-500/10 text-violet-600 dark:text-violet-300" };
+  return { label: "Secret", cls: "border-foreground/15 bg-secondary text-foreground/80" };
+}
+
+function envBadge(mode?: string) {
+  if (mode === "PRODUCTION") return { label: "live", cls: "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-300" };
+  return { label: "test", cls: "border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-300" };
 }
 
 function CopyableKey({ value }: { value: string }) {
@@ -42,7 +94,7 @@ function CopyableKey({ value }: { value: string }) {
   return (
     <div className="flex items-center gap-2 bg-muted rounded-md px-3 py-2 font-mono text-xs">
       <span className="flex-1 overflow-hidden text-ellipsis">
-        {visible ? value : "api_" + "•".repeat(24) + value.slice(-8)}
+        {visible ? value : value.slice(0, Math.min(12, value.indexOf("_") + 4)) + "•".repeat(22) + value.slice(-8)}
       </span>
       <button onClick={() => setVisible(!visible)} className="text-muted-foreground hover:text-foreground">
         {visible ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
@@ -66,7 +118,13 @@ function ApiKeysContent() {
   const [keys, setKeys] = useState<ApiKey[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
-  const [createForm, setCreateForm] = useState({ name: "", description: "" });
+  const [createForm, setCreateForm] = useState<CreateForm>({
+    name: "",
+    description: "",
+    type: "SECRET",
+    permissions: [],
+    expiresInDays: "",
+  });
   const [creating, setCreating] = useState(false);
   const [newKey, setNewKey] = useState<NewKeyResult | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -93,13 +151,19 @@ function ApiKeysContent() {
       const res = await apiFetch("/api/v1/api-keys", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: createForm.name, description: createForm.description || undefined }),
+        body: JSON.stringify({
+          name: createForm.name,
+          description: createForm.description || undefined,
+          type: createForm.type,
+          permissions: createForm.type === "PUBLISHABLE" ? [] : createForm.permissions,
+          expiresInDays: createForm.expiresInDays ? Number(createForm.expiresInDays) : undefined,
+        }),
       });
       if (res.ok) {
         const data = await res.json() as { data: NewKeyResult };
         setNewKey(data.data);
         setShowCreate(false);
-        setCreateForm({ name: "", description: "" });
+        setCreateForm({ name: "", description: "", type: "SECRET", permissions: [], expiresInDays: "" });
         fetchKeys();
       }
     } finally {
@@ -167,6 +231,7 @@ function ApiKeysContent() {
             <thead className="bg-muted/40">
               <tr>
                 <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Name</th>
+                <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Type</th>
                 <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Key Prefix</th>
                 <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground hidden md:table-cell">Last Used</th>
                 <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground hidden lg:table-cell">Created</th>
@@ -177,9 +242,27 @@ function ApiKeysContent() {
               {keys.map((k) => (
                 <tr key={k.id} className="group hover:bg-muted/20 transition-colors">
                   <td className="px-4 py-3.5">
-                    <div className="font-medium text-sm">{k.name}</div>
+                    <div className="font-medium text-sm flex items-center gap-2">
+                      {k.name}
+                      {k.revokedAt && <Badge variant="destructive" className="text-[10px]">Revoked</Badge>}
+                    </div>
                     {k.description && (
                       <div className="text-xs text-muted-foreground mt-0.5">{k.description}</div>
+                    )}
+                  </td>
+                  <td className="px-4 py-3.5">
+                    <div className="flex flex-wrap items-center gap-1">
+                      <Badge variant="outline" className={`text-[10px] ${typeBadge(k.type).cls}`}>
+                        {typeBadge(k.type).label}
+                      </Badge>
+                      <Badge variant="outline" className={`text-[10px] ${envBadge(k.environmentMode).cls}`}>
+                        {envBadge(k.environmentMode).label}
+                      </Badge>
+                    </div>
+                    {k.permissions && k.permissions.length > 0 && (
+                      <div className="text-[10px] text-muted-foreground mt-1 font-mono">
+                        {k.permissions.length} permission{k.permissions.length === 1 ? "" : "s"}
+                      </div>
                     )}
                   </td>
                   <td className="px-4 py-3.5">
@@ -197,7 +280,7 @@ function ApiKeysContent() {
                       size="sm"
                       className="text-destructive hover:text-destructive h-7 w-7 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
                       onClick={() => handleDelete(k.id)}
-                      disabled={deletingId === k.id}
+                      disabled={deletingId === k.id || Boolean(k.revokedAt)}
                     >
                       <Trash2 className="h-3.5 w-3.5" />
                     </Button>
@@ -214,13 +297,13 @@ function ApiKeysContent() {
         <p className="text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wider">Usage</p>
         <pre className="text-xs text-muted-foreground overflow-x-auto leading-relaxed">
 {`GET /api/v1/flags/check?key=scan
-Authorization: Bearer api_xxx
+Authorization: Bearer sk_test_xxx        (or pk_test_xxx for browser reads)
 X-Arcen-Company-Keys: wallet=0x...`}
         </pre>
       </div>
 
       {/* Create Sheet */}
-      <Sheet open={showCreate} onOpenChange={(v) => { if (!v) { setShowCreate(false); setCreateForm({ name: "", description: "" }); } }}>
+      <Sheet open={showCreate} onOpenChange={(v) => { if (!v) { setShowCreate(false); setCreateForm({ name: "", description: "", type: "SECRET", permissions: [], expiresInDays: "" }); } }}>
         <SheetContent side="right" className="sm:max-w-md flex flex-col p-0">
           <SheetHeader className="px-6 pt-6 pb-4 border-b border-border/60">
             <div className="flex items-center gap-3">
@@ -259,6 +342,81 @@ X-Arcen-Company-Keys: wallet=0x...`}
               />
             </div>
 
+            <div className="space-y-1.5">
+              <Label>Key type</Label>
+              <Select
+                value={createForm.type}
+                onValueChange={(value) =>
+                  setCreateForm({
+                    ...createForm,
+                    type: value as ApiKeyType,
+                    permissions: value === "PUBLISHABLE" ? [] : createForm.permissions,
+                  })
+                }
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Key type" />
+                </SelectTrigger>
+                <SelectContent>
+                  {KEY_TYPE_OPTIONS.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                {KEY_TYPE_OPTIONS.find((o) => o.value === createForm.type)?.hint}
+              </p>
+            </div>
+
+            {createForm.type !== "PUBLISHABLE" && (
+              <div className="space-y-2">
+                <Label>
+                  Permissions
+                  <span className="text-muted-foreground text-xs font-normal">
+                    {" "}{createForm.type === "SECRET" ? "(empty = full access)" : "(required)"}
+                  </span>
+                </Label>
+                <div className="grid grid-cols-2 gap-1.5">
+                  {PERMISSION_OPTIONS.map((permission) => {
+                    const checked = createForm.permissions.includes(permission);
+                    return (
+                      <label key={permission} className="flex items-center gap-1.5 text-xs">
+                        <input
+                          type="checkbox"
+                          className="h-3.5 w-3.5 accent-zinc-900"
+                          checked={checked}
+                          onChange={() =>
+                            setCreateForm({
+                              ...createForm,
+                              permissions: checked
+                                ? createForm.permissions.filter((p) => p !== permission)
+                                : [...createForm.permissions, permission],
+                            })
+                          }
+                        />
+                        <span className="font-mono">{permission}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            <div className="space-y-1.5">
+              <Label htmlFor="key-expiry">Expires in (days) <span className="text-muted-foreground text-xs font-normal">(optional)</span></Label>
+              <Input
+                id="key-expiry"
+                type="number"
+                min={1}
+                max={365}
+                value={createForm.expiresInDays}
+                onChange={(e) => setCreateForm({ ...createForm, expiresInDays: e.target.value })}
+                placeholder="Never expires"
+              />
+            </div>
+
             <div className="rounded-lg border border-border bg-secondary p-3 text-xs text-warning flex items-start gap-2">
               <AlertTriangle className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" />
               <span>The full key is shown only once after creation. Store it somewhere safe immediately.</span>
@@ -266,7 +424,7 @@ X-Arcen-Company-Keys: wallet=0x...`}
           </div>
 
           <SheetFooter className="px-6 py-4 border-t border-border/60 flex-row gap-2">
-            <Button variant="outline" className="flex-1" onClick={() => { setShowCreate(false); setCreateForm({ name: "", description: "" }); }}>
+            <Button variant="outline" className="flex-1" onClick={() => { setShowCreate(false); setCreateForm({ name: "", description: "", type: "SECRET", permissions: [], expiresInDays: "" }); }}>
               Cancel
             </Button>
             <Button className="flex-1" onClick={handleCreate} disabled={creating || !createForm.name.trim()}>

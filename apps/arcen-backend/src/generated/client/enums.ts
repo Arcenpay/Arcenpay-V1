@@ -380,3 +380,12 @@ export const ChainFamily = {
 } as const
 
 export type ChainFamily = (typeof ChainFamily)[keyof typeof ChainFamily]
+
+
+export const ApiKeyType = {
+  SECRET: 'SECRET',
+  PUBLISHABLE: 'PUBLISHABLE',
+  RESTRICTED: 'RESTRICTED'
+} as const
+
+export type ApiKeyType = (typeof ApiKeyType)[keyof typeof ApiKeyType]

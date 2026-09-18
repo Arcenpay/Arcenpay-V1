@@ -1,51 +1,124 @@
 /**
- * ArcenPay external API key authentication.
+ * ArcenPay external credential authentication (Stripe-style).
  *
- * Validates "Authorization: Bearer api_xxx" headers on public v1 routes.
- * Keys are stored as SHA-256 hashes — never in plaintext.
+ *   Secret keys      sk_live_… / sk_test_…   → server-side (Node SDK)
+ *   Publishable keys pk_live_… / pk_test_…   → browser-safe (React SDK)
+ *   Restricted keys  rk_live_… / rk_test_…   → limited server-side keys
+ *   Legacy keys      api_…                   → accepted for backward compat
  *
- * Returns the resolved teamId on success, or an error object on failure.
+ * Keys are stored as SHA-256 hashes — never plaintext. The raw value is
+ * shown once at creation. PUBLISHABLE keys only ever unlock client-safe
+ * endpoints; privileged operations require SECRET/RESTRICTED keys (and any
+ * permissions the endpoint demands).
  */
 
 import { createHash, randomBytes } from "crypto";
 import { db } from "../../db.js";
 import { aj, fixedWindow } from "./arcjet.js";
 
+export type ApiKeyTypeName = "SECRET" | "PUBLISHABLE" | "RESTRICTED";
+
 export type ApiKeyContext = {
   teamId: string;
   apiKeyId: string;
   environmentId: string | null;
+  keyType: ApiKeyTypeName;
+  permissions: string[];
+  environmentMode: "DEVELOPMENT" | "PRODUCTION" | null;
 };
 
 export type ApiKeyError = { error: string; status: number };
 
-// ─── Key hashing ─────────────────────────────────────────────────────────────
+// ─── Prefixes & permissions ───────────────────────────────────────────────────
+
+export const KEY_TYPE_PREFIXES: Record<
+  ApiKeyTypeName,
+  { live: string; test: string }
+> = {
+  SECRET: { live: "sk_live_", test: "sk_test_" },
+  PUBLISHABLE: { live: "pk_live_", test: "pk_test_" },
+  RESTRICTED: { live: "rk_live_", test: "rk_test_" },
+};
+
+export const TEMP_TOKEN_PREFIX = "arc_tok_";
+const LEGACY_PREFIX = "api_";
+
+const ALLOWED_KEY_PREFIXES = new Set<string>([
+  ...Object.values(KEY_TYPE_PREFIXES).flatMap((entry) => [entry.live, entry.test]),
+  LEGACY_PREFIX,
+]);
+
+export const API_PERMISSIONS = [
+  "entitlements.read",
+  "usage.consume",
+  "customers.read",
+  "companies.write",
+  "payments.write",
+  "subscriptions.write",
+  "tokens.create",
+] as const;
+
+export type ApiPermission = (typeof API_PERMISSIONS)[number];
+
+export const API_KEY_TYPE_LABELS: Record<ApiKeyTypeName, string> = {
+  SECRET: "Secret key",
+  PUBLISHABLE: "Publishable key",
+  RESTRICTED: "Restricted key",
+};
+
+// ─── Hashing & generation ─────────────────────────────────────────────────────
 
 export function hashApiKey(rawKey: string): string {
   return createHash("sha256").update(rawKey).digest("hex");
 }
 
-// ─── Key generation ───────────────────────────────────────────────────────────
+export function generateApiKey(input: {
+  type: ApiKeyTypeName;
+  mode: "DEVELOPMENT" | "PRODUCTION";
+}): {
+  raw: string;
+  hash: string;
+  prefix: string;
+  type: ApiKeyTypeName;
+  environmentMode: "DEVELOPMENT" | "PRODUCTION";
+} {
+  const prefix =
+    input.mode === "PRODUCTION"
+      ? KEY_TYPE_PREFIXES[input.type].live
+      : KEY_TYPE_PREFIXES[input.type].test;
+  const raw = prefix + randomBytes(32).toString("base64url");
+  return {
+    raw,
+    hash: hashApiKey(raw),
+    prefix: raw.slice(0, 16), // e.g. sk_live_9fK2wX7…
+    type: input.type,
+    environmentMode: input.mode,
+  };
+}
 
-export function generateApiKey(): {
+/** Short-lived customer access token (arc_tok_…) shown to browsers. */
+export function generateTemporaryAccessToken(): {
   raw: string;
   hash: string;
   prefix: string;
 } {
-  const bytes = randomBytes(32);
-  const raw = "api_" + bytes.toString("base64url");
-  const hash = hashApiKey(raw);
-  const prefix = raw.slice(0, 12); // "api_" + 8 chars
-  return { raw, hash, prefix };
+  const raw = TEMP_TOKEN_PREFIX + randomBytes(24).toString("base64url");
+  return { raw, hash: hashApiKey(raw), prefix: raw.slice(0, 18) };
 }
 
 // ─── Auth extraction ──────────────────────────────────────────────────────────
 
 function extractBearerToken(request: Request): string | null {
-  const auth = request.headers.get("authorization") ?? request.headers.get("x-api-key");
+  const auth =
+    request.headers.get("authorization") ?? request.headers.get("x-api-key");
   if (!auth) return null;
-  if (auth.startsWith("Bearer ")) return auth.slice(7).trim();
-  if (auth.startsWith("api_")) return auth.trim();
+  if (auth.startsWith("Bearer ")) {
+    return auth.slice(7).trim();
+  }
+  const trimmed = auth.trim();
+  for (const prefix of ALLOWED_KEY_PREFIXES) {
+    if (trimmed.startsWith(prefix)) return trimmed;
+  }
   return null;
 }
 
@@ -65,46 +138,81 @@ export async function requireApiKey(
   request: Request,
   options: {
     rateLimit?: { limit: number; windowMs: number };
+    /** Key types this endpoint accepts. Default: all. */
+    allow?: ApiKeyTypeName[];
+    /** Permissions required for SECRET/RESTRICTED keys (all must be present). */
+    permissions?: string[];
   } = {},
 ): Promise<ApiKeyContext | ApiKeyError> {
   const raw = extractBearerToken(request);
 
   if (!raw) {
     return {
-      error: "Missing API key. Provide Authorization: Bearer api_xxx",
-      status: 401,
-    };
-  }
-
-  if (!raw.startsWith("api_")) {
-    return {
-      error: "Invalid API key format. Keys must start with api_",
+      error: "Missing API key. Provide Authorization: Bearer sk_/pk_/rk_…",
       status: 401,
     };
   }
 
   const hash = hashApiKey(raw);
-
   const apiKey = await db.arcenApiKey.findUnique({
     where: { keyHash: hash },
-    select: { id: true, teamId: true, environmentId: true },
+    select: {
+      id: true,
+      teamId: true,
+      environmentId: true,
+      type: true,
+      permissions: true,
+      revokedAt: true,
+      expiresAt: true,
+      environmentMode: true,
+    },
   });
 
   if (!apiKey) {
+    return { error: "Invalid API key", status: 401 };
+  }
+  if (apiKey.revokedAt) {
+    return { error: "API key has been revoked", status: 401 };
+  }
+  if (apiKey.expiresAt && apiKey.expiresAt.getTime() <= Date.now()) {
+    return { error: "API key has expired", status: 401 };
+  }
+
+  const keyType = apiKey.type as ApiKeyTypeName;
+  const allowed = options.allow ?? ["SECRET", "PUBLISHABLE", "RESTRICTED"];
+  if (!allowed.includes(keyType)) {
     return {
-      error: "Invalid or revoked API key",
-      status: 401,
+      error: `This endpoint cannot be called with ${API_KEY_TYPE_LABELS[keyType].toLowerCase()}s`,
+      status: 403,
     };
+  }
+
+  // Permission enforcement (publishable keys are implicitly read-only).
+  if (keyType !== "PUBLISHABLE" && options.permissions?.length) {
+    const owned = apiKey.permissions ?? [];
+    const missing = options.permissions.filter((permission) => !owned.includes(permission));
+    // Empty permission list on SECRET keys = full access (legacy/standard).
+    if (owned.length > 0 && missing.length > 0) {
+      return {
+        error: `Missing permission(s): ${missing.join(", ")}`,
+        status: 403,
+      };
+    }
+    if (keyType === "RESTRICTED" && owned.length === 0) {
+      return {
+        error: `Missing permission(s): ${options.permissions.join(", ")}`,
+        status: 403,
+      };
+    }
   }
 
   // Apply per-key rate limiting via Arcjet
   if (process.env.ARCJET_KEY) {
-    const decision = await apiKeyProtect.protect(request as any, { apikey: apiKey.id });
+    const decision = await apiKeyProtect.protect(request as any, {
+      apikey: apiKey.id,
+    });
     if (decision.isDenied()) {
-      return {
-        error: "Rate limit exceeded",
-        status: 429,
-      };
+      return { error: "Rate limit exceeded", status: 429 };
     }
   }
 
@@ -119,6 +227,9 @@ export async function requireApiKey(
     teamId: apiKey.teamId,
     apiKeyId: apiKey.id,
     environmentId: apiKey.environmentId ?? null,
+    keyType,
+    permissions: apiKey.permissions ?? [],
+    environmentMode: apiKey.environmentMode ?? null,
   };
 }
 

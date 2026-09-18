@@ -12,6 +12,9 @@ import {
   http,
   parseUnits,
   formatUnits,
+  defineChain,
+  getAddress,
+  isAddress,
   type PublicClient,
   type WalletClient,
   type Chain,
@@ -105,6 +108,8 @@ export interface AgentConfig {
   maxDailySpend?: string | number;
   /** Session vault address (if pre-funded) */
   sessionVaultAddress?: string;
+  /** Pre-existing Session ID (if session vault was funded externally) */
+  sessionId?: string;
   /** Auto-top-up configuration */
   autoTopUp?: AutoTopUpConfig;
   /** Dispatch configuration for approval-based top-ups */
@@ -166,6 +171,27 @@ const CHAIN_MAP: Record<number, Chain> = {
   968: botTestnet,
 };
 
+/**
+ * Resolves or dynamically defines an EVM chain definition.
+ * Eliminates silent fallback to Sepolia for unsupported or custom EVM chain IDs.
+ */
+export function resolveEvmChain(chainId: number, rpcUrl?: string): Chain {
+  if (CHAIN_MAP[chainId]) {
+    return CHAIN_MAP[chainId];
+  }
+  const desc = getChainDescriptor(chainId);
+  const name = desc?.name ?? `EVM Chain ${chainId}`;
+  const rpc = rpcUrl ?? desc?.rpcUrl ?? 'http://127.0.0.1:8545';
+  return defineChain({
+    id: chainId,
+    name,
+    nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
+    rpcUrls: {
+      default: { http: [rpc] },
+    },
+  });
+}
+
 const ERC20_APPROVE_ABI = [{
   type: 'function',
   name: 'approve',
@@ -188,11 +214,44 @@ const ERC20_TRANSFER_ABI = [{
   stateMutability: 'nonpayable',
 }] as const;
 
+const ERC20_BALANCE_OF_ABI = [{
+  type: 'function',
+  name: 'balanceOf',
+  inputs: [
+    { name: 'account', type: 'address' },
+  ],
+  outputs: [{ name: '', type: 'uint256' }],
+  stateMutability: 'view',
+}] as const;
+
 const PERSISTENCE_KEY = 'arcenpay_agent_state';
 const BALANCE_RETRY_MAX = 3;
 const BALANCE_RETRY_BASE_MS = 500;
 
+function parseStellarAmountToAtomic6(val: string): bigint {
+  const parts = val.trim().split('.');
+  const whole = parts[0] || '0';
+  let frac = parts[1] || '';
+  if (frac.length > 6) {
+    frac = frac.slice(0, 6);
+  } else {
+    frac = frac.padEnd(6, '0');
+  }
+  return BigInt(whole) * 1000000n + BigInt(frac);
+}
+
 // ─── Helpers ──────────────────────────────────────────────────────
+
+function safeEvmAddress(address: string | undefined | null): `0x${string}` | null {
+  if (!address || typeof address !== 'string') return null;
+  const trimmed = address.trim();
+  if (!isAddress(trimmed, { strict: false })) return null;
+  try {
+    return getAddress(trimmed.toLowerCase()) as `0x${string}`;
+  } catch {
+    return null;
+  }
+}
 
 function parseHumanUsdcAmount(value: string, field: string): bigint {
   const trimmed = value.trim();
@@ -232,6 +291,19 @@ function formatUsdc(atomic: bigint): string {
     return `$${formatUnits(atomic, 6)} USDC`;
   } catch {
     return `${atomic} atomic units`;
+  }
+}
+
+function formatRequestAmount(raw: string): string {
+  if (!raw) return "$0.00 USDC";
+  const trimmed = String(raw).trim();
+  if (trimmed.includes(".")) {
+    return `$${trimmed} USDC`;
+  }
+  try {
+    return formatUsdc(BigInt(trimmed));
+  } catch {
+    return `$${trimmed} USDC`;
   }
 }
 
@@ -301,14 +373,22 @@ export class ArcenAgent {
 
     this.isStellar = isStellarChainId(config.chainId);
     const resolvedContracts = getContractAddresses(config.chainId);
-    this.contracts = config.sessionVaultAddress
-      ? { ...resolvedContracts, sessionVault: config.sessionVaultAddress }
-      : resolvedContracts;
+    let sessionVault = config.sessionVaultAddress ?? resolvedContracts.sessionVault;
+    if (!this.isStellar && sessionVault) {
+      sessionVault = safeEvmAddress(sessionVault) ?? sessionVault;
+    }
+    this.contracts = {
+      ...resolvedContracts,
+      sessionVault,
+    };
 
     this.store = config.store ?? new MemoryStore();
     this.policyEvaluator = new ArcenPolicyEvaluator(config.policies);
     if (config.mandate) {
       this.mandate = config.mandate;
+    }
+    if (config.sessionId) {
+      this.sessionId = config.sessionId;
     }
 
     if (this.isStellar) {
@@ -327,7 +407,7 @@ export class ArcenAgent {
         (this.stellarPassphrase.includes('Test')
           ? 'https://horizon-testnet.stellar.org'
           : 'https://horizon.stellar.org');
-      this.chain = CHAIN_MAP[config.chainId] ?? sepolia;
+      this.chain = resolveEvmChain(config.chainId, config.rpcUrl);
       this.account = privateKeyToAccount(
         '0x0000000000000000000000000000000000000000000000000000000000000001' as `0x${string}`,
       );
@@ -336,7 +416,7 @@ export class ArcenAgent {
       return;
     }
 
-    this.chain = CHAIN_MAP[config.chainId] ?? sepolia;
+    this.chain = resolveEvmChain(config.chainId, config.rpcUrl);
     this.account = privateKeyToAccount(config.privateKey as `0x${string}`);
     const defaultRpc = this.chain.rpcUrls?.default?.http?.[0];
     const rpcUrl = config.rpcUrl || defaultRpc;
@@ -446,6 +526,104 @@ export class ArcenAgent {
     return submitted.hash;
   }
 
+  /**
+   * Reads the agent's direct USDC balance on the Stellar ledger via Horizon.
+   */
+  async getStellarUsdcBalance(): Promise<bigint> {
+    if (!this.isStellar || !this.stellarAddress) return 0n;
+    try {
+      const server = await this.getStellarHorizonServer();
+      const account = await server.loadAccount(this.stellarAddress);
+      const usdcIssuer = getTokenAddress(this.config.chainId, 'USDC');
+      const usdcLine = account.balances.find((b: any) =>
+        b.asset_code === 'USDC' && (!usdcIssuer || b.asset_issuer === usdcIssuer),
+      );
+      if (usdcLine && usdcLine.balance) {
+        return parseStellarAmountToAtomic6(usdcLine.balance);
+      }
+      return 0n;
+    } catch {
+      return 0n;
+    }
+  }
+
+  /**
+   * Ensures the agent's Stellar account is funded (testnet Friendbot)
+   * and has a trustline established for USDC.
+   */
+  async ensureStellarReady(): Promise<{ funded: boolean; trustlineCreated: boolean }> {
+    if (!this.isStellar || !this.stellarAddress) {
+      return { funded: false, trustlineCreated: false };
+    }
+    const { Asset, TransactionBuilder, Operation, BASE_FEE } =
+      await import('@stellar/stellar-sdk');
+    const server = await this.getStellarHorizonServer();
+    let account: any = null;
+    let funded = false;
+    let trustlineCreated = false;
+
+    try {
+      account = await server.loadAccount(this.stellarAddress);
+    } catch {
+      // Account not found on ledger — try Friendbot on testnet
+      const isTestnet =
+        this.stellarPassphrase.includes('Test') ||
+        this.stellarHorizonUrl.includes('testnet') ||
+        this.config.chainId === 968 ||
+        this.config.chainId === 1500;
+      if (isTestnet) {
+        try {
+          const friendbotRes = await fetch(
+            `https://friendbot.stellar.org?addr=${encodeURIComponent(this.stellarAddress)}`,
+          );
+          if (friendbotRes.ok) {
+            funded = true;
+            await sleep(1500);
+            account = await server.loadAccount(this.stellarAddress);
+          }
+        } catch (fbErr) {
+          console.warn('[ArcenPayAgent] Friendbot request failed:', fbErr);
+        }
+      }
+    }
+
+    if (!account) {
+      throw new Error(
+        `[ArcenPayAgent] Stellar account ${this.stellarAddress} does not exist on network and could not be auto-funded.`,
+      );
+    }
+
+    // Check USDC trustline
+    const usdcIssuer = getTokenAddress(this.config.chainId, 'USDC');
+    if (usdcIssuer) {
+      const hasTrust = account.balances.some(
+        (b: any) => b.asset_code === 'USDC' && b.asset_issuer === usdcIssuer,
+      );
+      if (!hasTrust) {
+        try {
+          const usdcAsset = new Asset('USDC', usdcIssuer);
+          const tx = new TransactionBuilder(account, {
+            fee: BASE_FEE,
+            networkPassphrase: this.stellarPassphrase,
+          })
+            .addOperation(Operation.changeTrust({ asset: usdcAsset }))
+            .setTimeout(300)
+            .build();
+          tx.sign(this.stellarKeypair);
+          await server.submitTransaction(tx);
+          trustlineCreated = true;
+          console.log(
+            `[ArcenPayAgent] Established USDC trustline on Stellar account ${this.stellarAddress}`,
+          );
+        } catch (tErr) {
+          console.warn('[ArcenPayAgent] Failed to create USDC trustline:', tErr);
+        }
+      }
+    }
+
+    return { funded, trustlineCreated };
+  }
+
   // ─── Persistence ──────────────────────────────────────────
 
   /** Restores nonce, sessionId, and totalSpent from persistent store */
@@ -551,14 +729,20 @@ export class ArcenAgent {
       return this.sessionId;
     }
 
+    const safeUsdc = safeEvmAddress(usdcAddress);
+    const safeVault = safeEvmAddress(vaultAddress);
+    if (!safeUsdc || !safeVault) {
+      throw new Error(`Invalid USDC or SessionVault address for chain ${this.config.chainId}`);
+    }
+
     // Step 1: Approve SessionVault to spend USDC
     const approveHash = await this.walletClient!.writeContract({
       chain: this.chain,
       account: this.account,
-      address: usdcAddress,
+      address: safeUsdc,
       abi: ERC20_APPROVE_ABI,
       functionName: 'approve',
-      args: [vaultAddress, amountAtomic],
+      args: [safeVault, amountAtomic],
     } as any);
 
     console.log(`[ArcenPayAgent] USDC approve tx: ${approveHash}`);
@@ -568,10 +752,10 @@ export class ArcenAgent {
     const fundHash = await this.walletClient!.writeContract({
       chain: this.chain,
       account: this.account,
-      address: vaultAddress,
+      address: safeVault,
       abi: SessionVaultABI,
       functionName: 'fundSession',
-      args: [amountAtomic, usdcAddress],
+      args: [amountAtomic, safeUsdc],
     } as any);
 
     console.log(`[ArcenPayAgent] Fund session tx: ${fundHash}`);
@@ -723,11 +907,21 @@ export class ArcenAgent {
     if (this.isStellar) {
       for (let attempt = 0; attempt < BALANCE_RETRY_MAX; attempt++) {
         try {
-          const client = await this.getStellarClient();
-          const result = await client.get_agent_balance({
-            agent: this.stellarAddress,
-          });
-          return BigInt(result?.result ?? 0);
+          let bal = 0n;
+          try {
+            const client = await this.getStellarClient();
+            const result = await client.get_agent_balance({
+              agent: this.stellarAddress,
+            });
+            bal = BigInt(result?.result ?? 0);
+          } catch {
+            bal = 0n;
+          }
+          if (bal > 0n) return bal;
+
+          // Fallback: check direct USDC token balance on Horizon
+          const directBal = await this.getStellarUsdcBalance();
+          return directBal;
         } catch (err) {
           lastError = err;
           if (attempt < BALANCE_RETRY_MAX - 1) {
@@ -746,13 +940,77 @@ export class ArcenAgent {
 
     for (let attempt = 0; attempt < BALANCE_RETRY_MAX; attempt++) {
       try {
-        const balance = await this.publicClient!.readContract({
-          address: this.contracts.sessionVault as `0x${string}`,
-          abi: SessionVaultABI,
-          functionName: 'getAgentBalance',
-          args: [this.account.address],
-        });
-        return balance as bigint;
+        // 1. Try SessionVault.getAgentBalance(this.account.address)
+        try {
+          const safeVault = safeEvmAddress(this.contracts.sessionVault);
+          if (safeVault) {
+            const balance = await this.publicClient!.readContract({
+              address: safeVault,
+              abi: SessionVaultABI,
+              functionName: 'getAgentBalance',
+              args: [this.account.address],
+            });
+            if ((balance as bigint) > 0n) {
+              return balance as bigint;
+            }
+          }
+        } catch {
+          // Fall through
+        }
+
+        // 2. If sessionId is set and is a valid bytes32 hex, try SessionVault.getBalance(sessionId)
+        if (this.sessionId && this.sessionId.startsWith('0x') && this.sessionId.length === 66) {
+          try {
+            const safeVault = safeEvmAddress(this.contracts.sessionVault);
+            if (safeVault) {
+              const sessionBal = await this.publicClient!.readContract({
+                address: safeVault,
+                abi: SessionVaultABI,
+                functionName: 'getBalance',
+                args: [this.sessionId as `0x${string}`],
+              });
+              if ((sessionBal as bigint) > 0n) {
+                return sessionBal as bigint;
+              }
+            }
+          } catch {
+            // Fall through
+          }
+        }
+
+        // 3. Fallback: check agent EOA's direct USDC token balance
+        const rawToken = (getTokenAddress(this.config.chainId, 'USDC') ?? getTokenAddress(this.config.chainId, 'USDT')) as string | undefined;
+        const safeToken = safeEvmAddress(rawToken);
+        if (safeToken) {
+          try {
+            const directBal = await this.publicClient!.readContract({
+              address: safeToken,
+              abi: ERC20_BALANCE_OF_ABI,
+              functionName: 'balanceOf',
+              args: [this.account.address],
+            });
+            if ((directBal as bigint) > 0n) {
+              return directBal as bigint;
+            }
+          } catch {
+            // Fall through
+          }
+        }
+
+        // 4. Fallback: check native balance if chain uses native USDC (e.g. Arc Testnet)
+        try {
+          const desc = getChainDescriptor(this.config.chainId);
+          if (desc?.nativeCurrencySymbol === 'USDC') {
+            const nativeBal = await this.publicClient!.getBalance({ address: this.account.address });
+            if (nativeBal > 0n) {
+              return nativeBal / 10n**12n;
+            }
+          }
+        } catch {
+          // Fall through
+        }
+
+        return 0n;
       } catch (err) {
         lastError = err;
         if (attempt < BALANCE_RETRY_MAX - 1) {
@@ -820,14 +1078,20 @@ export class ArcenAgent {
       return;
     }
 
+    const safeUsdc = safeEvmAddress(usdcAddress);
+    const safeVault = safeEvmAddress(vaultAddress);
+    if (!safeUsdc || !safeVault) {
+      throw new Error(`Invalid USDC or SessionVault address for chain ${this.config.chainId}`);
+    }
+
     // Approve
     const approveHash = await this.walletClient!.writeContract({
       chain: this.chain,
       account: this.account,
-      address: usdcAddress,
+      address: safeUsdc,
       abi: ERC20_APPROVE_ABI,
       functionName: 'approve',
-      args: [vaultAddress, amountAtomic],
+      args: [safeVault, amountAtomic],
     } as any);
 
     console.log(`[ArcenPayAgent] Top-up approve tx: ${approveHash}`);
@@ -837,7 +1101,7 @@ export class ArcenAgent {
     const topUpHash = await this.walletClient!.writeContract({
       chain: this.chain,
       account: this.account,
-      address: vaultAddress,
+      address: safeVault,
       abi: SessionVaultABI,
       functionName: 'topUp',
       args: [sessionId as `0x${string}`, amountAtomic],
@@ -865,7 +1129,7 @@ export class ArcenAgent {
     const requests: TopUpRequest[] = [];
 
     for (const provider of enabled) {
-      const requestId = `topup_${Date.now()}_${randomUUID()}`;
+      const requestId = `topup_${Date.now()}_${randomUUID().replace(/-/g, '').slice(0, 8)}`;
       const target = provider.botToken
         ? `${provider.chatId}` : provider.webhookUrl
         ? provider.webhookUrl : provider.email ?? 'unknown';
@@ -963,7 +1227,7 @@ export class ArcenAgent {
         }
         const message = `🔔 **ArcenPay Agent Top-Up Request**\n` +
           `Agent: \`${request.agentAddress}\`\n` +
-          `Amount: ${formatUsdc(BigInt(request.amount))}\n` +
+          `Amount: ${formatRequestAmount(request.amount)}\n` +
           `Reason: ${request.reason}\n` +
           `Request ID: \`${request.id}\`\n` +
           `Approve with: \`/arcenpay approve ${request.id}\`\n` +
@@ -983,7 +1247,7 @@ export class ArcenAgent {
         }
         const message = `*ArcenPay Agent Top-Up Request*\n` +
           `Agent: \`${request.agentAddress}\`\n` +
-          `Amount: ${formatUsdc(BigInt(request.amount))}\n` +
+          `Amount: ${formatRequestAmount(request.amount)}\n` +
           `Reason: ${request.reason}\n` +
           `Request ID: \`${request.id}\``;
 
@@ -1011,7 +1275,7 @@ export class ArcenAgent {
     const shortAddr = `${request.agentAddress.slice(0, 6)}…${request.agentAddress.slice(-4)}`;
     return `<b>💰 ArcenPay Agent — Top-Up Request</b>\n\n` +
       `<b>Agent:</b> <code>${shortAddr}</code>\n` +
-      `<b>Amount:</b> ${formatUsdc(BigInt(request.amount))}\n` +
+      `<b>Amount:</b> ${formatRequestAmount(request.amount)}\n` +
       `<b>Reason:</b> ${request.reason}\n` +
       `<b>Request ID:</b> <code>${request.id}</code>\n\n` +
       `<i>Tap one of the buttons below:</i>`;
@@ -1026,11 +1290,6 @@ export class ArcenAgent {
       return false;
     }
 
-    if (!this.sessionId) {
-      console.warn('[ArcenPayAgent] Cannot auto-topup: no active session');
-      return false;
-    }
-
     const perTxnLimit = parseHumanUsdcAmount(
       this.config.autoTopUp.perTxnLimit,
       'perTxnLimit',
@@ -1042,12 +1301,27 @@ export class ArcenAgent {
 
     const mode = this.config.autoTopUp.mode;
 
+    if (!this.sessionId) {
+      if (mode === 'auto') {
+        const amountUsdc = formatUnits(cappedAmount, 6);
+        console.log(`[ArcenPayAgent] No active session; creating and funding new session with ${amountUsdc} USDC…`);
+        try {
+          await this.fundSession(amountUsdc);
+          console.log(`[ArcenPayAgent] Auto-fund session complete: ${amountUsdc} USDC → ${this.sessionId}`);
+          return true;
+        } catch (err) {
+          console.error('[ArcenPayAgent] Auto-fund session failed:', err);
+          return false;
+        }
+      }
+    }
+
     if (mode === 'auto') {
       // Auto mode: top up immediately without user approval
       const amountUsdc = formatUnits(cappedAmount, 6);
       console.log(`[ArcenPayAgent] Auto-topping up ${amountUsdc} USDC…`);
       try {
-        await this.topUpSession(this.sessionId, amountUsdc);
+        await this.topUpSession(this.sessionId!, amountUsdc);
         console.log(`[ArcenPayAgent] Auto-topup complete: ${amountUsdc} USDC`);
         return true;
       } catch (err) {
@@ -1082,7 +1356,11 @@ export class ArcenAgent {
             const resolved = this.resolveDispatchRequest(req.id, true);
             if (resolved && resolved.status === 'approved') {
               try {
-                await this.topUpSession(this.sessionId!, amountUsdc);
+                if (this.sessionId) {
+                  await this.topUpSession(this.sessionId, amountUsdc);
+                } else {
+                  await this.fundSession(amountUsdc);
+                }
                 console.log(`[ArcenPayAgent] Dispatch top-up approved and complete: ${amountUsdc} USDC`);
                 return true;
               } catch (err) {
@@ -1463,13 +1741,14 @@ export class ArcenAgent {
         spec.acceptedToken,
       );
     } else {
-      const tokenAddress =
+      const rawTokenAddress =
         getTokenAddress(this.config.chainId, spec.acceptedToken || spec.currency) ??
         spec.acceptedToken;
 
+      const tokenAddress = safeEvmAddress(rawTokenAddress);
       if (!tokenAddress) {
         throw new Error(
-          `[ArcenPayAgent] No token address found for ${spec.currency} on chain ${this.config.chainId}.`,
+          `[ArcenPayAgent] No valid token address found for ${spec.currency} on chain ${this.config.chainId}.`,
         );
       }
 
@@ -1477,13 +1756,15 @@ export class ArcenAgent {
         throw new Error("[ArcenPayAgent] Wallet client not initialized for EVM chain.");
       }
 
+      const safeRecipient = safeEvmAddress(recipientWallet) ?? (recipientWallet as `0x${string}`);
+
       txHash = await this.walletClient.writeContract({
         chain: this.chain,
         account: this.account,
-        address: tokenAddress as `0x${string}`,
+        address: tokenAddress,
         abi: ERC20_TRANSFER_ABI,
         functionName: "transfer",
-        args: [recipientWallet as `0x${string}`, requiredAmountAtomic],
+        args: [safeRecipient, requiredAmountAtomic],
       } as any);
 
       if (this.publicClient) {

@@ -279,6 +279,33 @@ export const INVOICE_DOWNLOAD_URL_TTL_SECONDS: number = (() => {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : 86400;
 })();
 
+// ── Object storage (Cloudflare R2 or local dev fallback) ─────────────────────
+
+/**
+ * Storage driver: "r2" uses Cloudflare R2 (S3-compatible). "local" uses
+ * the filesystem under INVOICE_STORAGE_DIR (dev default; also usable in prod
+ * when a persistent volume is mounted). Secrets live in .env only.
+ */
+export const STORAGE_DRIVER: "r2" | "local" = (() => {
+  const value = process.env.STORAGE_DRIVER;
+  if (value === "r2") return "r2";
+  if (value === "local") return "local";
+  // Auto: when all R2 credentials are present, prefer R2. Explicit
+  // STORAGE_DRIVER=local remains the opt-out for local development.
+  const r2Configured = [
+    "R2_ACCOUNT_ID",
+    "R2_ACCESS_KEY_ID",
+    "R2_SECRET_ACCESS_KEY",
+    "R2_BUCKET",
+  ].every((name) => Boolean((process.env[name] ?? "").trim()));
+  return r2Configured ? "r2" : "local";
+})();
+
+export const R2_ACCOUNT_ID = (process.env.R2_ACCOUNT_ID ?? "").trim();
+export const R2_ACCESS_KEY_ID = (process.env.R2_ACCESS_KEY_ID ?? "").trim();
+export const R2_SECRET_ACCESS_KEY = (process.env.R2_SECRET_ACCESS_KEY ?? "").trim();
+export const R2_BUCKET = (process.env.R2_BUCKET ?? "").trim();
+
 // ── Facilitator auth ──────────────────────────────────────────────────────────
 
 /**

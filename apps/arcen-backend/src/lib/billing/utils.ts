@@ -28,3 +28,47 @@ export function deriveBillingPeriodFromInterval(
     ? "annual"
     : "monthly";
 }
+
+
+/**
+ * Breaks a single over-long token (e.g. a wallet address) into name-safe chunks
+ * so it stays inside a PDF text column instead of overflowing the page edge.
+ */
+export function splitLongToken(text: string, maxLength = 32): string[] {
+  const trimmed = text.trim();
+  if (trimmed.length <= maxLength) return [trimmed];
+  const chunks: string[] = [];
+  for (let i = 0; i < trimmed.length; i += maxLength) {
+    chunks.push(trimmed.slice(i, i + maxLength));
+  }
+  return chunks;
+}
+
+/**
+ * Word wraps text to a column width, additionally chunking any single token
+ * longer than `maxLength` (wallets, tokens) onto its own lines.
+ */
+export function wrapColumnText(text: string, maxLength = 32): string[] {
+  const words = text.split(/\s+/).filter(Boolean);
+  const lines: string[] = [];
+  let current = "";
+  for (const word of words) {
+    if (word.length > maxLength) {
+      if (current) {
+        lines.push(current);
+        current = "";
+      }
+      lines.push(...splitLongToken(word, maxLength));
+      continue;
+    }
+    const next = current ? `${current} ${word}` : word;
+    if (next.length > maxLength && current) {
+      lines.push(current);
+      current = word;
+    } else {
+      current = next;
+    }
+  }
+  if (current) lines.push(current);
+  return lines.length > 0 ? lines : [text];
+}

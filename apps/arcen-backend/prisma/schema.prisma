@@ -379,6 +379,7 @@ model Team {
 
   billingTemplates BillingTemplate[]
   templateInstalls TemplateInstall[]
+  invoiceTemplates InvoiceTemplate[]
 
   invoices                   Invoice[]
   payments                   Payment[]
@@ -441,6 +442,7 @@ model WorkspaceEnvironment {
   companyCreditGrants        CompanyCreditGrant[]
   creditLedgerEntries        CreditLedgerEntry[]
   templateInstalls           TemplateInstall[]
+  invoiceTemplates           InvoiceTemplate[]
   invoices                   Invoice[]
   subscriptionStates         SubscriptionState[]
   subscriptionChangeRequests SubscriptionChangeRequest[]
@@ -843,6 +845,35 @@ model TaxProfile {
   team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
 }
 
+// ─── Invoice builder templates ───────────────────────────────────────────────
+
+model InvoiceTemplate {
+  id            String   @id @default(cuid())
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  teamId        String
+  environmentId String?
+  name          String
+  description   String?
+  // Declarative layout schema (V1 ordered sections/blocks) + style tokens.
+  // Validated against the allowlisted invoice-template schema before save.
+  config Json
+  // At most one active template per (team, environment) scope. When null is
+  // overridden, existing invoices render from their immutable snapshot.
+  isActive Boolean @default(false)
+  // Seeded platform default (the stock "Classic" template). Protected rows
+  // can be edited/published but never deleted (Plus/Pro baseline design).
+  isProtected Boolean @default(false)
+
+  team        Team                  @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  environment WorkspaceEnvironment? @relation(fields: [environmentId], references: [id], onDelete: SetNull)
+  invoices    Invoice[]
+
+  @@unique([teamId, environmentId, name])
+  @@index([teamId, isActive])
+  @@index([teamId, environmentId, isActive])
+}
+
 model InvoiceSequence {
   id         String   @id @default(cuid())
   createdAt  DateTime @default(now())
@@ -886,9 +917,14 @@ model Invoice {
   companyId   String?
   metadata    Json?
 
+  // Invoice builder template + frozen design snapshot (immutable at issuance).
+  templateId       String?
+  templateSnapshot Json?
+
   team             Team                  @relation(fields: [teamId], references: [id], onDelete: Cascade)
   environment      WorkspaceEnvironment? @relation(fields: [environmentId], references: [id], onDelete: SetNull)
   company          ArcenCompany?         @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  template         InvoiceTemplate?      @relation(fields: [templateId], references: [id], onDelete: SetNull)
   lineItems        InvoiceLine[]
   deliveries       InvoiceDelivery[]
   creditNotes      CreditNote[]
@@ -901,6 +937,7 @@ model Invoice {
   @@index([teamId, environmentMode])
   @@index([teamId, environmentId])
   @@index([companyId])
+  @@index([templateId])
 }
 
 model InvoiceLine {
@@ -1831,6 +1868,12 @@ model EmbedAccessToken {
 }
 
 // External API keys for ArcenPay developer access
+
+enum ApiKeyType {
+  SECRET
+  PUBLISHABLE
+  RESTRICTED
+}
 model ArcenApiKey {
   id            String    @id @default(cuid())
   createdAt     DateTime  @default(now())
@@ -1838,9 +1881,23 @@ model ArcenApiKey {
   teamId        String
   environmentId String?
 
+  // Stripe-style credential model.
+  //   SECRET      — sk_live_/sk_test_, used server-side (Node SDK)
+  //   PUBLISHABLE — pk_live_/pk_test_, safe in the browser (React SDK)
+  //   RESTRICTED  — rk_live_/rk_test_, limited server-side keys
+  type ApiKeyType @default(SECRET)
+  // Fine-grained permissions ("payments.write", "entitlements.read", ...).
+  // Empty = full access for SECRET keys; REQUIRED for RESTRICTED keys;
+  // ignored for PUBLISHABLE keys (implicitly read-only).
+  permissions String[] @default([])
+  expiresAt       DateTime?
+  revokedAt       DateTime?
+  // Development -> _test_ prefix; Production -> _live_ prefix.
+  environmentMode EnvironmentMode @default(DEVELOPMENT)
+
   name        String
-  keyHash     String  @unique // argon2 hash of the actual key
-  prefix      String // first 12 chars for display (e.g., api_abc12345..)
+  keyHash     String  @unique // sha-256 hash of the actual key (never stored plaintext)
+  prefix      String // display prefix (e.g., sk_live_8f92…)
   description String?
 
   team        Team                  @relation(fields: [teamId], references: [id], onDelete: Cascade)
@@ -1904,6 +1961,10 @@ model ArcenAgentConfig {
 
   autoTopUp          Json    @default("{\"mode\":\"off\",\"dailyLimit\":\"5.00\",\"perTxnLimit\":\"1.00\",\"threshold\":\"0.50\"}")
   dispatch           Json    @default("{\"enabled\":false,\"providers\":[],\"cooldownSeconds\":120,\"maxRetries\":3}")
+  // Agent pre-funding ledger: [{ amount, txHash, chainId, mode, createdAt, sessionId? }]
+  preApprovals       Json    @default("[]")
+  // Per-chain agent wallets: { [chainId]: { address, createdAt } }
+  agentWallets       Json    @default("{}")
   agentWalletAddress String?
   chainId            Int?
   chainFamily        ChainFamily @default(EVM)

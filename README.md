@@ -150,8 +150,19 @@ The `@arcenpay/agent` package transforms AI agents into self-sovereign economic 
 
 ### 4. Enterprise Compliance & Invoicing
 - **ISO 20022 XML:** Generates compliant `rem.001.001.07` payment execution records mapping Web3 stablecoins to ISO 4217 standard currency declarations.
-- **HMAC Downloadable Invoices:** Secure, signed URL PDF invoice generation rendered on-the-fly via `pdf-lib`.
+- **On-Demand Invoices (Stripe-style):** PDFs are never stored — signed, expiring URLs render the invoice object at request time. Snapshot-aware: issued invoices keep the design they were created with.
+- **Invoice Builder (Plus/Pro):** Providers design invoices in the dashboard — logo, brand colors, fonts, watermark, layout sections — with a live preview, protected seeded Classic template, and immutable per-invoice design snapshots.
+- **White-Label Embed:** Plus/Pro can remove the "Secured by ArcenPay" badge on their billing embed (server-enforced tier gate); Free always keeps it.
 - **Signed Webhook Delivery:** Real-time event notifications signed with HMAC-SHA256 headers (`x-arcenpay-signature`), compatible with standard Svix webhook parsers.
+
+### 5. Stripe-Style Credentials (`sk_` / `pk_` / `rk_` / `arc_tok_`)
+- **Secret keys** (`sk_live_/sk_test_`) for the Node SDK, **publishable keys** (`pk_live_/pk_test_`) for the browser React SDK, and **restricted keys** (`rk_`) with fine-grained permissions (`payments.write`, `entitlements.read`, …).
+- **Hashed-at-rest, shown-once** credential lifecycle with `expiresAt`, `revokedAt`, `lastUsedAt` and test/live environment prefixes.
+- **Temporary access tokens** (`arc_tok_…`, 60–900s) minted server-side for company-scoped browser sessions — no secret ever touches the client.
+
+### 6. Cloudflare R2 Object Storage
+- Pluggable `ObjectStore` with an **R2 driver** (S3-compatible, SigV4 validated against the official AWS test vector, zero SDK dependency) and a local filesystem fallback (`STORAGE_DRIVER=r2|local`).
+- Logos and future assets store in R2; invoice PDFs stay fully on-demand.
 
 ---
 

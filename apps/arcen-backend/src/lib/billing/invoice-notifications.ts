@@ -2,9 +2,7 @@ import { db } from "../../db.js";
 import { sendPaymentReceiptEmail } from "./email.js";
 import {
   createInvoiceDownloadUrl,
-  ensureInvoicePdfForTeam,
-  ensureReceiptPdfForTeam,
-  readObject,
+  renderInvoicePdfBytes,
 } from "./invoice-documents.js";
 import {
   getPaymentMethodLabel,
@@ -42,19 +40,20 @@ export async function sendPaidInvoiceReceipt(input: {
     return { sent: false as const, reason: "already_sent_for_payment" };
   }
 
-  const [{ objectKey: invoiceObjectKey }, { objectKey: receiptObjectKey, filename: receiptFilename, receiptNumber }] =
-    await Promise.all([
-      ensureInvoicePdfForTeam(context.invoice.teamId, context.invoice.id),
-      ensureReceiptPdfForTeam(context.invoice.teamId, context.invoice.id),
-    ]);
-
-  const invoiceBytes = await readObject(invoiceObjectKey);
-  const receiptBytes = await readObject(receiptObjectKey);
-  if (!invoiceBytes || !receiptBytes) {
-    return { sent: false as const, reason: "missing_pdf_attachments" };
-  }
-
-  const invoiceFilename = `${(context.invoice.number || context.invoice.id).replace(/[^a-zA-Z0-9_\-]/g, "_")}.pdf`;
+  const [invoiceDoc, receiptDoc] = await Promise.all([
+    renderInvoicePdfBytes({
+      teamId: context.invoice.teamId,
+      invoiceId: context.invoice.id,
+      kind: "invoice",
+    }),
+    renderInvoicePdfBytes({
+      teamId: context.invoice.teamId,
+      invoiceId: context.invoice.id,
+      kind: "receipt",
+    }),
+  ]);
+  const receiptNumber =
+    receiptDoc.receiptNumber ?? getStoredReceiptNumber(context);
   const providerName = getProviderDisplayName(context);
   const paymentMethod = getPaymentMethodLabel(context);
   const support = getSupportDetails(context);
@@ -62,14 +61,14 @@ export async function sendPaidInvoiceReceipt(input: {
     Number(context.invoice.amountPaid) > 0
       ? String(context.invoice.amountPaid)
       : String(context.invoice.total);
-  const invoiceDownloadUrl = createInvoiceDownloadUrl(
-    context.invoice.id,
-    invoiceObjectKey,
-  );
-  const receiptDownloadUrl = createInvoiceDownloadUrl(
-    context.invoice.id,
-    receiptObjectKey,
-  );
+  const invoiceDownloadUrl = createInvoiceDownloadUrl({
+    invoiceId: context.invoice.id,
+    kind: "invoice",
+  });
+  const receiptDownloadUrl = createInvoiceDownloadUrl({
+    invoiceId: context.invoice.id,
+    kind: "receipt",
+  });
 
   try {
     const result = await sendPaymentReceiptEmail({
@@ -96,12 +95,12 @@ export async function sendPaidInvoiceReceipt(input: {
         total: String(line.lineTotal),
       })),
       invoicePdf: {
-        filename: invoiceFilename,
-        contentBase64: invoiceBytes.toString("base64"),
+        filename: invoiceDoc.filename,
+        contentBase64: invoiceDoc.bytes.toString("base64"),
       },
       receiptPdf: {
-        filename: receiptFilename,
-        contentBase64: receiptBytes.toString("base64"),
+        filename: receiptDoc.filename,
+        contentBase64: receiptDoc.bytes.toString("base64"),
       },
     });
 

@@ -2,7 +2,7 @@
 //  @arcenpay/agent — Main Entry Point
 // ============================================================
 
-export { ArcenAgent, ArcenPayAgent, MEAPAgent } from './agent';
+export { ArcenAgent, ArcenPayAgent, MEAPAgent, resolveEvmChain } from './agent';
 export type {
   AgentConfig,
   FetchOptions,
@@ -26,6 +26,28 @@ export {
   type McpToolDefinition,
   type McpToolResponse,
 } from './mcp-tools';
+
+// ─── Multi-Framework AI Adapters ──────────────────────────
+export {
+  ARCENPAY_AGENT_TOOL_SCHEMAS,
+  executeArcenAgentTool,
+  createArcenAgentLangChainTools,
+  toLangChainTools,
+  createArcenAgentVercelAITools,
+  toVercelTools,
+  createArcenAgentOpenAITools,
+  toOpenAITools,
+  executeOpenAITool,
+  createArcenAgentAnthropicTools,
+  toAnthropicTools,
+  executeAnthropicTool,
+  type AgentToolSchema,
+  type LangChainTool,
+  type VercelAITool,
+  type OpenAITool,
+  type OpenAIFunctionDefinition,
+  type AnthropicTool,
+} from './frameworks';
 
 // ─── ArcenAuth Mandate (Layer 3) ───────────────────────────
 export {

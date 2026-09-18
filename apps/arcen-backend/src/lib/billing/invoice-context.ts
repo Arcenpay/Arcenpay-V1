@@ -149,6 +149,8 @@ export function getProviderAddressLines(
     profile.country,
     profile.supportPhone,
     profile.billingEmail || profile.contactEmail || null,
+    profile.taxId?.trim() ? `Tax ID: ${profile.taxId.trim()}` : null,
+    profile.gstin?.trim() ? `GSTIN: ${profile.gstin.trim()}` : null,
   ];
 
   return lines

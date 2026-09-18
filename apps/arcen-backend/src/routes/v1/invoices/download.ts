@@ -1,6 +1,6 @@
 import type { Context } from "hono";
 import { requirePermission, isErrorResponse } from "../../../lib/auth/api-auth.js";
-import { ensureInvoicePdfForTeam } from "../../../lib/billing/invoice-documents.js";
+import { getInvoicePdfDownloadUrl } from "../../../lib/billing/invoice-documents.js";
 
 export async function GET(c: Context) {
   const auth = await requirePermission(c, "invoices:read");
@@ -8,11 +8,12 @@ export async function GET(c: Context) {
 
   const id = c.req.param("id");
   try {
-    const { downloadUrl, objectKey } = await ensureInvoicePdfForTeam(
-      auth.team.teamId,
-      id!,
-    );
-    return c.json({ ok: true, downloadUrl, objectKey });
+    const { downloadUrl } = await getInvoicePdfDownloadUrl({
+      teamId: auth.team.teamId,
+      invoiceId: id!,
+      kind: "invoice",
+    });
+    return c.json({ ok: true, downloadUrl });
   } catch (err) {
     const message =
       err instanceof Error ? err.message : "Failed to prepare invoice document";

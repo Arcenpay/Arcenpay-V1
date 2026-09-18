@@ -2,8 +2,7 @@ import {
   createInvoiceDownloadUrl,
   verifyInvoiceDownloadToken,
   ensureInvoicePdfForTeam,
-  readSignedInvoicePdf,
-  readObject,
+  renderSignedInvoicePdf,
 } from '../lib/billing/invoice-documents';
 import {
   consumeMeteredEntitlement,
@@ -27,15 +26,15 @@ export class InvoiceService {
 
   createInvoiceDownloadUrl(
     invoiceId: string,
-    objectKey: string,
+    kind: 'invoice' | 'receipt',
     expiresInSeconds?: number,
   ): string {
-    return createInvoiceDownloadUrl(invoiceId, objectKey, expiresInSeconds);
+    return createInvoiceDownloadUrl({ invoiceId, kind, expiresInSeconds });
   }
 
   verifyInvoiceDownloadToken(input: {
     invoiceId: string;
-    objectKey: string;
+    kind: string;
     expRaw: string;
     signature: string;
   }): boolean {
@@ -45,7 +44,7 @@ export class InvoiceService {
   async ensureInvoicePdfForTeam(
     teamId: string,
     invoiceId: string,
-  ): Promise<{ objectKey: string; downloadUrl: string }> {
+  ): Promise<{ downloadUrl: string }> {
     try {
       return await ensureInvoicePdfForTeam(teamId, invoiceId);
     } catch (error) {
@@ -57,17 +56,13 @@ export class InvoiceService {
     }
   }
 
-  async readSignedInvoicePdf(params: {
+  async renderSignedInvoicePdf(params: {
     invoiceId: string;
-    objectKey: string;
+    kind: string;
     expRaw: string;
     signature: string;
   }): Promise<{ bytes: Buffer; filename: string } | null> {
-    return readSignedInvoicePdf(params);
-  }
-
-  async readObject(objectKey: string): Promise<Buffer | null> {
-    return readObject(objectKey);
+    return renderSignedInvoicePdf(params);
   }
 
   // ── Usage Consumption ──────────────────────────────────────────────────────

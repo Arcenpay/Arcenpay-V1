@@ -1,19 +1,22 @@
 import type { Context } from "hono";
-import { readSignedInvoicePdf } from "../../../lib/billing/invoice-documents.js";
+import { renderSignedInvoicePdf } from "../../../lib/billing/invoice-documents.js";
 
 export async function GET(c: Context): Promise<Response> {
   const id = c.req.param("id");
-  const key = c.req.query("key") || "";
+  const kind = c.req.query("kind") || "invoice";
   const exp = c.req.query("exp") || "";
   const sig = c.req.query("sig") || "";
 
-  if (!key || !exp || !sig) {
+  if (kind !== "invoice" && kind !== "receipt") {
+    return c.json({ error: "Invalid download token" }, 400 as any);
+  }
+  if (!exp || !sig) {
     return c.json({ error: "Missing download token" }, 400 as any);
   }
 
-  const result = await readSignedInvoicePdf({
+  const result = await renderSignedInvoicePdf({
     invoiceId: id!,
-    objectKey: key,
+    kind,
     expRaw: exp,
     signature: sig,
   });

@@ -26,6 +26,9 @@ import {
   RefreshCw,
   CreditCard,
   ShieldCheck,
+  Check,
+  X,
+  Sparkles,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { toast } from "sonner";
@@ -57,12 +60,47 @@ type TierLimits = {
   gasDailyBudgetUsd: number;
 };
 
+type TierFeatures = {
+  analytics: boolean;
+  webhooks: boolean;
+  customBranding: boolean;
+  invoiceBuilder: boolean;
+  apiAccess: boolean;
+  prioritySupport: boolean;
+  dedicatedSupport: boolean;
+  managedPlanEditing: boolean;
+  crossChainBilling: boolean;
+  whiteGloveOnboarding: boolean;
+  agentPayments: boolean;
+  zkSettlement: boolean;
+  crossChainMirroring: boolean;
+  tableland: boolean;
+  litProtocol: boolean;
+};
+
 type CurrentTier = {
   tier: string;
   expiresAt: string | null;
   limits: TierLimits;
   usage: { plans: number; members: number };
+  features?: TierFeatures;
 } | null;
+
+// Paid-tier capabilities surfaced on the plan card. FREE teams see these
+// locked; Plus unlocks invoice builder + white-label branding; Pro adds
+// dedicated support.
+const FEATURE_ROWS: Array<{ key: keyof TierFeatures; label: string }> = [
+  { key: "invoiceBuilder", label: "Custom invoice builder" },
+  { key: "customBranding", label: "Remove ArcenPay branding (white-label)" },
+  { key: "analytics", label: "Analytics" },
+  { key: "webhooks", label: "Webhooks" },
+  { key: "apiAccess", label: "API & SDK access" },
+  { key: "agentPayments", label: "Agent payments (x402)" },
+  { key: "zkSettlement", label: "ZK settlement (ZKVUB)" },
+  { key: "crossChainBilling", label: "Cross-chain billing" },
+  { key: "prioritySupport", label: "Priority support" },
+  { key: "dedicatedSupport", label: "Dedicated support" },
+];
 
 type SubscriptionStatus = {
   status: string | null;
@@ -437,6 +475,55 @@ export function BillingSection() {
               <p className="text-[10px] text-muted-foreground">workspace slots</p>
             </div>
           </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Sparkles className="w-5 h-5 text-foreground" />
+            What&apos;s included
+          </CardTitle>
+          <CardDescription>
+            Capabilities on your{" "}
+            <span className="font-medium text-foreground/80">{tierConfig.label}</span> plan.
+            {currentTier?.tier === "FREE" &&
+              " Upgrade to Plus for the custom invoice builder and white-label branding."}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-x-6 gap-y-2.5 sm:grid-cols-2">
+          {FEATURE_ROWS.map(({ key, label }) => {
+            const included = Boolean(currentTier?.features?.[key]);
+            return (
+              <div key={key} className="flex items-center gap-2.5 text-sm">
+                {included ? (
+                  <Check className="h-4 w-4 shrink-0 text-success" />
+                ) : (
+                  <X className="h-4 w-4 shrink-0 text-muted-foreground/40" />
+                )}
+                <span
+                  className={
+                    included
+                      ? "font-medium text-foreground/90"
+                      : "text-muted-foreground/60"
+                  }
+                >
+                  {label}
+                  {!included && (
+                    <span className="ml-1.5 text-[11px] text-muted-foreground/70">
+                      {key === "dedicatedSupport"
+                        ? "· Pro"
+                        : key === "crossChainBilling"
+                          ? "· Plus"
+                          : key === "invoiceBuilder" || key === "customBranding"
+                            ? "· Plus"
+                            : ""}
+                    </span>
+                  )}
+                </span>
+              </div>
+            );
+          })}
         </CardContent>
       </Card>
 

@@ -609,6 +609,7 @@ const PLATFORM_TIER_FEATURES: Record<PlatformTier, string[]> = {
     "Credit types: Up to 5 active credit types",
     "Usage metering & credit-burn: Yes",
     "Custom branding: Yes",
+    "Invoice builder: Yes",
     "ISO 20022 export: Yes",
     "Support: Priority email",
     "Platform fee: 1.0%",
@@ -629,6 +630,7 @@ const PLATFORM_TIER_FEATURES: Record<PlatformTier, string[]> = {
     "Credit types: Unlimited",
   "Usage metering & credit-burn: Yes",
   "Custom branding: Full whitelabel",
+  "Invoice builder: Full whitelabel",
   "Agent payments (x402 protocol): Yes",
   "ZK settlement (ZKVUB): Yes",
   "Support: Dedicated support",
@@ -665,6 +667,7 @@ export function buildPlatformTierEntitlements(tier: PlatformTier): Array<{
     if (text.startsWith("Coupons")) return "lucide:ticket";
     if (text.startsWith("Usage metering")) return "lucide:gauge";
     if (text.startsWith("Custom branding")) return "lucide:palette";
+    if (text.startsWith("Invoice builder")) return "lucide:file-pen";
     if (text.startsWith("ISO 20022")) return "lucide:file-text";
     if (text.startsWith("Cross-chain")) return "lucide:arrow-left-right";
     if (text.startsWith("Tableland")) return "lucide:database";

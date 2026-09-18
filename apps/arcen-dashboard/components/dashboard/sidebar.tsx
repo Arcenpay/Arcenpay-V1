@@ -1,7 +1,7 @@
 "use client";
 import { apiFetch } from "@/lib/api-client";
 
-import React, { useState, useEffect } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
 import type { Section } from "@/app/(dashboard)/page";
@@ -124,6 +124,7 @@ const navGroups: NavGroup[] = [
     collapsible: true,
     items: [
       { id: "invoices", label: "Invoices" },
+      { id: "invoice-builder", label: "Invoice Builder" },
       { id: "payments", label: "Payments" },
       { id: "billing", label: "Billing & Plan" },
       { id: "audit-log", label: "Audit Log" },
@@ -151,6 +152,16 @@ export function Sidebar({
   const { envMode, activeEnvironment } = useEnvironment();
   const { data: sessionData, refresh: refreshSessionData } =
     useDashboardSession();
+  // FREE tier gets no invoice builder — the feature (and its routes) is
+  // Plus/Pro only. Server endpoints still enforce this independently.
+  const isFreeTier = sessionData?.currentTeam?.platformTier === "FREE";
+  const visibleNavGroups = useMemo(() => {
+    if (!isFreeTier) return navGroups;
+    return navGroups.map((group) => ({
+      ...group,
+      items: group.items.filter((item) => item.id !== "invoice-builder"),
+    }));
+  }, [isFreeTier]);
   const [mounted, setMounted] = useState(false);
   const { theme, setTheme } = useTheme();
   const sidebarChainId =
@@ -186,7 +197,7 @@ export function Sidebar({
 
   // Auto-expand the group containing the active section (on mount / section change)
   useEffect(() => {
-    const parentGroup = navGroups.find(
+    const parentGroup = visibleNavGroups.find(
       (g) => g.collapsible && g.items.some((i) => i.id === activeSection),
     );
     if (parentGroup) {
@@ -338,7 +349,7 @@ export function Sidebar({
 
         {/* Navigation */}
         <nav className="flex-1 px-3 py-2 overflow-y-auto overflow-x-hidden">
-          {navGroups.map((group, gi) => {
+          {visibleNavGroups.map((group, gi) => {
             const GroupIcon = group.icon;
             const isExpanded = group.collapsible
               ? expandedGroup === group.label
@@ -645,6 +656,7 @@ export function Sidebar({
       <CommandPalette
         open={commandPaletteOpen}
         onOpenChange={setCommandPaletteOpen}
+        hideInvoiceBuilder={isFreeTier}
       />
     </>
   );

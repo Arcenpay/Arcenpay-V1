@@ -30,6 +30,10 @@ export type ArcenApiKeyMinAggregateOutputType = {
   lastUsedAt: Date | null
   teamId: string | null
   environmentId: string | null
+  type: $Enums.ApiKeyType | null
+  expiresAt: Date | null
+  revokedAt: Date | null
+  environmentMode: $Enums.EnvironmentMode | null
   name: string | null
   keyHash: string | null
   prefix: string | null
@@ -42,6 +46,10 @@ export type ArcenApiKeyMaxAggregateOutputType = {
   lastUsedAt: Date | null
   teamId: string | null
   environmentId: string | null
+  type: $Enums.ApiKeyType | null
+  expiresAt: Date | null
+  revokedAt: Date | null
+  environmentMode: $Enums.EnvironmentMode | null
   name: string | null
   keyHash: string | null
   prefix: string | null
@@ -54,6 +62,11 @@ export type ArcenApiKeyCountAggregateOutputType = {
   lastUsedAt: number
   teamId: number
   environmentId: number
+  type: number
+  permissions: number
+  expiresAt: number
+  revokedAt: number
+  environmentMode: number
   name: number
   keyHash: number
   prefix: number
@@ -68,6 +81,10 @@ export type ArcenApiKeyMinAggregateInputType = {
   lastUsedAt?: true
   teamId?: true
   environmentId?: true
+  type?: true
+  expiresAt?: true
+  revokedAt?: true
+  environmentMode?: true
   name?: true
   keyHash?: true
   prefix?: true
@@ -80,6 +97,10 @@ export type ArcenApiKeyMaxAggregateInputType = {
   lastUsedAt?: true
   teamId?: true
   environmentId?: true
+  type?: true
+  expiresAt?: true
+  revokedAt?: true
+  environmentMode?: true
   name?: true
   keyHash?: true
   prefix?: true
@@ -92,6 +113,11 @@ export type ArcenApiKeyCountAggregateInputType = {
   lastUsedAt?: true
   teamId?: true
   environmentId?: true
+  type?: true
+  permissions?: true
+  expiresAt?: true
+  revokedAt?: true
+  environmentMode?: true
   name?: true
   keyHash?: true
   prefix?: true
@@ -177,6 +203,11 @@ export type ArcenApiKeyGroupByOutputType = {
   lastUsedAt: Date | null
   teamId: string
   environmentId: string | null
+  type: $Enums.ApiKeyType
+  permissions: string[]
+  expiresAt: Date | null
+  revokedAt: Date | null
+  environmentMode: $Enums.EnvironmentMode
   name: string
   keyHash: string
   prefix: string
@@ -210,6 +241,11 @@ export type ArcenApiKeyWhereInput = {
   lastUsedAt?: Prisma.DateTimeNullableFilter<"ArcenApiKey"> | Date | string | null
   teamId?: Prisma.StringFilter<"ArcenApiKey"> | string
   environmentId?: Prisma.StringNullableFilter<"ArcenApiKey"> | string | null
+  type?: Prisma.EnumApiKeyTypeFilter<"ArcenApiKey"> | $Enums.ApiKeyType
+  permissions?: Prisma.StringNullableListFilter<"ArcenApiKey">
+  expiresAt?: Prisma.DateTimeNullableFilter<"ArcenApiKey"> | Date | string | null
+  revokedAt?: Prisma.DateTimeNullableFilter<"ArcenApiKey"> | Date | string | null
+  environmentMode?: Prisma.EnumEnvironmentModeFilter<"ArcenApiKey"> | $Enums.EnvironmentMode
   name?: Prisma.StringFilter<"ArcenApiKey"> | string
   keyHash?: Prisma.StringFilter<"ArcenApiKey"> | string
   prefix?: Prisma.StringFilter<"ArcenApiKey"> | string
@@ -224,6 +260,11 @@ export type ArcenApiKeyOrderByWithRelationInput = {
   lastUsedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   teamId?: Prisma.SortOrder
   environmentId?: Prisma.SortOrderInput | Prisma.SortOrder
+  type?: Prisma.SortOrder
+  permissions?: Prisma.SortOrder
+  expiresAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  revokedAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  environmentMode?: Prisma.SortOrder
   name?: Prisma.SortOrder
   keyHash?: Prisma.SortOrder
   prefix?: Prisma.SortOrder
@@ -242,6 +283,11 @@ export type ArcenApiKeyWhereUniqueInput = Prisma.AtLeast<{
   lastUsedAt?: Prisma.DateTimeNullableFilter<"ArcenApiKey"> | Date | string | null
   teamId?: Prisma.StringFilter<"ArcenApiKey"> | string
   environmentId?: Prisma.StringNullableFilter<"ArcenApiKey"> | string | null
+  type?: Prisma.EnumApiKeyTypeFilter<"ArcenApiKey"> | $Enums.ApiKeyType
+  permissions?: Prisma.StringNullableListFilter<"ArcenApiKey">
+  expiresAt?: Prisma.DateTimeNullableFilter<"ArcenApiKey"> | Date | string | null
+  revokedAt?: Prisma.DateTimeNullableFilter<"ArcenApiKey"> | Date | string | null
+  environmentMode?: Prisma.EnumEnvironmentModeFilter<"ArcenApiKey"> | $Enums.EnvironmentMode
   name?: Prisma.StringFilter<"ArcenApiKey"> | string
   prefix?: Prisma.StringFilter<"ArcenApiKey"> | string
   description?: Prisma.StringNullableFilter<"ArcenApiKey"> | string | null
@@ -255,6 +301,11 @@ export type ArcenApiKeyOrderByWithAggregationInput = {
   lastUsedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   teamId?: Prisma.SortOrder
   environmentId?: Prisma.SortOrderInput | Prisma.SortOrder
+  type?: Prisma.SortOrder
+  permissions?: Prisma.SortOrder
+  expiresAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  revokedAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  environmentMode?: Prisma.SortOrder
   name?: Prisma.SortOrder
   keyHash?: Prisma.SortOrder
   prefix?: Prisma.SortOrder
@@ -273,6 +324,11 @@ export type ArcenApiKeyScalarWhereWithAggregatesInput = {
   lastUsedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"ArcenApiKey"> | Date | string | null
   teamId?: Prisma.StringWithAggregatesFilter<"ArcenApiKey"> | string
   environmentId?: Prisma.StringNullableWithAggregatesFilter<"ArcenApiKey"> | string | null
+  type?: Prisma.EnumApiKeyTypeWithAggregatesFilter<"ArcenApiKey"> | $Enums.ApiKeyType
+  permissions?: Prisma.StringNullableListFilter<"ArcenApiKey">
+  expiresAt?: Prisma.DateTimeNullableWithAggregatesFilter<"ArcenApiKey"> | Date | string | null
+  revokedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"ArcenApiKey"> | Date | string | null
+  environmentMode?: Prisma.EnumEnvironmentModeWithAggregatesFilter<"ArcenApiKey"> | $Enums.EnvironmentMode
   name?: Prisma.StringWithAggregatesFilter<"ArcenApiKey"> | string
   keyHash?: Prisma.StringWithAggregatesFilter<"ArcenApiKey"> | string
   prefix?: Prisma.StringWithAggregatesFilter<"ArcenApiKey"> | string
@@ -283,6 +339,11 @@ export type ArcenApiKeyCreateInput = {
   id?: string
   createdAt?: Date | string
   lastUsedAt?: Date | string | null
+  type?: $Enums.ApiKeyType
+  permissions?: Prisma.ArcenApiKeyCreatepermissionsInput | string[]
+  expiresAt?: Date | string | null
+  revokedAt?: Date | string | null
+  environmentMode?: $Enums.EnvironmentMode
   name: string
   keyHash: string
   prefix: string
@@ -297,6 +358,11 @@ export type ArcenApiKeyUncheckedCreateInput = {
   lastUsedAt?: Date | string | null
   teamId: string
   environmentId?: string | null
+  type?: $Enums.ApiKeyType
+  permissions?: Prisma.ArcenApiKeyCreatepermissionsInput | string[]
+  expiresAt?: Date | string | null
+  revokedAt?: Date | string | null
+  environmentMode?: $Enums.EnvironmentMode
   name: string
   keyHash: string
   prefix: string
@@ -307,6 +373,11 @@ export type ArcenApiKeyUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   lastUsedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  type?: Prisma.EnumApiKeyTypeFieldUpdateOperationsInput | $Enums.ApiKeyType
+  permissions?: Prisma.ArcenApiKeyUpdatepermissionsInput | string[]
+  expiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  revokedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  environmentMode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
   name?: Prisma.StringFieldUpdateOperationsInput | string
   keyHash?: Prisma.StringFieldUpdateOperationsInput | string
   prefix?: Prisma.StringFieldUpdateOperationsInput | string
@@ -321,6 +392,11 @@ export type ArcenApiKeyUncheckedUpdateInput = {
   lastUsedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   teamId?: Prisma.StringFieldUpdateOperationsInput | string
   environmentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  type?: Prisma.EnumApiKeyTypeFieldUpdateOperationsInput | $Enums.ApiKeyType
+  permissions?: Prisma.ArcenApiKeyUpdatepermissionsInput | string[]
+  expiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  revokedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  environmentMode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
   name?: Prisma.StringFieldUpdateOperationsInput | string
   keyHash?: Prisma.StringFieldUpdateOperationsInput | string
   prefix?: Prisma.StringFieldUpdateOperationsInput | string
@@ -333,6 +409,11 @@ export type ArcenApiKeyCreateManyInput = {
   lastUsedAt?: Date | string | null
   teamId: string
   environmentId?: string | null
+  type?: $Enums.ApiKeyType
+  permissions?: Prisma.ArcenApiKeyCreatepermissionsInput | string[]
+  expiresAt?: Date | string | null
+  revokedAt?: Date | string | null
+  environmentMode?: $Enums.EnvironmentMode
   name: string
   keyHash: string
   prefix: string
@@ -343,6 +424,11 @@ export type ArcenApiKeyUpdateManyMutationInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   lastUsedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  type?: Prisma.EnumApiKeyTypeFieldUpdateOperationsInput | $Enums.ApiKeyType
+  permissions?: Prisma.ArcenApiKeyUpdatepermissionsInput | string[]
+  expiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  revokedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  environmentMode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
   name?: Prisma.StringFieldUpdateOperationsInput | string
   keyHash?: Prisma.StringFieldUpdateOperationsInput | string
   prefix?: Prisma.StringFieldUpdateOperationsInput | string
@@ -355,6 +441,11 @@ export type ArcenApiKeyUncheckedUpdateManyInput = {
   lastUsedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   teamId?: Prisma.StringFieldUpdateOperationsInput | string
   environmentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  type?: Prisma.EnumApiKeyTypeFieldUpdateOperationsInput | $Enums.ApiKeyType
+  permissions?: Prisma.ArcenApiKeyUpdatepermissionsInput | string[]
+  expiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  revokedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  environmentMode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
   name?: Prisma.StringFieldUpdateOperationsInput | string
   keyHash?: Prisma.StringFieldUpdateOperationsInput | string
   prefix?: Prisma.StringFieldUpdateOperationsInput | string
@@ -377,6 +468,11 @@ export type ArcenApiKeyCountOrderByAggregateInput = {
   lastUsedAt?: Prisma.SortOrder
   teamId?: Prisma.SortOrder
   environmentId?: Prisma.SortOrder
+  type?: Prisma.SortOrder
+  permissions?: Prisma.SortOrder
+  expiresAt?: Prisma.SortOrder
+  revokedAt?: Prisma.SortOrder
+  environmentMode?: Prisma.SortOrder
   name?: Prisma.SortOrder
   keyHash?: Prisma.SortOrder
   prefix?: Prisma.SortOrder
@@ -389,6 +485,10 @@ export type ArcenApiKeyMaxOrderByAggregateInput = {
   lastUsedAt?: Prisma.SortOrder
   teamId?: Prisma.SortOrder
   environmentId?: Prisma.SortOrder
+  type?: Prisma.SortOrder
+  expiresAt?: Prisma.SortOrder
+  revokedAt?: Prisma.SortOrder
+  environmentMode?: Prisma.SortOrder
   name?: Prisma.SortOrder
   keyHash?: Prisma.SortOrder
   prefix?: Prisma.SortOrder
@@ -401,6 +501,10 @@ export type ArcenApiKeyMinOrderByAggregateInput = {
   lastUsedAt?: Prisma.SortOrder
   teamId?: Prisma.SortOrder
   environmentId?: Prisma.SortOrder
+  type?: Prisma.SortOrder
+  expiresAt?: Prisma.SortOrder
+  revokedAt?: Prisma.SortOrder
+  environmentMode?: Prisma.SortOrder
   name?: Prisma.SortOrder
   keyHash?: Prisma.SortOrder
   prefix?: Prisma.SortOrder
@@ -491,10 +595,28 @@ export type ArcenApiKeyUncheckedUpdateManyWithoutEnvironmentNestedInput = {
   deleteMany?: Prisma.ArcenApiKeyScalarWhereInput | Prisma.ArcenApiKeyScalarWhereInput[]
 }
 
+export type ArcenApiKeyCreatepermissionsInput = {
+  set: string[]
+}
+
+export type EnumApiKeyTypeFieldUpdateOperationsInput = {
+  set?: $Enums.ApiKeyType
+}
+
+export type ArcenApiKeyUpdatepermissionsInput = {
+  set?: string[]
+  push?: string | string[]
+}
+
 export type ArcenApiKeyCreateWithoutTeamInput = {
   id?: string
   createdAt?: Date | string
   lastUsedAt?: Date | string | null
+  type?: $Enums.ApiKeyType
+  permissions?: Prisma.ArcenApiKeyCreatepermissionsInput | string[]
+  expiresAt?: Date | string | null
+  revokedAt?: Date | string | null
+  environmentMode?: $Enums.EnvironmentMode
   name: string
   keyHash: string
   prefix: string
@@ -507,6 +629,11 @@ export type ArcenApiKeyUncheckedCreateWithoutTeamInput = {
   createdAt?: Date | string
   lastUsedAt?: Date | string | null
   environmentId?: string | null
+  type?: $Enums.ApiKeyType
+  permissions?: Prisma.ArcenApiKeyCreatepermissionsInput | string[]
+  expiresAt?: Date | string | null
+  revokedAt?: Date | string | null
+  environmentMode?: $Enums.EnvironmentMode
   name: string
   keyHash: string
   prefix: string
@@ -548,6 +675,11 @@ export type ArcenApiKeyScalarWhereInput = {
   lastUsedAt?: Prisma.DateTimeNullableFilter<"ArcenApiKey"> | Date | string | null
   teamId?: Prisma.StringFilter<"ArcenApiKey"> | string
   environmentId?: Prisma.StringNullableFilter<"ArcenApiKey"> | string | null
+  type?: Prisma.EnumApiKeyTypeFilter<"ArcenApiKey"> | $Enums.ApiKeyType
+  permissions?: Prisma.StringNullableListFilter<"ArcenApiKey">
+  expiresAt?: Prisma.DateTimeNullableFilter<"ArcenApiKey"> | Date | string | null
+  revokedAt?: Prisma.DateTimeNullableFilter<"ArcenApiKey"> | Date | string | null
+  environmentMode?: Prisma.EnumEnvironmentModeFilter<"ArcenApiKey"> | $Enums.EnvironmentMode
   name?: Prisma.StringFilter<"ArcenApiKey"> | string
   keyHash?: Prisma.StringFilter<"ArcenApiKey"> | string
   prefix?: Prisma.StringFilter<"ArcenApiKey"> | string
@@ -558,6 +690,11 @@ export type ArcenApiKeyCreateWithoutEnvironmentInput = {
   id?: string
   createdAt?: Date | string
   lastUsedAt?: Date | string | null
+  type?: $Enums.ApiKeyType
+  permissions?: Prisma.ArcenApiKeyCreatepermissionsInput | string[]
+  expiresAt?: Date | string | null
+  revokedAt?: Date | string | null
+  environmentMode?: $Enums.EnvironmentMode
   name: string
   keyHash: string
   prefix: string
@@ -570,6 +707,11 @@ export type ArcenApiKeyUncheckedCreateWithoutEnvironmentInput = {
   createdAt?: Date | string
   lastUsedAt?: Date | string | null
   teamId: string
+  type?: $Enums.ApiKeyType
+  permissions?: Prisma.ArcenApiKeyCreatepermissionsInput | string[]
+  expiresAt?: Date | string | null
+  revokedAt?: Date | string | null
+  environmentMode?: $Enums.EnvironmentMode
   name: string
   keyHash: string
   prefix: string
@@ -607,6 +749,11 @@ export type ArcenApiKeyCreateManyTeamInput = {
   createdAt?: Date | string
   lastUsedAt?: Date | string | null
   environmentId?: string | null
+  type?: $Enums.ApiKeyType
+  permissions?: Prisma.ArcenApiKeyCreatepermissionsInput | string[]
+  expiresAt?: Date | string | null
+  revokedAt?: Date | string | null
+  environmentMode?: $Enums.EnvironmentMode
   name: string
   keyHash: string
   prefix: string
@@ -617,6 +764,11 @@ export type ArcenApiKeyUpdateWithoutTeamInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   lastUsedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  type?: Prisma.EnumApiKeyTypeFieldUpdateOperationsInput | $Enums.ApiKeyType
+  permissions?: Prisma.ArcenApiKeyUpdatepermissionsInput | string[]
+  expiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  revokedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  environmentMode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
   name?: Prisma.StringFieldUpdateOperationsInput | string
   keyHash?: Prisma.StringFieldUpdateOperationsInput | string
   prefix?: Prisma.StringFieldUpdateOperationsInput | string
@@ -629,6 +781,11 @@ export type ArcenApiKeyUncheckedUpdateWithoutTeamInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   lastUsedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   environmentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  type?: Prisma.EnumApiKeyTypeFieldUpdateOperationsInput | $Enums.ApiKeyType
+  permissions?: Prisma.ArcenApiKeyUpdatepermissionsInput | string[]
+  expiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  revokedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  environmentMode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
   name?: Prisma.StringFieldUpdateOperationsInput | string
   keyHash?: Prisma.StringFieldUpdateOperationsInput | string
   prefix?: Prisma.StringFieldUpdateOperationsInput | string
@@ -640,6 +797,11 @@ export type ArcenApiKeyUncheckedUpdateManyWithoutTeamInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   lastUsedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   environmentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  type?: Prisma.EnumApiKeyTypeFieldUpdateOperationsInput | $Enums.ApiKeyType
+  permissions?: Prisma.ArcenApiKeyUpdatepermissionsInput | string[]
+  expiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  revokedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  environmentMode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
   name?: Prisma.StringFieldUpdateOperationsInput | string
   keyHash?: Prisma.StringFieldUpdateOperationsInput | string
   prefix?: Prisma.StringFieldUpdateOperationsInput | string
@@ -651,6 +813,11 @@ export type ArcenApiKeyCreateManyEnvironmentInput = {
   createdAt?: Date | string
   lastUsedAt?: Date | string | null
   teamId: string
+  type?: $Enums.ApiKeyType
+  permissions?: Prisma.ArcenApiKeyCreatepermissionsInput | string[]
+  expiresAt?: Date | string | null
+  revokedAt?: Date | string | null
+  environmentMode?: $Enums.EnvironmentMode
   name: string
   keyHash: string
   prefix: string
@@ -661,6 +828,11 @@ export type ArcenApiKeyUpdateWithoutEnvironmentInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   lastUsedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  type?: Prisma.EnumApiKeyTypeFieldUpdateOperationsInput | $Enums.ApiKeyType
+  permissions?: Prisma.ArcenApiKeyUpdatepermissionsInput | string[]
+  expiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  revokedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  environmentMode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
   name?: Prisma.StringFieldUpdateOperationsInput | string
   keyHash?: Prisma.StringFieldUpdateOperationsInput | string
   prefix?: Prisma.StringFieldUpdateOperationsInput | string
@@ -673,6 +845,11 @@ export type ArcenApiKeyUncheckedUpdateWithoutEnvironmentInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   lastUsedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   teamId?: Prisma.StringFieldUpdateOperationsInput | string
+  type?: Prisma.EnumApiKeyTypeFieldUpdateOperationsInput | $Enums.ApiKeyType
+  permissions?: Prisma.ArcenApiKeyUpdatepermissionsInput | string[]
+  expiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  revokedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  environmentMode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
   name?: Prisma.StringFieldUpdateOperationsInput | string
   keyHash?: Prisma.StringFieldUpdateOperationsInput | string
   prefix?: Prisma.StringFieldUpdateOperationsInput | string
@@ -684,6 +861,11 @@ export type ArcenApiKeyUncheckedUpdateManyWithoutEnvironmentInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   lastUsedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   teamId?: Prisma.StringFieldUpdateOperationsInput | string
+  type?: Prisma.EnumApiKeyTypeFieldUpdateOperationsInput | $Enums.ApiKeyType
+  permissions?: Prisma.ArcenApiKeyUpdatepermissionsInput | string[]
+  expiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  revokedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  environmentMode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
   name?: Prisma.StringFieldUpdateOperationsInput | string
   keyHash?: Prisma.StringFieldUpdateOperationsInput | string
   prefix?: Prisma.StringFieldUpdateOperationsInput | string
@@ -698,6 +880,11 @@ export type ArcenApiKeySelect<ExtArgs extends runtime.Types.Extensions.InternalA
   lastUsedAt?: boolean
   teamId?: boolean
   environmentId?: boolean
+  type?: boolean
+  permissions?: boolean
+  expiresAt?: boolean
+  revokedAt?: boolean
+  environmentMode?: boolean
   name?: boolean
   keyHash?: boolean
   prefix?: boolean
@@ -712,6 +899,11 @@ export type ArcenApiKeySelectCreateManyAndReturn<ExtArgs extends runtime.Types.E
   lastUsedAt?: boolean
   teamId?: boolean
   environmentId?: boolean
+  type?: boolean
+  permissions?: boolean
+  expiresAt?: boolean
+  revokedAt?: boolean
+  environmentMode?: boolean
   name?: boolean
   keyHash?: boolean
   prefix?: boolean
@@ -726,6 +918,11 @@ export type ArcenApiKeySelectUpdateManyAndReturn<ExtArgs extends runtime.Types.E
   lastUsedAt?: boolean
   teamId?: boolean
   environmentId?: boolean
+  type?: boolean
+  permissions?: boolean
+  expiresAt?: boolean
+  revokedAt?: boolean
+  environmentMode?: boolean
   name?: boolean
   keyHash?: boolean
   prefix?: boolean
@@ -740,13 +937,18 @@ export type ArcenApiKeySelectScalar = {
   lastUsedAt?: boolean
   teamId?: boolean
   environmentId?: boolean
+  type?: boolean
+  permissions?: boolean
+  expiresAt?: boolean
+  revokedAt?: boolean
+  environmentMode?: boolean
   name?: boolean
   keyHash?: boolean
   prefix?: boolean
   description?: boolean
 }
 
-export type ArcenApiKeyOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "createdAt" | "lastUsedAt" | "teamId" | "environmentId" | "name" | "keyHash" | "prefix" | "description", ExtArgs["result"]["arcenApiKey"]>
+export type ArcenApiKeyOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "createdAt" | "lastUsedAt" | "teamId" | "environmentId" | "type" | "permissions" | "expiresAt" | "revokedAt" | "environmentMode" | "name" | "keyHash" | "prefix" | "description", ExtArgs["result"]["arcenApiKey"]>
 export type ArcenApiKeyInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   team?: boolean | Prisma.TeamDefaultArgs<ExtArgs>
   environment?: boolean | Prisma.ArcenApiKey$environmentArgs<ExtArgs>
@@ -772,6 +974,11 @@ export type $ArcenApiKeyPayload<ExtArgs extends runtime.Types.Extensions.Interna
     lastUsedAt: Date | null
     teamId: string
     environmentId: string | null
+    type: $Enums.ApiKeyType
+    permissions: string[]
+    expiresAt: Date | null
+    revokedAt: Date | null
+    environmentMode: $Enums.EnvironmentMode
     name: string
     keyHash: string
     prefix: string
@@ -1206,6 +1413,11 @@ export interface ArcenApiKeyFieldRefs {
   readonly lastUsedAt: Prisma.FieldRef<"ArcenApiKey", 'DateTime'>
   readonly teamId: Prisma.FieldRef<"ArcenApiKey", 'String'>
   readonly environmentId: Prisma.FieldRef<"ArcenApiKey", 'String'>
+  readonly type: Prisma.FieldRef<"ArcenApiKey", 'ApiKeyType'>
+  readonly permissions: Prisma.FieldRef<"ArcenApiKey", 'String[]'>
+  readonly expiresAt: Prisma.FieldRef<"ArcenApiKey", 'DateTime'>
+  readonly revokedAt: Prisma.FieldRef<"ArcenApiKey", 'DateTime'>
+  readonly environmentMode: Prisma.FieldRef<"ArcenApiKey", 'EnvironmentMode'>
   readonly name: Prisma.FieldRef<"ArcenApiKey", 'String'>
   readonly keyHash: Prisma.FieldRef<"ArcenApiKey", 'String'>
   readonly prefix: Prisma.FieldRef<"ArcenApiKey", 'String'>

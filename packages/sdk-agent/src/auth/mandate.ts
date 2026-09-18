@@ -90,6 +90,8 @@ export function createAgentMandate(params: CreateMandateParams): Omit<ArcenPayAg
       deniedRecipients: [],
       allowedTokens: ["USDC", "USDT"],
       ...params.scope,
+      validFrom: params.scope?.validFrom ?? new Date().toISOString(),
+      validUntil: params.scope?.validUntil ?? new Date(Date.now() + 86400 * 1000).toISOString(),
     },
     revocation: params.revocation ?? {
       method: "offchain_endpoint",

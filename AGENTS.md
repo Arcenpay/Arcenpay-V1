@@ -107,18 +107,58 @@ schema must be audited for data-integrity and idempotency.
 | `billing-reconciliation.ts` | 195 | Ledger integrity checker: paid invoices without payments, active companies without subscription state, stale PAST_DUE, failed payments without state, pending recovery tasks. |
 | `billing-runtime.ts` | 280 | Runtime diagnostics: open/failed lifecycle requests, recovery stats, webhook failures, legacy transition count. |
 | `invoices.ts` | 29 | Invoice number allocation (year-based upsert sequence). `toSix()` micro->decimal formatter. |
-| `invoice-documents.ts` | 550 | PDF generation (pdf-lib). Signed download URLs (HMAC-SHA256). Filesystem-based storage with sanitized paths. |
+| `invoice-documents.ts` | 550 | **On-demand** PDF generation (pdf-lib) — PDFs are never written to disk; signed URLs render the invoice object at request time (Stripe-style). Snapshot-aware dispatcher (template snapshot → active template → legacy). |
 | `invoice-context.ts` | 236 | Full billing context loader: team, profile, company, payments, address lines, payment method labels. |
 | `invoice-iso20022.ts` | 234 | ISO 20022 rem.001.001.07 XML export. Maps crypto tokens to ISO 4217 currency codes. |
 | `invoice-tax.ts` | 125 | US + India billing address validation (Zod schemas), GSTIN parsing, EIN validation. |
 | `invoice-notifications.ts` | 153 | Paid invoice receipt delivery (PDF + email). Dedup by txHash. Tracks delivery state. |
-| `email.ts` | 738 | Transactional email via Resend: auth codes, team invites, invoices, receipts, credit notes, plan changes, welcome. |
+| `email.ts` | 738 | Transactional email via Resend: auth codes, team invites, invoices, receipts, credit notes, plan changes, welcome. Invoice/receipt use a shared `arcenpayEmailShell` (on-brand light layout). |
 | `subscriber-emails.ts` | 97 | Scoped subscriber email registry. team:environment scoping with legacy fallback. Wallet address key. |
 | `subscription-change-requests.ts` | 808 | Full lifecycle FSM. 6 stages (REQUESTED->PENDING_VERIFICATION->PENDING_RECOVERY->APPLIED/FAILED/REVERTED). 5 change types. Snake/camel serialization. Legacy migration. |
 | `usage-credits.ts` | 540 | Credit ledger: grant (FIFO/LIFO expiry-aware), consume (serializable TX), burn configs from feature metadata. Plan + add-on grants. |
 | `usage-consume.ts` | 358 | Metered entitlement consumption with credit burn. Low-balance webhooks. Post-consume cache invalidation. |
 | `customer-identity.ts` | 105 | Sync customer name/email/wallet on user identity records. Idempotent (no-op if values match). |
 | `utils.ts` | 25 | Shared: `asRecord()`, `normalizeWallet()`, `readString()`, `deriveBillingPeriodFromInterval()`. These were consolidated from 13+ duplicate definitions. NEVER redefine these locally. |
+| `invoice-builder/types.ts` | — | Declarative invoice template config (V1 layout sections + style + watermark). Allowlist-only. |
+| `invoice-builder/schema.ts` | — | Zod validation: unknown props/enums rejected, no duplicate sections, 64KB cap. |
+| `invoice-builder/default-template.ts` | — | Stock "Classic" template (seeded + `isProtected` for Plus/Pro; cannot be deleted). |
+| `invoice-builder/renderer.ts` | — | pdf-lib declarative renderer: logo, colors, fonts, watermark, portrait/landscape, ordered sections. |
+| `invoice-builder/template-store.ts` | — | Template CRUD, snapshot resolution (snapshot → active → legacy) and idempotent snapshot stamping. |
+| `invoice-builder/preview.ts` | — | Builds a representative context for the live builder preview. |
+
+### Invoice builder & object storage
+
+- **Invoice templates** are per-team/environment (`InvoiceTemplate`), validated by
+  `invoice-builder/schema.ts`, rendered by the declarative pdf-lib renderer, and
+  **snapshotted onto every invoice at first render** (`Invoice.templateSnapshot`)
+  so later template edits never change issued documents. The seed "Classic"
+  template is `isProtected` (Plus/Pro baseline) and cannot be deleted.
+- **PDFs are on-demand**: `createInvoiceDownloadUrl()` issues an HMAC-signed render
+  URL; `renderSignedInvoicePdf()`/`renderInvoicePdfBytes()` render at request time.
+  Nothing is written to disk; the previous `externalRef`/object-key storage flow is
+  gone. `INVOICE_STORAGE_DIR` now only holds asset fallbacks (logos in local mode).
+- **Object storage** lives in `src/lib/storage/` — an `ObjectStore` interface with a
+  **Cloudflare R2** driver (S3-compatible, SigV4 signing via `s3-signer.ts`, validated
+  against the official AWS vector; zero SDK dependency) and a local filesystem driver.
+  `STORAGE_DRIVER=r2` activates R2 (auto-selected when all R2_* vars are present);
+  `STORAGE_DRIVER=local` forces the dev fallback. Logos upload via `getStorage().put()`.
+
+### Stripe-style credentials (API keys & tokens)
+
+- **Secret keys** `sk_live_/sk_test_…`, **publishable keys** `pk_live_/pk_test_…` and
+  **restricted keys** `rk_live_/rk_test_…` (legacy `api_…` accepted). Prefix encodes
+  type + environment (`_live_`=PRODUCTION, `_test_`=DEVELOPMENT). See
+  `src/lib/auth/api-key-auth.ts` (`KEY_TYPE_PREFIXES`, `generateApiKey({type, mode})`).
+- **Storage**: SHA-256 hash only; raw value shown once at creation.
+  `permissions[]` (empty = full for SECRET, required for RESTRICTED, ignored for
+  PUBLISHABLE which is implicitly read-only), `expiresAt`, `revokedAt`, `lastUsedAt`.
+- **`requireApiKey(request, { allow, permissions })`** enforces allow-list per endpoint
+  (publishable keys never reach secret-only routes) and permission checks.
+- **Temporary access tokens** `arc_tok_…` (60–900s, company-scoped, DB-backed) are
+  minted via `POST /api/v1/api-keys/tokens` with a SECRET/RESTRICTED key + `tokens.create`,
+  and resolved by `resolveEmbedAccessToken()` for the embed flow.
+- **Webhook signing secret** `whsec_…` is managed at `POST /api/provider/webhooks/secret`
+  (OWNER/ADMIN, rotate + show-once) and signed with HMAC-SHA256.
 
 ### Event Flow — Complete
 
@@ -293,6 +333,30 @@ previousPlanId, targetPlanId, requestedAt, effectiveAt, appliedAt, failedAt,
 autopayConfigTxHash, accessChangeTxHash, paymentTxHash, autopayControlTxHash,
 recoveryTaskId, pendingVerification, failureReason, metadata (Json?)
 @@index([teamId, environmentId, companyId, stage, requestedAt])
+```
+
+#### InvoiceTemplate
+```
+id (PK), teamId, environmentId?, name, description?, config (Json — V1 layout
++ style), isActive (at most one per team/env), isProtected (seeded default,
+none-deletable)
+@@unique([teamId, environmentId, name]), @@index([teamId, isActive]),
+@@index([teamId, environmentId, isActive])
+```
+
+Invoice adds `templateId?` + `templateSnapshot?` (frozen design at first render).
+
+#### ArcenApiKey (credentials)
+```
+id (PK), teamId, environmentId?, environmentMode (DEVELOPMENT|PRODUCTION)
+type (SECRET|PUBLISHABLE|RESTRICTED), permissions (String[]), keyHash (@unique),
+prefix (display), name, description?, expiresAt?, revokedAt?, lastUsedAt?
+```
+
+#### EmbedAccessToken (arc_tok_ / embed tokens)
+```
+id (PK), teamId, environmentId?, companyId?, userId?, tokenHash (@unique), expiresAt
+@@index([teamId, environmentId]), @@index([expiresAt])
 ```
 
 The full schema has ~70 models. See `apps/arcen-backend/prisma/schema.prisma` for the complete definition.
@@ -537,6 +601,11 @@ npm run test:launch      # Dashboard + facilitator
   header, `webhookId.timestamp.signature` format).
 - **Invoice download URLs are HMAC-signed** with `INVOICE_DOWNLOAD_URL_TTL_SECONDS`
   expiration (default 86400s = 24h).
+- **Stripe-style credential rules.** Publishable keys (`pk_`) are client-safe and
+  only unlock read-only endpoints; secret (`sk_`) / restricted (`rk_`) keys are
+  server-only with optional permission scopes; `arc_tok_` temp tokens are short-lived
+  and company-scoped. Keys are stored hashed (SHA-256) and shown once; revoke/rotate
+  to limit leaked-key blast radius. `R2_*` secrets live in `.env`.
 
 ## Contribution Rubric
 
@@ -609,6 +678,23 @@ npm run test:launch      # Dashboard + facilitator
    are lost on restart. Redis-backed persistence is gated by providing a
    Redis client to `DurableJobQueue.setRedis()`.
 
+8. **`R2_BUCKET` must be the plain bucket name — never a URL.** The storage
+   endpoint is derived from `R2_ACCOUNT_ID`. A URL-like value fails fast with
+   `STORAGE_R2_BUCKET_INVALID`. In dev `INVOICE_STORAGE_DIR` is `/tmp`, which
+   clears on reboot; production needs a persistent volume (or use R2).
+
+9. **Invoice PDFs are generated on demand — never stored.** Do NOT reintroduce
+   file writes / `externalRef` object keys for invoices. `readSignedInvoicePdf` was
+   replaced by `renderSignedInvoicePdf` (renders from the invoice object).
+
+10. **The seeded "Classic" template is `isProtected`** — delete returns
+    `403 PROTECTED_TEMPLATE`. Only custom templates can be deleted.
+
+11. **Credentials are typed and gated.** Publishable keys only work on
+    read-only endpoints (`requireApiKey` `allow` list); permission strings are
+    looked up with exact match. When adding an endpoint, decide which key types
+    it accepts — never silently allow all.
+
 8. **Cascade deletes on Team.** Deleting a Team cascades to ALL billing
    records (events, payments, subscriptions, invoices, etc.). This is
    intentional for tenant isolation but means team deletion is irreversible.
@@ -667,7 +753,11 @@ git log -p -- apps/arcen-backend/src/lib/billing/billing-events.ts
 | Add a recovery task kind | `billing-recovery.ts` (kind + handler), `schema.prisma` (enum) |
 | Modify dunning behavior | `billing-dunning.ts` |
 | Add a new webhook event | `deliver-webhook.ts` |
-| Change invoice generation | `invoice-documents.ts` (PDF), `billing-events.ts` (trigger) |
+| Change invoice generation | `invoice-documents.ts` (on-demand PDF), `billing-events.ts` (trigger) |
+| Build an invoice template | `invoice-builder/` (schema → store → renderer), routes `invoices/templates.ts` |
+| Add object storage (R2/local) | `lib/storage/` (`getStorage()`, `ObjectStore`), `config.ts` STORAGE_DRIVER/R2_* |
+| Manage API keys / credentials | `lib/auth/api-key-auth.ts` + routes `api-keys.ts` |
+| Rotate webhook secret | `routes/v1/provider/webhook-secret.ts` (`whsec_`) |
 | Add a new Prisma model | `schema.prisma` + migration |
 | Add a new route | `routes/v1/` + register in `routes/v1/index.ts` |
 | Change auth rules | `middleware/auth.ts` + `lib/auth/api-auth.ts` |

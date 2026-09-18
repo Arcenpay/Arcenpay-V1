@@ -26,6 +26,7 @@ import {
   Webhook,
   Bot,
   ReceiptText,
+  FilePen,
   CreditCard,
   ClipboardList,
   Settings,
@@ -69,6 +70,7 @@ const searchItems: SearchItem[] = [
 
   // Admin
   { id: "invoices", label: "Invoices", icon: ReceiptText, href: "/?section=invoices", group: "Admin", keywords: ["invoice", "billing", "payment"] },
+  { id: "invoice-builder", label: "Invoice Builder", icon: FilePen, href: "/?section=invoice-builder", group: "Admin", keywords: ["invoice", "design", "template", "logo", "branding"] },
   { id: "payments", label: "Payments", icon: CreditCard, href: "/?section=payments", group: "Admin", keywords: ["payment", "checkout", "link"] },
   { id: "billing", label: "Billing & Plan", icon: CreditCard, href: "/?section=billing", group: "Admin", keywords: ["billing", "tier", "plan"] },
   { id: "audit-log", label: "Audit Log", icon: ClipboardList, href: "/?section=audit-log", group: "Admin", keywords: ["audit", "log", "history"] },
@@ -85,9 +87,11 @@ const quickActions: SearchItem[] = [
 interface CommandPaletteProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+
+  hideInvoiceBuilder?: boolean;
 }
 
-export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
+export function CommandPalette({ open, onOpenChange, hideInvoiceBuilder = false }: CommandPaletteProps) {
   const router = useRouter();
   const [query, setQuery] = useState("");
 
@@ -103,7 +107,9 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
     return () => document.removeEventListener("keydown", down);
   }, [onOpenChange]);
 
-  const allItems = [...searchItems, ...quickActions];
+  const allItems = [...searchItems, ...quickActions].filter(
+    (item) => !(hideInvoiceBuilder && item.id === "invoice-builder"),
+  );
 
   const handleSelect = (item: SearchItem) => {
     if (item.href.startsWith("http")) {

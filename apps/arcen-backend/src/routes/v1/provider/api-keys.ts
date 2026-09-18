@@ -65,7 +65,10 @@ export async function createApiKey(c: Context) {
 
   const name = (body.name ?? "").trim() || "API Key";
 
-  const { raw: rawKey, hash: keyHash, prefix } = generateApiKey();
+  const { raw: rawKey, hash: keyHash, prefix } = generateApiKey({
+    type: "SECRET",
+    mode: activeEnvironment.mode,
+  });
 
   await db.providerProfile.upsert({
     where: {
@@ -90,6 +93,8 @@ export async function createApiKey(c: Context) {
       name,
       keyHash,
       prefix,
+      type: "SECRET",
+      environmentMode: activeEnvironment.mode,
     },
   });
 

@@ -142,6 +142,11 @@ export type TemplateInstall = Prisma.TemplateInstallModel
  */
 export type TaxProfile = Prisma.TaxProfileModel
 /**
+ * Model InvoiceTemplate
+ * 
+ */
+export type InvoiceTemplate = Prisma.InvoiceTemplateModel
+/**
  * Model InvoiceSequence
  * 
  */

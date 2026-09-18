@@ -1,9 +1,9 @@
 "use client";
 import { apiFetch } from "@/lib/api-client";
 
-import React, { useState, useEffect } from "react";
-import { useAccount, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
-import { parseUnits } from "viem";
+import React, { useCallback, useRef, useState, useEffect } from "react";
+import { useAccount, usePublicClient, useSwitchChain, useWriteContract } from "wagmi";
+import { parseUnits, decodeEventLog, getAddress, isAddress } from "viem";
 import { generatePrivateKey, privateKeyToAddress } from "viem/accounts";
 import { toast } from "sonner";
 import {
@@ -13,6 +13,7 @@ import {
   Activity,
   Copy,
   Check,
+  CheckCircle2,
   Plus,
   Trash2,
   Eye,
@@ -24,6 +25,13 @@ import {
   Database,
   Wallet,
   ArrowRightLeft,
+  ArrowUpRight,
+  RotateCcw,
+  Loader2,
+  RefreshCw,
+  ExternalLink,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -39,15 +47,24 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { getUsdcAddress } from "@/lib/contracts";
-import { resolveEnvironmentChainId } from "@/lib/default-chain";
+import { SessionVaultABI, getContractAddresses, getUsdcAddress } from "@/lib/contracts";
+import { getChainLabel, resolveEnvironmentChainId } from "@/lib/default-chain";
 import { useEnvironment } from "@/contexts/environment-context";
 import { SkeletonList, SkeletonTable } from "@/components/ui/skeleton";
 import { useStellarWallet } from "@/hooks/use-stellar-wallet";
 import {
   isStellarChainId,
   getStellarNetworkPassphrase,
+  getChainDescriptor,
 } from "@arcenpay/internal-core";
+
+const ERC20_BALANCE_ABI = [{
+  type: "function",
+  name: "balanceOf",
+  inputs: [{ name: "account", type: "address" }],
+  outputs: [{ name: "", type: "uint256" }],
+  stateMutability: "view",
+}] as const;
 
 const ERC20_APPROVE_ABI = [{
   type: "function",
@@ -59,6 +76,47 @@ const ERC20_APPROVE_ABI = [{
   outputs: [{ name: "", type: "bool" }],
   stateMutability: "nonpayable",
 }] as const;
+
+const ERC20_TRANSFER_ABI = [{
+  type: "function",
+  name: "transfer",
+  inputs: [
+    { name: "to", type: "address" },
+    { name: "amount", type: "uint256" },
+  ],
+  outputs: [{ name: "", type: "bool" }],
+  stateMutability: "nonpayable",
+}] as const;
+
+const ERC20_ALLOWANCE_ABI = [{
+  type: "function",
+  name: "allowance",
+  inputs: [
+    { name: "owner", type: "address" },
+    { name: "spender", type: "address" },
+  ],
+  outputs: [{ name: "", type: "uint256" }],
+  stateMutability: "view",
+}] as const;
+
+function getExplorerTxUrl(chainId: number, hash: string): string {
+  const descriptor = getChainDescriptor(chainId);
+  if (descriptor?.blockExplorerUrl) {
+    return `${descriptor.blockExplorerUrl}/tx/${hash}`;
+  }
+  return `https://explorer?tx=${hash}`;
+}
+
+function safeAddress(address: string | undefined | null): `0x${string}` | null {
+  if (!address || typeof address !== "string") return null;
+  const trimmed = address.trim();
+  if (!isAddress(trimmed, { strict: false })) return null;
+  try {
+    return getAddress(trimmed.toLowerCase()) as `0x${string}`;
+  } catch {
+    return null;
+  }
+}
 
 // ─────────────────────────────────────────────
 //  Types
@@ -656,9 +714,17 @@ function PermissionsTab() {
     autoTopUp: { mode: "off", dailyLimit: "5.00", perTxnLimit: "1.00", threshold: "0.50" },
     dispatch: { enabled: false, providers: [], cooldownSeconds: 120, maxRetries: 3 },
   });
-  const [agentWallet, setAgentWallet] = useState<string>("");
-  const [approveAmount, setApproveAmount] = useState<string>("100");
-  const [approveTxHash, setApproveTxHash] = useState<string>("");
+  const [agentWalletAddress, setAgentWalletAddress] = useState<string>("");
+  const [approveAmount, setApproveAmount] = useState<string>("10");
+  const [fundingMode, setFundingMode] = useState<"direct" | "vault">("direct");
+  const [approveHash, setApproveHash] = useState<`0x${string}` | null>(null);
+  const [fundHash, setFundHash] = useState<`0x${string}` | null>(null);
+  const [directHash, setDirectHash] = useState<`0x${string}` | null>(null);
+  const [approveStep, setApproveStep] = useState<"approve" | "fund" | null>(null);
+  const [vaultAllowance, setVaultAllowance] = useState<bigint | null>(null);
+  const [checkingAllowance, setCheckingAllowance] = useState(false);
+  const [agentWallets, setAgentWallets] = useState<Record<string, string>>({});
+  const [preApprovals, setPreApprovals] = useState<Array<{ amount: string; txHash: string; chainId: number; mode: string; createdAt: string; sessionId?: string | null }>>([]);
   const [approving, setApproving] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -679,87 +745,785 @@ function PermissionsTab() {
   const [testingIdx, setTestingIdx] = useState<number | null>(null);
   const [testResult, setTestResult] = useState<{ ok: boolean; message: string } | null>(null);
 
-  const { data: approveReceipt } = useWaitForTransactionReceipt({
-    hash: approveTxHash as `0x${string}` | undefined,
-    // Stellar hashes are 64-hex without an 0x prefix — wagmi's receipt watcher
-    // only understands EVM hashes, so disable it on Stellar (the Stellar path
-    // toasts its own success).
-    query: { enabled: !!approveTxHash && !isStellar },
-  });
+  const [userWalletBalance, setUserWalletBalance] = useState<string | null>(null);
+  const [walletBalance, setWalletBalance] = useState<string | null>(null);
+  const [vaultBalance, setVaultBalance] = useState<string | null>(null);
+  const [totalBalance, setTotalBalance] = useState<string | null>(null);
+  const [refreshingBalance, setRefreshingBalance] = useState(false);
+  const [lastFundedSuccess, setLastFundedSuccess] = useState<{
+    amount: string;
+    mode: "transfer" | "approve_and_fund";
+    txHash?: string;
+  } | null>(null);
+  const [showOtherWallets, setShowOtherWallets] = useState(false);
+  const [confirmReset, setConfirmReset] = useState(false);
+
+  const publicClient = usePublicClient();
+  const { switchChainAsync, isPending: isSwitchingNetwork } = useSwitchChain();
+
+  // Active-chain agent wallet: per-chain map wins, legacy field falls back.
+  // Normalized with safeAddress for EVM to guarantee EIP-55 checksum compliance.
+  const rawAgentWallet =
+    (agentWallets && agentWallets[String(configuredChainId)]) || agentWalletAddress || "";
+  const agentWallet = isStellar
+    ? rawAgentWallet
+    : (safeAddress(rawAgentWallet) ?? rawAgentWallet);
+
+  // EVM funding must happen on the same chain the environment targets.
+  const chainMismatch =
+    !isStellar &&
+    typeof evmChainId === "number" &&
+    typeof configuredChainId === "number" &&
+    evmChainId !== configuredChainId;
+
+  const evmVaultAddress = (() => {
+    if (isStellar || typeof evmChainId !== "number") return "";
+    try {
+      const raw = getContractAddresses(evmChainId).sessionVault || "";
+      return safeAddress(raw) ?? raw;
+    } catch {
+      return "";
+    }
+  })();
+
+  const checkAllowance = useCallback(async () => {
+    if (!userWallet || !evmChainId || !evmVaultAddress || isStellar) return;
+    const safeUser = safeAddress(userWallet);
+    const safeVault = safeAddress(evmVaultAddress);
+    const rawUsdc = getUsdcAddress(evmChainId);
+    const safeUsdc = safeAddress(rawUsdc);
+    if (!safeUser || !safeVault || !safeUsdc) return;
+
+    try {
+      setCheckingAllowance(true);
+      let allowance: bigint | null = null;
+      if (publicClient) {
+        try {
+          allowance = (await publicClient.readContract({
+            address: safeUsdc,
+            abi: ERC20_ALLOWANCE_ABI,
+            functionName: "allowance",
+            args: [safeUser, safeVault],
+          })) as bigint;
+        } catch {}
+      }
+
+      if (allowance === null) {
+        const { createPublicClient: makeClient, http: makeHttp } = await import("viem");
+        const desc = getChainDescriptor(evmChainId);
+        const rpc = desc?.rpcUrl || (evmChainId === 5042002 ? "https://rpc.testnet.arc.network" : "https://rpc.testnet.arc.network");
+        const directClient = makeClient({ transport: makeHttp(rpc, { timeout: 15_000 }) });
+        allowance = (await directClient.readContract({
+          address: safeUsdc,
+          abi: ERC20_ALLOWANCE_ABI,
+          functionName: "allowance",
+          args: [safeUser, safeVault],
+        })) as bigint;
+      }
+
+      setVaultAllowance(allowance);
+    } catch (err) {
+      console.warn("[Agent] Allowance check failed:", err);
+      setVaultAllowance(null);
+    } finally {
+      setCheckingAllowance(false);
+    }
+  }, [publicClient, userWallet, evmChainId, evmVaultAddress, isStellar]);
+
+  // Ref to always read the latest preApprovals without stale closure issues
+  const preApprovalsRef = useRef(preApprovals);
+  useEffect(() => { preApprovalsRef.current = preApprovals; }, [preApprovals]);
+
+  const refreshAgentBalance = useCallback(async (
+    overrideWallet?: string,
+    overridePreApprovals?: typeof preApprovals,
+  ) => {
+    setRefreshingBalance(true);
+    // Use override values (from permissions load) or fall back to current state
+    const effectiveAgentWallet = overrideWallet ?? agentWallet;
+    const effectivePreApprovals = overridePreApprovals ?? preApprovalsRef.current;
+
+    try {
+      const userParam = isStellar
+        ? (stellar.address ? `&userAddress=${encodeURIComponent(stellar.address)}` : "")
+        : (userWallet ? `&userAddress=${encodeURIComponent(userWallet)}` : "");
+
+      // 1. Fetch from backend /api/v1/agent/balance
+      const agentParam = effectiveAgentWallet
+        ? `&agentAddress=${encodeURIComponent(effectiveAgentWallet)}`
+        : "";
+      const res = await apiFetch(
+        `/api/v1/agent/balance?chainId=${configuredChainId}${userParam}${agentParam}`
+      ).catch(() => null);
+      if (res && res.ok) {
+        const body = await res.json().catch(() => null);
+        if (body?.data) {
+          const u = body.data.userWalletBalanceUsdc ?? "0.00";
+          const w = body.data.walletBalanceUsdc ?? "0.00";
+          const v = body.data.vaultBalanceUsdc ?? "0.00";
+          const t = body.data.totalUsdc ?? (parseFloat(w) + parseFloat(v)).toFixed(2);
+          setUserWalletBalance(u);
+          setWalletBalance(w);
+          setVaultBalance(v);
+          setTotalBalance(t);
+          if (Array.isArray(body.data.preApprovals) && body.data.preApprovals.length > 0) {
+            setPreApprovals(body.data.preApprovals);
+          }
+          return;
+        }
+      }
+
+      // 2. Direct on-chain fallback for EVM
+      if (!isStellar && publicClient) {
+        const safeAgent = safeAddress(effectiveAgentWallet);
+        const safeUser = safeAddress(userWallet);
+        const rawUsdc = getUsdcAddress(configuredChainId);
+        const safeUsdc = safeAddress(rawUsdc);
+        const contracts = getContractAddresses(configuredChainId);
+        const safeVault = safeAddress(contracts.sessionVault);
+        const desc = getChainDescriptor(configuredChainId);
+        const isNativeUsdc = desc?.nativeCurrencySymbol === "USDC";
+
+        let uBal = 0n;
+        let wBal = 0n;
+        let vBal = 0n;
+
+        // User wallet balance
+        if (safeUser && safeUsdc) {
+          try {
+            uBal = (await publicClient.readContract({
+              address: safeUsdc,
+              abi: ERC20_BALANCE_ABI,
+              functionName: "balanceOf",
+              args: [safeUser],
+            })) as bigint;
+          } catch {}
+          if (uBal === 0n && isNativeUsdc) {
+            try {
+              const nativeBal = await publicClient.getBalance({ address: safeUser });
+              if (nativeBal > 0n) {
+                uBal = nativeBal / 10n**12n;
+              }
+            } catch {}
+          }
+        }
+
+        // Agent direct wallet balance
+        if (safeAgent && safeUsdc) {
+          try {
+            wBal = (await publicClient.readContract({
+              address: safeUsdc,
+              abi: ERC20_BALANCE_ABI,
+              functionName: "balanceOf",
+              args: [safeAgent],
+            })) as bigint;
+          } catch {}
+          if (wBal === 0n && isNativeUsdc) {
+            try {
+              const nativeBal = await publicClient.getBalance({ address: safeAgent });
+              if (nativeBal > 0n) {
+                wBal = nativeBal / 10n**12n;
+              }
+            } catch {}
+          }
+        }
+
+        // Session vault balance (multi-source: safeAgent, safeUser, sessionIds)
+        if (safeVault) {
+          if (safeAgent) {
+            try {
+              const b = (await publicClient.readContract({
+                address: safeVault,
+                abi: SessionVaultABI,
+                functionName: "getAgentBalance",
+                args: [safeAgent],
+              })) as bigint;
+              if (b > vBal) vBal = b;
+            } catch {}
+          }
+
+          if (safeUser) {
+            try {
+              const b = (await publicClient.readContract({
+                address: safeVault,
+                abi: SessionVaultABI,
+                functionName: "getAgentBalance",
+                args: [safeUser],
+              })) as bigint;
+              if (b > vBal) vBal = b;
+            } catch {}
+          }
+
+          if (Array.isArray(effectivePreApprovals)) {
+            let sessionSum = 0n;
+            for (const pa of effectivePreApprovals) {
+              const sId = typeof pa.sessionId === "string" ? pa.sessionId : null;
+              if (sId && sId.startsWith("0x") && sId.length === 66) {
+                try {
+                  const sBal = (await publicClient.readContract({
+                    address: safeVault,
+                    abi: SessionVaultABI,
+                    functionName: "getBalance",
+                    args: [sId as `0x${string}`],
+                  })) as bigint;
+                  if (sBal > 0n) sessionSum += sBal;
+                } catch {}
+              }
+            }
+            if (sessionSum > vBal) vBal = sessionSum;
+          }
+        }
+
+        let uStr = (Number(uBal) / 1e6).toFixed(2);
+        let wStr = (Number(wBal) / 1e6).toFixed(2);
+        let vStr = (Number(vBal) / 1e6).toFixed(2);
+
+        // Fallback to recorded preApprovals if on-chain returns 0
+        if (parseFloat(vStr) <= 0 && Array.isArray(effectivePreApprovals)) {
+          const preVault = effectivePreApprovals
+            .filter((p: any) => p.mode === "approve_and_fund" && Number(p.amount) > 0)
+            .reduce((sum: number, p: any) => sum + Number(p.amount), 0);
+          if (preVault > 0) vStr = preVault.toFixed(2);
+        }
+
+        if (parseFloat(wStr) <= 0 && Array.isArray(effectivePreApprovals)) {
+          const preTransfer = effectivePreApprovals
+            .filter((p: any) => p.mode === "transfer" && Number(p.amount) > 0)
+            .reduce((sum: number, p: any) => sum + Number(p.amount), 0);
+          if (preTransfer > 0) wStr = preTransfer.toFixed(2);
+        }
+
+        const tStr = (parseFloat(wStr) + parseFloat(vStr)).toFixed(2);
+
+        setUserWalletBalance(uStr);
+        setWalletBalance(wStr);
+        setVaultBalance(vStr);
+        setTotalBalance(tStr);
+      } else if (isStellar) {
+        try {
+          const { Horizon } = await import("@stellar/stellar-sdk");
+          const passphrase = getStellarNetworkPassphrase(configuredChainId);
+          const horizonUrl = passphrase.includes("Test")
+            ? "https://horizon-testnet.stellar.org"
+            : "https://horizon.stellar.org";
+          const server = new Horizon.Server(horizonUrl);
+
+          if (stellar.address) {
+            try {
+              const uAcc = await server.loadAccount(stellar.address);
+              const uLine = uAcc.balances.find((b: any) => b.asset_code === "USDC");
+              if (uLine && "balance" in uLine) {
+                setUserWalletBalance(parseFloat(uLine.balance).toFixed(2));
+              }
+            } catch {}
+          }
+
+          if (effectiveAgentWallet) {
+            try {
+              const aAcc = await server.loadAccount(effectiveAgentWallet);
+              const aLine = aAcc.balances.find((b: any) => b.asset_code === "USDC");
+              if (aLine && "balance" in aLine) {
+                const w = parseFloat(aLine.balance).toFixed(2);
+                setWalletBalance(w);
+                setTotalBalance(w);
+              }
+            } catch {}
+          }
+        } catch (e) {
+          console.warn("[getAgentBalance Stellar client]", e);
+        }
+      }
+    } catch (err) {
+      console.warn("[Agent] Failed to refresh balances:", err);
+    } finally {
+      setRefreshingBalance(false);
+    }
+  }, [agentWallet, configuredChainId, isStellar, publicClient, userWallet, stellar.address]);
+
+  // ── Manual receipt polling (bypasses wagmi's broken polling on slow RPCs) ──
+  // wagmi's useWaitForTransactionReceipt uses a short internal timeout per poll
+  // which silently fails on slow RPCs like Arc Testnet. We instead use
+  // publicClient.waitForTransactionReceipt with a 120s timeout + 8s poll interval.
+
+  const [isWaitingDirect, setIsWaitingDirect] = useState(false);
+  const [isDirectSuccess, setIsDirectSuccess] = useState(false);
+
+  const [isWaitingApprove, setIsWaitingApprove] = useState(false);
+  const [isApproveSuccess, setIsApproveSuccess] = useState(false);
+
+  const [isWaitingFund, setIsWaitingFund] = useState(false);
+  const [isFundSuccess, setIsFundSuccess] = useState(false);
+  const [fundReceipt, setFundReceipt] = useState<{ logs: readonly { address: `0x${string}`; data: `0x${string}`; topics: readonly `0x${string}`[] }[] } | null>(null);
+
+  // Poll receipt directly — creates its own viem client with 30s transport timeout
+  // so we bypass wagmi's internal transport and poll fast and reliably.
+  const pollReceipt = useCallback(async (
+    hash: `0x${string}`,
+    onSuccess: (receipt: { logs: readonly { address: `0x${string}`; data: `0x${string}`; topics: readonly `0x${string}`[] }[] }) => void,
+    onFail: () => void,
+  ) => {
+    const { createPublicClient: makeClient, http: makeHttp } = await import("viem");
+    const desc = getChainDescriptor(configuredChainId);
+    const primaryRpc = desc?.rpcUrl || (configuredChainId === 5042002 ? "https://rpc.testnet.arc.network" : "https://rpc.testnet.arc.network");
+    const fallbackRpc = configuredChainId === 5042002 ? "https://5042002.rpc.thirdweb.com" : primaryRpc;
+
+    const directClient = makeClient({
+      transport: makeHttp(primaryRpc, { timeout: 15_000 }),
+    });
+    const fallbackClient = makeClient({
+      transport: makeHttp(fallbackRpc, { timeout: 15_000 }),
+    });
+
+    const MAX_ATTEMPTS = 50; // 50 × 2.5s = 125 seconds (~2 minutes)
+    for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+      try {
+        let receipt = await directClient.getTransactionReceipt({ hash }).catch(() => null);
+        if (!receipt && fallbackRpc !== primaryRpc) {
+          receipt = await fallbackClient.getTransactionReceipt({ hash }).catch(() => null);
+        }
+        if (receipt) {
+          if (receipt.status === "success") {
+            onSuccess(receipt);
+          } else {
+            onFail();
+          }
+          return;
+        }
+      } catch {
+        // receipt not indexed or confirmed yet — keep polling
+      }
+      await new Promise((res) => setTimeout(res, 2_500));
+    }
+    console.warn("[Agent] Receipt polling timed out for", hash);
+    onFail();
+  }, [configuredChainId]);
+
 
   useEffect(() => {
-    if (approveReceipt) {
-      toast.success(`Agent pre-approved to pull up to $${approveAmount} USDC`);
-      setApproveTxHash("");
-      setApproving(false);
-      setApproveAmount("100");
-    }
-  }, [approveReceipt, approveAmount]);
+    if (!directHash) { setIsWaitingDirect(false); setIsDirectSuccess(false); return; }
+    setIsWaitingDirect(true);
+    setIsDirectSuccess(false);
+    void pollReceipt(
+      directHash,
+      () => { setIsWaitingDirect(false); setIsDirectSuccess(true); },
+      () => { setIsWaitingDirect(false); setIsDirectSuccess(false); },
+    );
+  }, [directHash, pollReceipt]);
 
-  const handlePreApprove = async () => {
-    if (isStellar) {
-      if (!stellar.isConnected || !agentWallet) return;
-      setApproving(true);
-      try {
-        // Stellar has no ERC-20 approve — pre-funding is a direct USDC SAC
-        // transfer from the connected wallet to the agent wallet.
-        const { Asset, Horizon, TransactionBuilder, Operation, BASE_FEE } =
-          await import("@stellar/stellar-sdk");
-        const passphrase = getStellarNetworkPassphrase(configuredChainId);
-        const horizonUrl = passphrase.includes("Test")
-          ? "https://horizon-testnet.stellar.org"
-          : "https://horizon.stellar.org";
-        const server = new Horizon.Server(horizonUrl);
-        const usdcAddress = getUsdcAddress(configuredChainId);
-        if (!usdcAddress) {
-          throw new Error("No USDC asset configured for this chain.");
-        }
-        const asset = new Asset("USDC", usdcAddress);
-        const payer = await server.loadAccount(stellar.address!);
-        const tx = new TransactionBuilder(payer, {
-          fee: BASE_FEE,
-          networkPassphrase: passphrase,
-        })
-          .addOperation(
-            Operation.payment({
-              destination: agentWallet,
-              asset,
-              amount: approveAmount || "1",
-            }),
-          )
-          .setTimeout(300)
-          .build();
-        const { signedTxXdr } = await stellar.signTransaction(tx.toXDR(), {
-          networkPassphrase: passphrase,
-          address: stellar.address!,
-        });
-        const signedTx = TransactionBuilder.fromXDR(signedTxXdr, passphrase);
-        const submitted = await server.submitTransaction(signedTx);
-        setApproveTxHash(submitted.hash);
-        toast.info("Transfer submitted...");
-      } catch (err: unknown) {
-        toast.error(err instanceof Error ? err.message : "Transfer failed");
-        setApproving(false);
+  useEffect(() => {
+    if (!approveHash) { setIsWaitingApprove(false); setIsApproveSuccess(false); return; }
+    setIsWaitingApprove(true);
+    setIsApproveSuccess(false);
+    void pollReceipt(
+      approveHash,
+      () => { setIsWaitingApprove(false); setIsApproveSuccess(true); },
+      () => { setIsWaitingApprove(false); setIsApproveSuccess(false); },
+    );
+  }, [approveHash, pollReceipt]);
+
+  useEffect(() => {
+    if (!fundHash) { setIsWaitingFund(false); setIsFundSuccess(false); setFundReceipt(null); return; }
+    setIsWaitingFund(true);
+    setIsFundSuccess(false);
+    void pollReceipt(
+      fundHash,
+      (receipt) => { setIsWaitingFund(false); setIsFundSuccess(true); setFundReceipt(receipt); },
+      () => { setIsWaitingFund(false); setIsFundSuccess(false); },
+    );
+  }, [fundHash, pollReceipt]);
+
+  useEffect(() => {
+    void checkAllowance();
+  }, [checkAllowance]);
+
+  // Only refresh when the connected wallet changes after initial load
+  // (not on mount — the permissions load triggers the first refresh with correct data)
+  const prevUserWalletRef = useRef<string | undefined>(undefined);
+  const prevStellarAddressRef = useRef<string | undefined>(undefined);
+  useEffect(() => {
+    const currentUser = isStellar ? stellar.address : userWallet;
+    const prevUser = isStellar ? prevStellarAddressRef.current : prevUserWalletRef.current;
+    if (currentUser && currentUser !== prevUser) {
+      if (isStellar) {
+        prevStellarAddressRef.current = stellar.address ?? undefined;
+      } else {
+        prevUserWalletRef.current = userWallet;
       }
+      // Only refresh if we already have an agent wallet loaded (avoids double-fire on mount)
+      if (agentWallet) {
+        void refreshAgentBalance();
+      }
+    }
+  }, [userWallet, stellar.address, agentWallet, isStellar, refreshAgentBalance]);
+
+  const recordApproval = useCallback(
+    async (input: {
+      amount: string;
+      txHash: string;
+      chainId: number;
+      mode: "approve_and_fund" | "transfer";
+      sessionId?: string | null;
+    }) => {
+      try {
+        const res = await apiFetch("/api/v1/agent/fund", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(input),
+        });
+        const body = await res.json().catch(() => ({}));
+        if (res.ok && Array.isArray(body?.data?.preApprovals)) {
+          setPreApprovals(body.data.preApprovals);
+          return true;
+        }
+        return false;
+      } catch {
+        return false;
+      }
+    },
+    [],
+  );
+
+  const handleResetApproval = () => {
+    setApproving(false);
+    setApproveStep(null);
+    setApproveHash(null);
+    setFundHash(null);
+    setDirectHash(null);
+    void checkAllowance();
+  };
+
+  // Handle direct transfer confirmed
+  useEffect(() => {
+    if (isDirectSuccess && directHash) {
+      const amount = approveAmount || "0";
+      toast.success(`Agent wallet successfully funded with $${amount} USDC!`);
+      setLastFundedSuccess({
+        amount,
+        mode: "transfer",
+        txHash: directHash,
+      });
+      void recordApproval({
+        amount,
+        txHash: directHash,
+        chainId: evmChainId || configuredChainId,
+        mode: "transfer",
+      }).then(() => {
+        void refreshAgentBalance();
+      });
+      setDirectHash(null);
+      void checkAllowance();
+    }
+  }, [isDirectSuccess, directHash, approveAmount, evmChainId, configuredChainId, recordApproval, checkAllowance, refreshAgentBalance]);
+
+  // Handle vault approval confirmed
+  useEffect(() => {
+    if (isApproveSuccess && approveHash) {
+      toast.success("USDC approval confirmed on-chain! Click 'Step 2: Deposit into Vault' to complete funding.");
+      setApproveStep("fund");
+      void checkAllowance();
+    }
+  }, [isApproveSuccess, approveHash, checkAllowance]);
+
+  // Handle vault deposit confirmed
+  useEffect(() => {
+    if (isFundSuccess && fundHash && fundReceipt) {
+      let extractedSessionId: string | null = null;
+      for (const log of fundReceipt.logs) {
+        try {
+          const decoded = decodeEventLog({
+            abi: SessionVaultABI,
+            data: log.data,
+            topics: log.topics as [`0x${string}`, ...`0x${string}`[]] | [],
+          });
+          if (decoded.eventName === "SessionFunded") {
+            extractedSessionId = (decoded.args as any).sessionId;
+            break;
+          }
+        } catch {}
+      }
+      const amount = approveAmount || "0";
+      setLastFundedSuccess({
+        amount,
+        mode: "approve_and_fund",
+        txHash: fundHash,
+      });
+      void recordApproval({
+        amount,
+        txHash: fundHash,
+        chainId: evmChainId || configuredChainId,
+        mode: "approve_and_fund",
+        sessionId: extractedSessionId,
+      }).then(() => {
+        void refreshAgentBalance();
+      });
+      toast.success(`Session vault funded with $${amount} USDC!`);
+      setApproveHash(null);
+      setFundHash(null);
+      setApproveStep(null);
+      void checkAllowance();
+    }
+  }, [isFundSuccess, fundHash, fundReceipt, approveAmount, evmChainId, configuredChainId, recordApproval, checkAllowance, refreshAgentBalance]);
+
+  const handleDirectTransfer = async () => {
+    if (chainMismatch) {
+      toast.error(`Your wallet is on network ${evmChainId}; switch to ${configuredChainId} before funding.`);
+      return;
+    }
+    if (!isConnected || !userWallet || !agentWallet || !evmChainId) return;
+
+    const safeRecipient = safeAddress(agentWallet);
+    if (!safeRecipient) {
+      toast.error(`Agent wallet address "${agentWallet}" is invalid. Please generate or enter a valid address.`);
       return;
     }
 
-    if (!isConnected || !agentWallet || !evmChainId) return;
+    const rawUsdc = getUsdcAddress(evmChainId);
+    const safeUsdc = safeAddress(rawUsdc);
+    if (!safeUsdc) {
+      toast.error(`No valid USDC token address configured for chain ${evmChainId}`);
+      return;
+    }
+
+    const amountAtomic = parseUnits(approveAmount || "0", 6);
+    if (amountAtomic <= 0n) {
+      toast.error("Please enter a valid amount greater than 0");
+      return;
+    }
+
     setApproving(true);
     try {
-      const usdcAddress = getUsdcAddress(evmChainId);
-      const amountAtomic = parseUnits(approveAmount || "0", 6);
+      toast.info("Please confirm the USDC transfer in your wallet…");
       const hash = await writeContractAsync({
-        address: usdcAddress as `0x${string}`,
+        address: safeUsdc,
+        abi: ERC20_TRANSFER_ABI,
+        functionName: "transfer",
+        args: [safeRecipient, amountAtomic],
+      });
+      setDirectHash(hash as `0x${string}`);
+      toast.info("Transfer submitted! Waiting for block confirmation…");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Direct transfer failed");
+    } finally {
+      setApproving(false);
+    }
+  };
+
+  const handleVaultApprove = async () => {
+    if (chainMismatch) {
+      toast.error(`Your wallet is on network ${evmChainId}; switch to ${configuredChainId} before funding.`);
+      return;
+    }
+    if (!isConnected || !userWallet || !evmChainId) return;
+
+    const rawUsdc = getUsdcAddress(evmChainId);
+    const safeUsdc = safeAddress(rawUsdc);
+    const safeVault = safeAddress(getContractAddresses(evmChainId).sessionVault);
+    if (!safeUsdc || !safeVault) {
+      toast.error("Session vault or USDC address is invalid for this chain");
+      return;
+    }
+
+    const amountAtomic = parseUnits(approveAmount || "0", 6);
+    if (amountAtomic <= 0n) {
+      toast.error("Please enter a valid amount greater than 0");
+      return;
+    }
+
+    setApproving(true);
+    setApproveStep("approve");
+    try {
+      toast.info("Please confirm USDC approval in your wallet…");
+      const hash = await writeContractAsync({
+        address: safeUsdc,
         abi: ERC20_APPROVE_ABI,
         functionName: "approve",
-        args: [agentWallet as `0x${string}`, amountAtomic],
+        args: [safeVault, amountAtomic],
       });
-      setApproveTxHash(hash);
-      toast.info("Transaction submitted...");
+      setApproveHash(hash as `0x${string}`);
+      toast.info("Approval submitted! Waiting for block confirmation…");
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Transaction failed");
+      toast.error(err instanceof Error ? err.message : "Approval failed");
+      setApproveStep(null);
+    } finally {
       setApproving(false);
+    }
+  };
+
+  const handleVaultDeposit = async () => {
+    if (chainMismatch) {
+      toast.error(`Your wallet is on network ${evmChainId}; switch to ${configuredChainId} before funding.`);
+      return;
+    }
+    if (!isConnected || !userWallet || !evmChainId) return;
+
+    const rawUsdc = getUsdcAddress(evmChainId);
+    const safeUsdc = safeAddress(rawUsdc);
+    const safeVault = safeAddress(getContractAddresses(evmChainId).sessionVault);
+    if (!safeUsdc || !safeVault) {
+      toast.error("Session vault or USDC address is invalid for this chain");
+      return;
+    }
+
+    const amountAtomic = parseUnits(approveAmount || "0", 6);
+    if (amountAtomic <= 0n) {
+      toast.error("Please enter a valid amount greater than 0");
+      return;
+    }
+
+    setApproving(true);
+    setApproveStep("fund");
+    try {
+      toast.info("Please confirm Session Vault deposit in your wallet…");
+      const hash = await writeContractAsync({
+        address: safeVault,
+        abi: SessionVaultABI,
+        functionName: "fundSession",
+        args: [amountAtomic, safeUsdc],
+      });
+      setFundHash(hash as `0x${string}`);
+      toast.info("Vault deposit submitted! Waiting for block confirmation…");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Vault funding failed");
+    } finally {
+      setApproving(false);
+    }
+  };
+
+  const handleStellarTransfer = async () => {
+    if (!stellar.isConnected || !stellar.address || !agentWallet) return;
+    setApproving(true);
+    try {
+      const { Asset, Horizon, TransactionBuilder, Operation, BASE_FEE, Keypair } =
+        await import("@stellar/stellar-sdk");
+      const passphrase = getStellarNetworkPassphrase(configuredChainId);
+      const horizonUrl = passphrase.includes("Test")
+        ? "https://horizon-testnet.stellar.org"
+        : "https://horizon.stellar.org";
+      const server = new Horizon.Server(horizonUrl);
+      const usdcAddress = getUsdcAddress(configuredChainId);
+      if (!usdcAddress) {
+        throw new Error("No USDC asset configured for this chain.");
+      }
+      const asset = new Asset("USDC", usdcAddress);
+
+      // Step 1: Check if destination agent wallet exists on ledger
+      let destinationExists = true;
+      try {
+        await server.loadAccount(agentWallet);
+      } catch (e: any) {
+        if (e?.response?.status === 404) {
+          destinationExists = false;
+        }
+      }
+
+      if (!destinationExists) {
+        if (passphrase.includes("Test")) {
+          toast.info("Activating agent wallet on Stellar testnet via Friendbot…");
+          const fbRes = await fetch(`https://friendbot.stellar.org?addr=${encodeURIComponent(agentWallet)}`);
+          if (!fbRes.ok) {
+            throw new Error("Failed to activate agent wallet via Friendbot");
+          }
+          await new Promise((r) => setTimeout(r, 1500));
+        } else {
+          toast.info("Activating agent wallet on Stellar mainnet…");
+          const payer = await server.loadAccount(stellar.address);
+          const createTx = new TransactionBuilder(payer, {
+            fee: BASE_FEE,
+            networkPassphrase: passphrase,
+          })
+            .addOperation(Operation.createAccount({ destination: agentWallet, startingBalance: "2.5" }))
+            .setTimeout(300)
+            .build();
+          const { signedTxXdr } = await stellar.signTransaction(createTx.toXDR(), {
+            networkPassphrase: passphrase,
+            address: stellar.address,
+          });
+          const signed = TransactionBuilder.fromXDR(signedTxXdr, passphrase);
+          await server.submitTransaction(signed);
+        }
+      }
+
+      // Step 2: Establish USDC trustline if private key is in memory
+      if (generatedKey) {
+        try {
+          const agentKp = Keypair.fromSecret(generatedKey);
+          const agentAcc = await server.loadAccount(agentWallet);
+          const hasTrustline = agentAcc.balances.some(
+            (b: any) => b.asset_code === "USDC" && b.asset_issuer === usdcAddress,
+          );
+          if (!hasTrustline) {
+            toast.info("Establishing USDC trustline for agent wallet…");
+            const trustTx = new TransactionBuilder(agentAcc, {
+              fee: BASE_FEE,
+              networkPassphrase: passphrase,
+            })
+              .addOperation(Operation.changeTrust({ asset }))
+              .setTimeout(300)
+              .build();
+            trustTx.sign(agentKp);
+            await server.submitTransaction(trustTx);
+          }
+        } catch (trustErr) {
+          console.warn("Trustline auto-setup note:", trustErr);
+        }
+      }
+
+      // Step 3: Execute USDC payment to agent wallet
+      toast.info(`Transferring ${approveAmount || "1"} USDC to agent…`);
+      const payer = await server.loadAccount(stellar.address);
+      const tx = new TransactionBuilder(payer, {
+        fee: BASE_FEE,
+        networkPassphrase: passphrase,
+      })
+        .addOperation(
+          Operation.payment({
+            destination: agentWallet,
+            asset,
+            amount: approveAmount || "1",
+          }),
+        )
+        .setTimeout(300)
+        .build();
+      const { signedTxXdr } = await stellar.signTransaction(tx.toXDR(), {
+        networkPassphrase: passphrase,
+        address: stellar.address,
+      });
+      const signedTx = TransactionBuilder.fromXDR(signedTxXdr, passphrase);
+      const submitted = await server.submitTransaction(signedTx);
+      await recordApproval({
+        amount: approveAmount || "1",
+        txHash: submitted.hash,
+        chainId: configuredChainId,
+        mode: "transfer",
+      });
+      setLastFundedSuccess({
+        amount: approveAmount || "1",
+        mode: "transfer",
+        txHash: submitted.hash,
+      });
+      void refreshAgentBalance();
+      toast.success(`Agent wallet funded with ${approveAmount || "1"} USDC!`);
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Stellar transfer failed");
+    } finally {
+      setApproving(false);
+    }
+  };
+
+  const handlePreApprove = async () => {
+    if (isStellar) {
+      await handleStellarTransfer();
+      return;
+    }
+    if (fundingMode === "direct") {
+      await handleDirectTransfer();
+    } else {
+      const amountAtomic = parseUnits(approveAmount || "0", 6);
+      if (vaultAllowance !== null && vaultAllowance >= amountAtomic) {
+        await handleVaultDeposit();
+      } else {
+        await handleVaultApprove();
+      }
     }
   };
 
@@ -784,6 +1548,7 @@ function PermissionsTab() {
     setSavingWallet(true);
     setSaveError(null);
     try {
+      const cleanAddress = isStellar ? generatedAddress : (safeAddress(generatedAddress) ?? generatedAddress);
       const res = await apiFetch("/api/v1/agent/permissions", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -791,7 +1556,8 @@ function PermissionsTab() {
           autoTopUp: permissions.autoTopUp,
           dispatch: permissions.dispatch,
           chainId: configuredChainId,
-          agentWalletAddress: generatedAddress,
+          agentWalletAddress: cleanAddress,
+          agentWallets: { [String(configuredChainId)]: cleanAddress },
         }),
       });
       if (!res.ok) {
@@ -803,14 +1569,97 @@ function PermissionsTab() {
         setSaveError(`Failed to save wallet: ${errMsg}`);
         return;
       }
-      setAgentWallet(generatedAddress);
+      setAgentWalletAddress(cleanAddress);
+      setAgentWallets((prev) => ({
+        ...prev,
+        [String(configuredChainId)]: cleanAddress,
+      }));
       setGeneratedKey(null);
       setGeneratedAddress(null);
+      void refreshAgentBalance();
       toast.success("Agent wallet created! Copy your private key now — it won't be shown again.");
     } catch (e: any) {
       setSaveError(`Network error: ${e.message || "check console"}`);
     } finally {
       setSavingWallet(false);
+    }
+  };
+
+  const [resettingWallet, setResettingWallet] = useState(false);
+
+  const handleResetCurrentWallet = async () => {
+    if (!confirm(`Are you sure you want to remove the agent wallet for ${getChainLabel(configuredChainId)}? You can generate a new one right away.`)) {
+      return;
+    }
+    setResettingWallet(true);
+    try {
+      const res = await apiFetch("/api/v1/agent/permissions", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          autoTopUp: permissions.autoTopUp,
+          dispatch: permissions.dispatch,
+          chainId: configuredChainId,
+          resetCurrentWallet: true,
+        }),
+      });
+      if (!res.ok) {
+        toast.error("Failed to reset agent wallet");
+        return;
+      }
+      setAgentWallets((prev) => {
+        const next = { ...prev };
+        delete next[String(configuredChainId)];
+        return next;
+      });
+      setAgentWalletAddress("");
+      setGeneratedKey(null);
+      setGeneratedAddress(null);
+      setWalletBalance("0.00");
+      setVaultBalance("0.00");
+      setTotalBalance("0.00");
+      setLastFundedSuccess(null);
+      toast.success("Agent wallet reset. You can now generate a fresh wallet!");
+    } catch (e: any) {
+      toast.error(e?.message || "Failed to reset agent wallet");
+    } finally {
+      setResettingWallet(false);
+    }
+  };
+
+  const handleResetAllWallets = async () => {
+    if (!confirm("Are you sure you want to reset all agent wallets across all chains? This will clear all stored agent addresses.")) {
+      return;
+    }
+    setResettingWallet(true);
+    try {
+      const res = await apiFetch("/api/v1/agent/permissions", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          autoTopUp: permissions.autoTopUp,
+          dispatch: permissions.dispatch,
+          chainId: configuredChainId,
+          resetWallets: true,
+        }),
+      });
+      if (!res.ok) {
+        toast.error("Failed to reset agent wallets");
+        return;
+      }
+      setAgentWallets({});
+      setAgentWalletAddress("");
+      setGeneratedKey(null);
+      setGeneratedAddress(null);
+      setWalletBalance("0.00");
+      setVaultBalance("0.00");
+      setTotalBalance("0.00");
+      setLastFundedSuccess(null);
+      toast.success("All agent wallets reset! You can now generate a fresh wallet.");
+    } catch (e: any) {
+      toast.error(e?.message || "Failed to reset agent wallets");
+    } finally {
+      setResettingWallet(false);
     }
   };
 
@@ -826,8 +1675,44 @@ function PermissionsTab() {
             autoTopUp: d.data.autoTopUp || permissions.autoTopUp,
             dispatch: d.data.dispatch || permissions.dispatch,
           });
-          if (d.data.agentWalletAddress) {
-            setAgentWallet(d.data.agentWalletAddress);
+
+          // Resolve wallet address for the active chain
+          let resolvedWallet = "";
+          if (d.data.agentWallets && typeof d.data.agentWallets === "object") {
+            const map: Record<string, string> = {};
+            for (const [k, v] of Object.entries(d.data.agentWallets)) {
+              let addrStr = "";
+              if (typeof v === "string") {
+                addrStr = v;
+              } else if (v && typeof v === "object" && typeof (v as any).address === "string") {
+                addrStr = (v as any).address;
+              }
+              if (addrStr) {
+                map[k] = isStellarChainId(Number(k)) ? addrStr : (safeAddress(addrStr) ?? addrStr);
+              }
+            }
+            setAgentWallets(map);
+            resolvedWallet = map[String(configuredChainId)] || "";
+          }
+
+          if (!resolvedWallet && d.data.agentWalletAddress) {
+            const rawAddr = d.data.agentWalletAddress;
+            resolvedWallet = isStellar ? rawAddr : (safeAddress(rawAddr) ?? rawAddr);
+          }
+
+          if (resolvedWallet) {
+            setAgentWalletAddress(resolvedWallet);
+          }
+
+          const loadedPreApprovals = Array.isArray(d.data.preApprovals) ? d.data.preApprovals : [];
+          if (loadedPreApprovals.length > 0) {
+            setPreApprovals(loadedPreApprovals);
+          }
+
+          // ✅ Fire balance refresh NOW with the correct wallet + preApprovals
+          // (React state setters are async — if we relied on state here we'd get stale "")
+          if (resolvedWallet || loadedPreApprovals.length > 0) {
+            void refreshAgentBalance(resolvedWallet || undefined, loadedPreApprovals);
           }
         }
       })
@@ -835,6 +1720,7 @@ function PermissionsTab() {
         toast.error("Failed to load agent settings");
       })
       .finally(() => setLoading(false));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const savePermissions = async () => {
@@ -965,351 +1851,798 @@ function PermissionsTab() {
   };
 
   return (
-    <div className="space-y-8 max-w-2xl">
+    <div className="space-y-6 max-w-3xl">
       <div>
-        <h3 className="text-base font-semibold text-foreground">Agent Permissions</h3>
+        <h3 className="text-lg font-semibold text-foreground">Agent Permissions & Treasury</h3>
         <p className="text-sm text-muted-foreground mt-0.5">
-          Control how your agent handles top-ups and payment approvals.
+          Configure your autonomous agent&apos;s on-chain keys, treasury balance, and dispatch automation rules.
         </p>
       </div>
 
-      {/* Agent Wallet */}
-      <div className="space-y-4 p-5 rounded-lg border border-border bg-secondary">
-        <div className="flex items-center gap-2">
-          <Wallet className="w-4 h-4 text-foreground" />
-          <h4 className="text-sm font-semibold text-foreground">Step 1: Create Agent Wallet</h4>
+      {/* ── Step 1: Agent Identity & Treasury ── */}
+      <div className="rounded-xl border border-border bg-card p-5 space-y-4 shadow-xs">
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
+              <Bot className="w-5 h-5 text-primary" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h4 className="text-sm font-semibold text-foreground">Step 1: Agent Identity</h4>
+                {agentWallet ? (
+                  <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 text-[11px] gap-1 py-0.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                    Active
+                  </Badge>
+                ) : (
+                  <Badge variant="outline" className="text-[11px] text-muted-foreground">
+                    Action Required
+                  </Badge>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {isStellar
+                  ? "Dedicated Stellar keypair for signing x402 resource payments autonomously."
+                  : "Dedicated on-chain signing key for autonomous x402 payment negotiation."}
+              </p>
+            </div>
+          </div>
+          <Badge variant="secondary" className="text-xs font-mono shrink-0">
+            {getChainLabel(configuredChainId)}
+          </Badge>
         </div>
-        <p className="text-xs text-muted-foreground">
-          {isStellar
-            ? "Your agent needs its own Stellar wallet to sign payments and hold USDC. This is separate from your connected wallet for security."
-            : "Your agent needs its own Ethereum wallet to sign payments and hold USDC. This is separate from your connected wallet for security."}
-        </p>
 
         {agentWallet ? (
-          <div className="flex items-center gap-3 p-3 rounded border border-border bg-secondary">
-            <Wallet className="w-4 h-4 text-foreground shrink-0" />
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-foreground">Agent Wallet Active</p>
-              <code className="text-xs font-mono text-foreground block truncate">{agentWallet}</code>
-            </div>
-            <Badge variant="outline" className="text-xs text-foreground border-border bg-secondary shrink-0">
-              Active
-            </Badge>
-          </div>
-        ) : generatedAddress ? (
-          <div className="space-y-3">
-            <div className="p-4 rounded-lg border border-border bg-secondary">
-              <div className="flex items-start gap-3">
-                <Shield className="w-4 h-4 text-foreground mt-0.5 shrink-0" />
-                <div className="flex-1 min-w-0 space-y-2">
-                  <p className="text-sm font-medium text-foreground">Save your private key — it won&apos;t be shown again</p>
-                  <div>
-                    <p className="text-xs text-muted-foreground mb-1">Address</p>
-                    <div className="flex items-center gap-2">
-                      <code className="text-xs font-mono bg-background/50 px-2 py-1 rounded text-foreground flex-1 truncate">{generatedAddress}</code>
-                      <button onClick={() => { navigator.clipboard.writeText(generatedAddress); toast.success("Copied"); }} className="shrink-0">
-                        <Copy className="w-3.5 h-3.5 text-muted-foreground hover:text-foreground" />
-                      </button>
-                    </div>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground mb-1">Private Key</p>
-                    <div className="flex items-center gap-2">
-                      <code className="text-xs font-mono bg-background/50 px-2 py-1 rounded text-foreground flex-1 truncate">{generatedKey}</code>
-                      <button onClick={() => { navigator.clipboard.writeText(generatedKey!); toast.success("Copied"); }} className="shrink-0">
-                        <Copy className="w-3.5 h-3.5 text-muted-foreground hover:text-foreground" />
-                      </button>
-                    </div>
-                  </div>
-                  <div className="flex gap-2 pt-1">
-                    <Button size="sm" onClick={handleSaveWallet} disabled={savingWallet}>
-                      {savingWallet ? "Saving…" : "Save Wallet Address"}
+          <div className="space-y-3 pt-1">
+            {/* Active Wallet Display */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-lg border border-border/80 bg-secondary/30">
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Address</span>
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(agentWallet);
+                      toast.success("Agent address copied to clipboard");
+                    }}
+                    className="text-muted-foreground hover:text-foreground transition-colors"
+                    title="Copy address"
+                  >
+                    <Copy className="w-3.5 h-3.5" />
+                  </button>
+                  <a
+                    href={getExplorerTxUrl(configuredChainId, agentWallet).replace("/tx/", "/address/")}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-muted-foreground hover:text-foreground transition-colors"
+                    title="View on Explorer"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" />
+                  </a>
+                </div>
+                <code className="text-xs font-mono text-foreground font-medium block truncate mt-1">
+                  {agentWallet}
+                </code>
+              </div>
+
+              <div className="flex items-center gap-2 shrink-0">
+                {Object.keys(agentWallets).length > 1 && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowOtherWallets(!showOtherWallets)}
+                    className="h-8 text-xs text-muted-foreground hover:text-foreground gap-1"
+                  >
+                    <span>{Object.keys(agentWallets).length} Chains</span>
+                    {showOtherWallets ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                  </Button>
+                )}
+                {confirmReset ? (
+                  <div className="flex items-center gap-1.5">
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => {
+                        void handleResetCurrentWallet();
+                        setConfirmReset(false);
+                      }}
+                      disabled={resettingWallet}
+                      className="h-8 text-xs"
+                    >
+                      {resettingWallet ? "Resetting…" : "Confirm Reset"}
                     </Button>
-                    <Button size="sm" variant="outline" onClick={() => { setGeneratedKey(null); setGeneratedAddress(null); }}>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setConfirmReset(false)}
+                      className="h-8 text-xs"
+                    >
                       Cancel
                     </Button>
                   </div>
-                  {saveError && <p className="text-xs text-foreground">{saveError}</p>}
+                ) : (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setConfirmReset(true)}
+                    className="h-8 text-xs text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                  >
+                    Reset Wallet
+                  </Button>
+                )}
+              </div>
+            </div>
+
+            {/* Collapsible other chain addresses */}
+            {showOtherWallets && Object.keys(agentWallets).length > 1 && (
+              <div className="rounded-lg border border-border/60 bg-secondary/20 p-3 space-y-2 text-xs">
+                <div className="flex items-center justify-between pb-1 border-b border-border/40">
+                  <span className="font-medium text-muted-foreground uppercase text-[10px] tracking-wider">Multi-chain Addresses</span>
+                  <button
+                    onClick={handleResetAllWallets}
+                    disabled={resettingWallet}
+                    className="text-[11px] text-destructive hover:underline"
+                  >
+                    Reset All
+                  </button>
+                </div>
+                {Object.entries(agentWallets).map(([cId, addr]) => (
+                  <div key={cId} className="flex items-center justify-between gap-3 font-mono">
+                    <span className="text-muted-foreground">{getChainLabel(Number(cId))}</span>
+                    <span className="truncate">{addr}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Treasury Hero Card */}
+            <div className="p-4 rounded-xl border border-border/80 bg-secondary/40 space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">
+                    Agent Available Balance
+                  </p>
+                  <div className="flex items-baseline gap-2 mt-0.5">
+                    <span className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
+                      ${totalBalance ?? "0.00"}
+                    </span>
+                    <span className="text-sm font-medium text-muted-foreground">USDC</span>
+                  </div>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => void refreshAgentBalance()}
+                  disabled={refreshingBalance}
+                  className="h-8 px-2.5 text-xs text-muted-foreground hover:text-foreground gap-1.5"
+                  title="Refresh on-chain balance"
+                >
+                  <RefreshCw className={cn("w-3.5 h-3.5", refreshingBalance && "animate-spin")} />
+                  <span>{refreshingBalance ? "Updating…" : "Refresh"}</span>
+                </Button>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                <div className="p-3 rounded-lg border border-border/60 bg-background/60 flex items-center justify-between">
+                  <div>
+                    <span className="text-xs text-muted-foreground font-medium">Direct Wallet</span>
+                    <p className="text-sm font-semibold text-foreground mt-0.5">
+                      ${walletBalance ?? "0.00"} <span className="text-xs font-normal text-muted-foreground">USDC</span>
+                    </p>
+                    <span className="text-[10px] text-muted-foreground">Instant payment execution</span>
+                  </div>
+                  <Wallet className="w-4 h-4 text-muted-foreground/50 shrink-0" />
+                </div>
+
+                <div className="p-3 rounded-lg border border-border/60 bg-background/60 flex items-center justify-between">
+                  <div>
+                    <span className="text-xs text-muted-foreground font-medium">Session Vault (ZKVUB)</span>
+                    <p className="text-sm font-semibold text-foreground mt-0.5">
+                      ${vaultBalance ?? "0.00"} <span className="text-xs font-normal text-muted-foreground">USDC</span>
+                    </p>
+                    <span className="text-[10px] text-muted-foreground">Continuous billing escrow</span>
+                  </div>
+                  <Database className="w-4 h-4 text-muted-foreground/50 shrink-0" />
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : generatedAddress ? (
+          /* Save Key Pair Display */
+          <div className="space-y-3 p-4 rounded-lg border border-amber-500/40 bg-amber-500/5">
+            <div className="flex items-start gap-3">
+              <Shield className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
+              <div className="flex-1 min-w-0 space-y-2.5">
+                <p className="text-sm font-semibold text-foreground">Save your agent credentials — shown once only</p>
+                <div className="space-y-2">
+                  <div>
+                    <span className="text-[11px] text-muted-foreground uppercase font-medium">Public Address</span>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <code className="text-xs font-mono bg-background border border-border px-2.5 py-1.5 rounded-md text-foreground flex-1 truncate">{generatedAddress}</code>
+                      <Button size="sm" variant="outline" className="h-8 px-2" onClick={() => { navigator.clipboard.writeText(generatedAddress); toast.success("Address copied"); }}>
+                        <Copy className="w-3.5 h-3.5" />
+                      </Button>
+                    </div>
+                  </div>
+                  <div>
+                    <span className="text-[11px] text-muted-foreground uppercase font-medium">Private Key</span>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <code className="text-xs font-mono bg-background border border-border px-2.5 py-1.5 rounded-md text-foreground flex-1 truncate">{generatedKey}</code>
+                      <Button size="sm" variant="outline" className="h-8 px-2" onClick={() => { navigator.clipboard.writeText(generatedKey!); toast.success("Private key copied"); }}>
+                        <Copy className="w-3.5 h-3.5" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 pt-1">
+                  <Button size="sm" onClick={handleSaveWallet} disabled={savingWallet}>
+                    {savingWallet ? "Activating…" : "Save & Activate Wallet"}
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={() => { setGeneratedKey(null); setGeneratedAddress(null); }}>
+                    Cancel
+                  </Button>
                 </div>
               </div>
             </div>
           </div>
         ) : (
-          <div className="text-center py-6 border border-dashed border-border rounded-lg">
-            <Wallet className="w-8 h-8 text-foreground/40 mx-auto mb-2" />
-            <p className="text-sm text-muted-foreground">No agent wallet yet</p>
-            <p className="text-xs text-muted-foreground/60 mt-1 mb-3">Generate one to get started — your agent needs it to sign payments</p>
-            <Button onClick={handleGenerateWallet} className="gap-1.5">
-              <Plus className="w-3.5 h-3.5" />
-              Generate Agent Wallet
+          /* Empty state */
+          <div className="text-center py-8 border border-dashed border-border rounded-xl">
+            <div className="w-10 h-10 rounded-full bg-secondary/80 flex items-center justify-center mx-auto mb-3">
+              <Wallet className="w-5 h-5 text-muted-foreground" />
+            </div>
+            <p className="text-sm font-medium text-foreground">No agent wallet configured</p>
+            <p className="text-xs text-muted-foreground max-w-sm mx-auto mt-1 mb-4">
+              Generate a dedicated keypair for your agent to sign payments and draw entitlements autonomously.
+            </p>
+            <Button onClick={handleGenerateWallet} className="gap-2">
+              <Plus className="w-4 h-4" />
+              <span>Generate Agent Wallet</span>
             </Button>
           </div>
         )}
       </div>
 
-      {!agentWallet && (
-        <div className="text-center py-8 text-xs text-muted-foreground">
-          Create your agent wallet above to unlock auto-topup, dispatch, and pre-approve settings.
-        </div>
-      )}
-
+      {/* ── Step 2: Fund Agent (Only unlocked if wallet is active) ── */}
       {agentWallet && (
-      <>
-      {/* Auto-Topup Mode */}
-      <div className="space-y-4 p-5 rounded-lg border border-border bg-secondary/10">
-        <div className="flex items-center justify-between">
-          <div>
-            <h4 className="text-sm font-semibold text-foreground">Auto-Topup</h4>
-            <p className="text-xs text-muted-foreground mt-0.5">Automatically refill your agent's session when balance is low</p>
-          </div>
-          <select
-            value={permissions.autoTopUp.mode}
-            onChange={(e) => setPermissions({ ...permissions, autoTopUp: { ...permissions.autoTopUp, mode: e.target.value as "auto" | "dispatch" | "off" } })}
-            className="text-sm bg-background border border-border rounded px-3 py-1.5 text-foreground"
-          >
-            <option value="off">Off</option>
-            <option value="auto">Auto (no approval)</option>
-            <option value="dispatch">Dispatch (approve via msg)</option>
-          </select>
-        </div>
-
-        {permissions.autoTopUp.mode !== "off" && (
-          <div className="grid grid-cols-3 gap-4">
-            <div>
-              <Label className="text-xs text-muted-foreground mb-1.5 block">Daily Limit</Label>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">$</span>
-                <Input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={permissions.autoTopUp.dailyLimit}
-                  onChange={(e) => setPermissions({ ...permissions, autoTopUp: { ...permissions.autoTopUp, dailyLimit: e.target.value } })}
-                  className="pl-7 h-9 text-sm"
-                />
+        <div className="rounded-xl border border-border bg-card p-5 space-y-4 shadow-xs">
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center shrink-0">
+                <Zap className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
               </div>
-            </div>
-            <div>
-              <Label className="text-xs text-muted-foreground mb-1.5 block">Per Txn Limit</Label>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">$</span>
-                <Input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={permissions.autoTopUp.perTxnLimit}
-                  onChange={(e) => setPermissions({ ...permissions, autoTopUp: { ...permissions.autoTopUp, perTxnLimit: e.target.value } })}
-                  className="pl-7 h-9 text-sm"
-                />
-              </div>
-            </div>
-            <div>
-              <Label className="text-xs text-muted-foreground mb-1.5 block">Threshold</Label>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">$</span>
-                <Input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={permissions.autoTopUp.threshold}
-                  onChange={(e) => setPermissions({ ...permissions, autoTopUp: { ...permissions.autoTopUp, threshold: e.target.value } })}
-                  className="pl-7 h-9 text-sm"
-                />
+              <div>
+                <div className="flex items-center gap-2">
+                  <h4 className="text-sm font-semibold text-foreground">Step 2: Fund Agent</h4>
+                  {((totalBalance && parseFloat(totalBalance) > 0) || preApprovals.length > 0) ? (
+                    <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 text-[11px] gap-1 py-0.5">
+                      <CheckCircle2 className="w-3 h-3" />
+                      Funded (${totalBalance || "0.00"} USDC)
+                    </Badge>
+                  ) : (
+                    <Badge variant="outline" className="text-[11px] text-muted-foreground">
+                      Awaiting Deposit
+                    </Badge>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Deposit USDC to enable your agent to execute autonomous API and resource payments.
+                </p>
               </div>
             </div>
           </div>
-        )}
-      </div>
 
-      {/* Pre-Approve Agent Wallet */}
-      <div className="space-y-4 p-5 rounded-lg border border-border bg-secondary/10">
-        <div>
-          <h4 className="text-sm font-semibold text-foreground">Step 2: Pre-Approve Agent</h4>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            {isStellar
-              ? `Fund your agent wallet (${agentWallet.slice(0, 4)}…) with USDC from your connected wallet. Required once.`
-              : `Authorize your agent wallet (${agentWallet.slice(0, 8)}…) to pull USDC from your connected wallet. Required once.`}
-          </p>
-        </div>
-        <div className="flex items-end gap-4">
-          <div className="w-40">
-            <Label className="text-xs text-muted-foreground mb-1.5 block">Spending Limit (USDC)</Label>
+          {/* Network Mismatch Notice */}
+          {chainMismatch && (
+            <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3.5 flex items-center justify-between gap-3 text-xs">
+              <div className="space-y-0.5">
+                <p className="font-semibold text-amber-700 dark:text-amber-400">Network Mismatch</p>
+                <p className="text-muted-foreground">
+                  Your wallet is connected to network {evmChainId}. Switch to {configuredChainId} ({getChainLabel(configuredChainId)}) to fund.
+                </p>
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={isSwitchingNetwork}
+                onClick={() => void switchChainAsync({ chainId: configuredChainId })}
+                className="shrink-0 gap-1.5 h-8 text-xs"
+              >
+                <ArrowRightLeft className="w-3.5 h-3.5" />
+                {isSwitchingNetwork ? "Switching…" : "Switch"}
+              </Button>
+            </div>
+          )}
+
+          {/* Source Wallet Status Pill */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 rounded-lg border border-border/70 bg-secondary/20 text-xs">
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+              <span className="text-muted-foreground">Source:</span>
+              <code className="font-mono text-foreground font-medium">
+                {isStellar
+                  ? (stellar.address ? `${stellar.address.slice(0, 6)}…${stellar.address.slice(-4)}` : "Not connected")
+                  : (userWallet ? `${userWallet.slice(0, 6)}…${userWallet.slice(-4)}` : "Not connected")}
+              </code>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="text-muted-foreground">Available to fund:</span>
+              <span className="font-semibold text-foreground">${userWalletBalance ?? "0.00"} USDC</span>
+            </div>
+          </div>
+
+          {/* Success Alert Banner */}
+          {lastFundedSuccess && (
+            <div className="p-3.5 rounded-lg border border-emerald-500/40 bg-emerald-500/10 flex items-start justify-between gap-3">
+              <div className="flex items-start gap-2.5">
+                <CheckCircle2 className="w-4 h-4 text-emerald-500 mt-0.5 shrink-0" />
+                <div>
+                  <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-300">
+                    Successfully Funded with ${lastFundedSuccess.amount} USDC
+                  </p>
+                  <p className="text-[11px] text-emerald-600/80 dark:text-emerald-400/80 mt-0.5">
+                    {lastFundedSuccess.mode === "transfer"
+                      ? "Direct on-chain transfer complete. Your agent can now spend funds."
+                      : "Session Vault deposit confirmed. Vault balance is ready for settlements."}
+                  </p>
+                  {lastFundedSuccess.txHash && (
+                    <a
+                      href={getExplorerTxUrl(evmChainId || configuredChainId, lastFundedSuccess.txHash)}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-[11px] text-emerald-600 dark:text-emerald-400 underline hover:opacity-80 inline-flex items-center gap-1 mt-1 font-mono"
+                    >
+                      View transaction ({lastFundedSuccess.txHash.slice(0, 8)}…{lastFundedSuccess.txHash.slice(-4)}) ↗
+                    </a>
+                  )}
+                </div>
+              </div>
+              <button
+                onClick={() => setLastFundedSuccess(null)}
+                className="text-emerald-600 hover:text-emerald-800 p-1 text-xs"
+              >
+                ✕
+              </button>
+            </div>
+          )}
+
+          {/* Mode Selector for EVM */}
+          {!isStellar && (
+            <div className="grid grid-cols-2 p-1 rounded-lg bg-secondary/50 border border-border/70 text-xs">
+              <button
+                type="button"
+                onClick={() => setFundingMode("direct")}
+                className={cn(
+                  "py-2 px-3 rounded-md font-medium text-center transition-all flex items-center justify-center gap-2",
+                  fundingMode === "direct"
+                    ? "bg-background text-foreground shadow-xs"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <ArrowRightLeft className="w-3.5 h-3.5" />
+                <span>Direct Transfer</span>
+                <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4 font-normal">Fastest</Badge>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setFundingMode("vault");
+                  void checkAllowance();
+                }}
+                className={cn(
+                  "py-2 px-3 rounded-md font-medium text-center transition-all flex items-center justify-center gap-2",
+                  fundingMode === "vault"
+                    ? "bg-background text-foreground shadow-xs"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <Shield className="w-3.5 h-3.5" />
+                <span>Session Vault</span>
+                <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4 font-normal">ZKVUB</Badge>
+              </button>
+            </div>
+          )}
+
+          {/* Amount Input and Presets */}
+          <div className="space-y-2 pt-1">
+            <div className="flex items-center justify-between">
+              <Label className="text-xs font-medium text-foreground">Deposit Amount</Label>
+              <div className="flex items-center gap-1.5">
+                <span className="text-[11px] text-muted-foreground mr-1">Presets:</span>
+                {["5", "10", "25"].map((amt) => (
+                  <button
+                    key={amt}
+                    type="button"
+                    onClick={() => setApproveAmount(amt)}
+                    className={cn(
+                      "px-2.5 py-0.5 rounded text-[11px] font-medium border transition-colors",
+                      approveAmount === amt
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "bg-secondary/60 hover:bg-secondary text-muted-foreground hover:text-foreground border-border/60"
+                    )}
+                  >
+                    ${amt}
+                  </button>
+                ))}
+                {userWalletBalance && parseFloat(userWalletBalance) > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setApproveAmount(userWalletBalance)}
+                    className={cn(
+                      "px-2.5 py-0.5 rounded text-[11px] font-medium border transition-colors",
+                      approveAmount === userWalletBalance
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "bg-secondary/60 hover:bg-secondary text-primary border-primary/30"
+                    )}
+                  >
+                    Max
+                  </button>
+                )}
+              </div>
+            </div>
+
             <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">$</span>
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-semibold text-muted-foreground">$</span>
               <Input
                 type="number"
-                step="10"
+                step="1"
                 min="1"
                 value={approveAmount}
                 onChange={(e) => setApproveAmount(e.target.value)}
-                className="pl-7 h-9 text-sm"
+                className="pl-7 pr-16 h-10 text-sm font-medium"
+                placeholder="10"
               />
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-muted-foreground bg-secondary/80 px-2 py-0.5 rounded">
+                USDC
+              </span>
             </div>
           </div>
-          {isStellar ? (
-            stellar.isConnected && stellar.address ? (
-              <Button
-                onClick={handlePreApprove}
-                disabled={!approveAmount || approving || !!approveTxHash}
-                className="gap-1.5"
-              >
-                <ArrowRightLeft className="w-3.5 h-3.5" />
-                {approving || approveTxHash ? "Transferring…" : `Transfer $${approveAmount} USDC`}
-              </Button>
+
+          {/* Execution Actions */}
+          <div className="pt-2">
+            {isStellar ? (
+              stellar.isConnected && stellar.address ? (
+                <Button
+                  onClick={handlePreApprove}
+                  disabled={!approveAmount || approving || parseFloat(approveAmount || "0") <= 0}
+                  className="w-full h-10 gap-2 font-medium"
+                >
+                  {approving ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Signing transfer in Stellar wallet…</span>
+                    </>
+                  ) : (
+                    <>
+                      <ArrowRightLeft className="w-4 h-4" />
+                      <span>Transfer ${approveAmount || "0"} USDC to Agent</span>
+                    </>
+                  )}
+                </Button>
+              ) : (
+                <Button onClick={() => void stellar.connect()} className="w-full h-10 gap-2">
+                  <Wallet className="w-4 h-4" />
+                  <span>Connect Stellar Wallet</span>
+                </Button>
+              )
+            ) : isConnected && userWallet ? (
+              fundingMode === "direct" ? (
+                <Button
+                  onClick={handleDirectTransfer}
+                  disabled={!approveAmount || approving || isWaitingDirect || parseFloat(approveAmount || "0") <= 0}
+                  className="w-full h-10 gap-2 font-medium"
+                >
+                  {approving ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Confirm in your wallet…</span>
+                    </>
+                  ) : isWaitingDirect ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Confirming on {getChainLabel(configuredChainId)}…</span>
+                    </>
+                  ) : (
+                    <>
+                      <ArrowRightLeft className="w-4 h-4" />
+                      <span>Transfer ${approveAmount || "0"} USDC to Agent</span>
+                    </>
+                  )}
+                </Button>
+              ) : (
+                /* Session Vault 2-Step Progress */
+                (() => {
+                  const amountAtomic = parseUnits(approveAmount || "0", 6);
+                  const hasAllowance = vaultAllowance !== null && vaultAllowance >= amountAtomic;
+                  const step1Done = hasAllowance || approveStep === "fund";
+                  const step1Active = !step1Done && !isWaitingApprove && !approving;
+                  const step1Waiting = (approving && approveStep === "approve") || isWaitingApprove;
+                  const step2Active = step1Done && !isWaitingFund && !approving;
+                  const step2Waiting = (approving && approveStep === "fund") || isWaitingFund;
+
+                  return (
+                    <div className="space-y-3">
+                      {/* Stage 1 */}
+                      <div className={cn(
+                        "flex items-center justify-between p-3.5 rounded-lg border transition-all",
+                        step1Done
+                          ? "border-emerald-500/40 bg-emerald-500/5"
+                          : step1Waiting
+                          ? "border-amber-500/40 bg-amber-500/5"
+                          : "border-border/70 bg-secondary/20"
+                      )}>
+                        <div className="flex items-center gap-3">
+                          <div className={cn(
+                            "w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0",
+                            step1Done ? "bg-emerald-500 text-white" : step1Waiting ? "bg-amber-500 text-white" : "bg-secondary text-muted-foreground border border-border"
+                          )}>
+                            {step1Done ? <Check className="w-3.5 h-3.5" /> : step1Waiting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "1"}
+                          </div>
+                          <div>
+                            <p className={cn("text-xs font-semibold", step1Done ? "text-emerald-600 dark:text-emerald-400" : "text-foreground")}>
+                              {step1Done ? `USDC Approval Confirmed` : `Approve USDC for Vault`}
+                            </p>
+                            <p className="text-[11px] text-muted-foreground">
+                              {step1Done
+                                ? "Session Vault is authorized to transfer your deposit"
+                                : step1Waiting
+                                ? "Waiting for block confirmation on-chain…"
+                                : `Authorize vault to spend $${approveAmount || "0"} USDC`}
+                            </p>
+                          </div>
+                        </div>
+                        {!step1Done && (
+                          <Button
+                            onClick={handleVaultApprove}
+                            disabled={!approveAmount || !step1Active}
+                            size="sm"
+                            className="h-8 gap-1.5 text-xs"
+                          >
+                            {step1Waiting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ArrowRightLeft className="w-3.5 h-3.5" />}
+                            <span>{step1Waiting ? "Confirming…" : "Approve"}</span>
+                          </Button>
+                        )}
+                      </div>
+
+                      {/* Stage 2 */}
+                      <div className={cn(
+                        "flex items-center justify-between p-3.5 rounded-lg border transition-all",
+                        !step1Done && "opacity-50 pointer-events-none",
+                        step2Waiting
+                          ? "border-blue-500/40 bg-blue-500/5"
+                          : step1Done
+                          ? "border-border/80 bg-secondary/30"
+                          : "border-border/40 bg-secondary/10"
+                      )}>
+                        <div className="flex items-center gap-3">
+                          <div className={cn(
+                            "w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0",
+                            step2Waiting ? "bg-blue-500 text-white" : step1Done ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground border border-border"
+                          )}>
+                            {step2Waiting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "2"}
+                          </div>
+                          <div>
+                            <p className="text-xs font-semibold text-foreground">
+                              Deposit into Session Vault
+                            </p>
+                            <p className="text-[11px] text-muted-foreground">
+                              {step2Waiting
+                                ? "Confirming vault deposit on-chain…"
+                                : step1Done
+                                ? `Moves $${approveAmount || "0"} USDC into escrow for your agent`
+                                : "Requires Step 1 authorization first"}
+                            </p>
+                          </div>
+                        </div>
+                        {step1Done && (
+                          <Button
+                            onClick={handleVaultDeposit}
+                            disabled={!approveAmount || !step2Active}
+                            size="sm"
+                            className="h-8 gap-1.5 text-xs bg-emerald-600 hover:bg-emerald-500 text-white"
+                          >
+                            {step2Waiting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Database className="w-3.5 h-3.5" />}
+                            <span>{step2Waiting ? "Depositing…" : "Deposit Funds"}</span>
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })()
+              )
             ) : (
-              <Button onClick={() => void stellar.connect()} className="gap-1.5">
-                <Wallet className="w-3.5 h-3.5" />
-                Connect Stellar wallet
-              </Button>
-            )
-          ) : isConnected && userWallet ? (
-            <Button
-              onClick={handlePreApprove}
-              disabled={!approveAmount || approving || !!approveTxHash}
-              className="gap-1.5"
-            >
-              <ArrowRightLeft className="w-3.5 h-3.5" />
-              {approving || approveTxHash ? "Approving…" : `Approve $${approveAmount} USDC`}
-            </Button>
-          ) : (
-            <p className="text-xs text-foreground pb-1">Connect your wallet to approve</p>
-          )}
-        </div>
-        {isStellar ? (
-          stellar.isConnected && (
-            <div className="flex gap-2 text-xs text-muted-foreground">
-              <span>From: {stellar.address?.slice(0, 4)}…{stellar.address?.slice(-4)}</span>
-              <span>→</span>
-              <span>To: {agentWallet.slice(0, 4)}…{agentWallet.slice(-4)}</span>
-            </div>
-          )
-        ) : isConnected ? (
-          <div className="flex gap-2 text-xs text-muted-foreground">
-            <span>From: {userWallet?.slice(0, 8)}…{userWallet?.slice(-4)}</span>
-            <span>→</span>
-            <span>To: {agentWallet.slice(0, 8)}…{agentWallet.slice(-4)}</span>
-          </div>
-        ) : null}
-      </div>
-
-      {/* Dispatch Providers */}
-      <div className="space-y-4 p-5 rounded-lg border border-border bg-secondary/10">
-        <div className="flex items-center justify-between">
-          <div>
-            <h4 className="text-sm font-semibold text-foreground">Dispatch Providers</h4>
-            <p className="text-xs text-muted-foreground mt-0.5">Connect messaging apps to receive and approve top-up requests. Each provider carries its own credentials.</p>
-          </div>
-          <Button size="sm" variant="outline" onClick={() => setShowAddProvider(true)} className="gap-1.5">
-            <Plus className="w-3.5 h-3.5" />
-            Add Provider
-          </Button>
-        </div>
-
-        {permissions.dispatch.providers.length === 0 ? (
-          <div className="text-center py-6 border border-dashed border-border rounded-lg">
-            <p className="text-sm text-muted-foreground">No dispatch providers connected</p>
-            <p className="text-xs text-muted-foreground/60 mt-1">Click Add Provider to connect Telegram, Discord, Slack, or Email</p>
-          </div>
-        ) : (
-          <div className="space-y-2">
-            {permissions.dispatch.providers.map((p, i) => {
-              const detail =
-                p.type === "telegram" ? `Bot: ${(p.botToken || "").slice(0, 12)}… | Chat: ${p.chatId}` :
-                p.type === "discord" || p.type === "slack" ? (p.webhookUrl || "").slice(0, 40) + "…" :
-                p.email || "";
-              return (
-                <div key={i} className="flex items-center justify-between gap-3 p-3 rounded border border-border bg-background/50">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-8 h-8 rounded bg-secondary flex items-center justify-center text-xs font-bold text-muted-foreground uppercase shrink-0">
-                      {p.type.slice(0, 2)}
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium text-foreground truncate">{p.label || p.type}</p>
-                      <p className="text-xs text-muted-foreground font-mono truncate">{detail}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <button
-                      onClick={() => toggleProviderEnabled(i)}
-                      className={cn(
-                        "w-8 h-5 rounded-full transition-colors relative",
-                        p.enabled ? "bg-green-500" : "bg-muted"
-                      )}
-                    >
-                      <span className={cn(
-                        "absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform",
-                        p.enabled ? "left-[14px]" : "left-[2px]"
-                      )} />
-                    </button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => testDispatchProvider(i)}
-                      disabled={testingIdx === i}
-                      className="h-7 text-xs"
-                    >
-                      {testingIdx === i ? "Sending…" : "Test"}
-                    </Button>
-                    <button onClick={() => removeProvider(i)} className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-destructive">
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-            {testResult && (
-              <div className={cn(
-                "text-xs px-3 py-2 rounded",
-                testResult.ok ? "bg-secondary text-foreground border border-border" : "bg-secondary text-foreground border border-border"
-              )}>
-                {testResult.message}
+              <div className="text-center py-3 text-xs text-muted-foreground bg-secondary/30 rounded-lg border border-border/60">
+                Please connect your wallet in the top right to fund this agent.
               </div>
             )}
           </div>
-        )}
 
-        {/* Dispatch settings */}
-        {permissions.dispatch.providers.length > 0 && (
-          <div className="grid grid-cols-2 gap-4 pt-2">
-            <div>
-              <Label className="text-xs text-muted-foreground mb-1 block">Cooldown (seconds)</Label>
-              <Input
-                type="number"
-                min="30"
-                value={permissions.dispatch.cooldownSeconds}
-                onChange={(e) => setPermissions({
-                  ...permissions,
-                  dispatch: { ...permissions.dispatch, cooldownSeconds: parseInt(e.target.value) || 120 }
-                })}
-                className="h-9 text-sm"
-              />
+          {/* Recent Funding History */}
+          {preApprovals.length > 0 && (
+            <div className="pt-3 border-t border-border/60">
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground block mb-2">
+                Recent Funding Activity
+              </span>
+              <div className="space-y-1.5 max-h-36 overflow-y-auto pr-1">
+                {[...preApprovals].reverse().slice(0, 5).map((entry, i) => (
+                  <div key={`${entry.txHash}-${i}`} className="flex items-center justify-between p-2 rounded-md bg-secondary/30 border border-border/40 text-xs">
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-normal">
+                        {entry.mode === "transfer" ? "Direct Transfer" : "Session Vault"}
+                      </Badge>
+                      <span className="font-semibold text-foreground">+${entry.amount} USDC</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+                      <span>{new Date(entry.createdAt).toLocaleDateString()}</span>
+                      {entry.txHash && (
+                        <a
+                          href={getExplorerTxUrl(entry.chainId || configuredChainId, entry.txHash)}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="hover:text-foreground inline-flex items-center"
+                          title="View on Explorer"
+                        >
+                          <ArrowUpRight className="w-3 h-3" />
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
-            <div>
-              <Label className="text-xs text-muted-foreground mb-1 block">Max Retries</Label>
-              <Input
-                type="number"
-                min="1"
-                max="10"
-                value={permissions.dispatch.maxRetries}
-                onChange={(e) => setPermissions({
-                  ...permissions,
-                  dispatch: { ...permissions.dispatch, maxRetries: parseInt(e.target.value) || 3 }
+          )}
+        </div>
+      )}
+
+      {/* ── Automation & Dispatch Policies (Only when wallet exists) ── */}
+      {agentWallet && (
+        <>
+          {/* Auto-Topup */}
+          <div className="rounded-xl border border-border bg-card p-5 space-y-4 shadow-xs">
+            <div className="flex items-center justify-between">
+              <div>
+                <h4 className="text-sm font-semibold text-foreground">Auto-Topup Policies</h4>
+                <p className="text-xs text-muted-foreground mt-0.5">Automatically replenish your agent&apos;s session balance when it drops below threshold.</p>
+              </div>
+              <select
+                value={permissions.autoTopUp.mode}
+                onChange={(e) => setPermissions({ ...permissions, autoTopUp: { ...permissions.autoTopUp, mode: e.target.value as "auto" | "dispatch" | "off" } })}
+                className="text-xs bg-secondary/50 border border-border rounded-md px-3 py-1.5 text-foreground font-medium focus:outline-hidden"
+              >
+                <option value="off">Disabled</option>
+                <option value="auto">Automatic Refill</option>
+                <option value="dispatch">Dispatch (Approval via Chat)</option>
+              </select>
+            </div>
+
+            {permissions.autoTopUp.mode !== "off" && (
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+                <div>
+                  <Label className="text-xs text-muted-foreground mb-1 block">Daily Spending Limit</Label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">$</span>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={permissions.autoTopUp.dailyLimit}
+                      onChange={(e) => setPermissions({ ...permissions, autoTopUp: { ...permissions.autoTopUp, dailyLimit: e.target.value } })}
+                      className="pl-6 h-9 text-xs"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <Label className="text-xs text-muted-foreground mb-1 block">Per-Txn Limit</Label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">$</span>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={permissions.autoTopUp.perTxnLimit}
+                      onChange={(e) => setPermissions({ ...permissions, autoTopUp: { ...permissions.autoTopUp, perTxnLimit: e.target.value } })}
+                      className="pl-6 h-9 text-xs"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <Label className="text-xs text-muted-foreground mb-1 block">Trigger Threshold</Label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">$</span>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={permissions.autoTopUp.threshold}
+                      onChange={(e) => setPermissions({ ...permissions, autoTopUp: { ...permissions.autoTopUp, threshold: e.target.value } })}
+                      className="pl-6 h-9 text-xs"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Dispatch Providers */}
+          <div className="rounded-xl border border-border bg-card p-5 space-y-4 shadow-xs">
+            <div className="flex items-center justify-between">
+              <div>
+                <h4 className="text-sm font-semibold text-foreground">Dispatch Notification Channels</h4>
+                <p className="text-xs text-muted-foreground mt-0.5">Receive and approve payment top-up requests directly through messaging apps.</p>
+              </div>
+              <Button size="sm" variant="outline" onClick={() => setShowAddProvider(true)} className="gap-1.5 h-8 text-xs">
+                <Plus className="w-3.5 h-3.5" />
+                Add Channel
+              </Button>
+            </div>
+
+            {permissions.dispatch.providers.length === 0 ? (
+              <div className="text-center py-6 border border-dashed border-border rounded-lg">
+                <p className="text-xs text-muted-foreground">No dispatch channels connected yet.</p>
+                <p className="text-[11px] text-muted-foreground/70 mt-0.5">Supports Telegram, Discord, Slack, and Email webhooks.</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {permissions.dispatch.providers.map((p, i) => {
+                  const detail =
+                    p.type === "telegram" ? `Bot: ${(p.botToken || "").slice(0, 10)}… | Chat: ${p.chatId}` :
+                    p.type === "discord" || p.type === "slack" ? (p.webhookUrl || "").slice(0, 36) + "…" :
+                    p.email || "";
+                  return (
+                    <div key={i} className="flex items-center justify-between gap-3 p-3 rounded-lg border border-border bg-secondary/20">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-8 h-8 rounded-md bg-secondary flex items-center justify-center text-xs font-bold text-foreground uppercase shrink-0 border border-border/50">
+                          {p.type.slice(0, 2)}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-xs font-semibold text-foreground truncate">{p.label || p.type}</p>
+                          <p className="text-[11px] text-muted-foreground font-mono truncate">{detail}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => testDispatchProvider(i)}
+                          disabled={testingIdx === i}
+                          className="h-7 px-2 text-xs"
+                        >
+                          {testingIdx === i ? "Testing…" : "Test"}
+                        </Button>
+                        <button onClick={() => removeProvider(i)} className="p-1 rounded-md hover:bg-secondary text-muted-foreground hover:text-destructive transition-colors">
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  );
                 })}
-                className="h-9 text-sm"
-              />
+                {testResult && (
+                  <div className={cn(
+                    "text-xs px-3 py-2 rounded-md border",
+                    testResult.ok ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/30" : "bg-destructive/10 text-destructive border-destructive/30"
+                  )}>
+                    {testResult.message}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Save Permissions Action Bar */}
+          <div className="flex items-center justify-between p-4 rounded-xl border border-border bg-card shadow-xs">
+            <div>
+              <p className="text-xs font-semibold text-foreground">Save Configuration</p>
+              <p className="text-[11px] text-muted-foreground">Persist updated auto-topup thresholds and notification channels.</p>
+            </div>
+            <div className="flex items-center gap-3">
+              {saved && <span className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">✓ Saved successfully</span>}
+              {saveError && <span className="text-xs text-destructive">{saveError}</span>}
+              <Button onClick={savePermissions} disabled={saving || loading} className="h-9 px-4 text-xs font-medium">
+                {loading ? "Loading…" : saving ? "Saving…" : "Save Changes"}
+              </Button>
             </div>
           </div>
-        )}
-      </div>
-
-      {/* Save */}
-      <div className="flex items-center gap-3">
-        <Button onClick={savePermissions} disabled={saving || loading}>
-          {loading ? "Loading…" : saving ? "Saving…" : saved ? "Saved ✓" : "Save Permissions"}
-        </Button>
-        {saved && <span className="text-xs text-foreground">Settings saved</span>}
-        {saveError && <span className="text-xs text-foreground">{saveError}</span>}
-      </div>
+        </>
+      )}
 
       {/* Add Provider Dialog */}
       <Dialog open={showAddProvider} onOpenChange={setShowAddProvider}>
@@ -1409,8 +2742,6 @@ function PermissionsTab() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      </>
-      )}
     </div>
   );
 }

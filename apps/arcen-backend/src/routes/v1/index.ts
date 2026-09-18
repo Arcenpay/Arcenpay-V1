@@ -50,8 +50,10 @@ import { POST as companyPlanPreview, OPTIONS as companyPlanPreviewOptions } from
 import { POST as companyUnsubscribe, OPTIONS as companyUnsubscribeOptions } from "./company-unsubscribe.js";
 import { POST as companyResume, OPTIONS as companyResumeOptions } from "./company-resume.js";
 import { GET as listApiKeys, POST as createApiKeySdk, DELETE as revokeApiKey } from "./api-keys.js";
+import { createTempToken } from "./api-keys.js";
 import { GET as getZkTlsProofs, POST as createZkTlsProof } from "./proofs-zktls.js";
 import { GET as getAgentPermissions, PUT as updateAgentPermissions } from "./agent-permissions.js";
+import { recordAgentFunding, getAgentBalance } from "./agent-permissions.js";
 import { GET as getAgentDispatch, POST as createAgentDispatch } from "./agent-dispatch.js";
 import { POST as testAgentDispatch } from "./agent-dispatch-test.js";
 
@@ -139,10 +141,13 @@ export const v1Router = new Hono()
   .get("/api-keys", listApiKeys)
   .post("/api-keys", createApiKeySdk)
   .delete("/api-keys", revokeApiKey)
+  .post("/api-keys/tokens", createTempToken)
   .get("/proofs/zktls", getZkTlsProofs)
   .post("/proofs/zktls", createZkTlsProof)
   .get("/agent/permissions", getAgentPermissions)
   .put("/agent/permissions", updateAgentPermissions)
+  .get("/agent/balance", getAgentBalance)
   .get("/agent/dispatch", getAgentDispatch)
   .post("/agent/dispatch", createAgentDispatch)
-  .post("/agent/dispatch/test", testAgentDispatch);
+  .post("/agent/dispatch/test", testAgentDispatch)
+  .post("/agent/fund", recordAgentFunding);
