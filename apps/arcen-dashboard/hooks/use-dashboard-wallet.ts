@@ -1,12 +1,13 @@
 "use client";
 
 import { useCallback } from "react";
-import { useAppKit } from "@reown/appkit/react";
+import { useAppKit, useAppKitAccount } from "@reown/appkit/react";
 import { toast } from "sonner";
 import { useAccount, useChainId, useDisconnect, useSwitchChain } from "wagmi";
 import {
   DEFAULT_CHAIN_ID,
   isSupportedDashboardChainId,
+  isSupportedWalletAuthChainId,
   getChainLabel,
   SUPPORTED_DASHBOARD_CHAIN_LABEL,
 } from "@/lib/default-chain";
@@ -29,7 +30,15 @@ export function shortWalletAddress(address: string): string {
 
 export function useDashboardWallet(linkedWallet?: string | null) {
   const { open } = useAppKit();
-  const { address, isConnected } = useAccount();
+  const wagmiAccount = useAccount();
+  const appKitAccount = useAppKitAccount();
+
+  const isConnected =
+    wagmiAccount.isConnected ||
+    Boolean(appKitAccount.isConnected && appKitAccount.address);
+  const address = (wagmiAccount.address || appKitAccount.address) as
+    | `0x${string}`
+    | undefined;
   const chainId = useChainId();
   const { disconnectAsync, isPending: isDisconnecting } = useDisconnect();
   const { switchChainAsync, isPending: isSwitchingChain } = useSwitchChain();
@@ -44,7 +53,7 @@ export function useDashboardWallet(linkedWallet?: string | null) {
     normalizedLinkedWallet === normalizedConnectedWallet;
   const isWrongWalletConnected =
     hasLinkedWallet && hasConnectedWallet && !isLinkedWalletConnected;
-  const isOnSupportedNetwork = isSupportedDashboardChainId(chainId);
+  const isOnSupportedNetwork = isSupportedWalletAuthChainId(chainId);
   const isWrongNetwork = hasConnectedWallet && !isOnSupportedNetwork;
   const connectedWalletLabel = address ? shortWalletAddress(address) : null;
   const linkedWalletLabel = linkedWallet ? shortWalletAddress(linkedWallet) : null;
@@ -64,20 +73,28 @@ export function useDashboardWallet(linkedWallet?: string | null) {
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Could not disconnect wallet.";
-      toast.error(message);
+      if (!message.includes("before enable") && !message.includes("connect()")) {
+        toast.error(message);
+      }
     }
   }, [disconnectAsync]);
 
   const reconnectWallet = useCallback(async () => {
     try {
       if (hasConnectedWallet) {
-        await disconnectAsync();
+        try {
+          await disconnectAsync();
+        } catch (err) {
+          console.warn("[useDashboardWallet] Disconnect before reconnect ignored:", err);
+        }
       }
       await open({ view: "Connect" });
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Could not reconnect wallet.";
-      toast.error(message);
+      if (!message.includes("before enable") && !message.includes("connect()")) {
+        toast.error(message);
+      }
     }
   }, [disconnectAsync, hasConnectedWallet, open]);
 

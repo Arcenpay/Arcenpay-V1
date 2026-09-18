@@ -200,7 +200,18 @@ function getOrCreateWagmiConfig(walletConnectProjectId?: string) {
   const config = createConfig({
     chains: ARCENPAY_WAGMI_CHAINS,
     connectors: projectId
-      ? [injected(), walletConnect({ projectId })]
+      ? [
+          injected(),
+          walletConnect({
+            projectId,
+            metadata: {
+              name: "ArcenPay",
+              description: "ArcenPay Web3 Entitlement & Billing Platform",
+              url: "https://app.arcenpay.com",
+              icons: ["https://app.arcenpay.com/apple-icon.png"],
+            },
+          }),
+        ]
       : [injected()],
     transports: {
       [sepolia.id]: getRpcTransport(sepolia.id),

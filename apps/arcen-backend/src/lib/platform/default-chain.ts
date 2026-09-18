@@ -48,6 +48,25 @@ export function isSupportedDashboardChainId(
   return parseChainId(value) !== null;
 }
 
+export const EVM_AUTH_CHAIN_IDS = [
+  1, // Ethereum Mainnet
+  8453, // Base Mainnet
+  84532, // Base Sepolia
+  11155111, // Sepolia
+  5042002, // Arc Testnet
+  677, // BOT Chain Mainnet
+  968, // BOT Chain Testnet
+] as const;
+
+export function isSupportedWalletAuthChainId(chainId: unknown): boolean {
+  const numeric = Number(chainId);
+  if (!Number.isInteger(numeric)) return false;
+  return (
+    isSupportedDashboardChainId(numeric) ||
+    (EVM_AUTH_CHAIN_IDS as readonly number[]).includes(numeric)
+  );
+}
+
 export const DEFAULT_CHAIN_ID: SupportedDashboardChainId =
   parseChainId(getConfiguredRuntimeChainId()) ?? BOT_MAINNET_CHAIN_ID;
 

@@ -69,12 +69,14 @@ export function createPageMetadata({
       images: [
         {
           url: absoluteSiteUrl(DASHBOARD_OG_IMAGE_PATH),
+          width: 1200,
+          height: 630,
           alt: DASHBOARD_SITE_NAME,
         },
       ],
     },
     twitter: {
-      card: "summary",
+      card: "summary_large_image",
       title: resolvedTitle,
       description,
       images: [absoluteSiteUrl(DASHBOARD_OG_IMAGE_PATH)],
@@ -105,12 +107,14 @@ export const rootMetadata: Metadata = {
     images: [
       {
         url: absoluteSiteUrl(DASHBOARD_OG_IMAGE_PATH),
+        width: 1200,
+        height: 630,
         alt: DASHBOARD_SITE_NAME,
       },
     ],
   },
   twitter: {
-    card: "summary",
+    card: "summary_large_image",
     title: DASHBOARD_SITE_NAME,
     description: DASHBOARD_DESCRIPTION,
     images: [absoluteSiteUrl(DASHBOARD_OG_IMAGE_PATH)],
@@ -119,6 +123,7 @@ export const rootMetadata: Metadata = {
     icon: [
       { url: "/icon.svg", type: "image/svg+xml" },
       { url: "/icon-light-32x32.png", sizes: "32x32", type: "image/png" },
+      { url: "/icon-dark-32x32.png", sizes: "32x32", type: "image/png", media: "(prefers-color-scheme: dark)" },
     ],
     apple: [{ url: "/apple-icon.png", sizes: "180x180", type: "image/png" }],
   },

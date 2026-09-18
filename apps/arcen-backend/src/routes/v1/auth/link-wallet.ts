@@ -8,6 +8,7 @@ import { getSessionFromCtx } from "../../../lib/auth/auth.server.js";
 import { maskEmail } from "../../../lib/auth/auth-flow.js";
 import {
   isSupportedDashboardChainId,
+  isSupportedWalletAuthChainId,
   getChainLabel,
   TESTNET_CHAIN_IDS,
   MAINNET_CHAIN_IDS,
@@ -91,8 +92,8 @@ export async function linkWallet(c: Context) {
     const isStellar = isStellarChainId(chainId);
     const normalizedAddress = isStellar ? address : address.toLowerCase();
 
-    // Support Stellar chain ID (synthetic: 9_000_000+)
-    if (!isSupportedDashboardChainId(chainId) && !isStellarChainId(chainId)) {
+    // Support EVM chains and Stellar chain ID (synthetic: 9_000_000+)
+    if (!isSupportedWalletAuthChainId(chainId) && !isStellarChainId(chainId)) {
       const labels = [...TESTNET_CHAIN_IDS, ...MAINNET_CHAIN_IDS].map(getChainLabel).join(" or ");
       return c.json(
         {

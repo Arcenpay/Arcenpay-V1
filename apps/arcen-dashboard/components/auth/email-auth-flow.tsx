@@ -560,10 +560,10 @@ export function EmailAuthFlow({
                   "Select your blockchain ecosystem first. You'll connect the appropriate wallet next."}
                 {step === "wallet" &&
                   chainFamily !== "stellar" &&
-                  `Connect a wallet on ${SUPPORTED_WALLET_CHAIN_LABEL}. After email verification, we'll request one signature and complete setup.`}
+                  "Connect an EVM wallet (Base, Arc, BOT Chain, Ethereum). After email verification, we'll request one signature and complete setup."}
                 {step === "wallet" &&
                   chainFamily === "stellar" &&
-                  "Connect a Stellar wallet. After email verification, we'll request one signature and complete setup."}
+                  "Connect a Stellar wallet (Freighter, xBull, LOBSTR). After email verification, we'll request one signature and complete setup."}
                 {step === "email" &&
                   "Once your wallet is connected, we'll send a 6-digit code to your email."}
                 {step === "code" &&
