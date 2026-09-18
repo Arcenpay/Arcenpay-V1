@@ -2,10 +2,8 @@
 import { apiFetch } from "@/lib/api-client";
 
 import { useEffect, useMemo, useState } from "react";
-import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Building2, CheckCircle2, Loader2, PlusCircle } from "lucide-react";
-import { NetworkIcon } from "@web3icons/react/dynamic";
 import { Web3Icon } from "@/components/web3-icon";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -264,64 +262,13 @@ export default function EnvironmentOnboardingPage() {
 
           {/* Type & Chain Grid */}
           <div className="grid gap-4 sm:grid-cols-2">
-            {/* Blockchain Ecosystem */}
-            <div className="space-y-2">
-              <Label htmlFor="environment-family" className="text-sm font-medium text-foreground">
-                Blockchain Ecosystem
-              </Label>
-              <Select
-                value={selectedFamily}
-                onValueChange={(val) => {
-                  const fam = val as ChainFamily;
-                  setSelectedFamily(fam);
-                  setOnboardingChainFamily(fam);
-                  setChainId(defaultChainIdForFamily(mode, fam));
-                }}
-              >
-                <SelectTrigger id="environment-family" className="bg-background border-input text-foreground h-11 focus:ring-brand">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="bg-popover border-border text-popover-foreground">
-                  <SelectItem value="evm">
-                    <span className="flex items-center gap-2">
-                      <span className="w-4 h-4 rounded-full overflow-hidden flex items-center justify-center shrink-0">
-                        <Image
-                          src="/botchain.jpg"
-                          alt="BOT Chain"
-                          width={18}
-                          height={18}
-                          className="rounded-full object-cover shrink-0"
-                          unoptimized
-                        />
-                      </span>
-                      EVM Networks
-                    </span>
-                  </SelectItem>
-                  <SelectItem value="stellar" disabled={mode === "PRODUCTION"}>
-                    <span className="flex items-center gap-2">
-                      <NetworkIcon name="stellar" variant="branded" size={18} className="rounded-full bg-white dark:bg-white p-px" />
-                      Stellar Networks{mode === "PRODUCTION" ? " — Coming soon" : ""}
-                    </span>
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Environment Mode */}
             <div className="space-y-2">
               <Label htmlFor="environment-type" className="text-sm font-medium text-foreground">
                 Environment Mode
               </Label>
               <Select
                 value={mode}
-                onValueChange={(value) => {
-                  const newMode = value as EnvironmentMode;
-                  setMode(newMode);
-                  if (newMode === "PRODUCTION" && selectedFamily === "stellar") {
-                    setSelectedFamily("evm");
-                    setOnboardingChainFamily("evm");
-                  }
-                }}
+                onValueChange={(value) => setMode(value as EnvironmentMode)}
               >
                 <SelectTrigger id="environment-type" className="bg-background border-input text-foreground h-11 focus:ring-brand">
                   <SelectValue />
@@ -337,8 +284,7 @@ export default function EnvironmentOnboardingPage() {
               </Select>
             </div>
 
-            {/* Target Blockchain Network */}
-            <div className="space-y-2 sm:col-span-2">
+            <div className="space-y-2">
               <Label htmlFor="environment-chain" className="text-sm font-medium text-foreground">
                 Target Blockchain Network
               </Label>
