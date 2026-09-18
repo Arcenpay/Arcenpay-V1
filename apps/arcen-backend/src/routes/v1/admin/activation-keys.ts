@@ -35,7 +35,36 @@ export function buildEnterpriseActivationEmailHtml(params: {
   const tierMap: Record<string, string> = { FREE: "Free", PLUS: "Plus", PRO: "Pro" };
   const tierLabel = tierMap[params.tier] ?? params.tier;
   const activationUrl = `${dashUrl}/onboarding/activation?key=${encodeURIComponent(params.key)}`;
-  const expiresFormatted = params.expiresAt ? new Date(params.expiresAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : null;
+  const expiresFormatted = params.expiresAt
+    ? new Date(params.expiresAt).toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      })
+    : null;
+  const escapedKey = params.key
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;");
+  const escapedNotes = params.notes
+    ? params.notes
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+    : null;
+  const escapedCustomMessage = params.customMessage
+    ? params.customMessage
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+    : null;
+  const escapedRecipient = params.recipientEmail?.trim()
+    ? params.recipientEmail
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+    : null;
+  const preferencesUrl = `${dashUrl}/settings/notifications`;
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -44,71 +73,234 @@ export function buildEnterpriseActivationEmailHtml(params: {
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="color-scheme" content="light" />
   <meta name="supported-color-schemes" content="light" />
-  <title>Your ArcenPay Activation Key</title>
+  <title>${tierLabel} Workspace Activation — ArcenPay</title>
 </head>
-<body style="margin:0;padding:0;background-color:#f8fafc;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased;">
-  <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="padding:48px 16px;background-color:#f8fafc;">
-    <tr><td align="center">
-      <table width="100%" cellpadding="0" cellspacing="0" role="presentation"
-             style="max-width:540px;background-color:#ffffff;border:1px solid #e2e8f0;border-radius:16px;box-shadow:0 4px 6px -1px rgba(0,0,0,0.05),0 2px 4px -2px rgba(0,0,0,0.05);overflow:hidden;text-align:left;">
-        <!-- Top brand accent banner -->
-        <tr><td style="height:5px;background:linear-gradient(90deg, #4f46e5 0%, #7c3aed 100%);"></td></tr>
-        <tr><td style="padding:40px 36px;">
-          <!-- Brand Header -->
-          <div style="margin-bottom:28px;">
-            <span style="font-size:22px;font-weight:800;letter-spacing:-0.5px;color:#0f172a;">Arcen<span style="color:#4f46e5;">Pay</span></span>
-            <span style="display:inline-block;margin-left:10px;padding:3px 10px;background-color:#eef2ff;color:#4f46e5;font-size:12px;font-weight:700;border-radius:9999px;vertical-align:middle;text-transform:uppercase;letter-spacing:0.5px;">${tierLabel} Plan</span>
-          </div>
+<body style="margin:0;padding:0;background-color:#fafafa;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Segoe UI',Roboto,Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased;color:#0a0a0a;">
+  <!-- Outer Canvas Table -->
+  <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="background-color:#fafafa;margin:0;padding:40px 16px 60px;">
+    <tr>
+      <td align="center" style="margin:0;padding:0;">
+        <!-- Centered Email Card (max 560px) -->
+        <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="max-width:560px;width:100%;background-color:#ffffff;border:1px solid #e4e4e7;border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.04),0 8px 24px -4px rgba(0,0,0,0.03);text-align:left;">
 
-          <h1 style="margin:0 0 12px;font-size:24px;font-weight:700;color:#0f172a;line-height:1.3;letter-spacing:-0.3px;">
-            Your ${tierLabel} Workspace is Ready
-          </h1>
-          <p style="margin:0 0 24px;font-size:14px;color:#475569;line-height:1.6;">
-            You've been invited to activate your <strong style="color:#0f172a;">${tierLabel}</strong> workspace on ArcenPay. Use your unique platform activation key below to unlock the Web3 billing infrastructure and control plane.
-          </p>
+          <!-- Brand Header: Official Logo -->
+          <tr>
+            <td style="padding:28px 36px 20px 36px;background-color:#ffffff;">
+              <table cellpadding="0" cellspacing="0" role="presentation">
+                <tr>
+                  <td style="vertical-align:middle;line-height:0;">
+                    <a href="${dashUrl}" style="text-decoration:none;display:inline-block;">
+                      <img src="https://files.catbox.moe/dzpc14.png" alt="ArcenPay" width="138" height="34" style="display:block;height:32px;width:auto;border:0;outline:none;" />
+                    </a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
 
-          ${params.customMessage ? `<div style="background-color:#f1f5f9;border-left:4px solid #4f46e5;padding:14px 18px;margin-bottom:24px;border-radius:0 8px 8px 0;font-size:14px;color:#334155;line-height:1.5;">${params.customMessage}</div>` : ""}
+          <!-- Subtle Divider -->
+          <tr>
+            <td style="padding:0 36px;">
+              <div style="height:1px;background-color:#f4f4f5;line-height:1px;">&nbsp;</div>
+            </td>
+          </tr>
 
-          <!-- Key Box -->
-          <div style="background-color:#f5f3ff;border:2px dashed #c7d2fe;border-radius:12px;padding:24px 20px;margin:24px 0;text-align:center;">
-            <p style="margin:0 0 8px;font-size:11px;font-weight:700;color:#6366f1;text-transform:uppercase;letter-spacing:1.5px;">Platform Activation Key</p>
-            <div style="margin:0 0 10px;font-size:24px;font-weight:800;color:#312e81;font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;letter-spacing:2.5px;">
-              ${params.key}
-            </div>
-            <div style="font-size:12px;color:#6b21a8;font-weight:500;">
-              Valid for <strong>${params.maxUses} workspace${params.maxUses > 1 ? "s" : ""}</strong>${expiresFormatted ? ` &bull; Expires ${expiresFormatted}` : ""}
-            </div>
-            ${params.notes ? `<div style="margin-top:6px;font-size:11px;color:#7c3aed;">Note: ${params.notes}</div>` : ""}
-          </div>
+          <!-- Main Content Slot -->
+          <tr>
+            <td style="padding:28px 36px 32px 36px;background-color:#ffffff;">
+              <table width="100%" cellpadding="0" cellspacing="0" role="presentation">
 
-          <!-- CTA Button -->
-          <div style="text-align:center;margin:32px 0;">
-            <a href="${activationUrl}"
-               style="display:inline-block;padding:14px 36px;background-color:#4f46e5;color:#ffffff;text-decoration:none;border-radius:10px;font-size:15px;font-weight:600;box-shadow:0 4px 6px -1px rgba(79,70,229,0.3);letter-spacing:0.2px;">
-              Activate Workspace &rarr;
-            </a>
-          </div>
+                <!-- Eyebrow Category -->
+                <tr>
+                  <td style="padding:0 0 10px 0;">
+                    <div style="font-size:11px;font-weight:700;color:#71717a;text-transform:uppercase;letter-spacing:0.06em;">
+                      Enterprise Workspace Provisioning
+                    </div>
+                  </td>
+                </tr>
 
-          <!-- Quick instructions -->
-          <div style="background-color:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:18px 20px;margin:24px 0;">
-            <p style="margin:0 0 10px;font-size:13px;font-weight:700;color:#1e293b;">How to activate:</p>
-            <ol style="margin:0;padding-left:18px;font-size:13px;color:#475569;line-height:1.7;">
-              <li>Click the button above or visit <a href="${dashUrl}" style="color:#4f46e5;text-decoration:none;font-weight:500;">${dashUrl}</a></li>
-              <li>Sign in or create your account with your email</li>
-              <li>Enter your activation key to unlock the dashboard</li>
-            </ol>
-          </div>
+                <!-- Main Heading -->
+                <tr>
+                  <td style="padding:0 0 14px 0;">
+                    <h1 style="margin:0;font-size:22px;line-height:30px;font-weight:700;color:#0a0a0a;letter-spacing:-0.02em;">
+                      Your ${tierLabel} workspace is ready
+                    </h1>
+                  </td>
+                </tr>
 
-          <hr style="margin:32px 0 20px;border:none;border-top:1px solid #f1f5f9;" />
-          <p style="margin:0 0 6px;font-size:12px;color:#64748b;line-height:1.5;">
-            Sent by the ArcenPay Platform Admin Team (<a href="mailto:hello@arcenpay.com" style="color:#4f46e5;text-decoration:none;">hello@arcenpay.com</a>).
-          </p>
-          <p style="margin:0;font-size:12px;color:#94a3b8;line-height:1.5;">
-            Questions or need assistance? Reply directly to this email.
-          </p>
-        </td></tr>
-      </table>
-    </td></tr>
+                <!-- Intro Paragraph -->
+                <tr>
+                  <td style="padding:0 0 20px 0;font-size:14px;line-height:22px;color:#3f3f46;">
+                    An enterprise workspace license has been provisioned on ArcenPay. Your environment includes dedicated facilitator relay, high-throughput ZK verification, and programmable subscription controls.
+                  </td>
+                </tr>
+
+                ${
+                  escapedCustomMessage
+                    ? `
+                <tr>
+                  <td style="padding:0 0 20px 0;">
+                    <div style="background-color:#fafafa;border:1px solid #e4e4e7;border-radius:8px;padding:12px 16px;font-size:13px;color:#3f3f46;line-height:20px;">
+                      <strong style="color:#0a0a0a;">Note:</strong> ${escapedCustomMessage}
+                    </div>
+                  </td>
+                </tr>`
+                    : ""
+                }
+
+                <!-- Activation Key Card -->
+                <tr>
+                  <td style="padding:0 0 24px 0;">
+                    <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="border:1px solid #e4e4e7;border-radius:10px;background-color:#fafafa;padding:18px 20px;">
+                      <tr>
+                        <td>
+                          <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="margin-bottom:6px;">
+                            <tr>
+                              <td align="left" style="font-size:11px;font-weight:600;color:#71717a;text-transform:uppercase;letter-spacing:0.05em;">
+                                Platform Activation Key
+                              </td>
+                              <td align="right" style="font-size:12px;color:#71717a;">
+                                ${params.maxUses} workspace${params.maxUses > 1 ? "s" : ""}${expiresFormatted ? ` &middot; Expires ${expiresFormatted}` : ""}
+                              </td>
+                            </tr>
+                          </table>
+                          <div style="font-size:22px;font-weight:700;color:#0a0a0a;font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;letter-spacing:1.5px;padding:6px 0 2px 0;">
+                            ${escapedKey}
+                          </div>
+                          ${escapedNotes ? `<div style="margin-top:6px;font-size:12px;color:#71717a;">Reference: <span style="color:#0a0a0a;">${escapedNotes}</span></div>` : ""}
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+
+                <!-- Primary CTA Button -->
+                <tr>
+                  <td style="padding:0 0 24px 0;">
+                    <table cellpadding="0" cellspacing="0" role="presentation">
+                      <tr>
+                        <td style="border-radius:8px;background-color:#0a0a0a;">
+                          <a href="${activationUrl}" target="_blank" rel="noopener noreferrer" style="display:inline-block;padding:12px 28px;color:#ffffff;background-color:#0a0a0a;border:1px solid #0a0a0a;border-radius:8px;font-size:14px;font-weight:600;text-decoration:none;text-align:center;">
+                            Activate workspace &rarr;
+                          </a>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+
+                <!-- Provisioned Specifications Summary -->
+                <tr>
+                  <td style="padding:0 0 24px 0;">
+                    <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="border:1px solid #e4e4e7;border-radius:10px;background-color:#ffffff;overflow:hidden;">
+                      <tr>
+                        <td style="padding:10px 16px;border-bottom:1px solid #f4f4f5;font-size:13px;color:#71717a;">Workspace Tier</td>
+                        <td style="padding:10px 16px;border-bottom:1px solid #f4f4f5;font-size:13px;font-weight:600;color:#0a0a0a;" align="right">${tierLabel}</td>
+                      </tr>
+                      <tr>
+                        <td style="padding:10px 16px;border-bottom:1px solid #f4f4f5;font-size:13px;color:#71717a;">Settlement Engine</td>
+                        <td style="padding:10px 16px;border-bottom:1px solid #f4f4f5;font-size:13px;font-weight:600;color:#0a0a0a;" align="right">High-Throughput Rollup</td>
+                      </tr>
+                      <tr>
+                        <td style="padding:10px 16px;font-size:13px;color:#71717a;">Autonomous Agent Module</td>
+                        <td style="padding:10px 16px;font-size:13px;font-weight:600;color:#0a0a0a;" align="right">Enabled (x402)</td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+
+                <!-- Sign-off -->
+                <tr>
+                  <td style="padding:0;font-size:13px;line-height:20px;color:#71717a;">
+                    Questions about your enterprise deployment? Reach out to <a href="mailto:hello@arcenpay.com" target="_blank" rel="noopener noreferrer" style="color:#0001fd;text-decoration:underline;font-weight:500;">hello@arcenpay.com</a>.
+                  </td>
+                </tr>
+
+              </table>
+            </td>
+          </tr>
+
+          <!-- Footer Divider -->
+          <tr>
+            <td style="padding:0 36px;">
+              <div style="height:1px;background-color:#f4f4f5;line-height:1px;">&nbsp;</div>
+            </td>
+          </tr>
+
+          <!-- Footer Area -->
+          <tr>
+            <td style="padding:24px 36px 32px 36px;background-color:#fafafa;">
+              <table width="100%" cellpadding="0" cellspacing="0" role="presentation">
+                <tr>
+                  <td style="padding:0 0 10px 0;font-size:12px;line-height:18px;color:#71717a;">
+                    ${
+                      escapedRecipient
+                        ? `This email was sent to <a href="mailto:${escapedRecipient}" style="color:#71717a;text-decoration:underline;">${escapedRecipient}</a>. To change which emails you receive, <a href="${preferencesUrl}" style="color:#71717a;text-decoration:underline;">manage your notification settings</a>.`
+                        : `To manage your email preferences, visit your <a href="${preferencesUrl}" style="color:#71717a;text-decoration:underline;">notification settings</a>.`
+                    }
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:0 0 20px 0;font-size:12px;line-height:18px;color:#71717a;">
+                    &copy; 2026 ArcenPay Protocol. All rights reserved.
+                  </td>
+                </tr>
+                <tr>
+                  <td>
+                    <table width="100%" cellpadding="0" cellspacing="0" role="presentation">
+                      <tr>
+                        <!-- Left: Mini Brand Logo -->
+                        <td align="left" style="vertical-align:middle;">
+                          <a href="${dashUrl}" style="text-decoration:none;display:inline-block;">
+                            <img src="https://files.catbox.moe/dzpc14.png" alt="ArcenPay" width="92" height="23" style="display:block;height:22px;width:auto;border:0;outline:none;opacity:0.85;" />
+                          </a>
+                        </td>
+
+                        <!-- Right: Clean Social Icons (X, LinkedIn, GitHub) -->
+                        <td align="right" style="vertical-align:middle;">
+                          <table cellpadding="0" cellspacing="0" role="presentation">
+                            <tr>
+                              <!-- X (Twitter) -->
+                              <td style="padding-left:14px;">
+                                <a href="https://x.com/arcenpayhq" style="display:inline-block;color:#71717a;text-decoration:none;" title="X (Twitter)">
+                                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block;color:#71717a;">
+                                    <path d="M4 4l11.733 16h4.267l-11.733 -16z"></path>
+                                    <path d="M4 20l6.768 -6.768m2.46 -2.46l6.772 -6.772"></path>
+                                  </svg>
+                                </a>
+                              </td>
+                              <!-- LinkedIn -->
+                              <td style="padding-left:14px;">
+                                <a href="https://www.linkedin.com/company/arcenpay" style="display:inline-block;color:#71717a;text-decoration:none;" title="LinkedIn">
+                                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block;color:#71717a;">
+                                    <path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"></path>
+                                    <rect x="2" y="9" width="4" height="12"></rect>
+                                    <circle cx="4" cy="4" r="2"></circle>
+                                  </svg>
+                                </a>
+                              </td>
+                              <!-- GitHub -->
+                              <td style="padding-left:14px;">
+                                <a href="https://github.com/arcenpay" style="display:inline-block;color:#71717a;text-decoration:none;" title="GitHub">
+                                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block;color:#71717a;">
+                                    <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path>
+                                  </svg>
+                                </a>
+                              </td>
+                            </tr>
+                          </table>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
   </table>
 </body>
 </html>`;

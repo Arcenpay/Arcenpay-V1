@@ -109,74 +109,108 @@ export class EmailService {
         welcome: {
           subject: `Welcome to ${this.brandName}!`,
           body: `
-          <h2>Welcome to ${this.brandName}! 🎉</h2>
-          <p>Your subscription is now active.</p>
-          <table style="border-collapse:collapse;width:100%;max-width:400px">
-            <tr><td style="padding:8px;border-bottom:1px solid #eee"><strong>Plan</strong></td><td style="padding:8px;border-bottom:1px solid #eee">${data.planTier || "Pro"}</td></tr>
-            <tr><td style="padding:8px;border-bottom:1px solid #eee"><strong>Wallet</strong></td><td style="padding:8px;border-bottom:1px solid #eee"><code>${shortAddr}</code></td></tr>
-            <tr><td style="padding:8px;border-bottom:1px solid #eee"><strong>Expires</strong></td><td style="padding:8px;border-bottom:1px solid #eee">${data.expiresAt || "N/A"}</td></tr>
-            <tr><td style="padding:8px"><strong>Token ID</strong></td><td style="padding:8px">#${data.tokenId || "—"}</td></tr>
+          <h1 style="margin:0 0 10px;font-size:22px;line-height:30px;font-weight:700;color:#0a0a0a;letter-spacing:-0.02em;">Welcome to ${this.brandName}</h1>
+          <p style="margin:0 0 20px;font-size:14px;line-height:22px;color:#3f3f46;">Your subscription is now active on-chain.</p>
+          <table style="border-collapse:collapse;width:100%;border:1px solid #e4e4e7;border-radius:10px;background:#fafafa;margin-bottom:20px;overflow:hidden;">
+            <tr><td style="padding:10px 16px;border-bottom:1px solid #e4e4e7;font-size:13px;color:#71717a;">Plan</td><td style="padding:10px 16px;border-bottom:1px solid #e4e4e7;font-size:13px;font-weight:600;color:#0a0a0a;" align="right">${data.planTier || "Pro"}</td></tr>
+            <tr><td style="padding:10px 16px;border-bottom:1px solid #e4e4e7;font-size:13px;color:#71717a;">Wallet</td><td style="padding:10px 16px;border-bottom:1px solid #e4e4e7;font-size:13px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;color:#0a0a0a;" align="right">${shortAddr}</td></tr>
+            <tr><td style="padding:10px 16px;border-bottom:1px solid #e4e4e7;font-size:13px;color:#71717a;">Expires</td><td style="padding:10px 16px;border-bottom:1px solid #e4e4e7;font-size:13px;font-weight:600;color:#0a0a0a;" align="right">${data.expiresAt || "N/A"}</td></tr>
+            <tr><td style="padding:10px 16px;font-size:13px;color:#71717a;">Token ID</td><td style="padding:10px 16px;font-size:13px;font-weight:600;color:#0a0a0a;" align="right">#${data.tokenId || "—"}</td></tr>
           </table>
-          <p style="margin-top:16px;color:#888">Transaction: <a href="${data.explorerUrl || "#"}">${data.txHash?.slice(0, 16) || ""}...</a></p>
+          <p style="margin:0;font-size:13px;color:#71717a;">Transaction: <a href="${data.explorerUrl || "#"}" style="color:#0001fd;text-decoration:underline;font-weight:600;">${data.txHash?.slice(0, 16) || ""}...</a></p>
         `,
         },
 
         renewal_receipt: {
           subject: `${this.brandName} — Subscription Renewed`,
           body: `
-          <h2>Subscription Renewed ✅</h2>
-          <p>Your subscription has been automatically renewed.</p>
-          <table style="border-collapse:collapse;width:100%;max-width:400px">
-            <tr><td style="padding:8px;border-bottom:1px solid #eee"><strong>Amount</strong></td><td style="padding:8px;border-bottom:1px solid #eee">${data.amount || "0"} USDC</td></tr>
-            <tr><td style="padding:8px;border-bottom:1px solid #eee"><strong>New Expiry</strong></td><td style="padding:8px;border-bottom:1px solid #eee">${data.expiresAt || "N/A"}</td></tr>
-            <tr><td style="padding:8px"><strong>Wallet</strong></td><td style="padding:8px"><code>${shortAddr}</code></td></tr>
+          <div style="font-size:11px;font-weight:700;color:#71717a;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:10px;">Automated Renewal</div>
+          <h1 style="margin:0 0 10px;font-size:22px;line-height:30px;font-weight:700;color:#0a0a0a;letter-spacing:-0.02em;">Subscription Renewed</h1>
+          <p style="margin:0 0 20px;font-size:14px;line-height:22px;color:#3f3f46;">Your subscription has been automatically renewed for the next billing cycle.</p>
+          <table style="border-collapse:collapse;width:100%;border:1px solid #e4e4e7;border-radius:10px;background:#fafafa;margin-bottom:20px;overflow:hidden;">
+            <tr><td style="padding:10px 16px;border-bottom:1px solid #e4e4e7;font-size:13px;color:#71717a;">Amount</td><td style="padding:10px 16px;border-bottom:1px solid #e4e4e7;font-size:13px;font-weight:700;color:#0a0a0a;" align="right">${data.amount || "0"} USDC</td></tr>
+            <tr><td style="padding:10px 16px;border-bottom:1px solid #e4e4e7;font-size:13px;color:#71717a;">New Expiry</td><td style="padding:10px 16px;border-bottom:1px solid #e4e4e7;font-size:13px;font-weight:600;color:#0a0a0a;" align="right">${data.expiresAt || "N/A"}</td></tr>
+            <tr><td style="padding:10px 16px;font-size:13px;color:#71717a;">Wallet</td><td style="padding:10px 16px;font-size:13px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;color:#0a0a0a;" align="right">${shortAddr}</td></tr>
           </table>
-          <p style="margin-top:16px;color:#888">Transaction: <a href="${data.explorerUrl || "#"}">${data.txHash?.slice(0, 16) || ""}...</a></p>
+          <p style="margin:0 0 20px;font-size:13px;color:#71717a;">Transaction: <a href="${data.explorerUrl || `https://testnet.arcscan.app/tx/${data.txHash || ""}`}" target="_blank" rel="noopener noreferrer" style="color:#0001fd;text-decoration:underline;font-weight:600;">${data.txHash?.slice(0, 16) || ""}...</a></p>
+          <div>
+            <a href="http://localhost:3000/settings/billing" target="_blank" rel="noopener noreferrer" style="display:inline-block;padding:10px 22px;background-color:#0a0a0a;color:#ffffff;border-radius:8px;font-size:13px;font-weight:600;text-decoration:none;">
+              View billing history &rarr;
+            </a>
+          </div>
         `,
         },
 
         payment_failed: {
           subject: `⚠️ ${this.brandName} — Payment Failed`,
           body: `
-          <h2>Payment Failed ⚠️</h2>
-          <p>We were unable to process your subscription renewal.</p>
-          <p><strong>Reason:</strong> ${data.reason || "Insufficient balance"}</p>
-          <p><strong>Wallet:</strong> <code>${shortAddr}</code></p>
-          <p>Please ensure your smart account has sufficient USDC balance to avoid service interruption.</p>
+          <div style="font-size:11px;font-weight:700;color:#dc2626;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:10px;">Action Required</div>
+          <h1 style="margin:0 0 10px;font-size:22px;line-height:30px;font-weight:700;color:#0a0a0a;letter-spacing:-0.02em;">Payment Failed</h1>
+          <p style="margin:0 0 20px;font-size:14px;line-height:22px;color:#3f3f46;">We were unable to process your recurring subscription renewal.</p>
+          <table style="border-collapse:collapse;width:100%;border:1px solid #e4e4e7;border-radius:10px;background:#fafafa;margin-bottom:20px;overflow:hidden;">
+            <tr><td style="padding:10px 16px;border-bottom:1px solid #e4e4e7;font-size:13px;color:#71717a;">Reason</td><td style="padding:10px 16px;border-bottom:1px solid #e4e4e7;font-size:13px;font-weight:600;color:#ef4444;" align="right">${data.reason || "Insufficient balance"}</td></tr>
+            <tr><td style="padding:10px 16px;font-size:13px;color:#71717a;">Wallet</td><td style="padding:10px 16px;font-size:13px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;color:#0a0a0a;" align="right">${shortAddr}</td></tr>
+          </table>
+          <p style="margin:0 0 20px;font-size:13px;color:#71717a;">Please top up your wallet with USDC to prevent subscription interruption.</p>
+          <div>
+            <a href="http://localhost:3000/settings/billing" target="_blank" rel="noopener noreferrer" style="display:inline-block;padding:10px 22px;background-color:#0a0a0a;color:#ffffff;border-radius:8px;font-size:13px;font-weight:600;text-decoration:none;">
+              Manage subscription &rarr;
+            </a>
+          </div>
         `,
         },
 
         subscription_expiring: {
           subject: `${this.brandName} — Subscription Expiring Soon`,
           body: `
-          <h2>Subscription Expiring Soon ⏰</h2>
-          <p>Your subscription will expire on <strong>${data.expiresAt || "soon"}</strong>.</p>
-          <p>Please ensure your wallet has sufficient balance for automatic renewal, or renew manually.</p>
-          <p><strong>Wallet:</strong> <code>${shortAddr}</code></p>
+          <h1 style="margin:0 0 10px;font-size:22px;line-height:30px;font-weight:700;color:#0a0a0a;letter-spacing:-0.02em;">Subscription Expiring Soon</h1>
+          <p style="margin:0 0 20px;font-size:14px;line-height:22px;color:#3f3f46;">Your subscription will expire on <strong style="color:#0a0a0a;">${data.expiresAt || "soon"}</strong>.</p>
+          <table style="border-collapse:collapse;width:100%;border:1px solid #e4e4e7;border-radius:10px;background:#fafafa;margin-bottom:20px;overflow:hidden;">
+            <tr><td style="padding:10px 16px;font-size:13px;color:#71717a;">Wallet</td><td style="padding:10px 16px;font-size:13px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;color:#0a0a0a;" align="right">${shortAddr}</td></tr>
+          </table>
+          <p style="margin:0 0 20px;font-size:13px;color:#71717a;">Please ensure your wallet has sufficient balance for automated renewal.</p>
+          <div>
+            <a href="http://localhost:3000/settings/billing" target="_blank" rel="noopener noreferrer" style="display:inline-block;padding:10px 22px;background-color:#0a0a0a;color:#ffffff;border-radius:8px;font-size:13px;font-weight:600;text-decoration:none;">
+              Renew subscription &rarr;
+            </a>
+          </div>
         `,
         },
 
         access_revoked: {
           subject: `${this.brandName} — Access Revoked`,
           body: `
-          <h2>Access Revoked</h2>
-          <p>Your subscription has been cancelled and access has been revoked.</p>
-          <p><strong>Token ID:</strong> #${data.tokenId || "—"}</p>
-          <p><strong>Wallet:</strong> <code>${shortAddr}</code></p>
-          <p>You can re-subscribe at any time to restore access.</p>
+          <h1 style="margin:0 0 10px;font-size:22px;line-height:30px;font-weight:700;color:#0a0a0a;letter-spacing:-0.02em;">Access Revoked</h1>
+          <p style="margin:0 0 20px;font-size:14px;line-height:22px;color:#3f3f46;">Your subscription has ended and entitlement access has been revoked.</p>
+          <table style="border-collapse:collapse;width:100%;border:1px solid #e4e4e7;border-radius:10px;background:#fafafa;margin-bottom:20px;overflow:hidden;">
+            <tr><td style="padding:10px 16px;border-bottom:1px solid #e4e4e7;font-size:13px;color:#71717a;">Token ID</td><td style="padding:10px 16px;border-bottom:1px solid #e4e4e7;font-size:13px;font-weight:600;color:#0a0a0a;" align="right">#${data.tokenId || "—"}</td></tr>
+            <tr><td style="padding:10px 16px;font-size:13px;color:#71717a;">Wallet</td><td style="padding:10px 16px;font-size:13px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;color:#0a0a0a;" align="right">${shortAddr}</td></tr>
+          </table>
+          <p style="margin:0 0 20px;font-size:13px;color:#71717a;">You can re-subscribe anytime from the platform dashboard to restore access.</p>
+          <div>
+            <a href="http://localhost:3000" target="_blank" rel="noopener noreferrer" style="display:inline-block;padding:10px 22px;background-color:#0a0a0a;color:#ffffff;border-radius:8px;font-size:13px;font-weight:600;text-decoration:none;">
+              Re-subscribe now &rarr;
+            </a>
+          </div>
         `,
         },
 
         low_session_balance: {
           subject: `⚠️ ${this.brandName} — Low Session Balance`,
           body: `
-          <h2>Low Session Balance ⚠️</h2>
-          <p>Your ZKVUB session vault balance is running low.</p>
-          <table style="border-collapse:collapse;width:100%;max-width:400px">
-            <tr><td style="padding:8px;border-bottom:1px solid #eee"><strong>Remaining</strong></td><td style="padding:8px;border-bottom:1px solid #eee">${data.remaining || "0"} USDC</td></tr>
-            <tr><td style="padding:8px"><strong>Session ID</strong></td><td style="padding:8px"><code>${data.sessionId?.slice(0, 16) || ""}...</code></td></tr>
+          <div style="font-size:11px;font-weight:700;color:#d97706;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:10px;">Low Balance Alert</div>
+          <h1 style="margin:0 0 10px;font-size:22px;line-height:30px;font-weight:700;color:#0a0a0a;letter-spacing:-0.02em;">Low Session Balance</h1>
+          <p style="margin:0 0 20px;font-size:14px;line-height:22px;color:#3f3f46;">Your ZKVUB session vault balance is running low.</p>
+          <table style="border-collapse:collapse;width:100%;border:1px solid #e4e4e7;border-radius:10px;background:#fafafa;margin-bottom:20px;overflow:hidden;">
+            <tr><td style="padding:10px 16px;border-bottom:1px solid #e4e4e7;font-size:13px;color:#71717a;">Remaining Balance</td><td style="padding:10px 16px;border-bottom:1px solid #e4e4e7;font-size:13px;font-weight:700;color:#0a0a0a;" align="right">${data.remaining || "0"} USDC</td></tr>
+            <tr><td style="padding:10px 16px;font-size:13px;color:#71717a;">Session ID</td><td style="padding:10px 16px;font-size:13px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;color:#0a0a0a;" align="right"><code>${data.sessionId?.slice(0, 16) || ""}...</code></td></tr>
           </table>
-          <p>Please deposit additional USDC to avoid service interruption.</p>
+          <p style="margin:0 0 20px;font-size:13px;color:#71717a;">Please deposit additional USDC to avoid service interruption.</p>
+          <div>
+            <a href="http://localhost:3000/settings/billing" target="_blank" rel="noopener noreferrer" style="display:inline-block;padding:10px 22px;background-color:#0a0a0a;color:#ffffff;border-radius:8px;font-size:13px;font-weight:600;text-decoration:none;">
+              Top up session vault &rarr;
+            </a>
+          </div>
         `,
         },
       };
@@ -195,15 +229,28 @@ export class EmailService {
   private wrapInLayout(body: string): string {
     return `
       <!DOCTYPE html>
-      <html>
-      <head><meta charset="utf-8"></head>
-      <body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;max-width:600px;margin:0 auto;padding:20px;color:#1a1a2e;background:#fafafa">
-        <div style="background:#fff;border-radius:12px;padding:32px;box-shadow:0 2px 8px rgba(0,0,0,0.06)">
-          ${body}
-        </div>
-        <div style="text-align:center;margin-top:24px;font-size:12px;color:#999">
-          <p>${this.brandName} — ArcenPay + ZKVUB Protocol</p>
-          <p>Powered by on-chain entitlements</p>
+      <html lang="en">
+      <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      </head>
+      <body style="font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Segoe UI',Roboto,sans-serif;-webkit-font-smoothing:antialiased;max-width:560px;margin:0 auto;padding:40px 16px;color:#0a0a0a;background:#fafafa;">
+        <div style="background:#ffffff;border:1px solid #e4e4e7;border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.04);">
+          <!-- Header -->
+          <div style="padding:28px 36px 20px 36px;background:#ffffff;">
+            <img src="https://files.catbox.moe/dzpc14.png" alt="${this.brandName}" width="138" height="34" style="display:block;height:32px;width:auto;border:0;outline:none;" />
+          </div>
+          <!-- Divider -->
+          <div style="height:1px;background-color:#f4f4f5;line-height:1px;">&nbsp;</div>
+          <!-- Content -->
+          <div style="padding:28px 36px 32px 36px;background:#ffffff;">
+            ${body}
+          </div>
+          <!-- Footer -->
+          <div style="padding:20px 36px 28px 36px;background:#fafafa;border-top:1px solid #f4f4f5;text-align:center;font-size:12px;color:#71717a;">
+            <p style="margin:0 0 6px 0;">${this.brandName} &middot; Powered by ArcenPay Protocol</p>
+            <p style="margin:0;font-size:11px;color:#a1a1aa;">&copy; 2026 ArcenPay Protocol. All rights reserved.</p>
+          </div>
         </div>
       </body>
       </html>
