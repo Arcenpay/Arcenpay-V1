@@ -27,6 +27,7 @@ export default function Dashboard({ onResetComponent }: { onResetComponent?: () 
 
   const doIdentify = useCallback(async (address: string, type: 'evm' | 'stellar') => {
     setConnectionStatus('identifying')
+    setWalletType(type)
     try {
       await identify({
         company: { wallet: address, name: 'Demo User' },
@@ -195,6 +196,22 @@ export default function Dashboard({ onResetComponent }: { onResetComponent?: () 
               ))}
             </div>
           )}
+        </section>
+
+        <section style={styles.section}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+            <h2 style={styles.sectionTitle}>Feature Flags</h2>
+            <span style={{ fontSize: 12, color: '#64748b' }}>useFlag(&apos;aifetures&apos;)</span>
+          </div>
+          <div style={{
+            padding: '10px 14px', borderRadius: 8, fontSize: 13,
+            background: hasAiFeatures ? '#f0fdf4' : '#f8fafc',
+            border: `1px solid ${hasAiFeatures ? '#22c55e' : '#e2e8f0'}`,
+            display: 'inline-flex', alignItems: 'center', gap: 8,
+          }}>
+            <span>{hasAiFeatures ? '🚀' : '🔒'}</span>
+            <span style={{ fontWeight: 600 }}>AI Features ({hasAiFeatures ? 'Enabled' : 'Disabled'})</span>
+          </div>
         </section>
 
         <section id="billing-section" style={styles.section}>
