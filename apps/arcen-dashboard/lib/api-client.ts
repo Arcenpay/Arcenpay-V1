@@ -1,4 +1,4 @@
-import { BACKEND_URL } from "@/lib/config";
+import { BACKEND_URL, resolveClientBackendUrl } from "@/lib/config";
 
 const AUTH_DEBUG_PREFIX = "[DEBUG-auth-20260907]";
 
@@ -7,7 +7,9 @@ function backendPath(path: string): string {
   const versionedPath = normalizedPath.startsWith("/api/v1/")
     ? normalizedPath
     : normalizedPath.replace(/^\/api\//, "/api/v1/");
-  return `${BACKEND_URL.replace(/\/$/, "")}${versionedPath}`;
+  const base =
+    typeof window !== "undefined" ? resolveClientBackendUrl() : BACKEND_URL;
+  return `${base.replace(/\/$/, "")}${versionedPath}`;
 }
 
 export function apiFetch(

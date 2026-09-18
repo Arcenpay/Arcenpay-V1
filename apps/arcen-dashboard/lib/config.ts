@@ -92,6 +92,26 @@ export const BACKEND_URL: string = (() => {
   return "http://localhost:3300";
 })();
 
+/**
+ * Resolves the backend base URL dynamically on the client.
+ * If accessed on mobile via LAN IP (e.g. 192.168.1.x:3000), dynamically
+ * maps localhost:3300 to the host's IP at port 3300 so requests succeed.
+ */
+export function resolveClientBackendUrl(): string {
+  if (typeof window !== "undefined") {
+    const envUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
+    if (envUrl && !envUrl.includes("localhost") && !envUrl.includes("127.0.0.1")) {
+      return envUrl;
+    }
+    const currentHost = window.location.hostname;
+    if (currentHost && currentHost !== "localhost" && currentHost !== "127.0.0.1") {
+      const protocol = window.location.protocol;
+      return `${protocol}//${currentHost}:3300`;
+    }
+  }
+  return BACKEND_URL;
+}
+
 // ── Subgraph ──────────────────────────────────────────────────────────────────
 
 /**
