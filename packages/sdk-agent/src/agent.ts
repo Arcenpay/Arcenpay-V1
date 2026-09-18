@@ -294,6 +294,19 @@ function formatUsdc(atomic: bigint): string {
   }
 }
 
+function formatRequestAmount(raw: string): string {
+  if (!raw) return "$0.00 USDC";
+  const trimmed = String(raw).trim();
+  if (trimmed.includes(".")) {
+    return `$${trimmed} USDC`;
+  }
+  try {
+    return formatUsdc(BigInt(trimmed));
+  } catch {
+    return `$${trimmed} USDC`;
+  }
+}
+
 async function sleep(ms: number): Promise<void> {
   return new Promise((r) => setTimeout(r, ms));
 }
@@ -1116,7 +1129,7 @@ export class ArcenAgent {
     const requests: TopUpRequest[] = [];
 
     for (const provider of enabled) {
-      const requestId = `topup_${Date.now()}_${randomUUID()}`;
+      const requestId = `topup_${Date.now()}_${randomUUID().replace(/-/g, '').slice(0, 8)}`;
       const target = provider.botToken
         ? `${provider.chatId}` : provider.webhookUrl
         ? provider.webhookUrl : provider.email ?? 'unknown';
@@ -1214,7 +1227,7 @@ export class ArcenAgent {
         }
         const message = `🔔 **ArcenPay Agent Top-Up Request**\n` +
           `Agent: \`${request.agentAddress}\`\n` +
-          `Amount: ${formatUsdc(BigInt(request.amount))}\n` +
+          `Amount: ${formatRequestAmount(request.amount)}\n` +
           `Reason: ${request.reason}\n` +
           `Request ID: \`${request.id}\`\n` +
           `Approve with: \`/arcenpay approve ${request.id}\`\n` +
@@ -1234,7 +1247,7 @@ export class ArcenAgent {
         }
         const message = `*ArcenPay Agent Top-Up Request*\n` +
           `Agent: \`${request.agentAddress}\`\n` +
-          `Amount: ${formatUsdc(BigInt(request.amount))}\n` +
+          `Amount: ${formatRequestAmount(request.amount)}\n` +
           `Reason: ${request.reason}\n` +
           `Request ID: \`${request.id}\``;
 
@@ -1262,7 +1275,7 @@ export class ArcenAgent {
     const shortAddr = `${request.agentAddress.slice(0, 6)}…${request.agentAddress.slice(-4)}`;
     return `<b>💰 ArcenPay Agent — Top-Up Request</b>\n\n` +
       `<b>Agent:</b> <code>${shortAddr}</code>\n` +
-      `<b>Amount:</b> ${formatUsdc(BigInt(request.amount))}\n` +
+      `<b>Amount:</b> ${formatRequestAmount(request.amount)}\n` +
       `<b>Reason:</b> ${request.reason}\n` +
       `<b>Request ID:</b> <code>${request.id}</code>\n\n` +
       `<i>Tap one of the buttons below:</i>`;
