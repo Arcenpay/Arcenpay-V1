@@ -141,7 +141,7 @@ type SessionsPayload = {
 };
 
 export function SessionsSection() {
-  const { isConnected } = useAccount();
+  const { isConnected, address: userAddress } = useAccount();
   const { envMode, activeEnvironment, isLoading: envLoading } = useEnvironment();
   const configuredChainId = activeEnvironment?.chainId ?? resolveEnvironmentChainId(envMode);
   const environmentKey = activeEnvironment?.id ?? envMode;
@@ -156,6 +156,7 @@ export function SessionsSection() {
   const [payload, setPayload] = useState<SessionsPayload | null>(null);
   const [sessionsLoading, setSessionsLoading] = useState(true);
   const [sessionsError, setSessionsError] = useState<string | null>(null);
+  const [agentWalletAddress, setAgentWalletAddress] = useState<string | null>(null);
 
   // Deposit dialog state
   const [showDepositDialog, setShowDepositDialog] = useState(false);
@@ -180,9 +181,20 @@ export function SessionsSection() {
         chainId: String(effectiveChainId),
         environmentMode: envMode,
       });
-      const res = await apiFetch(`/api/platform/sessions?${params.toString()}`, {
-        cache: "no-store",
-      });
+
+      // Fetch sessions and agent permissions in parallel
+      const [res, agentRes] = await Promise.all([
+        apiFetch(`/api/platform/sessions?${params.toString()}`, { cache: "no-store" }),
+        apiFetch("/api/v1/agent/permissions").catch(() => null),
+      ]);
+
+      if (agentRes && agentRes.ok) {
+        const agentData = await agentRes.json().catch(() => null);
+        if (agentData?.data?.agentWalletAddress) {
+          setAgentWalletAddress(agentData.data.agentWalletAddress);
+        }
+      }
+
       if (!res.ok) {
         const msg = `Failed to load sessions (${res.status})`;
         setSessionsError(msg);
@@ -197,7 +209,7 @@ export function SessionsSection() {
     } finally {
       setSessionsLoading(false);
     }
-  }, [mounted, envLoading, effectiveChainId, envMode, environmentKey]);
+  }, [mounted, envLoading, effectiveChainId, envMode]);
 
   useEffect(() => {
     if (!mounted || envLoading) return;
@@ -538,7 +550,10 @@ export function SessionsSection() {
             <thead>
               <tr className="border-b border-border bg-secondary/50">
                 <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                  Agent Address
+                  Session ID
+                </th>
+                <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                  Agent / Depositor
                 </th>
                 <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                   Vault Balance
@@ -555,14 +570,17 @@ export function SessionsSection() {
             <tbody>
               {sessionsLoading && (
                 <tr>
-                  <td colSpan={5}>
-                    <SkeletonTable rows={3} cols={5} />
+                  <td colSpan={6}>
+                    <SkeletonTable rows={3} cols={6} />
                   </td>
                 </tr>
               )}
               {!sessionsLoading &&
                 sessions.map((session, index) => {
                   const lastSettlement = session.settlements?.[0];
+                  const isUser = userAddress && session.agent.toLowerCase() === userAddress.toLowerCase();
+                  const isAgent = agentWalletAddress && session.agent.toLowerCase() === agentWalletAddress.toLowerCase();
+
                   return (
                     <tr
                       key={session.id}
@@ -570,9 +588,39 @@ export function SessionsSection() {
                       style={{ animationDelay: `${index * 40}ms` }}
                     >
                       <td className="py-3 px-4">
-                        <code className="text-xs font-mono text-foreground">
-                          {truncateAddress(session.agent)}
-                        </code>
+                        <div className="flex items-center gap-1.5">
+                          <code className="text-xs font-mono text-foreground font-medium">
+                            {truncateAddress(session.id, 8, 6)}
+                          </code>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              navigator.clipboard.writeText(session.id);
+                              toast.success("Session ID copied");
+                            }}
+                            className="text-muted-foreground hover:text-foreground p-0.5 rounded transition-colors"
+                            title="Copy Session ID"
+                          >
+                            <Copy className="w-3 h-3" />
+                          </button>
+                        </div>
+                      </td>
+                      <td className="py-3 px-4">
+                        <div className="flex items-center gap-2">
+                          <code className="text-xs font-mono text-foreground">
+                            {truncateAddress(session.agent)}
+                          </code>
+                          {isUser && (
+                            <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20 font-medium">
+                              Your Wallet
+                            </Badge>
+                          )}
+                          {isAgent && (
+                            <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 font-medium">
+                              Configured Agent
+                            </Badge>
+                          )}
+                        </div>
                       </td>
                       <td className="py-3 px-4">
                         <span className="text-sm font-medium text-foreground">
@@ -895,13 +943,24 @@ export function SessionsSection() {
       <Dialog open={showDepositDialog} onOpenChange={setShowDepositDialog}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle>Fund Agent Session</DialogTitle>
+            <DialogTitle>Fund Session Vault</DialogTitle>
             <DialogDescription>
-              Deposit USDC to a new SessionVault session. The agent uses this
-              balance to pay for API calls via x402.
+              Pre-fund USDC into a SessionVault contract for off-chain x402 micropayments with ZK-batch settlement.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
+            <div className="p-2.5 rounded-lg bg-secondary/50 border border-border text-xs space-y-1">
+              <span className="text-muted-foreground">Session Owner on Ledger:</span>
+              <div className="flex items-center gap-1.5 font-mono font-medium text-foreground">
+                <span>{isStellar ? (stellar.address ? truncateAddress(stellar.address) : "Not connected") : (userAddress ? truncateAddress(userAddress) : "Not connected")}</span>
+                <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20">
+                  Your Connected Wallet
+                </Badge>
+              </div>
+              <p className="text-[11px] text-muted-foreground pt-0.5 leading-relaxed">
+                Note: The session is credited to the depositing wallet. For your autonomous AI agent to own its own session, fund the agent wallet via Direct Transfer and call <code className="font-mono text-foreground">agent.fundSession()</code> programmatically.
+              </p>
+            </div>
             <div className="space-y-2">
               <Label htmlFor="depositAmount">Amount (USDC)</Label>
               <div className="relative">

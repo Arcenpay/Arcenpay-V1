@@ -2242,6 +2242,31 @@ function PermissionsTab() {
             </div>
           )}
 
+          {/* Mode Guidance Callout */}
+          {!isStellar && (
+            fundingMode === "direct" ? (
+              <div className="p-3 rounded-lg bg-blue-500/5 border border-blue-500/20 text-xs flex items-start gap-2.5">
+                <ArrowRightLeft className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
+                <div className="space-y-0.5">
+                  <p className="font-semibold text-foreground">Direct Transfer (Recommended for Agent Payments & MCP)</p>
+                  <p className="text-muted-foreground leading-relaxed">
+                    Sends USDC directly to your AI agent&apos;s wallet (<code className="font-mono text-foreground font-medium">{agentWallet ? `${agentWallet.slice(0, 6)}…${agentWallet.slice(-4)}` : "agent"}</code>). Your agent directly controls these funds to pay payment links, purchase datasets, and make autonomous transactions.
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="p-3 rounded-lg bg-amber-500/5 border border-amber-500/20 text-xs flex items-start gap-2.5">
+                <Shield className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                <div className="space-y-0.5">
+                  <p className="font-semibold text-foreground">Session Vault (ZKVUB Micropayment Batching)</p>
+                  <p className="text-muted-foreground leading-relaxed">
+                    Pre-funds an on-chain session for high-frequency x402 API calls. <span className="font-medium text-foreground">Note:</span> Deposits from your browser wallet register your connected address (<code className="font-mono text-foreground font-medium">{userWallet ? `${userWallet.slice(0, 6)}…${userWallet.slice(-4)}` : "wallet"}</code>) as the session owner on-chain. To have your agent own its own session, use Direct Transfer to fund the agent wallet first and call <code className="font-mono text-foreground">agent.fundSession()</code>.
+                  </p>
+                </div>
+              </div>
+            )
+          )}
+
           {/* Amount Input and Presets */}
           <div className="space-y-2 pt-1">
             <div className="flex items-center justify-between">
