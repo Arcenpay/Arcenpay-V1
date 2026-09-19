@@ -4,7 +4,9 @@
  *   Secret keys      sk_live_… / sk_test_…   → server-side (Node SDK)
  *   Publishable keys pk_live_… / pk_test_…   → browser-safe (React SDK)
  *   Restricted keys  rk_live_… / rk_test_…   → limited server-side keys
- *   Legacy keys      api_…                   → accepted for backward compat
+ *
+ * The legacy `api_…` prefix is REMOVED. It is no longer accepted anywhere.
+ * Any old `api_…` key must be regenerated as `sk_`/`pk_`/`rk_`.
  *
  * Keys are stored as SHA-256 hashes — never plaintext. The raw value is
  * shown once at creation. PUBLISHABLE keys only ever unlock client-safe
@@ -41,12 +43,51 @@ export const KEY_TYPE_PREFIXES: Record<
 };
 
 export const TEMP_TOKEN_PREFIX = "arc_tok_";
-const LEGACY_PREFIX = "api_";
 
-const ALLOWED_KEY_PREFIXES = new Set<string>([
+export const ALLOWED_KEY_PREFIXES = new Set<string>([
   ...Object.values(KEY_TYPE_PREFIXES).flatMap((entry) => [entry.live, entry.test]),
-  LEGACY_PREFIX,
 ]);
+
+/**
+ * Returns true when `value` looks like a platform credential token.
+ *
+ * Handles both a raw token (`sk_live_…`, `pk_live_…`, `rk_…`) and a full
+ * `Authorization` header value (`"Bearer sk_live_…"`).
+ *
+ * This is the single source of truth for "is this an API key?" used by every
+ * route/auth path in the app. DO NOT reimplement prefix checks (e.g.
+ * `startsWith("api_")`) locally — that misses the Stripe-style sk_/pk_/rk_
+ * credentials and was the cause of production auth failures.
+ */
+export function isApiKeyToken(value: string | null | undefined): boolean {
+  if (!value) return false;
+  const trimmed = value.trim();
+  if (trimmed.startsWith("Bearer ")) {
+    return Array.from(ALLOWED_KEY_PREFIXES).some((prefix) =>
+      trimmed.slice(7).trimStart().startsWith(prefix),
+    );
+  }
+  return Array.from(ALLOWED_KEY_PREFIXES).some((prefix) =>
+    trimmed.startsWith(prefix),
+  );
+}
+
+/**
+ * Normalizes an `Authorization`/`x-api-key` header value into the raw API key,
+ * or returns `null` when it does not look like one of our credential tokens.
+ * Also drives the public `extractBearerToken` behavior.
+ */
+export function normalizeApiKeyAuth(
+  auth: string | null | undefined,
+): string | null {
+  if (!auth) return null;
+  if (auth.startsWith("Bearer ")) {
+    const token = auth.slice(7).trim();
+    return isApiKeyToken(token) ? token : null;
+  }
+  const trimmed = auth.trim();
+  return isApiKeyToken(trimmed) ? trimmed : null;
+}
 
 export const API_PERMISSIONS = [
   "entitlements.read",
@@ -56,6 +97,9 @@ export const API_PERMISSIONS = [
   "payments.write",
   "subscriptions.write",
   "tokens.create",
+  "invoices.read",
+  "invoices.write",
+  "invoices.send",
 ] as const;
 
 export type ApiPermission = (typeof API_PERMISSIONS)[number];
@@ -111,15 +155,7 @@ export function generateTemporaryAccessToken(): {
 function extractBearerToken(request: Request): string | null {
   const auth =
     request.headers.get("authorization") ?? request.headers.get("x-api-key");
-  if (!auth) return null;
-  if (auth.startsWith("Bearer ")) {
-    return auth.slice(7).trim();
-  }
-  const trimmed = auth.trim();
-  for (const prefix of ALLOWED_KEY_PREFIXES) {
-    if (trimmed.startsWith(prefix)) return trimmed;
-  }
-  return null;
+  return normalizeApiKeyAuth(auth);
 }
 
 /** Per-API-key rate limit — LIVE in production, DRY_RUN in development */

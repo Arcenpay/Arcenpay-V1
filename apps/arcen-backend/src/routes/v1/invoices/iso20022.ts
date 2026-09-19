@@ -1,10 +1,10 @@
 import type { Context } from "hono";
-import { requirePermission, isErrorResponse } from "../../../lib/auth/api-auth.js";
+import { requireInvoiceAuth, isInvoiceAuthError } from "../../../lib/auth/invoice-auth.js";
 import { generateInvoiceIso20022 } from "../../../lib/billing/invoice-iso20022.js";
 
 export async function GET(c: Context): Promise<Response> {
-  const auth = await requirePermission(c, "invoices:read");
-  if (isErrorResponse(auth)) {
+  const auth = await requireInvoiceAuth(c, { rolePermission: "invoices:read", apiPermission: "read" });
+  if (isInvoiceAuthError(auth)) {
     return c.json(
       { ok: false, error: auth.error },
       auth.status as any as any,
@@ -13,7 +13,7 @@ export async function GET(c: Context): Promise<Response> {
 
   const id = c.req.param("id");
   try {
-    const exportFile = await generateInvoiceIso20022(auth.team.teamId, id!);
+    const exportFile = await generateInvoiceIso20022(auth.teamId, id!);
     return new Response(exportFile.xml, {
       status: 200,
       headers: {

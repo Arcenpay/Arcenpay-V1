@@ -1,5 +1,5 @@
 import type { Context } from "hono";
-import { requireApiKey, isApiKeyError } from "../../lib/auth/api-key-auth.js";
+import { requireApiKey, isApiKeyError, isApiKeyToken } from "../../lib/auth/api-key-auth.js";
 import { resolveEmbedAccessToken } from "../../lib/entitlements/embed-access-token.js";
 import { type CompanyKeys, type UserKeys } from "../../lib/entitlements/flag-engine.js";
 import {
@@ -85,7 +85,7 @@ export async function POST(c: Context) {
   let companyKeys: CompanyKeys;
   let userKeys: UserKeys | undefined;
 
-  if (bearerToken.startsWith("api_")) {
+  if (isApiKeyToken(bearerToken)) {
     const ctx = await requireApiKey(c.req.raw, {
       rateLimit: { limit: 500, windowMs: 60_000 },
     });

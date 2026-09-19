@@ -1,15 +1,15 @@
 import type { Context } from "hono";
-import { requirePermission, isErrorResponse } from "../../../lib/auth/api-auth.js";
+import { requireInvoiceAuth, isInvoiceAuthError } from "../../../lib/auth/invoice-auth.js";
 import { getInvoicePdfDownloadUrl } from "../../../lib/billing/invoice-documents.js";
 
 export async function GET(c: Context) {
-  const auth = await requirePermission(c, "invoices:read");
-  if (isErrorResponse(auth)) return c.json({ ok: false, error: auth.error }, auth.status as any as any);
+  const auth = await requireInvoiceAuth(c, { rolePermission: "invoices:read", apiPermission: "read" });
+  if (isInvoiceAuthError(auth)) return c.json({ ok: false, error: auth.error }, auth.status as any as any);
 
   const id = c.req.param("id");
   try {
     const { downloadUrl } = await getInvoicePdfDownloadUrl({
-      teamId: auth.team.teamId,
+      teamId: auth.teamId,
       invoiceId: id!,
       kind: "invoice",
     });

@@ -2,7 +2,7 @@ import type { Context } from "hono";
 import { randomBytes } from "node:crypto";
 import { z } from "zod";
 import { db } from "../../../db.js";
-import { requirePermission, isErrorResponse } from "../../../lib/auth/api-auth.js";
+import { requireInvoiceAuth, isInvoiceAuthError } from "../../../lib/auth/invoice-auth.js";
 import { writeAuditEvent } from "../../../lib/platform/audit.js";
 import { toPrismaNullableJson } from "../../../utils/prisma-json.js";
 import { sendCreditNoteEmail } from "../../../lib/billing/email.js";
@@ -21,12 +21,12 @@ const createSchema = z.object({
 });
 
 export async function GET(c: Context) {
-  const auth = await requirePermission(c, "invoices:read");
-  if (isErrorResponse(auth)) return c.json({ ok: false, error: auth.error }, auth.status as any as any);
+  const auth = await requireInvoiceAuth(c, { rolePermission: "invoices:read", apiPermission: "read" });
+  if (isInvoiceAuthError(auth)) return c.json({ ok: false, error: auth.error }, auth.status as any as any);
 
   const id = c.req.param("id");
   const invoice = await db.invoice.findFirst({
-    where: { id, teamId: auth.team.teamId },
+    where: { id, teamId: auth.teamId },
     select: { id: true },
   });
 
@@ -43,8 +43,8 @@ export async function GET(c: Context) {
 }
 
 export async function POST(c: Context) {
-  const auth = await requirePermission(c, "invoices:write");
-  if (isErrorResponse(auth)) return c.json({ ok: false, error: auth.error }, auth.status as any as any);
+  const auth = await requireInvoiceAuth(c, { rolePermission: "invoices:write", apiPermission: "write" });
+  if (isInvoiceAuthError(auth)) return c.json({ ok: false, error: auth.error }, auth.status as any as any);
 
   const id = c.req.param("id");
 
@@ -55,7 +55,7 @@ export async function POST(c: Context) {
   }
 
   const invoice = await db.invoice.findFirst({
-    where: { id, teamId: auth.team.teamId },
+    where: { id, teamId: auth.teamId },
     include: {
       creditNotes: { select: { amount: true } },
       payments: {
@@ -107,7 +107,7 @@ export async function POST(c: Context) {
 
   if (invoice.status === "PAID" && invoice.customerWallet) {
     await postBillingCredit({
-      teamId: auth.team.teamId,
+      teamId: auth.teamId,
       walletAddress: invoice.customerWallet,
       amount: parsed.data.amount,
       metadata: {
@@ -120,7 +120,7 @@ export async function POST(c: Context) {
 
     const company = await db.arcenCompany.findFirst({
       where: {
-        teamId: auth.team.teamId,
+        teamId: auth.teamId,
         walletAddress: invoice.customerWallet.toLowerCase(),
       },
       select: {
@@ -131,7 +131,7 @@ export async function POST(c: Context) {
 
     if (company) {
       await recordBillingAdjustment({
-        teamId: auth.team.teamId,
+        teamId: auth.teamId,
         companyId: company.id,
         subscriptionStateId: company.subscriptionState?.id ?? null,
         paymentId: invoice.payments[0]?.id ?? null,
@@ -153,9 +153,9 @@ export async function POST(c: Context) {
 
   await writeAuditEvent({
     headers: { get: (name: string) => c.req.header(name) },
-    teamId: auth.team.teamId,
-    userId: auth.team.userId,
-    walletAddress: auth.team.walletAddress,
+    teamId: auth.teamId,
+    userId: auth.userId ?? undefined,
+    walletAddress: auth.walletAddress ?? undefined,
     action: "invoice.creditnote.create",
     resourceType: "CreditNote",
     resourceId: creditNote.id,

@@ -237,7 +237,7 @@ export function EventsStreamSection() {
         <p className="text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wider">Quick Reference</p>
         <pre className="text-xs text-muted-foreground overflow-x-auto leading-relaxed">
 {`POST /api/v1/events
-Authorization: Bearer api_xxx
+Authorization: Bearer sk_live_xxxxxxxx
 {
   "event_type": "track",
   "name": "scan"

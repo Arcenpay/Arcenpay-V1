@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 import { ArcenClient } from "../client";
 
 const BASE_URL = "http://localhost";
-const API_KEY = "api_testkey123";
+const API_KEY = "sk_test_5gcUPXPtLwdoO4afZZwce8HPZiBgpBVgAKKwN8cqe74";
 
 const mockFetch = vi.fn();
 vi.stubGlobal("fetch", mockFetch);

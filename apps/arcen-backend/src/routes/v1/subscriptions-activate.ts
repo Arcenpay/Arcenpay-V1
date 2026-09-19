@@ -4,7 +4,7 @@
  * Prepare or confirm the first authorized on-chain subscription activation.
  *
  * Auth:
- *   - Bearer api_xxx (recommended for provider backends)
+ *   - Bearer sk_/pk_/rk_ (recommended for provider backends)
  *   - Dashboard session cookie
  *
  * Body:
@@ -49,6 +49,7 @@ import {
   requireAnyAuth,
   isAnyAuthError,
 } from "../../lib/auth/require-any-auth.js";
+import { isApiKeyToken } from "../../lib/auth/api-key-auth.js";
 import {
   resolveCompany,
   type CompanyKeys,
@@ -723,7 +724,7 @@ export async function POST(c: Context) {
   let sessionDefaults: Awaited<
     ReturnType<typeof resolveDashboardSessionIdentityDefaults>
   > | null = null;
-  if (bearerToken && !bearerToken.startsWith("api_")) {
+  if (bearerToken && !isApiKeyToken(bearerToken)) {
     embedTokenContext = await resolveEmbedAccessToken(bearerToken);
     if (!embedTokenContext) {
       return c.json(

@@ -3,7 +3,7 @@
  * POST   /api/v1/companies/:id/overrides   — Set/update an override
  * DELETE /api/v1/companies/:id/overrides   — Remove an override (by featureKey query param)
  *
- * Authorization: Bearer api_xxx
+ * Authorization: Bearer sk_/pk_/rk_
  */
 
 import type { Context } from "hono";

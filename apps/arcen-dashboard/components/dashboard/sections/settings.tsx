@@ -2285,7 +2285,7 @@ export function SettingsSection() {
               <p className="text-xs text-muted-foreground mt-0.5">
                 Use these keys to authenticate your server-side SDK and backend API calls to ArcenPay —
                 feature flag checks, event tracking, company management, usage queries, and access token generation.
-                Pass as <code className="text-foreground">Authorization: Bearer api_…</code> on all{" "}
+                Pass as <code className="text-foreground">Authorization: Bearer sk_/pk_/rk_…</code> on all{" "}
                 <code className="text-foreground">/api/v1/*</code> endpoints. Keys are shown only once on creation.{" "}
                 <span className="text-foreground font-medium">For webhook verification</span>, use the signing
                 secret from <strong>Connections → Webhooks</strong>.

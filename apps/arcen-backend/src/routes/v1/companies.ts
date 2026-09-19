@@ -2,7 +2,7 @@
  * GET  /api/v1/companies   — List companies (paginated)
  * POST /api/v1/companies   — Create a company
  *
- * Authorization: Bearer api_xxx
+ * Authorization: Bearer sk_/pk_/rk_
  */
 
 import type { Context } from "hono";

@@ -1,6 +1,6 @@
 import type { Context } from "hono";
 import { db } from "../../../db.js";
-import { requirePermission, isErrorResponse } from "../../../lib/auth/api-auth.js";
+import { requireInvoiceAuth, isInvoiceAuthError } from "../../../lib/auth/invoice-auth.js";
 import { ensureInvoicePdfForTeam } from "../../../lib/billing/invoice-documents.js";
 import { writeAuditEvent } from "../../../lib/platform/audit.js";
 import { deliverWebhook } from "../../../lib/webhooks/deliver-webhook.js";
@@ -14,12 +14,12 @@ import {
 } from "../../../lib/payments/onchain-payment-verification.js";
 
 export async function GET(c: Context) {
-  const auth = await requirePermission(c, "invoices:read");
-  if (isErrorResponse(auth)) return c.json({ ok: false, error: auth.error }, auth.status as any as any);
+  const auth = await requireInvoiceAuth(c, { rolePermission: "invoices:read", apiPermission: "read" });
+  if (isInvoiceAuthError(auth)) return c.json({ ok: false, error: auth.error }, auth.status as any as any);
 
   const id = c.req.param("id");
   const invoice = await db.invoice.findFirst({
-    where: { id, teamId: auth.team.teamId },
+    where: { id, teamId: auth.teamId },
     include: {
       lineItems: true,
       deliveries: { orderBy: { createdAt: "desc" } },
@@ -33,7 +33,7 @@ export async function GET(c: Context) {
   }
 
   const { downloadUrl } = await ensureInvoicePdfForTeam(
-    auth.team.teamId,
+    auth.teamId,
     invoice.id,
   );
   const requestUrl = new URL(c.req.url);
@@ -65,8 +65,8 @@ const patchSchema = z.object({
 });
 
 export async function PATCH(c: Context) {
-  const auth = await requirePermission(c, "invoices:write");
-  if (isErrorResponse(auth)) return c.json({ ok: false, error: auth.error }, auth.status as any as any);
+  const auth = await requireInvoiceAuth(c, { rolePermission: "invoices:write", apiPermission: "write" });
+  if (isInvoiceAuthError(auth)) return c.json({ ok: false, error: auth.error }, auth.status as any as any);
 
   const id = c.req.param("id");
 
@@ -77,7 +77,7 @@ export async function PATCH(c: Context) {
   }
 
   const invoice = await db.invoice.findFirst({
-    where: { id, teamId: auth.team.teamId },
+    where: { id, teamId: auth.teamId },
   });
 
   if (!invoice) {
@@ -110,7 +110,7 @@ export async function PATCH(c: Context) {
     }
 
     const owner = await db.teamMember.findFirst({
-      where: { teamId: auth.team.teamId, role: "OWNER" },
+      where: { teamId: auth.teamId, role: "OWNER" },
       select: { user: { select: { walletAddress: true } } },
     });
     const providerWallet = owner?.user?.walletAddress?.toLowerCase();
@@ -123,7 +123,7 @@ export async function PATCH(c: Context) {
 
     const plan = invoice.planId
       ? await db.catalogPlan.findFirst({
-          where: { id: invoice.planId, teamId: auth.team.teamId },
+          where: { id: invoice.planId, teamId: auth.teamId },
           select: { acceptedToken: true },
         })
       : null;
@@ -191,7 +191,7 @@ export async function PATCH(c: Context) {
   if (verifiedPaymentProof) {
     await recordSuccessfulPayment({
       idempotencyKey: `payment:invoice.paid:${invoice.id}:${verifiedPaymentProof.txHash}`,
-      teamId: auth.team.teamId,
+      teamId: auth.teamId,
       walletAddress: invoice.customerWallet,
       invoiceId: invoice.id,
       kind: "MANUAL_INVOICE_PAYMENT",
@@ -213,9 +213,9 @@ export async function PATCH(c: Context) {
 
   await writeAuditEvent({
     headers: { get: (name: string) => c.req.header(name) },
-    teamId: auth.team.teamId,
-    userId: auth.team.userId,
-    walletAddress: auth.team.walletAddress,
+    teamId: auth.teamId,
+    userId: auth.userId ?? undefined,
+    walletAddress: auth.walletAddress ?? undefined,
     action: `invoice.status.${parsed.data.status.toLowerCase()}`,
     resourceType: "Invoice",
     resourceId: invoice.id,
@@ -229,12 +229,12 @@ export async function PATCH(c: Context) {
 
   if (parsed.data.status === "PAID") {
     await sendPaidInvoiceReceipt({
-      teamId: auth.team.teamId,
+      teamId: auth.teamId,
       invoiceId: updated.id,
       txHash: verifiedPaymentProof?.txHash ?? null,
     }).catch(() => {});
 
-    deliverWebhook(auth.team.teamId, "invoice.paid", {
+    deliverWebhook(auth.teamId, "invoice.paid", {
       invoiceId: updated.id,
       invoiceNumber: updated.number,
       customerEmail: updated.customerEmail,

@@ -8,6 +8,7 @@
 import type { Context } from "hono";
 import { z } from "zod";
 import { requireAnyAuth, isAnyAuthError } from "../../lib/auth/require-any-auth.js";
+import { isApiKeyToken } from "../../lib/auth/api-key-auth.js";
 import { resolveEmbedAccessToken } from "../../lib/entitlements/embed-access-token.js";
 import {
   normalizeBillingPeriod,
@@ -32,7 +33,7 @@ async function resolveRequestTeamId(
     ? authHeader.slice(7)
     : "";
 
-  if (bearerToken && !bearerToken.startsWith("api_")) {
+  if (bearerToken && !isApiKeyToken(bearerToken)) {
     const embedToken = await resolveEmbedAccessToken(bearerToken);
     if (!embedToken?.teamId) {
       return c.json(

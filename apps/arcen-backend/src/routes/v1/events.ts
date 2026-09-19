@@ -5,11 +5,12 @@
  * ArcenPay-compatible event ingestion.
  * Supports "track" (usage) and "identify" (company/user upsert) events.
  *
- * Authorization: Bearer api_xxx
+ * Authorization: Bearer sk_/pk_/rk_
  */
 
 import type { Context } from "hono";
 import { requireAnyAuth, isAnyAuthError } from "../../lib/auth/require-any-auth.js";
+import { isApiKeyToken } from "../../lib/auth/api-key-auth.js";
 import { deliverWebhook } from "../../lib/webhooks/deliver-webhook.js";
 import { requirePermission, isErrorResponse } from "../../lib/auth/api-auth.js";
 import { db } from "../../db.js";
@@ -344,7 +345,7 @@ export async function POST(c: Context) {
       activeEnvironmentId?: string | null;
     };
 
-  if (bearerToken && !bearerToken.startsWith("api_")) {
+  if (bearerToken && !isApiKeyToken(bearerToken)) {
     const accessToken = await resolveEmbedAccessToken(bearerToken);
     if (!accessToken) {
       return jsonWithCors(c, { error: "Invalid or expired token" }, 401);

@@ -19,6 +19,8 @@ import {
   generateTemporaryAccessToken,
   hashApiKey,
   requireApiKey,
+  isApiKeyToken,
+  normalizeApiKeyAuth,
   API_PERMISSIONS,
 } from "../../../src/lib/auth/api-key-auth.js";
 import { resolveEmbedAccessToken } from "../../../src/lib/entitlements/embed-access-token.js";
@@ -161,5 +163,43 @@ describe("Stripe-style API keys", () => {
     // Missing/expired row -> null
     mockDb.embedAccessToken.findFirst.mockResolvedValueOnce(null);
     expect(await resolveEmbedAccessToken(tk.raw)).toBeNull();
+  });
+
+  // ── Prefix detection (single source of truth) ──────────────────────────
+  // Regression guard: routes previously gated API-key auth on the legacy
+  // `api_` prefix only, silently breaking sk_/pk_/rk_ credentials in
+  // production. Every route must use isApiKeyToken / normalizeApiKeyAuth.
+  // The legacy `api_` prefix has been REMOVED from the platform entirely.
+  it("detects ALL credential types — Stripe-style live + test", () => {
+    for (const type of ["SECRET", "PUBLISHABLE", "RESTRICTED"] as const) {
+      for (const mode of ["PRODUCTION", "DEVELOPMENT"] as const) {
+        const { raw } = generateApiKey({ type, mode });
+        expect(isApiKeyToken(raw)).toBe(true);
+        expect(isApiKeyToken(`Bearer ${raw}`)).toBe(true);
+        expect(normalizeApiKeyAuth(`Bearer ${raw}`)).toBe(raw);
+        expect(normalizeApiKeyAuth(raw)).toBe(raw);
+      }
+    }
+    expect(normalizeApiKeyAuth("x-api-key-style-raw")).toBe(null);
+  });
+
+  it("rejects the REMOVED legacy api_ prefix", () => {
+    expect(isApiKeyToken("api_legacykey123")).toBe(false);
+    expect(isApiKeyToken("Bearer api_legacykey123")).toBe(false);
+    expect(normalizeApiKeyAuth("api_legacykey123")).toBe(null);
+  });
+
+  it("isApiKeyToken and normalizeApiKeyAuth reject non-credential tokens", () => {
+    expect(isApiKeyToken("")).toBe(false);
+    expect(isApiKeyToken(null)).toBe(false);
+    expect(isApiKeyToken(undefined)).toBe(false);
+    expect(isApiKeyToken("arc_tok_embeddeddoesnotcount")).toBe(false);
+    expect(isApiKeyToken("random-jwt.payload.signature")).toBe(false);
+    expect(normalizeApiKeyAuth("arc_tok_embeddeddoesnotcount")).toBe(null);
+  });
+
+  it("does NOT treat embed access tokens as API keys (they hit the embed path)", () => {
+    const tk = generateTemporaryAccessToken();
+    expect(isApiKeyToken(tk.raw)).toBe(false);
   });
 });

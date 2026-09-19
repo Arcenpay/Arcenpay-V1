@@ -2,14 +2,19 @@
  * Dual-authentication helper for /api/v1/* routes.
  *
  * API routes may be called either:
- *  - Externally, by a DApp backend using "Authorization: Bearer api_xxx"
+ *  - Externally, by a DApp backend using "Authorization: Bearer sk_/pk_/rk_xxx"
  *  - Internally, by the ArcenPay dashboard UI using a session cookie
  *
- * This helper tries API key auth first. If no api_ token is present it falls
+ * This helper tries API key auth first. If no API-key token is present it falls
  * back to session auth. Returns { teamId } on success or an error object on failure.
  */
 
-import { requireApiKey, isApiKeyError } from "./api-key-auth.js";
+import {
+  requireApiKey,
+  isApiKeyError,
+  isApiKeyToken,
+  type ApiKeyTypeName,
+} from "./api-key-auth.js";
 import { getSessionFromCtx } from "./auth.server.js";
 import { resolveTeamContext } from "./team-session.js";
 import type { Context } from "hono";
@@ -35,16 +40,19 @@ export function isAnyAuthError(v: unknown): v is AnyAuthError {
 
 function looksLikeApiKey(c: Context): boolean {
   const auth = c.req.header("authorization") ?? c.req.header("x-api-key");
-  if (!auth) return false;
-  return auth.startsWith("api_") || auth.startsWith("Bearer api_");
+  return isApiKeyToken(auth);
 }
 
 export async function requireAnyAuth(
   c: Context,
+  options: {
+    /** Key types this endpoint accepts. Publishable (`pk_`) is implicitly read-only — omit for read routes, use `["SECRET","RESTRICTED"]` for any write/mint route. */
+    allow?: ApiKeyTypeName[];
+  } = {},
 ): Promise<AnyAuthContext | AnyAuthError> {
   // ── API key path ──────────────────────────────────────────────────────────
   if (looksLikeApiKey(c)) {
-    const ctx = await requireApiKey(c.req.raw);
+    const ctx = await requireApiKey(c.req.raw, { allow: options.allow });
     if (isApiKeyError(ctx)) return ctx;
     return {
       teamId: ctx.teamId,

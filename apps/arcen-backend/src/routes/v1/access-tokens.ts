@@ -8,7 +8,7 @@
  * "identify" call needed.
  * The same applies to users: unknown users linked to a known company are auto-created.
  *
- * Authorization: Bearer api_xxx  (call from your backend, never expose API key client-side)
+ * Authorization: Bearer sk_/pk_/rk_  (call from your backend, never expose API key client-side)
  *
  * Body:
  * {
@@ -278,8 +278,14 @@ export async function OPTIONS(c: Context) {
 
 export async function POST(c: Context) {
   const origin = c.req.header("origin");
+  // SECURITY NOTE: `pk_` keys mint ACCESS-TOKENS that are scoped to the
+  // company identified in the request body (company id/wallet/email), exactly
+  // like Stripe's "publishable key creates a Customer/Checkout Session". The
+  // token lets the holder drive THAT company's embed (billing portal) only —
+  // it is not a team-wide capability. Server-side flows should still prefer
+  // minting with a SECRET/RESTRICTED key from the provider's backend.
   const ctx = await requireAnyAuth(c);
-  if (isAnyAuthError(ctx)) return c.json({ ok: false, error: ctx.error }, ctx.status as any);
+  if (isAnyAuthError(ctx)) return c.json({ ok: false, error: ctx.error }, ctx.status as any, corsHeaders(origin));
 
   const { teamId } = ctx;
   const activeEnvironment = ctx.activeEnvironmentId

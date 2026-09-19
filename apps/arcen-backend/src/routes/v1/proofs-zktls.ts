@@ -4,7 +4,7 @@
  * Submit a Reclaim Protocol zkTLS proof to gate Web3 features
  * based on verified Web2 data (subscription status, API usage, etc).
  *
- * Authorization: Bearer api_xxx
+ * Authorization: Bearer sk_/pk_/rk_
  */
 
 import type { Context } from "hono";

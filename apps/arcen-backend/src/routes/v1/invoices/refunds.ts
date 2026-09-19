@@ -1,7 +1,7 @@
 import type { Context } from "hono";
 import { z } from "zod";
 import { db } from "../../../db.js";
-import { requirePermission, isErrorResponse } from "../../../lib/auth/api-auth.js";
+import { requireInvoiceAuth, isInvoiceAuthError } from "../../../lib/auth/invoice-auth.js";
 import { writeAuditEvent } from "../../../lib/platform/audit.js";
 import {
   decimalToAtomicUnits,
@@ -23,12 +23,12 @@ const createSchema = z.object({
 });
 
 export async function GET(c: Context) {
-  const auth = await requirePermission(c, "invoices:read");
-  if (isErrorResponse(auth)) return c.json({ ok: false, error: auth.error }, auth.status as any as any);
+  const auth = await requireInvoiceAuth(c, { rolePermission: "invoices:read", apiPermission: "read" });
+  if (isInvoiceAuthError(auth)) return c.json({ ok: false, error: auth.error }, auth.status as any as any);
 
   const id = c.req.param("id");
   const invoice = await db.invoice.findFirst({
-    where: { id, teamId: auth.team.teamId },
+    where: { id, teamId: auth.teamId },
     select: { id: true },
   });
 
@@ -45,8 +45,8 @@ export async function GET(c: Context) {
 }
 
 export async function POST(c: Context) {
-  const auth = await requirePermission(c, "invoices:write");
-  if (isErrorResponse(auth)) return c.json({ ok: false, error: auth.error }, auth.status as any as any);
+  const auth = await requireInvoiceAuth(c, { rolePermission: "invoices:write", apiPermission: "write" });
+  if (isInvoiceAuthError(auth)) return c.json({ ok: false, error: auth.error }, auth.status as any as any);
 
   const id = c.req.param("id");
   const body = await c.req.json() .catch(() => ({}));
@@ -56,7 +56,7 @@ export async function POST(c: Context) {
   }
 
   const invoice = await db.invoice.findFirst({
-    where: { id, teamId: auth.team.teamId },
+    where: { id, teamId: auth.teamId },
     include: {
       payments: {
         where: { status: "SUCCEEDED" },
@@ -80,7 +80,7 @@ export async function POST(c: Context) {
   }
 
   const owner = await db.teamMember.findFirst({
-    where: { teamId: auth.team.teamId, role: "OWNER" },
+    where: { teamId: auth.teamId, role: "OWNER" },
     select: { user: { select: { walletAddress: true } } },
   });
   const providerWallet = owner?.user?.walletAddress?.toLowerCase();
@@ -90,7 +90,7 @@ export async function POST(c: Context) {
 
   const plan = invoice.planId
     ? await db.catalogPlan.findFirst({
-        where: { id: invoice.planId, teamId: auth.team.teamId },
+        where: { id: invoice.planId, teamId: auth.teamId },
         select: { acceptedToken: true },
       })
     : null;
@@ -125,7 +125,7 @@ export async function POST(c: Context) {
   }
 
   const refund = await recordRefund({
-    teamId: auth.team.teamId,
+    teamId: auth.teamId,
     walletAddress: recipientWallet,
     invoiceId: invoice.id,
     paymentId: invoice.payments[0]?.id ?? null,
@@ -146,9 +146,9 @@ export async function POST(c: Context) {
 
   await writeAuditEvent({
     headers: { get: (name: string) => c.req.header(name) },
-    teamId: auth.team.teamId,
-    userId: auth.team.userId,
-    walletAddress: auth.team.walletAddress,
+    teamId: auth.teamId,
+    userId: auth.userId ?? undefined,
+    walletAddress: auth.walletAddress ?? undefined,
     action: "invoice.refund.create",
     resourceType: "Refund",
     resourceId: refund.id,

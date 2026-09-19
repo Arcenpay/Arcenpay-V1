@@ -2,7 +2,7 @@
  * GET  /api/v1/users   — List users (paginated)
  * POST /api/v1/users   — Create or identify a user
  *
- * Authorization: Bearer api_xxx
+ * Authorization: Bearer sk_/pk_/rk_
  */
 
 import type { Context } from "hono";

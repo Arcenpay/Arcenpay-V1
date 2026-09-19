@@ -1,7 +1,7 @@
 import type { Context } from "hono";
 import { z } from "zod";
 import { db } from "../../../db.js";
-import { requirePermission, isErrorResponse } from "../../../lib/auth/api-auth.js";
+import { requireInvoiceAuth, isInvoiceAuthError } from "../../../lib/auth/invoice-auth.js";
 import { allocateInvoiceNumber, toSix } from "../../../lib/billing/invoices.js";
 import { writeAuditEvent } from "../../../lib/platform/audit.js";
 import { toPrismaNullableJson } from "../../../utils/prisma-json.js";
@@ -146,8 +146,8 @@ const createSchema = z.object({
 });
 
 export async function GET(c: Context) {
-  const auth = await requirePermission(c, "invoices:read");
-  if (isErrorResponse(auth)) return c.json({ ok: false, error: auth.error }, auth.status as any as any);
+  const auth = await requireInvoiceAuth(c, { rolePermission: "invoices:read", apiPermission: "read" });
+  if (isInvoiceAuthError(auth)) return c.json({ ok: false, error: auth.error }, auth.status as any as any);
 
   const parsed = listSchema.safeParse(
     Object.fromEntries(new URL(c.req.url).searchParams),
@@ -156,16 +156,31 @@ export async function GET(c: Context) {
     return c.json({ error: "Invalid query", details: parsed.error.flatten().fieldErrors }, 400 as any);
   }
 
-  const activeEnvironment = await requireResolvedActiveEnvironment(
-    auth.session,
-    auth.team.teamId,
-  );
-  if (!activeEnvironment) {
-    return c.json({ error: "No workspace environment selected" }, 409 as any);
+  // Sessions resolve the active workspace environment; API keys are already
+  // scoped to the environment they were created in. API keys MUST be
+  // environment-bound — a key without an environment cannot safely scope a
+  // query and is rejected (matches the create route).
+  if (auth.source === "api_key" && !auth.environmentId) {
+    return c.json(
+      { error: "This key is not bound to a workspace environment. Recreate it bound to an environment." },
+      409 as any,
+    );
+  }
+
+  let activeEnvironmentId: string | null = auth.environmentId ?? null;
+  if (auth.source === "session" && auth.session) {
+    const activeEnvironment = await requireResolvedActiveEnvironment(
+      auth.session.session,
+      auth.teamId,
+    );
+    if (!activeEnvironment) {
+      return c.json({ error: "No workspace environment selected" }, 409 as any);
+    }
+    activeEnvironmentId = activeEnvironment.id;
   }
 
   const where = {
-    teamId: auth.team.teamId,
+    teamId: auth.teamId,
     ...(parsed.data.status && { status: parsed.data.status }),
     ...(parsed.data.q && {
       OR: [
@@ -188,7 +203,7 @@ export async function GET(c: Context) {
   // Broader plan lookup: all plans in the team (cross-environment safety net)
   const allTeamPlanIds = (
     await db.catalogPlan.findMany({
-      where: { teamId: auth.team.teamId },
+      where: { teamId: auth.teamId },
       select: { id: true },
     })
   ).map((plan) => plan.id);
@@ -199,7 +214,7 @@ export async function GET(c: Context) {
       AND: [
         {
           OR: [
-            { environmentId: activeEnvironment.id },
+            ...(activeEnvironmentId ? [{ environmentId: activeEnvironmentId }] : []),
             { environmentId: null },
             ...(allTeamPlanIds.length > 0
               ? [{ planId: { in: allTeamPlanIds } }]
@@ -278,8 +293,8 @@ export async function GET(c: Context) {
 }
 
 export async function POST(c: Context) {
-  const auth = await requirePermission(c, "invoices:write");
-  if (isErrorResponse(auth)) return c.json({ ok: false, error: auth.error }, auth.status as any as any);
+  const auth = await requireInvoiceAuth(c, { rolePermission: "invoices:write", apiPermission: "write" });
+  if (isInvoiceAuthError(auth)) return c.json({ ok: false, error: auth.error }, auth.status as any as any);
 
   const body = await c.req.json() .catch(() => ({}));
   const parsed = createSchema.safeParse(body);
@@ -287,16 +302,33 @@ export async function POST(c: Context) {
     return c.json({ error: "Invalid request", details: parsed.error.flatten().fieldErrors }, 400 as any);
   }
 
-  const activeEnvironment = await requireResolvedActiveEnvironment(
-    auth.session,
-    auth.team.teamId,
-  );
+  // Sessions resolve the active workspace environment. API keys are bound to
+  // the environment they were created in and require one to create invoices —
+  // a key without an environment cannot scope the invoice.
+  let activeEnvironment: { id: string; mode: "DEVELOPMENT" | "PRODUCTION" } | null = null;
+  if (auth.source === "session" && auth.session) {
+    const env = await requireResolvedActiveEnvironment(
+      auth.session.session,
+      auth.teamId,
+    );
+    if (!env) {
+      return c.json({ error: "No workspace environment selected" }, 409 as any);
+    }
+    activeEnvironment = env;
+  } else if (auth.environmentId) {
+    const env = await db.workspaceEnvironment.findFirst({
+      where: { id: auth.environmentId, teamId: auth.teamId },
+      select: { id: true, mode: true },
+    });
+    if (env) activeEnvironment = { id: env.id, mode: env.mode };
+  }
+
   if (!activeEnvironment) {
-    return c.json({ error: "No workspace environment selected" }, 409 as any);
+    return c.json({ error: "No workspace environment selected for this key. Recreate the key bound to a workspace environment." }, 409 as any);
   }
 
   const team = await db.team.findUnique({
-    where: { id: auth.team.teamId },
+    where: { id: auth.teamId },
     select: { slug: true, invoicePrefix: true },
   });
 
@@ -305,7 +337,7 @@ export async function POST(c: Context) {
   }
 
   const prefix = team.invoicePrefix || `INV-${team.slug.toUpperCase()}`;
-  const number = await allocateInvoiceNumber(auth.team.teamId, prefix);
+  const number = await allocateInvoiceNumber(auth.teamId, prefix);
 
   const lines = parsed.data.lines.map((line) => {
     const lineSubtotal = line.quantity * line.unitAmount;
@@ -332,7 +364,7 @@ export async function POST(c: Context) {
 
   const invoice = await db.invoice.create({
     data: {
-      teamId: auth.team.teamId,
+      teamId: auth.teamId,
       environmentId: activeEnvironment.id,
       environmentMode: activeEnvironment.mode,
       status: "ISSUED",
@@ -369,11 +401,11 @@ export async function POST(c: Context) {
   });
 
   const { downloadUrl } = await ensureInvoicePdfForTeam(
-    auth.team.teamId,
+    auth.teamId,
     invoice.id,
   );
 
-  deliverWebhook(auth.team.teamId, "invoice.issued", {
+  deliverWebhook(auth.teamId, "invoice.issued", {
     invoiceId: invoice.id,
     invoiceNumber: invoice.number,
     customerEmail: invoice.customerEmail,
@@ -408,7 +440,7 @@ export async function POST(c: Context) {
           errorMessage: err?.message || "send failed",
         },
       });
-      deliverWebhook(auth.team.teamId, "invoice.delivery_failed", {
+      deliverWebhook(auth.teamId, "invoice.delivery_failed", {
         invoiceId: invoice.id,
         invoiceNumber: invoice.number,
         customerEmail: invoice.customerEmail,
@@ -420,9 +452,9 @@ export async function POST(c: Context) {
 
   await writeAuditEvent({
     headers: { get: (name: string) => c.req.header(name) },
-    teamId: auth.team.teamId,
-    userId: auth.team.userId,
-    walletAddress: auth.team.walletAddress,
+    teamId: auth.teamId,
+    userId: auth.userId ?? undefined,
+    walletAddress: auth.walletAddress ?? undefined,
     action: "invoice.create",
     resourceType: "Invoice",
     resourceId: invoice.id,

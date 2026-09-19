@@ -41,6 +41,9 @@ const PERMISSION_OPTIONS = [
   "payments.write",
   "subscriptions.write",
   "tokens.create",
+  "invoices.read",
+  "invoices.write",
+  "invoices.send",
 ] as const;
 
 interface ApiKey {

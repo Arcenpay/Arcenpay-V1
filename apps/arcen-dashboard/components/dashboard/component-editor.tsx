@@ -2205,7 +2205,7 @@ const arcenpayApiUrl = process.env.ARCENPAY_API_URL ?? 'https://api.arcenpay.com
 const res = await fetch(\`\${arcenpayApiUrl}/api/v1/access-tokens\`, {
   method: 'POST',
   headers: {
-    'Authorization': 'Bearer api_your_api_key',
+    'Authorization': 'Bearer sk_test_your_secret_key',
     'Content-Type': 'application/json',
   },
   body: JSON.stringify({

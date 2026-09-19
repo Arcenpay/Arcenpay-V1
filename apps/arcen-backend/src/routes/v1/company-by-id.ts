@@ -3,7 +3,7 @@
  * PATCH  /api/v1/companies/:id   — Update company traits / plan assignment
  * DELETE /api/v1/companies/:id   — Delete company
  *
- * Authorization: Bearer api_xxx
+ * Authorization: Bearer sk_/pk_/rk_
  */
 
 import type { Context } from "hono";

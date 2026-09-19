@@ -3,6 +3,7 @@ import type { Context, Next } from "hono";
 import { getCookie } from "hono/cookie";
 import { db, withPrismaReconnect } from "../db.js";
 import { SIWE_JWT_SECRET, PLATFORM_ADMIN_SECRET, isPlatformAdminEmail } from "../config.js";
+import { isApiKeyToken } from "../lib/auth/api-key-auth.js";
 
 const AUTH_COOKIE_NAME = "arcen_session";
 const AUTH_SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
@@ -264,11 +265,11 @@ export function requireApiKeyAuth() {
   return async (c: Context, next: Next) => {
     const auth = c.req.header("authorization") ?? c.req.header("x-api-key");
     if (!auth) {
-      return c.json({ ok: false, error: "Missing API key. Provide Authorization: Bearer api_xxx", code: "UNAUTHORIZED" }, 401 as any);
+      return c.json({ ok: false, error: "Missing API key. Provide Authorization: Bearer sk_/pk_/rk_xxx", code: "UNAUTHORIZED" }, 401 as any);
     }
 
     const raw = auth.startsWith("Bearer ") ? auth.slice(7).trim() : auth.trim();
-    if (!raw.startsWith("api_")) {
+    if (!isApiKeyToken(raw)) {
       return c.json({ ok: false, error: "Invalid API key format", code: "UNAUTHORIZED" }, 401 as any);
     }
 

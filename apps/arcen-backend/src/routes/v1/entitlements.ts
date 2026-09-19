@@ -5,12 +5,12 @@
  *
  * Auth (either):
  *  A) Bearer <access_token>
- *  B) Bearer api_<key> + X-Arcen-Company-Keys / X-Arcen-User-Keys
+ *  B) Bearer sk_/pk_/rk_ + X-Arcen-Company-Keys / X-Arcen-User-Keys
  */
 
 import type { Context } from "hono";
 import { type CompanyKeys, type UserKeys } from "../../lib/entitlements/flag-engine.js";
-import { requireApiKey, isApiKeyError } from "../../lib/auth/api-key-auth.js";
+import { requireApiKey, isApiKeyError, isApiKeyToken } from "../../lib/auth/api-key-auth.js";
 import { resolveEmbedAccessToken } from "../../lib/entitlements/embed-access-token.js";
 import { resolveEntitlementResults } from "../../lib/entitlements/entitlements.js";
 import { corsHeaders } from "../../middleware/cors.js";
@@ -47,7 +47,7 @@ export async function GET(c: Context) {
   let companyKeys: CompanyKeys | undefined;
   let userKeys: UserKeys | undefined;
 
-  if (bearerToken.startsWith("api_")) {
+  if (isApiKeyToken(bearerToken)) {
     const ctx = await requireApiKey(c.req.raw, {
       rateLimit: { limit: 500, windowMs: 60_000 },
       // Entitlement reads are client-safe: publishable, secret and restricted

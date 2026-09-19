@@ -5,7 +5,7 @@
  *
  * Auth (either):
  *  A) Bearer <access_token>  — resolves company/user from EmbedAccessToken record
- *  B) Bearer api_<key>       — API key auth; reads X-Arcen-Company-Keys / X-Arcen-User-Keys headers
+ *  B) Bearer sk_/pk_/rk_  — API key auth; reads X-Arcen-Company-Keys / X-Arcen-User-Keys headers
  *
  * Returns:
  *  BOOLEAN features: { key, enabled, reason }
@@ -14,7 +14,7 @@
 
 import type { Context } from "hono";
 import { type CompanyKeys, type UserKeys } from "../../lib/entitlements/flag-engine.js";
-import { requireApiKey, isApiKeyError } from "../../lib/auth/api-key-auth.js";
+import { requireApiKey, isApiKeyError, isApiKeyToken } from "../../lib/auth/api-key-auth.js";
 import { resolveEmbedAccessToken } from "../../lib/entitlements/embed-access-token.js";
 import { resolveEntitlementResult } from "../../lib/entitlements/entitlements.js";
 import { corsHeaders } from "../../middleware/cors.js";
@@ -60,7 +60,7 @@ export async function GET(c: Context) {
   let companyKeys: CompanyKeys | undefined;
   let userKeys: UserKeys | undefined;
 
-  if (bearerToken.startsWith("api_")) {
+  if (isApiKeyToken(bearerToken)) {
     const ctx = await requireApiKey(c.req.raw, { rateLimit: { limit: 500, windowMs: 60_000 } });
     if (isApiKeyError(ctx)) {
       return c.json({ ok: false, error: ctx.error }, ctx.status as any);

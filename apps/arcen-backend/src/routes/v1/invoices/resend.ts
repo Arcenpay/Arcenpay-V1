@@ -1,6 +1,6 @@
 import type { Context } from "hono";
 import { db } from "../../../db.js";
-import { requirePermission, isErrorResponse } from "../../../lib/auth/api-auth.js";
+import { requireInvoiceAuth, isInvoiceAuthError } from "../../../lib/auth/invoice-auth.js";
 import { sendInvoiceEmail } from "../../../lib/billing/email.js";
 import { writeAuditEvent } from "../../../lib/platform/audit.js";
 import { ensureInvoicePdfForTeam } from "../../../lib/billing/invoice-documents.js";
@@ -8,8 +8,8 @@ import { invoiceResendProtect } from "../../../lib/auth/arcjet.js";
 import { deliverWebhook } from "../../../lib/webhooks/deliver-webhook.js";
 
 export async function POST(c: Context) {
-  const auth = await requirePermission(c, "invoices:send");
-  if (isErrorResponse(auth)) return c.json({ ok: false, error: auth.error }, auth.status as any as any);
+  const auth = await requireInvoiceAuth(c, { rolePermission: "invoices:send", apiPermission: "send" });
+  if (isInvoiceAuthError(auth)) return c.json({ ok: false, error: auth.error }, auth.status as any as any);
 
   const id = c.req.param("id");
 
@@ -19,7 +19,7 @@ export async function POST(c: Context) {
   }
 
   const invoice = await db.invoice.findFirst({
-    where: { id, teamId: auth.team.teamId },
+    where: { id, teamId: auth.teamId },
     include: { deliveries: { orderBy: { createdAt: "desc" }, take: 1 } },
   });
 
@@ -34,7 +34,7 @@ export async function POST(c: Context) {
   const prior = invoice.deliveries[0];
   try {
     const { downloadUrl } = await ensureInvoicePdfForTeam(
-      auth.team.teamId,
+      auth.teamId,
       invoice.id,
     );
 
@@ -60,9 +60,9 @@ export async function POST(c: Context) {
 
     await writeAuditEvent({
       headers: { get: (name: string) => c.req.header(name) },
-      teamId: auth.team.teamId,
-      userId: auth.team.userId,
-      walletAddress: auth.team.walletAddress,
+      teamId: auth.teamId,
+      userId: auth.userId ?? undefined,
+      walletAddress: auth.walletAddress ?? undefined,
       action: "invoice.resend",
       resourceType: "InvoiceDelivery",
       resourceId: delivery.id,
@@ -84,9 +84,9 @@ export async function POST(c: Context) {
 
     await writeAuditEvent({
       headers: { get: (name: string) => c.req.header(name) },
-      teamId: auth.team.teamId,
-      userId: auth.team.userId,
-      walletAddress: auth.team.walletAddress,
+      teamId: auth.teamId,
+      userId: auth.userId ?? undefined,
+      walletAddress: auth.walletAddress ?? undefined,
       action: "invoice.resend.failed",
       resourceType: "InvoiceDelivery",
       resourceId: delivery.id,
@@ -97,7 +97,7 @@ export async function POST(c: Context) {
       },
     });
 
-    deliverWebhook(auth.team.teamId, "invoice.delivery_failed", {
+    deliverWebhook(auth.teamId, "invoice.delivery_failed", {
       invoiceId: invoice.id,
       invoiceNumber: invoice.number,
       customerEmail: invoice.customerEmail,

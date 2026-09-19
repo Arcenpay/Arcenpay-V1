@@ -313,11 +313,10 @@ export class ArcenClient {
       "pk_test_",
       "rk_live_",
       "rk_test_",
-      "api_",
     ];
     if (!supportedPrefixes.some((prefix) => config.apiKey.startsWith(prefix))) {
       throw new Error(
-        'ArcenClient: apiKey must start with sk_live_, sk_test_, pk_live_, pk_test_, rk_live_, rk_test_ or api_',
+        'ArcenClient: apiKey must start with sk_live_, sk_test_, pk_live_, pk_test_, rk_live_ or rk_test_ (legacy api_ keys are no longer supported — regenerate as sk_/pk_/rk_)',
       );
     }
     this.apiKey = config.apiKey;
