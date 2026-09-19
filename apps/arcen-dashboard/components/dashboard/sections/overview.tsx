@@ -270,7 +270,7 @@ export function OverviewSection() {
   const hasPlans = Number(metrics.activePlans) > 0;
 
   const setupSteps = [
-    { label: "Connect wallet", done: hasWallet, icon: Wallet, href: "/onboarding/chain" },
+    { label: "Connect wallet", done: hasWallet, icon: Wallet, href: "/login" },
     { label: "Create environment", done: hasEnvironment, icon: Globe, href: "/environments/new" },
     { label: "Create a plan", done: hasPlans, icon: CreditCard, href: "/?section=catalog-plans" },
   ];

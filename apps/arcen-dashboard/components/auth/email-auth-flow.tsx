@@ -266,8 +266,10 @@ export function EmailAuthFlow({
           keyStatus: keyStatus ?? null,
         });
         if (isActivated || isExpiredOrRevoked) {
-          console.info("[DEBUG-auth-20260907] post-auth navigation", { destination: "/" });
-          window.location.href = "/";
+          const environments = Array.isArray(data?.environments) ? data.environments : [];
+          const destination = environments.length > 0 ? "/" : "/onboarding/provider-profile";
+          console.info("[DEBUG-auth-20260907] post-auth navigation", { destination });
+          window.location.href = destination;
           return;
         }
       }

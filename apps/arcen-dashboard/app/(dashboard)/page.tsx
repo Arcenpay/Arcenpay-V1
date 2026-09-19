@@ -111,7 +111,7 @@ export default function Dashboard() {
         if (cancelled) return;
 
         if (!session?.user?.walletAddress && !session?.user?.stellarWalletAddress) {
-          window.location.replace("/onboarding/chain");
+          window.location.replace("/login");
           return;
         }
 
@@ -122,6 +122,12 @@ export default function Dashboard() {
         const activated = isAdmin || session.currentTeam?.isPlatformActivated === true;
         if (!activated && keyStatus !== "EXPIRED" && keyStatus !== "REVOKED") {
           window.location.replace("/onboarding/activation");
+          return;
+        }
+
+        const environments = Array.isArray(session.environments) ? session.environments : [];
+        if (environments.length === 0) {
+          window.location.replace("/onboarding/provider-profile");
           return;
         }
 

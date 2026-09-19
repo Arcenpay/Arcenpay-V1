@@ -43,7 +43,8 @@ const routeAfterWalletLink = async () => {
       const keyStatus = data?.currentTeam?.activationKeyStatus;
       const isExpiredOrRevoked = keyStatus === "EXPIRED" || keyStatus === "REVOKED";
       if (isActivated || isExpiredOrRevoked) {
-        window.location.href = "/";
+        const environments = Array.isArray(data?.environments) ? data.environments : [];
+        window.location.href = environments.length > 0 ? "/" : "/onboarding/provider-profile";
         return;
       }
     }

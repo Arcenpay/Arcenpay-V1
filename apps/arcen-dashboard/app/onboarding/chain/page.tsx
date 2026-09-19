@@ -1,7 +1,9 @@
 "use client";
 
+import { useEffect } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import { apiFetch } from "@/lib/api-client";
 import { Card } from "@/components/ui/card";
 import { OnboardingShell } from "@/components/onboarding/onboarding-shell";
 import { setOnboardingChainFamily } from "@/lib/onboarding-chain-family";
@@ -10,6 +12,18 @@ import type { ChainFamily } from "@arcenpay/internal-core";
 
 export default function ChainFamilyPage() {
   const router = useRouter();
+
+  useEffect(() => {
+    apiFetch("/api/auth/session")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data?.user?.walletAddress || data?.user?.stellarWalletAddress) {
+          const environments = Array.isArray(data?.environments) ? data.environments : [];
+          router.replace(environments.length > 0 ? "/" : "/onboarding/provider-profile");
+        }
+      })
+      .catch(() => {});
+  }, [router]);
 
   const select = (family: ChainFamily) => {
     setOnboardingChainFamily(family);

@@ -52,6 +52,10 @@ export default function ProviderProfilePage() {
     apiFetch("/api/auth/session")
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
+        if (!data?.user?.id || (!data?.user?.walletAddress && !data?.user?.stellarWalletAddress)) {
+          router.replace("/login");
+          return;
+        }
         const isAdmin =
           data?.user?.isPlatformAdmin === true ||
           isPlatformAdminEmail(data?.user?.email);

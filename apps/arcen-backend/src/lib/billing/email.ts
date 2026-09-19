@@ -67,8 +67,7 @@ async function sendWithResend(input: {
 }
 
 /** Sends a 6-digit email auth code for the dashboard login flow (automated from noreply) */
-const LOGO_IMAGE_URL = "https://files.catbox.moe/dzpc14.png";
-const HERO_IMAGE_URL = "https://files.catbox.moe/oe5jl5.jpg";
+const LOGO_IMAGE_URL = "https://app.arcenpay.com/arcenpay-logo.png";
 
 function escapeHtml(value: string): string {
   return value
@@ -120,7 +119,7 @@ function renderArcenpayEmailLayout(input: ArcenpayEmailLayoutInput): string {
                 <tr>
                   <td style="vertical-align:middle;line-height:0;">
                     <a href="${dashUrl}" style="text-decoration:none;display:inline-block;">
-                      <img src="${LOGO_IMAGE_URL}" alt="ArcenPay" width="138" height="34" style="display:block;height:32px;width:auto;border:0;outline:none;" />
+                      <img src="${LOGO_IMAGE_URL}" alt="ArcenPay" width="138" height="34" style="display:block;height:32px;width:auto;border:0;outline:none;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Segoe UI',sans-serif;font-size:20px;font-weight:700;color:#0a0a0a;letter-spacing:-0.5px;" />
                     </a>
                   </td>
                 </tr>
@@ -176,7 +175,7 @@ function renderArcenpayEmailLayout(input: ArcenpayEmailLayoutInput): string {
                         <!-- Left: Mini Brand Logo -->
                         <td align="left" style="vertical-align:middle;">
                           <a href="${dashUrl}" style="text-decoration:none;display:inline-block;">
-                            <img src="${LOGO_IMAGE_URL}" alt="ArcenPay" width="92" height="23" style="display:block;height:22px;width:auto;border:0;outline:none;opacity:0.85;" />
+                            <img src="${LOGO_IMAGE_URL}" alt="ArcenPay" width="92" height="23" style="display:block;height:22px;width:auto;border:0;outline:none;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Segoe UI',sans-serif;font-size:13px;font-weight:700;color:#71717a;letter-spacing:-0.3px;opacity:0.85;" />
                           </a>
                         </td>
 
@@ -246,9 +245,9 @@ export async function sendEmailAuthCode(
     .map(
       (digit) => `
       <td style="padding:0 4px;">
-        <table cellpadding="0" cellspacing="0" role="presentation" style="border:1.5px solid #e4e4e7;border-radius:8px;background-color:#fafafa;width:50px;height:56px;text-align:center;">
+        <table cellpadding="0" cellspacing="0" role="presentation" style="border:1.5px solid #e4e4e7;border-radius:10px;background-color:#fafafa;width:50px;height:56px;text-align:center;">
           <tr>
-            <td align="center" valign="middle" style="font-size:28px;font-weight:800;color:#0a0a0a;font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;line-height:56px;width:50px;height:56px;">
+            <td align="center" valign="middle" style="font-size:28px;font-weight:800;color:#0001fd;font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;line-height:56px;width:50px;height:56px;">
               ${escapeHtml(digit)}
             </td>
           </tr>
@@ -258,11 +257,20 @@ export async function sendEmailAuthCode(
     .join("");
 
   const bodyHtml = `
+    <!-- Category Eyebrow -->
+    <tr>
+      <td style="padding:0 0 10px 0;">
+        <div style="font-size:11px;font-weight:700;color:#0001fd;text-transform:uppercase;letter-spacing:0.06em;">
+          Verification Code
+        </div>
+      </td>
+    </tr>
+
     <!-- Heading -->
     <tr>
       <td style="padding:0 0 10px 0;">
         <h1 style="margin:0;font-size:22px;line-height:30px;font-weight:700;color:#0a0a0a;letter-spacing:-0.02em;">
-          Your verification code
+          Sign in to ArcenPay
         </h1>
       </td>
     </tr>
@@ -299,13 +307,13 @@ export async function sendEmailAuthCode(
       </td>
     </tr>
 
-    <!-- CTA Button -->
+    <!-- CTA Button (Pill Rounded) -->
     <tr>
       <td style="padding:0 0 24px 0;">
         <table cellpadding="0" cellspacing="0" role="presentation">
           <tr>
-            <td style="border-radius:8px;background-color:#0a0a0a;">
-              <a href="${loginUrl}" style="display:inline-block;padding:12px 24px;color:#ffffff;background-color:#0a0a0a;border:1px solid #0a0a0a;border-radius:8px;font-size:14px;font-weight:600;text-decoration:none;text-align:center;">
+            <td align="center" style="border-radius:9999px;background-color:#0a0a0a;">
+              <a href="${loginUrl}" style="display:inline-block;padding:13px 30px;color:#ffffff;background-color:#0a0a0a;border:1px solid #0a0a0a;border-radius:9999px;font-size:14px;font-weight:600;text-decoration:none;text-align:center;letter-spacing:-0.01em;">
                 Sign in to dashboard &rarr;
               </a>
             </td>
@@ -346,31 +354,40 @@ export async function sendTeamInviteEmail(
   const escapedTeamName = escapeHtml(teamName);
 
   const bodyHtml = `
+    <!-- Category Eyebrow -->
+    <tr>
+      <td style="padding:0 0 10px 0;">
+        <div style="font-size:11px;font-weight:700;color:#0001fd;text-transform:uppercase;letter-spacing:0.06em;">
+          Team Invitation
+        </div>
+      </td>
+    </tr>
+
     <!-- Heading -->
     <tr>
       <td style="padding:0 0 10px 0;">
         <h1 style="margin:0;font-size:22px;line-height:30px;font-weight:700;color:#0a0a0a;letter-spacing:-0.02em;">
-          You&#39;ve been invited to join ${escapedTeamName}
+          Join ${escapedTeamName} on ArcenPay
         </h1>
       </td>
     </tr>
     <tr>
       <td style="padding:0 0 20px 0;font-size:14px;line-height:22px;color:#3f3f46;">
-        <strong>${inviterText}</strong> has invited you to join the team on <strong>${escapedTeamName}</strong> on ArcenPay.
+        <strong>${inviterText}</strong> has invited you to collaborate on <strong>${escapedTeamName}</strong> on ArcenPay.
       </td>
     </tr>
 
     <!-- Team Invite Card -->
     <tr>
       <td style="padding:0 0 24px 0;">
-        <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="border:1px solid #e4e4e7;border-radius:10px;background-color:#fafafa;padding:18px 20px;">
+        <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="border:1px solid #e4e4e7;border-radius:12px;background-color:#fafafa;padding:18px 20px;">
           <tr>
             <td style="vertical-align:middle;">
               <div style="font-size:11px;font-weight:700;color:#71717a;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">Workspace</div>
               <div style="font-size:16px;font-weight:700;color:#0a0a0a;">${escapedTeamName}</div>
             </td>
             <td align="right" style="vertical-align:middle;">
-              <span style="display:inline-block;padding:3px 8px;background-color:#ffffff;border:1px solid #e4e4e7;border-radius:6px;font-size:11px;font-weight:600;color:#0a0a0a;">
+              <span style="display:inline-block;padding:4px 10px;background-color:#ffffff;border:1px solid #e4e4e7;border-radius:9999px;font-size:11px;font-weight:600;color:#0001fd;">
                 Pending Invite
               </span>
             </td>
@@ -379,13 +396,13 @@ export async function sendTeamInviteEmail(
       </td>
     </tr>
 
-    <!-- CTA Button -->
+    <!-- CTA Button (Pill Rounded) -->
     <tr>
       <td style="padding:0 0 24px 0;">
         <table cellpadding="0" cellspacing="0" role="presentation">
           <tr>
-            <td style="border-radius:8px;background-color:#0a0a0a;">
-              <a href="${url}" target="_blank" rel="noopener noreferrer" style="display:inline-block;padding:12px 26px;color:#ffffff;background-color:#0a0a0a;border:1px solid #0a0a0a;border-radius:8px;font-size:14px;font-weight:600;text-decoration:none;text-align:center;">
+            <td align="center" style="border-radius:9999px;background-color:#0a0a0a;">
+              <a href="${url}" target="_blank" rel="noopener noreferrer" style="display:inline-block;padding:13px 32px;color:#ffffff;background-color:#0a0a0a;border:1px solid #0a0a0a;border-radius:9999px;font-size:14px;font-weight:600;text-decoration:none;text-align:center;letter-spacing:-0.01em;">
                 Accept invitation &rarr;
               </a>
             </td>
@@ -631,6 +648,15 @@ export async function sendSubscriptionPlanChangeEmail(
   const copy = buildSubscriptionPlanChangeCopy(input);
 
   const bodyHtml = `
+    <!-- Category Eyebrow -->
+    <tr>
+      <td style="padding:0 0 10px 0;">
+        <div style="font-size:11px;font-weight:700;color:#0001fd;text-transform:uppercase;letter-spacing:0.06em;">
+          Subscription Update
+        </div>
+      </td>
+    </tr>
+
     <!-- Main Heading -->
     <tr>
       <td style="padding:0 0 10px 0;">
@@ -647,13 +673,13 @@ export async function sendSubscriptionPlanChangeEmail(
       </td>
     </tr>
 
-    <!-- CTA to Manage Subscription -->
+    <!-- CTA to Manage Subscription (Pill Rounded) -->
     <tr>
       <td style="padding:0 0 24px 0;">
         <table cellpadding="0" cellspacing="0" role="presentation">
           <tr>
-            <td style="border-radius:8px;background-color:#0a0a0a;">
-              <a href="${dashUrl}" style="display:inline-block;padding:12px 24px;color:#ffffff;background-color:#0a0a0a;border:1px solid #0a0a0a;border-radius:8px;font-size:14px;font-weight:600;text-decoration:none;text-align:center;">
+            <td align="center" style="border-radius:9999px;background-color:#0a0a0a;">
+              <a href="${dashUrl}" style="display:inline-block;padding:13px 30px;color:#ffffff;background-color:#0a0a0a;border:1px solid #0a0a0a;border-radius:9999px;font-size:14px;font-weight:600;text-decoration:none;text-align:center;letter-spacing:-0.01em;">
                 Manage subscription &rarr;
               </a>
             </td>
@@ -687,6 +713,15 @@ export async function sendCreditNoteEmail(input: CreditNoteEmailInput): Promise<
   const formattedAmount = formatMoneyWithCurrency(input.amount, input.currency);
 
   const bodyHtml = `
+    <!-- Category Eyebrow -->
+    <tr>
+      <td style="padding:0 0 10px 0;">
+        <div style="font-size:11px;font-weight:700;color:#0001fd;text-transform:uppercase;letter-spacing:0.06em;">
+          Credit Note
+        </div>
+      </td>
+    </tr>
+
     <!-- Main Heading -->
     <tr>
       <td style="padding:0 0 10px 0;">
@@ -706,12 +741,12 @@ export async function sendCreditNoteEmail(input: CreditNoteEmailInput): Promise<
     <!-- Credit Note Details Card -->
     <tr>
       <td style="padding:0 0 24px 0;">
-        <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="border:1px solid #e4e4e7;border-radius:10px;background-color:#fafafa;padding:18px 20px;">
+        <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="border:1px solid #e4e4e7;border-radius:12px;background-color:#fafafa;padding:18px 20px;">
           <tr>
             <td style="font-size:13px;line-height:22px;color:#3f3f46;">
               <div style="margin-bottom:6px;"><strong style="color:#0a0a0a;">Credit Note:</strong> ${escapeHtml(input.noteNumber)}</div>
               <div style="margin-bottom:6px;"><strong style="color:#0a0a0a;">Invoice:</strong> ${escapeHtml(input.invoiceNumber)}</div>
-              <div style="margin-bottom:6px;"><strong style="color:#0a0a0a;">Amount Credited:</strong> <span style="font-weight:700;color:#0a0a0a;">${formattedAmount}</span></div>
+              <div style="margin-bottom:6px;"><strong style="color:#0a0a0a;">Amount Credited:</strong> <span style="font-weight:700;color:#0001fd;">${formattedAmount}</span></div>
               <div><strong style="color:#0a0a0a;">Reason:</strong> ${escapeHtml(input.reason)}</div>
             </td>
           </tr>
@@ -719,13 +754,13 @@ export async function sendCreditNoteEmail(input: CreditNoteEmailInput): Promise<
       </td>
     </tr>
 
-    <!-- CTA Button -->
+    <!-- CTA Button (Pill Rounded) -->
     <tr>
       <td style="padding:0 0 24px 0;">
         <table cellpadding="0" cellspacing="0" role="presentation">
           <tr>
-            <td style="border-radius:8px;background-color:#0a0a0a;">
-              <a href="${dashUrl}" style="display:inline-block;padding:12px 24px;color:#ffffff;background-color:#0a0a0a;border:1px solid #0a0a0a;border-radius:8px;font-size:14px;font-weight:600;text-decoration:none;text-align:center;">
+            <td align="center" style="border-radius:9999px;background-color:#0a0a0a;">
+              <a href="${dashUrl}" style="display:inline-block;padding:13px 30px;color:#ffffff;background-color:#0a0a0a;border:1px solid #0a0a0a;border-radius:9999px;font-size:14px;font-weight:600;text-decoration:none;text-align:center;letter-spacing:-0.01em;">
                 View in dashboard &rarr;
               </a>
             </td>
@@ -763,6 +798,15 @@ export async function sendInvoiceEmail(input: InvoiceEmailInput): Promise<void> 
     `${APP_URL}/invoices/${encodeURIComponent(input.invoiceNumber)}`;
 
   const bodyHtml = `
+    <!-- Category Eyebrow -->
+    <tr>
+      <td style="padding:0 0 10px 0;">
+        <div style="font-size:11px;font-weight:700;color:#0001fd;text-transform:uppercase;letter-spacing:0.06em;">
+          Invoice Issued
+        </div>
+      </td>
+    </tr>
+
     <!-- Main Heading -->
     <tr>
       <td style="padding:0 0 10px 0;">
@@ -780,7 +824,7 @@ export async function sendInvoiceEmail(input: InvoiceEmailInput): Promise<void> 
     <!-- Amount Due Card -->
     <tr>
       <td style="padding:0 0 24px 0;">
-        <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="border:1px solid #e4e4e7;border-radius:10px;background-color:#fafafa;padding:22px 20px;">
+        <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="border:1px solid #e4e4e7;border-radius:12px;background-color:#fafafa;padding:22px 20px;">
           <tr>
             <td>
               <div style="font-size:11px;font-weight:700;color:#71717a;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Amount Due</div>
@@ -792,13 +836,13 @@ export async function sendInvoiceEmail(input: InvoiceEmailInput): Promise<void> 
       </td>
     </tr>
 
-    <!-- CTA Button -->
+    <!-- CTA Button (Pill Rounded) -->
     <tr>
       <td style="padding:0 0 20px 0;">
         <table cellpadding="0" cellspacing="0" role="presentation">
           <tr>
-            <td style="border-radius:8px;background-color:#0a0a0a;">
-              <a href="${downloadUrl}" style="display:inline-block;padding:12px 26px;color:#ffffff;background-color:#0a0a0a;border:1px solid #0a0a0a;border-radius:8px;font-size:14px;font-weight:600;text-decoration:none;text-align:center;">
+            <td align="center" style="border-radius:9999px;background-color:#0a0a0a;">
+              <a href="${downloadUrl}" style="display:inline-block;padding:13px 32px;color:#ffffff;background-color:#0a0a0a;border:1px solid #0a0a0a;border-radius:9999px;font-size:14px;font-weight:600;text-decoration:none;text-align:center;letter-spacing:-0.01em;">
                 View invoice &rarr;
               </a>
             </td>
@@ -891,7 +935,7 @@ export async function sendPaymentReceiptEmail(
     <!-- Category Eyebrow -->
     <tr>
       <td style="padding:0 0 8px 0;">
-        <div style="font-size:11px;font-weight:700;color:#71717a;text-transform:uppercase;letter-spacing:0.06em;">
+        <div style="font-size:11px;font-weight:700;color:#0001fd;text-transform:uppercase;letter-spacing:0.06em;">
           Payment Receipt
         </div>
       </td>
@@ -914,7 +958,7 @@ export async function sendPaymentReceiptEmail(
     <!-- Receipt Meta Table Card -->
     <tr>
       <td style="padding:0 0 24px 0;">
-        <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="border:1px solid #e4e4e7;border-radius:10px;background-color:#fafafa;padding:16px 20px;">
+        <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="border:1px solid #e4e4e7;border-radius:12px;background-color:#fafafa;padding:16px 20px;">
           <tr>
             <td style="padding:4px 0;font-size:13px;color:#71717a;">Receipt Number</td>
             <td align="right" style="padding:4px 0;font-size:13px;font-weight:600;color:#0a0a0a;">${escapedReceiptNumber}</td>
@@ -961,20 +1005,20 @@ export async function sendPaymentReceiptEmail(
       </td>
     </tr>
 
-    <!-- Download Actions -->
+    <!-- Download Actions (Pill Rounded) -->
     <tr>
       <td style="padding:0 0 24px 0;">
         <table cellpadding="0" cellspacing="0" role="presentation">
           <tr>
             ${
               input.receiptDownloadUrl
-                ? `<td style="padding-right:12px;border-radius:8px;background-color:#0a0a0a;">
-                    <a href="${input.receiptDownloadUrl}" target="_blank" rel="noopener noreferrer" style="display:inline-block;padding:10px 20px;color:#ffffff;background-color:#0a0a0a;border:1px solid #0a0a0a;border-radius:8px;font-size:13px;font-weight:600;text-decoration:none;text-align:center;">
+                ? `<td style="padding-right:12px;border-radius:9999px;background-color:#0a0a0a;">
+                    <a href="${input.receiptDownloadUrl}" target="_blank" rel="noopener noreferrer" style="display:inline-block;padding:12px 24px;color:#ffffff;background-color:#0a0a0a;border:1px solid #0a0a0a;border-radius:9999px;font-size:13px;font-weight:600;text-decoration:none;text-align:center;letter-spacing:-0.01em;">
                       Download receipt PDF &rarr;
                     </a>
                    </td>`
-                : `<td style="padding-right:12px;border-radius:8px;background-color:#0a0a0a;">
-                    <a href="${APP_URL || "https://app.arcenpay.com"}/settings/billing" target="_blank" rel="noopener noreferrer" style="display:inline-block;padding:10px 20px;color:#ffffff;background-color:#0a0a0a;border:1px solid #0a0a0a;border-radius:8px;font-size:13px;font-weight:600;text-decoration:none;text-align:center;">
+                : `<td style="padding-right:12px;border-radius:9999px;background-color:#0a0a0a;">
+                    <a href="${APP_URL || "https://app.arcenpay.com"}/settings/billing" target="_blank" rel="noopener noreferrer" style="display:inline-block;padding:12px 24px;color:#ffffff;background-color:#0a0a0a;border:1px solid #0a0a0a;border-radius:9999px;font-size:13px;font-weight:600;text-decoration:none;text-align:center;letter-spacing:-0.01em;">
                       View billing dashboard &rarr;
                     </a>
                    </td>`
@@ -1035,13 +1079,11 @@ export async function sendWelcomeEmail(
   const greeting = firstName ? `Hi ${escapeHtml(firstName)},` : "Hi there,";
 
   const bodyHtml = `
-    <!-- Hero Image Artwork Card -->
+    <!-- Category Eyebrow -->
     <tr>
-      <td style="padding:0 0 28px 0;">
-        <div style="border-radius:10px;overflow:hidden;border:1px solid #e4e4e7;line-height:0;background-color:#050508;box-shadow:0 2px 10px rgba(0,0,0,0.04);">
-          <a href="${dashUrl}" style="display:block;text-decoration:none;">
-            <img src="${HERO_IMAGE_URL}" alt="ArcenPay — Web3 Entitlement Layer" width="540" style="display:block;width:100%;height:auto;border:0;outline:none;" />
-          </a>
+      <td style="padding:0 0 10px 0;">
+        <div style="font-size:11px;font-weight:700;color:#0001fd;text-transform:uppercase;letter-spacing:0.06em;">
+          Getting Started
         </div>
       </td>
     </tr>
@@ -1062,13 +1104,13 @@ export async function sendWelcomeEmail(
       </td>
     </tr>
     <tr>
-      <td style="padding:0 0 12px 0;font-size:14px;line-height:22px;color:#3f3f46;">
-        We&#39;re thrilled to welcome you to ArcenPay. You&#39;re now ready to deploy programmable subscriptions, real-time credit metering, and autonomous agent payments with zero custody complexity.
+      <td style="padding:0 0 14px 0;font-size:14px;line-height:22px;color:#3f3f46;">
+        We&#39;re excited to welcome you to ArcenPay. Your billing control plane is active and ready to manage on-chain subscriptions, credit metering, and automated invoicing.
       </td>
     </tr>
     <tr>
       <td style="padding:0 0 24px 0;font-size:14px;line-height:22px;color:#3f3f46;">
-        Whether you&#39;re building a SaaS platform, consumer Web3 app, or multi-agent service—welcome aboard! If there&#39;s anything you need, our team is right here.
+        Here are key resources to help you integrate and start accepting payments:
       </td>
     </tr>
 
@@ -1079,16 +1121,37 @@ export async function sendWelcomeEmail(
       </td>
     </tr>
 
-    <!-- Resource 1: Changelog -->
+    <!-- Resource 1: Documentation -->
+    <tr>
+      <td style="padding:0 0 16px 0;">
+        <div style="margin-bottom:3px;">
+          <a href="https://docs.arcenpay.com/introduction" style="color:#0001fd;font-size:14px;font-weight:600;text-decoration:none;">
+            Platform Documentation &rarr;
+          </a>
+        </div>
+        <div style="font-size:13px;line-height:19px;color:#71717a;">
+          Architecture guides, SDK quickstarts, and API references.
+        </div>
+      </td>
+    </tr>
+
+    <!-- Thin Divider -->
+    <tr>
+      <td style="padding:0 0 16px 0;">
+        <div style="height:1px;background-color:#f4f4f5;line-height:1px;">&nbsp;</div>
+      </td>
+    </tr>
+
+    <!-- Resource 2: Changelog -->
     <tr>
       <td style="padding:0 0 16px 0;">
         <div style="margin-bottom:3px;">
           <a href="https://docs.arcenpay.com/changelog" style="color:#0001fd;font-size:14px;font-weight:600;text-decoration:none;">
-            ArcenPay changelog &rarr;
+            Changelog & Updates &rarr;
           </a>
         </div>
         <div style="font-size:13px;line-height:19px;color:#71717a;">
-          Weekly new updates, protocol improvements, and SDK releases.
+          Latest product improvements, SDK releases, and protocol updates.
         </div>
       </td>
     </tr>
@@ -1100,37 +1163,16 @@ export async function sendWelcomeEmail(
       </td>
     </tr>
 
-    <!-- Resource 2: Follow us on X (Twitter) -->
-    <tr>
-      <td style="padding:0 0 16px 0;">
-        <div style="margin-bottom:3px;">
-          <a href="https://x.com/arcenpayhq" style="color:#0001fd;font-size:14px;font-weight:600;text-decoration:none;">
-            Follow us on X (@arcenpayhq) &rarr;
-          </a>
-        </div>
-        <div style="font-size:13px;line-height:19px;color:#71717a;">
-          Stay up-to-date with product announcements and tutorials.
-        </div>
-      </td>
-    </tr>
-
-    <!-- Thin Divider -->
-    <tr>
-      <td style="padding:0 0 16px 0;">
-        <div style="height:1px;background-color:#f4f4f5;line-height:1px;">&nbsp;</div>
-      </td>
-    </tr>
-
-    <!-- Resource 3: Why we're building ArcenPay -->
+    <!-- Resource 3: Community & Announcements -->
     <tr>
       <td style="padding:0 0 24px 0;">
         <div style="margin-bottom:3px;">
-          <a href="https://docs.arcenpay.com/introduction" style="color:#0001fd;font-size:14px;font-weight:600;text-decoration:none;">
-            Why we&#39;re building ArcenPay &rarr;
+          <a href="https://x.com/arcenpayhq" style="color:#0001fd;font-size:14px;font-weight:600;text-decoration:none;">
+            Follow on X (@arcenpayhq) &rarr;
           </a>
         </div>
         <div style="font-size:13px;line-height:19px;color:#71717a;">
-          Explore our architecture for programmable entitlements and agent commerce.
+          Stay up to date with product releases and announcements.
         </div>
       </td>
     </tr>
@@ -1138,7 +1180,7 @@ export async function sendWelcomeEmail(
     <!-- Support Notice -->
     <tr>
       <td style="padding:0 0 14px 0;font-size:14px;line-height:22px;color:#3f3f46;">
-        Thanks for signing up. If you have any questions, reach out at <a href="mailto:support@arcenpay.com" style="color:#0001fd;text-decoration:underline;font-weight:600;">support@arcenpay.com</a> or on <a href="https://x.com/arcenpayhq" style="color:#0001fd;text-decoration:underline;font-weight:600;">X (@arcenpayhq)</a>.
+        Have questions? Contact our team anytime at <a href="mailto:support@arcenpay.com" style="color:#0001fd;text-decoration:underline;font-weight:600;">support@arcenpay.com</a>.
       </td>
     </tr>
     <tr>
@@ -1147,14 +1189,14 @@ export async function sendWelcomeEmail(
       </td>
     </tr>
 
-    <!-- CTA Button -->
+    <!-- CTA Button (Pill Rounded) -->
     <tr>
       <td style="padding:0 0 10px 0;">
         <table cellpadding="0" cellspacing="0" role="presentation">
           <tr>
-            <td style="border-radius:8px;background-color:#0a0a0a;">
-              <a href="${dashUrl}" style="display:inline-block;padding:12px 28px;color:#ffffff;background-color:#0a0a0a;border:1px solid #0a0a0a;border-radius:8px;font-size:14px;font-weight:600;text-decoration:none;text-align:center;">
-                Open your dashboard &rarr;
+            <td align="center" style="border-radius:9999px;background-color:#0a0a0a;">
+              <a href="${dashUrl}" style="display:inline-block;padding:13px 32px;color:#ffffff;background-color:#0a0a0a;border:1px solid #0a0a0a;border-radius:9999px;font-size:14px;font-weight:600;text-decoration:none;text-align:center;letter-spacing:-0.01em;">
+                Open dashboard &rarr;
               </a>
             </td>
           </tr>
@@ -1182,7 +1224,7 @@ export async function sendDispatchTestEmail(email: string): Promise<void> {
     <!-- Status Eyebrow -->
     <tr>
       <td style="padding:0 0 10px 0;">
-        <div style="font-size:11px;font-weight:700;color:#71717a;text-transform:uppercase;letter-spacing:0.06em;">
+        <div style="font-size:11px;font-weight:700;color:#0001fd;text-transform:uppercase;letter-spacing:0.06em;">
           Agent Dispatch Notification
         </div>
       </td>
@@ -1200,7 +1242,7 @@ export async function sendDispatchTestEmail(email: string): Promise<void> {
     <!-- Content -->
     <tr>
       <td style="padding:0 0 12px 0;font-size:14px;line-height:22px;color:#3f3f46;">
-        This test message confirms that your ArcenPay Agent dispatch provider is configured correctly and ready to deliver agent alerts.
+        This test message confirms that your ArcenPay Agent notifications are configured correctly and ready to deliver real-time alerts.
       </td>
     </tr>
     <tr>
@@ -1212,25 +1254,25 @@ export async function sendDispatchTestEmail(email: string): Promise<void> {
     <!-- Details Card -->
     <tr>
       <td style="padding:0 0 24px 0;">
-        <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="border:1px solid #e4e4e7;border-radius:10px;background-color:#fafafa;padding:16px 20px;">
+        <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="border:1px solid #e4e4e7;border-radius:12px;background-color:#fafafa;padding:16px 20px;">
           <tr>
             <td style="font-size:13px;line-height:20px;color:#3f3f46;">
               <strong style="color:#0a0a0a;">Recipient:</strong> ${escapeHtml(email)}<br />
-              <strong style="color:#0a0a0a;">Timestamp:</strong> ${new Date().toUTCString()}<br />
-              <strong style="color:#0a0a0a;">Provider:</strong> Resend API
+              <strong style="color:#0a0a0a;">Notification Channel:</strong> Email Alerts<br />
+              <strong style="color:#0a0a0a;">Status:</strong> Active &amp; Verified
             </td>
           </tr>
         </table>
       </td>
     </tr>
 
-    <!-- CTA Button -->
+    <!-- CTA Button (Pill Rounded) -->
     <tr>
       <td style="padding:0 0 24px 0;">
         <table cellpadding="0" cellspacing="0" role="presentation">
           <tr>
-            <td style="border-radius:8px;background-color:#0a0a0a;">
-              <a href="${dashUrl}/agents" target="_blank" rel="noopener noreferrer" style="display:inline-block;padding:12px 24px;color:#ffffff;background-color:#0a0a0a;border:1px solid #0a0a0a;border-radius:8px;font-size:14px;font-weight:600;text-decoration:none;text-align:center;">
+            <td align="center" style="border-radius:9999px;background-color:#0a0a0a;">
+              <a href="${dashUrl}/agents" target="_blank" rel="noopener noreferrer" style="display:inline-block;padding:13px 30px;color:#ffffff;background-color:#0a0a0a;border:1px solid #0a0a0a;border-radius:9999px;font-size:14px;font-weight:600;text-decoration:none;text-align:center;letter-spacing:-0.01em;">
                 Open agent dashboard &rarr;
               </a>
             </td>

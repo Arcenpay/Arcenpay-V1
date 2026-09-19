@@ -90,7 +90,7 @@ export function buildEnterpriseActivationEmailHtml(params: {
                 <tr>
                   <td style="vertical-align:middle;line-height:0;">
                     <a href="${dashUrl}" style="text-decoration:none;display:inline-block;">
-                      <img src="https://files.catbox.moe/dzpc14.png" alt="ArcenPay" width="138" height="34" style="display:block;height:32px;width:auto;border:0;outline:none;" />
+                      <img src="https://app.arcenpay.com/arcenpay-logo.png" alt="ArcenPay" width="138" height="34" style="display:block;height:32px;width:auto;border:0;outline:none;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Segoe UI',sans-serif;font-size:20px;font-weight:700;color:#0a0a0a;letter-spacing:-0.5px;" />
                     </a>
                   </td>
                 </tr>
@@ -113,8 +113,8 @@ export function buildEnterpriseActivationEmailHtml(params: {
                 <!-- Eyebrow Category -->
                 <tr>
                   <td style="padding:0 0 10px 0;">
-                    <div style="font-size:11px;font-weight:700;color:#71717a;text-transform:uppercase;letter-spacing:0.06em;">
-                      Enterprise Workspace Provisioning
+                    <div style="font-size:11px;font-weight:700;color:#0001fd;text-transform:uppercase;letter-spacing:0.06em;">
+                      Workspace Activation
                     </div>
                   </td>
                 </tr>
@@ -131,7 +131,7 @@ export function buildEnterpriseActivationEmailHtml(params: {
                 <!-- Intro Paragraph -->
                 <tr>
                   <td style="padding:0 0 20px 0;font-size:14px;line-height:22px;color:#3f3f46;">
-                    An enterprise workspace license has been provisioned on ArcenPay. Your environment includes dedicated facilitator relay, high-throughput ZK verification, and programmable subscription controls.
+                    Your ArcenPay ${tierLabel} workspace has been provisioned. Use the activation key below or click the button to finish setting up your workspace and billing control plane.
                   </td>
                 </tr>
 
@@ -140,7 +140,7 @@ export function buildEnterpriseActivationEmailHtml(params: {
                     ? `
                 <tr>
                   <td style="padding:0 0 20px 0;">
-                    <div style="background-color:#fafafa;border:1px solid #e4e4e7;border-radius:8px;padding:12px 16px;font-size:13px;color:#3f3f46;line-height:20px;">
+                    <div style="background-color:#fafafa;border:1px solid #e4e4e7;border-left:3px solid #0001fd;border-radius:0 8px 8px 0;padding:12px 16px;font-size:13px;color:#3f3f46;line-height:20px;">
                       <strong style="color:#0a0a0a;">Note:</strong> ${escapedCustomMessage}
                     </div>
                   </td>
@@ -151,7 +151,7 @@ export function buildEnterpriseActivationEmailHtml(params: {
                 <!-- Activation Key Card -->
                 <tr>
                   <td style="padding:0 0 24px 0;">
-                    <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="border:1px solid #e4e4e7;border-radius:10px;background-color:#fafafa;padding:18px 20px;">
+                    <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="border:1px solid #e4e4e7;border-radius:12px;background-color:#fafafa;padding:18px 20px;">
                       <tr>
                         <td>
                           <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="margin-bottom:6px;">
@@ -164,23 +164,22 @@ export function buildEnterpriseActivationEmailHtml(params: {
                               </td>
                             </tr>
                           </table>
-                          <div style="font-size:22px;font-weight:700;color:#0a0a0a;font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;letter-spacing:1.5px;padding:6px 0 2px 0;">
+                          <div style="font-size:24px;font-weight:800;color:#0001fd;font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;letter-spacing:1.5px;padding:6px 0 4px 0;">
                             ${escapedKey}
                           </div>
-                          ${escapedNotes ? `<div style="margin-top:6px;font-size:12px;color:#71717a;">Reference: <span style="color:#0a0a0a;">${escapedNotes}</span></div>` : ""}
                         </td>
                       </tr>
                     </table>
                   </td>
                 </tr>
 
-                <!-- Primary CTA Button -->
+                <!-- Primary CTA Button (Pill Rounded) -->
                 <tr>
                   <td style="padding:0 0 24px 0;">
                     <table cellpadding="0" cellspacing="0" role="presentation">
                       <tr>
-                        <td style="border-radius:8px;background-color:#0a0a0a;">
-                          <a href="${activationUrl}" target="_blank" rel="noopener noreferrer" style="display:inline-block;padding:12px 28px;color:#ffffff;background-color:#0a0a0a;border:1px solid #0a0a0a;border-radius:8px;font-size:14px;font-weight:600;text-decoration:none;text-align:center;">
+                        <td align="center" style="border-radius:9999px;background-color:#0a0a0a;">
+                          <a href="${activationUrl}" target="_blank" rel="noopener noreferrer" style="display:inline-block;padding:13px 32px;color:#ffffff;background-color:#0a0a0a;border:1px solid #0a0a0a;border-radius:9999px;font-size:14px;font-weight:600;text-decoration:none;text-align:center;letter-spacing:-0.01em;">
                             Activate workspace &rarr;
                           </a>
                         </td>
@@ -189,30 +188,10 @@ export function buildEnterpriseActivationEmailHtml(params: {
                   </td>
                 </tr>
 
-                <!-- Provisioned Specifications Summary -->
-                <tr>
-                  <td style="padding:0 0 24px 0;">
-                    <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="border:1px solid #e4e4e7;border-radius:10px;background-color:#ffffff;overflow:hidden;">
-                      <tr>
-                        <td style="padding:10px 16px;border-bottom:1px solid #f4f4f5;font-size:13px;color:#71717a;">Workspace Tier</td>
-                        <td style="padding:10px 16px;border-bottom:1px solid #f4f4f5;font-size:13px;font-weight:600;color:#0a0a0a;" align="right">${tierLabel}</td>
-                      </tr>
-                      <tr>
-                        <td style="padding:10px 16px;border-bottom:1px solid #f4f4f5;font-size:13px;color:#71717a;">Settlement Engine</td>
-                        <td style="padding:10px 16px;border-bottom:1px solid #f4f4f5;font-size:13px;font-weight:600;color:#0a0a0a;" align="right">High-Throughput Rollup</td>
-                      </tr>
-                      <tr>
-                        <td style="padding:10px 16px;font-size:13px;color:#71717a;">Autonomous Agent Module</td>
-                        <td style="padding:10px 16px;font-size:13px;font-weight:600;color:#0a0a0a;" align="right">Enabled (x402)</td>
-                      </tr>
-                    </table>
-                  </td>
-                </tr>
-
                 <!-- Sign-off -->
                 <tr>
                   <td style="padding:0;font-size:13px;line-height:20px;color:#71717a;">
-                    Questions about your enterprise deployment? Reach out to <a href="mailto:hello@arcenpay.com" target="_blank" rel="noopener noreferrer" style="color:#0001fd;text-decoration:underline;font-weight:500;">hello@arcenpay.com</a>.
+                    Questions about your workspace? Reach out to <a href="mailto:support@arcenpay.com" target="_blank" rel="noopener noreferrer" style="color:#0001fd;text-decoration:underline;font-weight:600;">support@arcenpay.com</a>.
                   </td>
                 </tr>
 
@@ -252,7 +231,7 @@ export function buildEnterpriseActivationEmailHtml(params: {
                         <!-- Left: Mini Brand Logo -->
                         <td align="left" style="vertical-align:middle;">
                           <a href="${dashUrl}" style="text-decoration:none;display:inline-block;">
-                            <img src="https://files.catbox.moe/dzpc14.png" alt="ArcenPay" width="92" height="23" style="display:block;height:22px;width:auto;border:0;outline:none;opacity:0.85;" />
+                            <img src="https://app.arcenpay.com/arcenpay-logo.png" alt="ArcenPay" width="92" height="23" style="display:block;height:22px;width:auto;border:0;outline:none;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Segoe UI',sans-serif;font-size:13px;font-weight:700;color:#71717a;letter-spacing:-0.3px;opacity:0.85;" />
                           </a>
                         </td>
 

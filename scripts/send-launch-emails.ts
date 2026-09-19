@@ -11,9 +11,9 @@ import { createHash } from "node:crypto";
 import { loadEnvFile } from "node:process";
 import { fileURLToPath } from "node:url";
 
-// ── Image Assets (CDN hosted for 100% reliable Gmail proxy rendering) ─────────
-const LOGO_IMAGE_URL = "https://files.catbox.moe/dzpc14.png";
-const HERO_IMAGE_URL = "https://files.catbox.moe/oe5jl5.jpg";
+// ── Image Assets (Hosted on official domain for reliable email rendering) ──────
+const LOGO_IMAGE_URL = "https://app.arcenpay.com/arcenpay-logo.png";
+const HERO_IMAGE_URL = "https://app.arcenpay.com/arcenpay-launch-hero.jpg";
 
 // ── Official Verified Links ──────────────────────────────────────────────────
 const APP_URL = "https://app.arcenpay.com";
@@ -399,7 +399,7 @@ export function buildEmailHtml(v: {
                 <tr>
                   <td>
                     <a href="${APP_URL}"
-                       style="display:block;width:100%;text-align:center;background-color:${brandBlue};color:#ffffff;font-size:15px;font-weight:700;padding:14px 0;border-radius:6px;text-decoration:none;box-sizing:border-box;letter-spacing:0.01em;">
+                       style="display:block;width:100%;text-align:center;background-color:${brandBlue};color:#ffffff;font-size:15px;font-weight:700;padding:14px 0;border-radius:9999px;text-decoration:none;box-sizing:border-box;letter-spacing:0.01em;">
                       Open your dashboard &rarr;
                     </a>
                   </td>
@@ -482,7 +482,7 @@ export function buildEmailHtml(v: {
                     </p>
                     <!-- Button: 'Talk to us' linked to https://www.arcenpay.com/contact -->
                     <a href="${CONTACT_URL}"
-                       style="display:inline-block;border:1.5px solid #0a0a0a;background-color:#ffffff;color:#0a0a0a;font-size:14px;font-weight:700;padding:10px 36px;border-radius:6px;text-decoration:none;">
+                       style="display:inline-block;border:1.5px solid #0a0a0a;background-color:#ffffff;color:#0a0a0a;font-size:14px;font-weight:700;padding:10px 36px;border-radius:9999px;text-decoration:none;">
                       Talk to us
                     </a>
                   </td>
