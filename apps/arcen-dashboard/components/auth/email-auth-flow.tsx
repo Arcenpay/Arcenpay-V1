@@ -24,6 +24,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { buildSIWEMessage } from "@/lib/auth";
+import { wagmiConfig } from "@/lib/wagmi";
 import {
   DEFAULT_WALLET_CHAIN_LABEL,
   SUPPORTED_WALLET_CHAIN_LABEL,
@@ -380,7 +381,79 @@ export function EmailAuthFlow({
         issuedAt,
       });
 
-      const signature = await signMessageAsync({ message });
+      // Pre-check and restore provider session if using WalletConnect
+      const currentConn = wagmiConfig.state.connections.get(
+        wagmiConfig.state.current ?? "",
+      );
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const provider: any = await currentConn?.connector?.getProvider?.();
+      if (provider) {
+        if (!provider.session && provider.client?.session?.getAll) {
+          try {
+            const sessions = provider.client.session.getAll();
+            if (Array.isArray(sessions) && sessions.length > 0) {
+              provider.session = sessions[sessions.length - 1];
+              provider.createProviders?.();
+            }
+          } catch {}
+        }
+      }
+
+      let signature: string;
+      try {
+        signature = await signMessageAsync({ message });
+      } catch (signErr: any) {
+        const errMsg = signErr?.message || "";
+        const isConnectorOrSessionError =
+          errMsg.includes("does not match the connection's chain") ||
+          errMsg.includes("ConnectorChainMismatchError") ||
+          errMsg.includes("ConnectorUnavailableReconnectingError") ||
+          errMsg.includes("ConnectorNotConnectedError") ||
+          errMsg.includes("before request()") ||
+          errMsg.includes("before enable()") ||
+          errMsg.includes("connect()");
+
+        if (isConnectorOrSessionError) {
+          console.warn(
+            "[EmailAuthFlow] signMessageAsync failed with connector/session error, attempting direct provider personal_sign:",
+            errMsg,
+          );
+          if (provider && typeof provider.request === "function") {
+            // Ensure session is recovered before direct request
+            if (!provider.session && provider.client?.session?.getAll) {
+              try {
+                const sessions = provider.client.session.getAll();
+                if (Array.isArray(sessions) && sessions.length > 0) {
+                  provider.session = sessions[sessions.length - 1];
+                  provider.createProviders?.();
+                }
+              } catch {}
+            }
+            try {
+              signature = await provider.request({
+                method: "personal_sign",
+                params: [message, address],
+              });
+            } catch (fallbackErr: any) {
+              if (
+                fallbackErr?.message?.includes("invalid") ||
+                fallbackErr?.code === -32602
+              ) {
+                signature = await provider.request({
+                  method: "personal_sign",
+                  params: [address, message],
+                });
+              } else {
+                throw fallbackErr;
+              }
+            }
+          } else {
+            throw signErr;
+          }
+        } else {
+          throw signErr;
+        }
+      }
       const linkResponse = await apiFetch("/api/auth/link-wallet", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -410,8 +483,14 @@ export function EmailAuthFlow({
         linkError instanceof Error
           ? linkError.message
           : "Could not link this wallet.";
-      if (message.toLowerCase().includes("rejected")) {
+      if (message.toLowerCase().includes("rejected") || message.toLowerCase().includes("denied")) {
         setError("Signature cancelled. Click Sign wallet to finish login.");
+      } else if (
+        message.includes("before request()") ||
+        message.includes("before enable()") ||
+        message.includes("Session not initialized")
+      ) {
+        setError("Wallet connection session expired. Please reconnect your wallet to finish signing.");
       } else {
         setError(`Wallet signing failed: ${message}`);
       }

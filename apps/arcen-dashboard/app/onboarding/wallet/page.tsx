@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { buildSIWEMessage } from "@/lib/auth";
+import { wagmiConfig } from "@/lib/wagmi";
 import {
   DEFAULT_WALLET_CHAIN_LABEL,
   SUPPORTED_WALLET_CHAIN_LABEL,
@@ -91,7 +92,79 @@ function EvmWalletConnect() {
       if (!nonceRes.ok) throw new Error("Failed to get nonce");
       const { nonce, issuedAt } = await nonceRes.json();
       const message = buildSIWEMessage({ address, chainId, nonce, domain: window.location.host, uri: window.location.origin, issuedAt });
-      const signature = await signMessageAsync({ message });
+      // Pre-check and restore provider session if using WalletConnect
+      const currentConn = wagmiConfig.state.connections.get(
+        wagmiConfig.state.current ?? "",
+      );
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const provider: any = await currentConn?.connector?.getProvider?.();
+      if (provider) {
+        if (!provider.session && provider.client?.session?.getAll) {
+          try {
+            const sessions = provider.client.session.getAll();
+            if (Array.isArray(sessions) && sessions.length > 0) {
+              provider.session = sessions[sessions.length - 1];
+              provider.createProviders?.();
+            }
+          } catch {}
+        }
+      }
+
+      let signature: string;
+      try {
+        signature = await signMessageAsync({ message });
+      } catch (signErr: any) {
+        const errMsg = signErr?.message || "";
+        const isConnectorOrSessionError =
+          errMsg.includes("does not match the connection's chain") ||
+          errMsg.includes("ConnectorChainMismatchError") ||
+          errMsg.includes("ConnectorUnavailableReconnectingError") ||
+          errMsg.includes("ConnectorNotConnectedError") ||
+          errMsg.includes("before request()") ||
+          errMsg.includes("before enable()") ||
+          errMsg.includes("connect()");
+
+        if (isConnectorOrSessionError) {
+          console.warn(
+            "[OnboardingWallet] signMessageAsync failed with connector/session error, attempting direct provider personal_sign:",
+            errMsg,
+          );
+          if (provider && typeof provider.request === "function") {
+            // Ensure session is recovered before direct request
+            if (!provider.session && provider.client?.session?.getAll) {
+              try {
+                const sessions = provider.client.session.getAll();
+                if (Array.isArray(sessions) && sessions.length > 0) {
+                  provider.session = sessions[sessions.length - 1];
+                  provider.createProviders?.();
+                }
+              } catch {}
+            }
+            try {
+              signature = await provider.request({
+                method: "personal_sign",
+                params: [message, address],
+              });
+            } catch (fallbackErr: any) {
+              if (
+                fallbackErr?.message?.includes("invalid") ||
+                fallbackErr?.code === -32602
+              ) {
+                signature = await provider.request({
+                  method: "personal_sign",
+                  params: [address, message],
+                });
+              } else {
+                throw fallbackErr;
+              }
+            }
+          } else {
+            throw signErr;
+          }
+        } else {
+          throw signErr;
+        }
+      }
       const res = await apiFetch("/api/auth/link-wallet", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -108,7 +181,17 @@ function EvmWalletConnect() {
       await routeAfterWalletLink();
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Something went wrong";
-      toast.error(msg.includes("rejected") || msg.includes("denied") ? "Signature cancelled" : msg);
+      if (msg.includes("rejected") || msg.includes("denied")) {
+        toast.error("Signature cancelled");
+      } else if (
+        msg.includes("before request()") ||
+        msg.includes("before enable()") ||
+        msg.includes("Session not initialized")
+      ) {
+        toast.error("Wallet connection session expired. Please reconnect your wallet.");
+      } else {
+        toast.error(msg);
+      }
     } finally { setIsSigning(false); }
   };
 

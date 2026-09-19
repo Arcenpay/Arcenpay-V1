@@ -1,5 +1,6 @@
 import { cookieStorage, createStorage, connect, reconnect } from "@wagmi/core";
 import { WagmiAdapter } from "@reown/appkit-adapter-wagmi";
+import { ChainController } from "@reown/appkit-controllers";
 import { base, baseSepolia, mainnet, sepolia } from "@reown/appkit/networks";
 import { arcTestnet, botMainnet, botTestnet } from "@arcenpay/internal-core";
 import {
@@ -88,6 +89,279 @@ export const wagmiAdapter = new WagmiAdapter({
 });
 
 export const wagmiConfig = wagmiAdapter.wagmiConfig;
+
+/**
+ * Patch UniversalProvider instances to automatically restore lost sessions from
+ * SignClient storage and prevent "Please call connect() before request()" errors.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function patchUniversalProvider(provider: any) {
+  if (!provider || provider.__arcenUniversalPatched) return;
+  provider.__arcenUniversalPatched = true;
+
+  const ensureSession = () => {
+    if (!provider.session && provider.client?.session?.getAll) {
+      try {
+        const sessions = provider.client.session.getAll();
+        if (Array.isArray(sessions) && sessions.length > 0) {
+          provider.session = sessions[sessions.length - 1];
+          if (typeof provider.createProviders === "function") {
+            try {
+              provider.createProviders();
+            } catch {}
+          }
+        }
+      } catch {}
+    }
+  };
+
+  ensureSession();
+
+  const origRequest = provider.request?.bind(provider);
+  if (origRequest) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    provider.request = async function (payload: any, chain?: string, expiry?: number) {
+      ensureSession();
+      try {
+        return await origRequest(payload, chain, expiry);
+      } catch (err: any) {
+        if (
+          err?.message?.includes("before request()") ||
+          err?.message?.includes("before enable()") ||
+          err?.message?.includes("connect()")
+        ) {
+          ensureSession();
+          if (provider.session) {
+            return await origRequest(payload, chain, expiry);
+          }
+        }
+        throw err;
+      }
+    };
+  }
+
+  const origEnable = provider.enable?.bind(provider);
+  if (origEnable) {
+    provider.enable = async function () {
+      ensureSession();
+      if (provider.session) {
+        return await provider.requestAccounts?.();
+      }
+      try {
+        return await origEnable();
+      } catch (err: any) {
+        if (
+          err?.message?.includes("before enable") ||
+          err?.message?.includes("connect()") ||
+          err?.message?.includes("Session not initialized")
+        ) {
+          ensureSession();
+          if (provider.session) {
+            return await provider.requestAccounts?.();
+          }
+        }
+        throw err;
+      }
+    };
+  }
+
+  const origDisconnect = provider.disconnect?.bind(provider);
+  if (origDisconnect) {
+    provider.disconnect = async function () {
+      if (!provider.session) {
+        try {
+          await provider.cleanup?.();
+        } catch {}
+        return;
+      }
+      try {
+        return await origDisconnect();
+      } catch (err: any) {
+        if (
+          err?.message?.includes("before enable") ||
+          err?.message?.includes("connect()") ||
+          err?.message?.includes("Session not initialized")
+        ) {
+          try {
+            await provider.cleanup?.();
+          } catch {}
+          return;
+        }
+        throw err;
+      }
+    };
+  }
+}
+
+/**
+ * Intercept and fix connector.getChainId to eliminate undefined return values
+ * and chain mismatches caused by Reown AppKit's WalletConnectConnector bug.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function patchConnectorChainId(connector: any) {
+  if (!connector || connector.__arcenChainIdPatched) return;
+  connector.__arcenChainIdPatched = true;
+
+  // 0. Disable isChainsStale to prevent Reown AppKit from destroying active sessions
+  // when mobile wallets only approve a subset of chains (e.g. Ethereum Mainnet only)
+  if (typeof connector.isChainsStale === "function") {
+    connector.isChainsStale = async function () {
+      return false;
+    };
+  }
+
+  // 1. Wrap connector.getProvider to always patch the universalProvider instance
+  const origGetProvider = connector.getProvider?.bind(connector);
+  if (origGetProvider) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    connector.getProvider = async function (...args: any[]) {
+      const provider = await origGetProvider(...args);
+      if (provider) {
+        patchUniversalProvider(provider);
+      }
+      return provider;
+    };
+  }
+
+  const origGetChainId = connector.getChainId?.bind(connector);
+
+  connector.getChainId = async function () {
+    let id: number | undefined;
+
+    // 1. Try original getChainId
+    try {
+      if (origGetChainId) {
+        id = await origGetChainId();
+      }
+    } catch {}
+
+    if (typeof id === "number" && !isNaN(id) && id > 0) {
+      return id;
+    }
+
+    // 2. Resolve from connector provider
+    try {
+      const provider = await connector.getProvider?.();
+      if (provider) {
+        // UniversalProvider (WalletConnect) direct property
+        if (typeof provider.chainId === "number" && provider.chainId > 0) {
+          id = provider.chainId;
+        } else if (typeof provider.chainId === "string" && !isNaN(Number(provider.chainId))) {
+          id = Number(provider.chainId);
+        } else if (typeof provider.getDefaultChain === "function") {
+          const defaultChain = provider.getDefaultChain();
+          if (typeof defaultChain === "number" && defaultChain > 0) {
+            id = defaultChain;
+          } else if (typeof defaultChain === "string") {
+            const parsed = parseInt(defaultChain.split(":").pop() || defaultChain, 10);
+            if (!isNaN(parsed) && parsed > 0) id = parsed;
+          }
+        }
+
+        // WalletConnect session namespaces
+        if (!id && provider.session?.namespaces) {
+          const eip155 =
+            provider.session.namespaces.eip155 ||
+            provider.session.namespaces["eip155"];
+          // Try accounts first: e.g. "eip155:1:0xabc..." - tells us what chain the active account is on
+          if (eip155?.accounts?.[0]) {
+            const parts = eip155.accounts[0].split(":");
+            if (parts.length >= 2) {
+              const parsed = parseInt(parts[1], 10);
+              if (!isNaN(parsed) && parsed > 0) id = parsed;
+            }
+          }
+          // Try chains next: e.g. ["eip155:1", ...]
+          if (!id && eip155?.chains?.[0]) {
+            const parsed = parseInt(eip155.chains[0].split(":").pop() || "", 10);
+            if (!isNaN(parsed) && parsed > 0) id = parsed;
+          }
+        }
+
+        // Standard EVM provider RPC
+        if (!id && typeof provider.request === "function") {
+          try {
+            const hexChainId = await provider.request({ method: "eth_chainId" });
+            if (hexChainId) {
+              const parsed =
+                typeof hexChainId === "string"
+                  ? parseInt(hexChainId, 16)
+                  : Number(hexChainId);
+              if (!isNaN(parsed) && parsed > 0) id = parsed;
+            }
+          } catch {}
+        }
+      }
+    } catch {}
+
+    // 3. Resolve from Wagmi connection state for this connector
+    if (!id && typeof window !== "undefined") {
+      try {
+        const conn =
+          wagmiConfig.state.connections.get(connector.uid) ??
+          wagmiConfig.state.connections.get(wagmiConfig.state.current ?? "");
+        if (conn?.chainId && typeof conn.chainId === "number" && conn.chainId > 0) {
+          id = conn.chainId;
+        }
+      } catch {}
+    }
+
+    // 4. Resolve from wagmiConfig.state.chainId
+    if (!id && typeof wagmiConfig.state.chainId === "number" && wagmiConfig.state.chainId > 0) {
+      id = wagmiConfig.state.chainId;
+    }
+
+    // 5. Fallback to default network or Ethereum Mainnet (1)
+    if (!id || isNaN(id) || id <= 0) {
+      id = (DEFAULT_CHAIN_ID as number) || 1;
+    }
+
+    // Synchronize AppKit ChainController if needed so AppKit UI stays in sync
+    try {
+      const activeNetwork = ChainController.getActiveCaipNetwork();
+      if (!activeNetwork || activeNetwork.id !== id) {
+        const caipNetworks = ChainController.getCaipNetworks();
+        const match = caipNetworks?.find(
+          (c) => c.id === id || Number(c.id) === id || c.caipNetworkId === `eip155:${id}`,
+        );
+        if (match) {
+          ChainController.setActiveCaipNetwork(match);
+        }
+      }
+    } catch {}
+
+    return id;
+  };
+}
+
+// Immediately patch all current connectors
+wagmiConfig.connectors.forEach(patchConnectorChainId);
+
+// Intercept connector store to automatically patch any newly created/registered connectors
+try {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const internalConnectors = (wagmiConfig as any)._internal?.connectors;
+  if (internalConnectors) {
+    if (typeof internalConnectors.subscribe === "function") {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      internalConnectors.subscribe((connectors: any[]) => {
+        if (Array.isArray(connectors)) {
+          connectors.forEach(patchConnectorChainId);
+        }
+      });
+    }
+    if (typeof internalConnectors.setup === "function") {
+      const origSetup = internalConnectors.setup.bind(internalConnectors);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      internalConnectors.setup = function (connector: any) {
+        const result = origSetup(connector);
+        patchConnectorChainId(result);
+        return result;
+      };
+    }
+  }
+} catch {}
+
 
 const EIP155_CHAINS = [
   "eip155:1",
@@ -178,6 +452,7 @@ const origSetUniversalProvider = (wagmiAdapter as any).setUniversalProvider.bind
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 (wagmiAdapter as any).setUniversalProvider = async function (universalProvider: any) {
   if (universalProvider) {
+    patchUniversalProvider(universalProvider);
     // 0. Intercept universalProvider.disconnect and enable to prevent the WalletConnect bug:
     // "Please call connect() before enable()" when session is uninitialized or already disconnected.
     if (typeof universalProvider.disconnect === "function") {
@@ -276,6 +551,33 @@ const origSetUniversalProvider = (wagmiAdapter as any).setUniversalProvider.bind
         const connector = wagmiConfig.connectors.find(
           (c) => c.id === "walletConnect",
         );
+        if (connector) {
+          patchConnectorChainId(connector);
+        }
+
+        // Synchronize AppKit's ChainController with the active chain from session
+        try {
+          const eip155 = universalProvider.session?.namespaces?.eip155;
+          let sessionChainId: number | undefined;
+          if (typeof universalProvider.chainId === "number" && universalProvider.chainId > 0) {
+            sessionChainId = universalProvider.chainId;
+          } else if (eip155?.accounts?.[0]) {
+            const parsed = parseInt(eip155.accounts[0].split(":")[1] || "", 10);
+            if (!isNaN(parsed) && parsed > 0) sessionChainId = parsed;
+          } else if (eip155?.chains?.[0]) {
+            const parsed = parseInt(eip155.chains[0].split(":").pop() || "", 10);
+            if (!isNaN(parsed) && parsed > 0) sessionChainId = parsed;
+          }
+          if (sessionChainId) {
+            const match = ChainController.getCaipNetworks().find(
+              (c) => c.id === sessionChainId || Number(c.id) === sessionChainId || c.caipNetworkId === `eip155:${sessionChainId}`,
+            );
+            if (match) {
+              ChainController.setActiveCaipNetwork(match);
+            }
+          }
+        } catch {}
+
         if (!connector) return;
 
         if (wagmiConfig.state.status !== "connected") {
