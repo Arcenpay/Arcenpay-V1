@@ -9,6 +9,7 @@ import {
   EXPOSE_HEADERS,
 } from "./middleware/cors.js";
 import { appRouter } from "./routes/index.js";
+import { arcjetGlobalProtect } from "./middleware/arcjet-global.js";
 
 export function createApp() {
   const app = new Hono();
@@ -27,6 +28,10 @@ export function createApp() {
   );
 
   app.use("*", prettyJSON());
+
+  // Global Arcjet edge protection (shield + detectBot). No-op outside
+  // production, and exempts the docs playground + valid API-key traffic.
+  app.use("*", arcjetGlobalProtect);
 
   if (process.env.NODE_ENV !== "production") {
     app.use("*", logger());

@@ -16,7 +16,7 @@
 
 import { createHash, randomBytes } from "crypto";
 import { db } from "../../db.js";
-import { aj, fixedWindow } from "./arcjet.js";
+import { aj, fixedWindow, isDocsApiOrigin } from "./arcjet.js";
 
 export type ApiKeyTypeName = "SECRET" | "PUBLISHABLE" | "RESTRICTED";
 
@@ -242,8 +242,12 @@ export async function requireApiKey(
     }
   }
 
-  // Apply per-key rate limiting via Arcjet
-  if (process.env.ARCJET_KEY) {
+  // Apply per-key rate limiting via Arcjet.
+  // Requests from the docs API playground (docs.arcenpay.com) are first-party
+  // "try it" testing traffic — they never count against a user's per-key
+  // bucket, otherwise the playground would break the moment a user explores
+  // multiple references. All other requests keep the 500 req/60s limit.
+  if (process.env.ARCJET_KEY && !isDocsApiOrigin(request)) {
     const decision = await apiKeyProtect.protect(request as any, {
       apikey: apiKey.id,
     });

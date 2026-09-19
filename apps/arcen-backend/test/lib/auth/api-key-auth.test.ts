@@ -12,6 +12,8 @@ vi.mock("../../../src/db.js", () => ({
 vi.mock("../../../src/lib/auth/arcjet.js", () => ({
   aj: { withRule: () => ({ protect: vi.fn(async () => ({ isDenied: () => false })) }) },
   fixedWindow: () => ({}),
+  isDocsApiOrigin: vi.fn(() => false),
+  shouldBypassGlobalProtection: vi.fn(() => false),
 }));
 
 import {
