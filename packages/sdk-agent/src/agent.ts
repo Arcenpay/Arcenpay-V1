@@ -1930,7 +1930,14 @@ export class ArcenAgent {
         `${apiRoot}/api/v1/public/payment-links/${specSlug}/session`,
       confirmUrl:
         (created.confirmUrl as string | undefined) ??
-        (apiRoot ? `${apiRoot}/api/v1/checkout-sessions/:sessionId/confirm` : undefined),
+        // Template: the caller substitutes `:sessionId` with the id returned by
+        // the session endpoint. Points at the real public confirm route —
+        // the previous value named `/api/v1/checkout-sessions/:sessionId/confirm`,
+        // which is not a registered endpoint, so substituting a valid session id
+        // still produced a 404.
+        (apiRoot
+          ? `${apiRoot}/api/v1/public/checkout/:sessionId/confirm`
+          : undefined),
       checkoutUrl:
         (created.checkoutUrl as string | undefined) ??
         (specSlug ? `${apiRoot}/pay/${specSlug}` : undefined),

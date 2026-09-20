@@ -196,7 +196,19 @@ export async function resolveCompany(
 
   const where: Record<string, unknown>[] = [];
   if (keys.internalId) where.push({ id: keys.internalId });
-  if (keys.id) where.push({ externalId: keys.id });
+  /**
+   * `keys.id` is documented as the CALLER'S OWN id (it maps to `externalId`).
+   *
+   * We also accept the platform's own company id. Passing an ArcenPay company id
+   * — the value the dashboard displays and that `setCompanyOverride()` takes —
+   * as `keys.id` previously matched nothing, silently producing `company: null`.
+   * Because overrides are only loaded when a company resolves, every override
+   * for that company was then skipped with no error surfaced anywhere.
+   *
+   * Safe: the query remains scoped by `teamId`, so neither branch can reach
+   * another tenant's company.
+   */
+  if (keys.id) where.push({ id: keys.id }, { externalId: keys.id });
   if (keys.wallet) {
     const normalizedWallet = keys.wallet.trim();
     const isStellar = normalizedWallet.startsWith("G") && normalizedWallet.length === 56;
@@ -329,7 +341,9 @@ export async function resolveUser(
 
   const where: Record<string, unknown>[] = [];
   if (keys.internalId) where.push({ id: keys.internalId });
-  if (keys.id) where.push({ externalId: keys.id });
+  // Accept both the caller's own user id (externalId) and the platform user id,
+  // mirroring resolveCompany. Team-scoped, so no cross-tenant reach.
+  if (keys.id) where.push({ id: keys.id }, { externalId: keys.id });
   if (keys.clerkUserId) where.push({ clerkUserId: keys.clerkUserId });
   if (keys.wallet) where.push({ walletAddress: keys.wallet.toLowerCase() });
   if (keys.email) {

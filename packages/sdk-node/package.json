@@ -1,7 +1,7 @@
 {
   "name": "@arcenpay/node",
-  "version": "1.0.0",
-  "description": "ArcenPay SDK — Node.js middleware and billing services",
+  "version": "1.1.0",
+  "description": "ArcenPay SDK \u2014 Node.js middleware and billing services",
   "license": "MIT",
   "homepage": "https://app.arcenpay.com",
   "repository": {

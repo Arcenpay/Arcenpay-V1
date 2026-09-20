@@ -554,6 +554,18 @@ type PortalAction =
   | { type: "FETCH_OK"; data: ComponentRenderData; view?: PortalView }
   | { type: "HYDRATE_DATA"; data: ComponentRenderData }
   | { type: "FETCH_ERR"; error: string }
+  /**
+   * The component cannot fetch because no credential is available yet
+   * (no accessToken prop, no provider session token, no env token).
+   *
+   * SECURITY/UX: firing the request anyway sends `Authorization: Bearer `
+   * (empty). The API correctly treats that as unauthenticated traffic, so the
+   * request is subject to bot/shield protection and comes back as
+   * `429 BOT_BLOCKED`, which surfaced to end users as the misleading
+   * "Failed to load component" error. Skipping the request and clearing the
+   * loading flag lets the token-required guidance render instead.
+   */
+  | { type: "FETCH_SKIP" }
   | { type: "OPEN_CHECKOUT" }
   | { type: "OPEN_UNSUBSCRIBE" }
   | { type: "OPEN_PAYMENT" }
@@ -633,6 +645,11 @@ function reducer(state: PortalState, action: PortalAction): PortalState {
       };
     case "FETCH_ERR":
       return { ...state, loading: false, error: action.error, actionError: null };
+    case "FETCH_SKIP":
+      // Deliberately not an error: nothing has gone wrong, we simply have no
+      // credential to fetch with. Rendering falls through to the
+      // "Access token required" guidance below.
+      return { ...state, loading: false, error: null, actionError: null };
     case "OPEN_CHECKOUT":
       return {
         ...state,
@@ -10418,13 +10435,30 @@ export function ArcenEmbed({
       });
       return;
     }
+
+    // SECURITY: never issue an authenticated request without a credential.
+    // Without this guard the request carried `Authorization: Bearer ` (empty),
+    // which the API treats as anonymous traffic — it is then subject to
+    // bot/shield protection and returns `429 BOT_BLOCKED`. ArcenEmbed surfaced
+    // that as "Failed to load component", which points the developer at the
+    // wrong problem entirely.
+    //
+    // `resolvedToken` is a dependency below, so the moment a token arrives
+    // (e.g. once `identify()` resolves, or the `accessToken` prop is passed)
+    // the fetch runs automatically. Previously it was absent from the dep list,
+    // so the embed would never load if the token appeared after mount.
+    if (!resolvedToken) {
+      dispatch({ type: "FETCH_SKIP" });
+      return;
+    }
+
     const controller = new AbortController();
     abortRef.current = controller;
     fetchData(controller.signal, { view: initialViewRef.current });
     return () => {
       abortRef.current?.abort();
     };
-  }, [fetchData, mockData]);
+  }, [fetchData, mockData, resolvedToken]);
 
   useEffect(() => {
     if (!mockData || !initialView) return;

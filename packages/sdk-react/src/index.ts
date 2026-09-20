@@ -3,7 +3,7 @@
 // ============================================================
 
 // Provider — the single entry point
-export { ArcenPayProvider, useArcenPay } from "./providers/ArcenPayProvider";
+export { ArcenPayProvider, useArcenPay, useIdentify } from "./providers/ArcenPayProvider";
 export type {
   ArcenPayProviderProps,
   ArcenPayContextValue,
@@ -44,6 +44,22 @@ export {
 } from "./hooks/useEntitlement";
 export type { EntitlementErrorCode } from "./hooks/useEntitlement";
 export { useConsumeEntitlement } from "./hooks/useConsumeEntitlement";
+// Metered (usage-based) entitlements.
+//
+// `useEntitlementCheck` and `invalidateEntitlementCache` were previously NOT
+// exported, which is why integrating teams concluded the SDK had no way to read
+// `allocation` / `usage` and hand-rolled their own server endpoint. They have
+// always existed; they just were not reachable through the package entry point.
+export {
+  useEntitlementCheck,
+  invalidateEntitlementCache,
+} from "./hooks/useEntitlementCheck";
+export type {
+  UseEntitlementCheckOptions,
+  UseEntitlementCheckReturn,
+} from "./hooks/useEntitlementCheck";
+export { useMeteredEntitlement } from "./hooks/useMeteredEntitlement";
+export type { UseMeteredEntitlementReturn } from "./hooks/useMeteredEntitlement";
 export { useTrack } from "./hooks/useTrack";
 export type { TrackEventInput } from "./hooks/useTrack";
 export { useStellarEmbedWallet } from "./hooks/useStellarEmbedWallet";

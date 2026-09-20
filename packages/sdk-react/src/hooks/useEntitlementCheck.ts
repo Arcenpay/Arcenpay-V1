@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import type { EntitlementResult } from "../sdk";
 import { useArcenPay } from "../providers/ArcenPayProvider";
+import { warnOnUnknownFeatureKey } from "../lib/feature-key-diagnostics";
 
 export interface UseEntitlementCheckOptions {
   cacheTtlMs?: number;
@@ -10,8 +11,16 @@ export interface UseEntitlementCheckOptions {
 
 export interface UseEntitlementCheckReturn extends Partial<EntitlementResult> {
   enabled: boolean;
+  /** Maximum allowed usage for the active billing period. `null` = unlimited. */
   allocation: number | null;
+  /** Units consumed in the active billing period. */
   usage: number;
+  /**
+   * Units still available: `max(allocation - usage, 0)`.
+   * `null` when the entitlement is unlimited (`allocation === null`), so callers
+   * can distinguish "no limit" from "none left".
+   */
+  remaining: number | null;
   exceeded: boolean;
   loading: boolean;
   error: string | null;
@@ -22,6 +31,26 @@ const cache = new Map<
   string,
   { result: EntitlementResult; expiresAt: number }
 >();
+
+/**
+ * Drops cached entitlement reads.
+ *
+ * MUST be called after anything that mutates usage (e.g. `consume()`).
+ * Otherwise `refetch()` returns the still-fresh cached value and the UI shows
+ * the pre-consume quota until the TTL expires — the classic "my meter never
+ * moves" bug.
+ *
+ * @param featureKey clear only this key's entries; omit to clear everything.
+ */
+export function invalidateEntitlementCache(featureKey?: string): void {
+  if (!featureKey) {
+    cache.clear();
+    return;
+  }
+  for (const key of cache.keys()) {
+    if (key.endsWith(`:${featureKey}`)) cache.delete(key);
+  }
+}
 
 export function useEntitlementCheck(
   featureKey: string,
@@ -79,6 +108,7 @@ export function useEntitlementCheck(
       }
 
       const json = (await res.json()) as EntitlementResult;
+      warnOnUnknownFeatureKey(featureKey, json.reason);
       cache.set(cacheKey, { result: json, expiresAt: Date.now() + cacheTtlMs });
       setResult(json);
     } catch (err) {
@@ -94,12 +124,18 @@ export function useEntitlementCheck(
     return () => abortRef.current?.abort();
   }, [fetchEntitlement]);
 
+  const allocation = result?.allocation ?? null;
+  const usage = result?.usage ?? 0;
+
   return {
     key: result?.key ?? featureKey,
     enabled: result?.enabled ?? false,
     reason: result?.reason,
-    allocation: result?.allocation ?? null,
-    usage: result?.usage ?? 0,
+    allocation,
+    usage,
+    // `null` allocation means unlimited, which must not be reported as 0
+    // remaining — that would render "0 left" for an uncapped entitlement.
+    remaining: allocation === null ? null : Math.max(allocation - usage, 0),
     exceeded: result?.exceeded ?? false,
     loading,
     error,

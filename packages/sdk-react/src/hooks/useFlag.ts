@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import type { ArcenCompanyKeys, ArcenUserKeys } from "../sdk";
 import { useArcenPay } from "../providers/ArcenPayProvider";
+import { warnOnUnknownFeatureKey } from "../lib/feature-key-diagnostics";
 
 // ─── Module-level cache ──────────────────────────────────────────────────────
 
@@ -87,6 +88,7 @@ export function useFlag(
       })
       .then((json: { enabled?: boolean; reason?: string }) => {
         const value = json.enabled ?? false;
+        warnOnUnknownFeatureKey(featureKey, json.reason);
         flagCache.set(cacheKey, {
           enabled: value,
           reason: (json as { reason?: string }).reason ?? "",
@@ -157,6 +159,7 @@ export function useFlags(
           .then(async (response) => {
             const json = (await response.json().catch(() => ({}))) as {
               enabled?: boolean;
+              reason?: string;
               error?: string;
             };
 
@@ -164,6 +167,7 @@ export function useFlags(
               throw new Error(json.error ?? `HTTP ${response.status}`);
             }
 
+            warnOnUnknownFeatureKey(key, json.reason);
             return [key, json.enabled ?? false] as [string, boolean];
           })
           .catch((error) => {

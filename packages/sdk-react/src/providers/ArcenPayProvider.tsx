@@ -7,6 +7,7 @@ import React, {
   useMemo,
   useState,
   useCallback,
+  useRef,
   type ReactNode,
 } from "react";
 import { WagmiProvider, createConfig, http, useAccount } from "wagmi";
@@ -118,6 +119,7 @@ export interface ArcenIdentifyInput {
 // ─── Internal helpers ────────────────────────────────────────────────────────
 
 import { resolveDashboardBaseUrl } from "../lib/api";
+import { createIdentifyCoordinator } from "../lib/identify-coordinator";
 
 const ARCENPAY_WAGMI_CHAINS = [sepolia, baseSepolia, base, arcTestnet, botTestnet, botMainnet] as const;
 const wagmiConfigCache = new Map<string, ReturnType<typeof createConfig>>();
@@ -169,7 +171,11 @@ async function readErrorMessage(
   return payload.detail ?? payload.error ?? payload.message ?? fallback;
 }
 
-function getRpcTransport(id: number) {
+function getRpcTransport(id: number, rpcOverrides?: Record<number, string>) {
+  // Precedence: explicit provider prop > env var > chain manifest default.
+  // The prop exists so applications can point the SDK at their own RPC without
+  // being forced to set build-time NEXT_PUBLIC_ env vars.
+  const override = rpcOverrides?.[id];
   const specific =
     typeof process !== "undefined"
       ? process.env[`NEXT_PUBLIC_RPC_URL_${id}`]
@@ -183,13 +189,18 @@ function getRpcTransport(id: number) {
       return "";
     }
   })();
-  const url = specific ?? global_ ?? manifestRpc;
+  const url = override ?? specific ?? global_ ?? manifestRpc;
 
   return url ? http(url) : http();
 }
 
-function getOrCreateWagmiConfig(walletConnectProjectId?: string) {
-  const cacheKey = walletConnectProjectId ?? "";
+function getOrCreateWagmiConfig(
+  walletConnectProjectId?: string,
+  rpcUrls?: Record<number, string>,
+) {
+  // The resolved RPC set is part of the cache key: two providers configured with
+  // different overrides must not share a wagmi config.
+  const cacheKey = `${walletConnectProjectId ?? ""}|${JSON.stringify(rpcUrls ?? {})}`;
   const cachedConfig = wagmiConfigCache.get(cacheKey);
 
   if (cachedConfig) {
@@ -214,12 +225,12 @@ function getOrCreateWagmiConfig(walletConnectProjectId?: string) {
         ]
       : [injected()],
     transports: {
-      [sepolia.id]: getRpcTransport(sepolia.id),
-      [baseSepolia.id]: getRpcTransport(baseSepolia.id),
-      [base.id]: getRpcTransport(base.id),
-      [arcTestnet.id]: getRpcTransport(arcTestnet.id),
-      [botTestnet.id]: getRpcTransport(botTestnet.id),
-      [botMainnet.id]: getRpcTransport(botMainnet.id),
+      [sepolia.id]: getRpcTransport(sepolia.id, rpcUrls),
+      [baseSepolia.id]: getRpcTransport(baseSepolia.id, rpcUrls),
+      [base.id]: getRpcTransport(base.id, rpcUrls),
+      [arcTestnet.id]: getRpcTransport(arcTestnet.id, rpcUrls),
+      [botTestnet.id]: getRpcTransport(botTestnet.id, rpcUrls),
+      [botMainnet.id]: getRpcTransport(botMainnet.id, rpcUrls),
     },
     ssr: true,
   });
@@ -262,6 +273,73 @@ function getPublishableKey(): string | undefined {
 
 // ─── Context ─────────────────────────────────────────────────────────────────
 
+/**
+ * Deduplication key for `identify()`.
+ *
+ * Two calls with the same key describe the same billing subject, so the second
+ * one must be a no-op rather than another pair of network round-trips.
+ */
+function buildIdentifyKey(input: ArcenIdentifyInput): string {
+  const company = input.company ?? {};
+  const user = input.user ?? {};
+  return [
+    company.id ?? "",
+    company.wallet?.toLowerCase() ?? "",
+    company.email?.toLowerCase() ?? "",
+    user.id ?? "",
+    user.wallet?.toLowerCase() ?? "",
+    user.email?.toLowerCase() ?? "",
+  ].join("|");
+}
+
+/**
+ * True when two session objects carry the same *observable* values.
+ *
+ * Used to bail out of `setState` when a write would change nothing. Returning
+ * the previous object from an updater makes React skip the re-render entirely,
+ * which is what keeps the context value referentially stable.
+ */
+function sessionEquals(a: ArcenSessionValue, b: ArcenSessionValue): boolean {
+  return (
+    a.isReady === b.isReady &&
+    a.isIdentifying === b.isIdentifying &&
+    a.identifyError === b.identifyError &&
+    a.token === b.token &&
+    a.identify === b.identify &&
+    companyEquals(a.company, b.company) &&
+    userEquals(a.user, b.user)
+  );
+}
+
+function companyEquals(
+  a: ArcenCompanyIdentity | null,
+  b: ArcenCompanyIdentity | null,
+): boolean {
+  if (a === b) return true;
+  if (!a || !b) return false;
+  return (
+    a.id === b.id &&
+    a.wallet === b.wallet &&
+    a.email === b.email &&
+    a.name === b.name
+  );
+}
+
+function userEquals(
+  a: ArcenUserIdentity | null,
+  b: ArcenUserIdentity | null,
+): boolean {
+  if (a === b) return true;
+  if (!a || !b) return false;
+  return (
+    a.id === b.id &&
+    a.clerkUserId === b.clerkUserId &&
+    a.wallet === b.wallet &&
+    a.email === b.email &&
+    a.name === b.name
+  );
+}
+
 const ArcenPayContext = createContext<ArcenPayContextValue | null>(null);
 
 // ─── Provider Props ──────────────────────────────────────────────────────────
@@ -284,6 +362,23 @@ export interface ArcenPayProviderProps {
   chainId?: number;
   /** @deprecated Auto-detected. */
   walletConnectProjectId?: string;
+  /**
+   * Per-chain RPC endpoint overrides, keyed by chain ID.
+   *
+   * Takes precedence over `NEXT_PUBLIC_RPC_URL_<chainId>`, `NEXT_PUBLIC_RPC_URL`,
+   * and the built-in chain defaults. Use this to point the SDK at your own
+   * node/plan (Alchemy, QuickNode, a private endpoint) or to keep traffic off a
+   * default public RPC.
+   *
+   * @example
+   * ```tsx
+   * <ArcenPayProvider
+   *   publishableKey={pk}
+   *   rpcUrls={{ 677: "https://my-botchain-node.example/rpc" }}
+   * />
+   * ```
+   */
+  rpcUrls?: Record<number, string>;
 }
 
 interface ArcenPayRuntimeProps {
@@ -294,6 +389,7 @@ interface ArcenPayRuntimeProps {
   lockChainId: boolean;
   publishableKey: string;
   userConfig?: Partial<ArcenPayConfig>;
+  rpcUrls?: Record<number, string>;
 }
 
 // ─── Provider Component ──────────────────────────────────────────────────────
@@ -306,6 +402,7 @@ export function ArcenPayProvider(props: ArcenPayProviderProps) {
     chainId: chainIdProp,
     walletConnectProjectId: wcProp,
     componentId: cidProp,
+    rpcUrls,
   } = props;
 
   // Resolve configuration — explicit props first, then env vars, then defaults
@@ -324,8 +421,8 @@ export function ArcenPayProvider(props: ArcenPayProviderProps) {
 
   // ── Wagmi config ──────────────────────────────────────────────────────
   const wagmiConfig = useMemo(
-    () => getOrCreateWagmiConfig(wcProjectId),
-    [wcProjectId],
+    () => getOrCreateWagmiConfig(wcProjectId, rpcUrls),
+    [wcProjectId, rpcUrls],
   );
 
   const [queryClient] = useState(
@@ -347,6 +444,7 @@ export function ArcenPayProvider(props: ArcenPayProviderProps) {
           lockChainId={lockChainId}
           publishableKey={publishableKey}
           userConfig={userConfig}
+          rpcUrls={rpcUrls}
         >
           {children}
         </ArcenPayRuntime>
@@ -363,6 +461,7 @@ function ArcenPayRuntime({
   lockChainId,
   publishableKey,
   userConfig,
+  rpcUrls,
 }: ArcenPayRuntimeProps) {
   const { chainId: walletChainId, isConnected } = useAccount();
   const chainId =
@@ -374,6 +473,30 @@ function ArcenPayRuntime({
       : configuredChainId;
 
   // ── Session state ──────────────────────────────────────────────────────
+  //
+  // WHY `identify` MUST BE REFERENTIALLY STABLE
+  // -------------------------------------------
+  // `identify` is part of the public context value. Consumer code naturally
+  // writes `useEffect(() => { arcen.identify(...) }, [arcen, address])` — a
+  // completely reasonable React pattern. If `identify` re-mutates session state
+  // on every call, that becomes an unbounded loop:
+  //
+  //   effect -> identify() -> setSession -> new context object
+  //         -> effect re-fires -> identify() -> ...
+  //
+  // Each iteration used to fire TWO network requests (events + access-tokens).
+  // Within seconds the browser's socket pool is exhausted and *every* fetch in
+  // the host application starts failing with `net::ERR_INSUFFICIENT_RESOURCES`,
+  // including unrelated third-party traffic.
+  //
+  // Three mechanisms make that impossible:
+  //   1. `identify` is created once (stable deps) and never changes identity.
+  //   2. Repeat calls for the same company/user are a NO-OP that returns the
+  //      already-minted token — so an effect that re-fires costs nothing.
+  //   3. Concurrent calls share a single in-flight promise, so N effects firing
+  //      together produce ONE pair of requests.
+  //
+  // Callers therefore do NOT need a manual `useRef` latch.
   const [session, setSession] = useState<ArcenSessionValue>({
     isReady: false,
     token: null,
@@ -386,106 +509,146 @@ function ArcenPayRuntime({
     },
   });
 
+  // Coordinates identify() calls: repeat calls for the same company/user are
+  // no-ops, concurrent calls share one in-flight promise. See
+  // ../lib/identify-coordinator.ts for the failure mode this prevents.
+  const coordinatorRef = useRef(createIdentifyCoordinator<void>());
+  const publishableKeyRef = useRef(publishableKey);
+  const baseUrlRef = useRef(baseUrl);
+  publishableKeyRef.current = publishableKey;
+  baseUrlRef.current = baseUrl;
+
+  // Re-arm the latch whenever there is no session token (first mount, logout,
+  // expiry) so the next identify() genuinely re-runs.
+  useEffect(() => {
+    if (!session.token) {
+      coordinatorRef.current.reset();
+    }
+  }, [session.token]);
+
+  /** Writes a session patch, skipping the render when nothing observable changed. */
+  const patchSession = useCallback(
+    (patch: Partial<ArcenSessionValue>) => {
+      setSession((current) => {
+        const next = { ...current, ...patch };
+        return sessionEquals(current, next) ? current : next;
+      });
+    },
+    [],
+  );
+
   // ── identify() implementation ──────────────────────────────────────────
-  const identify = useCallback(
+  const identify = useCallback<ArcenSessionValue["identify"]>(
     async (input: ArcenIdentifyInput) => {
-      if (!publishableKey) {
+      const pk = publishableKeyRef.current;
+      const url = baseUrlRef.current;
+      const dedupKey = buildIdentifyKey(input);
+
+      if (!pk) {
         const msg =
           "ArcenPayProvider requires publishableKey to identify. Set NEXT_PUBLIC_ARCENPAY_PUBLISHABLE_KEY env var or pass it as a prop.";
-        setSession((current) => ({
-          ...current,
-          isIdentifying: false,
-          identifyError: msg,
-        }));
+        setSession((current) => {
+          const next = {
+            ...current,
+            isIdentifying: false,
+            identifyError: msg,
+          };
+          return sessionEquals(current, next) ? current : next;
+        });
         throw new Error(msg);
       }
 
-      setSession((current) => ({
-        ...current,
-        isIdentifying: true,
-        identifyError: null,
-      }));
+      // (2)+(3) Deduplicate and coalesce: repeats replay, concurrent calls join.
+      // `run` executes the task at most once per company/user key.
+      await coordinatorRef.current.run(dedupKey, async () => {
+        patchSession({ isIdentifying: true, identifyError: null });
 
-      try {
-        const headers = {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${publishableKey}`,
-        };
-
-        const res = await fetchWithTimeout(`${baseUrl}/api/v1/events`, {
-          method: "POST",
-          headers,
-          body: JSON.stringify({
-            event_type: "identify",
-            ...(input.company ? { company: input.company } : {}),
-            ...(input.user ? { user: input.user } : {}),
-          }),
-        });
-
-        if (!res.ok) {
-          throw new Error(await readErrorMessage(res, `HTTP ${res.status}`));
-        }
-
-        // Generate a short-lived access token for embed/hook calls
-        const tokenRes = await fetchWithTimeout(`${baseUrl}/api/v1/access-tokens`, {
-          method: "POST",
-          headers,
-          body: JSON.stringify({
-            company: input.company ?? {},
-            user: input.user ?? {},
-            expiresIn: 3600,
-          }),
-        });
-
-        if (!tokenRes.ok) {
-          throw new Error(
-            await readErrorMessage(tokenRes, "Failed to create session token"),
-          );
-        }
-
-        const tokenData = (await tokenRes.json()) as {
-          data?: {
-            token?: string;
-            company_id?: string;
-            user_id?: string;
+        try {
+          const headers = {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${pk}`,
           };
-        };
 
-        setSession({
-          isReady: true,
-          isIdentifying: false,
-          identifyError: null,
-          token: tokenData.data?.token ?? null,
-          company: input.company ? { ...input.company } : null,
-          user: input.user ? { ...input.user } : null,
-          identify,
-        });
-      } catch (err) {
-        const message =
-          err instanceof DOMException && err.name === "TimeoutError"
-            ? "ArcenPay identify timed out. Check your network connection."
-            : err instanceof Error
-              ? err.message
-              : "Failed to identify billing session.";
+          const res = await fetchWithTimeout(`${url}/api/v1/events`, {
+            method: "POST",
+            headers,
+            body: JSON.stringify({
+              event_type: "identify",
+              ...(input.company ? { company: input.company } : {}),
+              ...(input.user ? { user: input.user } : {}),
+            }),
+          });
 
-        setSession((current) => ({
-          ...current,
-          isIdentifying: false,
-          identifyError: message,
-        }));
-        throw err;
-      }
+          if (!res.ok) {
+            throw new Error(await readErrorMessage(res, `HTTP ${res.status}`));
+          }
+
+          // Generate a short-lived access token for embed/hook calls
+          const tokenRes = await fetchWithTimeout(`${url}/api/v1/access-tokens`, {
+            method: "POST",
+            headers,
+            body: JSON.stringify({
+              company: input.company ?? {},
+              user: input.user ?? {},
+              expiresIn: 3600,
+            }),
+          });
+
+          if (!tokenRes.ok) {
+            throw new Error(
+              await readErrorMessage(tokenRes, "Failed to create session token"),
+            );
+          }
+
+          const tokenData = (await tokenRes.json()) as {
+            data?: {
+              token?: string;
+              company_id?: string;
+              user_id?: string;
+            };
+          };
+
+          const nextToken = tokenData.data?.token ?? null;
+
+          patchSession({
+            isReady: true,
+            isIdentifying: false,
+            identifyError: null,
+            token: nextToken,
+            company: input.company ? { ...input.company } : null,
+            user: input.user ? { ...input.user } : null,
+          });
+        } catch (err) {
+          const message =
+            err instanceof DOMException && err.name === "TimeoutError"
+              ? "ArcenPay identify timed out. Check your network connection."
+              : err instanceof Error
+                ? err.message
+                : "Failed to identify billing session.";
+
+          setSession((current) => {
+            const next = {
+              ...current,
+              isIdentifying: false,
+              identifyError: message,
+            };
+            return sessionEquals(current, next) ? current : next;
+          });
+          throw err;
+        }
+      });
     },
-    [publishableKey, baseUrl],
+    // Stable: `patchSession` has no dependencies, so this callback is created
+    // exactly once. Referencing `identify` here would make it depend on itself.
+    [patchSession],
   );
 
-  // Update identify reference in session state
+  // Expose `identify` through `session` for backwards compatibility. The
+  // bail-out in `patchSession` means this produces at most one extra render,
+  // and `identify` never changes identity, so it can never re-trigger itself.
   useEffect(() => {
-    setSession((current) => ({
-      ...current,
-      identify,
-    }));
-  }, [identify]);
+    patchSession({ identify });
+  }, [identify, patchSession]);
 
   // ── Smart-account infra config ────────────────────────────────────────
   const [smartAccount, setSmartAccount] = useState<SmartAccountInfra>({
@@ -576,7 +739,9 @@ function ArcenPayRuntime({
     const network: NetworkConfig = {
       chainId,
       name: manifest.chainName,
-      rpcUrl: manifest.services.rpcUrl,
+      // An explicit provider override wins over the manifest default so the
+      // advertised RPC and the one wagmi actually uses cannot diverge.
+      rpcUrl: rpcUrls?.[chainId] ?? manifest.services.rpcUrl,
       contracts,
     };
 
@@ -599,7 +764,11 @@ function ArcenPayRuntime({
 
     return {
       session,
-      identify: session.identify,
+      // Always the real, stable callback — never a value read back out of
+      // session state. Children's effects run BEFORE the parent's, so a child
+      // that calls `arcen.identify()` on mount could otherwise observe the
+      // placeholder stored in the initial state.
+      identify,
       baseUrl,
       config,
       contracts,
@@ -609,7 +778,7 @@ function ArcenPayRuntime({
       smartAccount,
       publishableKey,
     };
-  }, [baseUrl, chainId, componentId, session, userConfig, smartAccount, publishableKey]);
+  }, [baseUrl, chainId, componentId, session, userConfig, smartAccount, publishableKey, rpcUrls]);
 
   return (
     <ArcenPayContext.Provider value={contextValue}>
@@ -636,4 +805,29 @@ export function useArcenPay(): ArcenPayContextValue & {
     throw new Error("useArcenPay() must be used within an <ArcenPayProvider>");
   }
   return context;
+}
+
+/**
+ * Returns ONLY the `identify` action.
+ *
+ * Prefer this over `useArcenPay().identify` when calling from an effect.
+ * `useArcenPay()` returns the whole context object, whose identity changes
+ * whenever session state changes — so `useEffect(..., [arcen])` re-runs on
+ * every session update. The function returned here is referentially stable and
+ * is safe to use as the sole dependency:
+ *
+ * ```tsx
+ * const identify = useIdentify();
+ * const { address } = useAccount();
+ *
+ * useEffect(() => {
+ *   if (address) void identify({ company: { wallet: address } }).catch(() => {});
+ * }, [identify, address]);   // no loop: identify never changes identity
+ * ```
+ *
+ * Even if the effect does re-fire, the provider deduplicates by company+user,
+ * so a repeated call for the same subject performs no network request.
+ */
+export function useIdentify(): ArcenSessionValue["identify"] {
+  return useArcenPay().identify;
 }

@@ -31,6 +31,15 @@ import { GET as listEvents, POST as trackEvent, OPTIONS as eventsOptions } from 
 import { GET as listFeatureFlags, POST as createFeatureFlag } from "./feature-flags.js";
 import { GET as listFlagRules, POST as createFlagRule, PUT as updateFlagRule } from "./feature-flag-rules.js";
 import { GET as listFlagOverrides, POST as createFlagOverride, DELETE as deleteFlagOverride } from "./feature-flag-overrides.js";
+/**
+ * Per-company manual flag overrides.
+ *
+ * These handlers existed and were correct, but were never mounted — so
+ * `client.setCompanyOverride()` in `@arcenpay/node` and the documented
+ * "Company overrides" section both 404'd against a route that looked
+ * implemented. Mounting them is the whole fix.
+ */
+import { GET as listCompanyOverrides, POST as setCompanyOverride, DELETE as deleteCompanyOverride } from "./company-overrides.js";
 import { GET as listFeatures, POST as createFeature } from "./features.js";
 import { PUT as updateFeature, DELETE as deleteFeature } from "./feature-by-id.js";
 import { GET as checkFlag } from "./flags-check.js";
@@ -112,6 +121,11 @@ export const v1Router = new Hono()
   .get("/checkout-sessions", listCheckoutSessions)
   .post("/checkout-sessions", createCheckoutSession)
   .get("/checkout-sessions/:id", getCheckoutSessionById)
+  // Company flag overrides — matched by the backend's own entitlements
+  // resolution order ("company overrides are checked first").
+  .get("/companies/:id/overrides", listCompanyOverrides)
+  .post("/companies/:id/overrides", setCompanyOverride)
+  .delete("/companies/:id/overrides", deleteCompanyOverride)
   .get("/payment-links", listPaymentLinks)
   .post("/payment-links", createPaymentLink)
   .get("/payment-links/:id", getPaymentLink)

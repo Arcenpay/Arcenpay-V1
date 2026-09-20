@@ -63,7 +63,17 @@ export function toAgenticSpecification(
     isAgentic,
     expiresAt: link.expiresAt ? link.expiresAt.toISOString() : null,
     sessionUrl: `${root}/api/v1/public/payment-links/${link.slug}/session`,
-    confirmUrl: `${root}/api/v1/checkout-sessions/:sessionId/confirm`,
+    /**
+     * Confirmation is scoped to a checkout SESSION, and the session id only
+     * exists after `sessionUrl` has been called — so this is a TEMPLATE whose
+     * `:sessionId` the caller substitutes.
+     *
+     * It must therefore name a REAL route. It previously read
+     * `/api/v1/checkout-sessions/:sessionId/confirm`, which is not registered
+     * anywhere, so every agent that followed the URL (even after substituting a
+     * valid session id) received a 404. The live endpoint is the public one.
+     */
+    confirmUrl: `${root}/api/v1/public/checkout/:sessionId/confirm`,
     metadata: (link.metadata as Record<string, unknown>) ?? null,
   };
 }
