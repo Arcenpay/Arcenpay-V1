@@ -79,6 +79,39 @@ function getPaymasterUrl(chainId: number) {
   return `https://api.pimlico.io/v2/${chainId}/rpc?apikey=${apiKey}`;
 }
 
+/**
+ * Chains the hosted provider (Pimlico) actually supports.
+ *
+ * `getBundlerUrl()`/`getPaymasterUrl()` synthesise
+ * `https://api.pimlico.io/v2/<chainId>/rpc?apikey=…` for ANY chain id whenever a
+ * key is present. For a chain Pimlico does not serve — 677 (BOT Chain Mainnet)
+ * and 968 (BOT Chain Testnet/BOHR) are not in its supported list — the client
+ * receives a URL that fails on first use:
+ *
+ *   pimlico_getUserOperationGasPrice → chain "677" is not supported
+ *
+ * Returning empty URLs for those chains (unless the operator has explicitly
+ * configured their OWN bundler, which we cannot judge) lets the SDK fall through
+ * to a direct wallet transaction where the user pays gas.
+ *
+ * Source: https://docs.pimlico.io/guides/supported-chains
+ */
+const HOSTED_PROVIDER_SUPPORTED_CHAIN_IDS: ReadonlySet<number> = new Set([
+  1, // Ethereum
+  11155111, // Ethereum Sepolia
+  8453, // Base
+  84532, // Base Sepolia
+  137, // Polygon
+  42161, // Arbitrum One
+  10, // Optimism
+  5042, // Arc Mainnet
+  5042002, // Arc Testnet
+]);
+
+function isPimlicoEndpoint(url: string): boolean {
+  return /api\.pimlico\.io\//i.test(url);
+}
+
 export async function OPTIONS(c: Context) {
   return c.json(null, 204 as any, corsHeaders(c.req.header("origin")));
 }
@@ -108,12 +141,46 @@ export async function GET(c: Context) {
     );
   }
 
+  /**
+   * Refuse to advertise the hosted provider on a chain it does not serve.
+   *
+   * We respond 200 with empty URLs plus an explicit reason (rather than an error
+   * status) so existing clients take their normal "no infrastructure configured"
+   * path — which means a direct wallet transaction, paid for by the user —
+   * instead of surfacing an opaque provider failure mid-cancellation.
+   */
+  const usesHostedProvider =
+    isPimlicoEndpoint(bundlerUrl) || isPimlicoEndpoint(paymasterUrl);
+
+  if (usesHostedProvider && !HOSTED_PROVIDER_SUPPORTED_CHAIN_IDS.has(chainId)) {
+    return c.json(
+      {
+        data: {
+          provider: "pimlico" as const,
+          chainId,
+          bundlerUrl: "",
+          paymasterUrl: "",
+          selfFunded: requestedSelfFunded,
+          available: false,
+          reason:
+            `Gas sponsorship is not available on chain ${chainId}. ` +
+            "The hosted smart-account provider does not support this network, so " +
+            "transactions are submitted directly by the connected wallet, which " +
+            "pays its own gas.",
+        },
+      },
+      200,
+      corsHeaders(origin),
+    );
+  }
+
   const data = {
     provider: "pimlico" as const,
     chainId,
     bundlerUrl,
     paymasterUrl,
     selfFunded: requestedSelfFunded,
+    available: true,
   };
 
   return c.json({ data }, 200, corsHeaders(origin));

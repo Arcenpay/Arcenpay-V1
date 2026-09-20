@@ -21,7 +21,23 @@ import React, {
   useState,
 } from "react";
 import { createPortal } from "react-dom";
-import dynamicIconImports from "lucide-react/dynamicIconImports";
+/**
+ * Lazy per-icon loader map for provider-configurable feature icons.
+ *
+ * The `.js` extension is REQUIRED, not cosmetic. `lucide-react` ships no
+ * `exports` map, so Node's ESM resolver will not perform extension guessing:
+ *
+ *   import … from "lucide-react/dynamicIconImports"     → ERR_MODULE_NOT_FOUND
+ *     "Did you mean to import lucide-react/dynamicIconImports.js?"
+ *   import … from "lucide-react/dynamicIconImports.js"   → ✅
+ *
+ * tsup treats `dependencies` as external by default, so whatever specifier is
+ * written here is published verbatim. Without the extension the main
+ * `@arcenpay/react` entrypoint fails to import in any Node/SSR context (Next.js
+ * server rendering, Vitest, plain `node -e`), even though browser bundlers
+ * resolve it fine — which is exactly how this stayed hidden.
+ */
+import dynamicIconImports from "lucide-react/dynamicIconImports.js";
 import type {
   ComponentRenderData,
   ComponentElement,
@@ -45,6 +61,7 @@ import {
 import {
   getCounterfactualSmartAccountAddress,
   hasSmartAccountInfrastructure,
+  isSmartAccountProviderUnavailableError,
   isUnsupportedEip7702AuthorizationError,
   sendSmartAccountTransaction,
 } from "../lib/smart-account";
@@ -7141,12 +7158,28 @@ function PaymentContent({
           data: params.data,
         });
       } catch (error) {
+        /**
+         * Fall back to a direct wallet transaction (the user pays gas) whenever
+         * the sponsored path cannot complete.
+         *
+         * This previously only covered two narrow cases — the smart account BEING
+         * the connected EOA (EIP-7702), or a wallet that cannot sign 7702
+         * authorizations. Any provider-side failure therefore surfaced raw:
+         *
+         *   "Details: chain \"677\" is not supported"   ← Pimlico, BOT Chain
+         *
+         * `isSmartAccountProviderUnavailableError` covers unsupported chains,
+         * unknown methods, provider-transport failures and bundler/paymaster
+         * rejections, so sponsorship becomes best-effort rather than a hard
+         * dependency. User rejections are deliberately excluded.
+         */
         const canFallbackToDirectWalletExecution = Boolean(
-          effectiveSmartAccountAddress &&
-            resolvedWalletAddress &&
-            (effectiveSmartAccountAddress.toLowerCase() ===
-              resolvedWalletAddress.toLowerCase() ||
-              isUnsupportedEip7702AuthorizationError(error)),
+          resolvedWalletAddress &&
+            (isSmartAccountProviderUnavailableError(error) ||
+              (effectiveSmartAccountAddress &&
+                (effectiveSmartAccountAddress.toLowerCase() ===
+                  resolvedWalletAddress.toLowerCase() ||
+                  isUnsupportedEip7702AuthorizationError(error)))),
         );
 
         if (canFallbackToDirectWalletExecution) {
@@ -9483,12 +9516,25 @@ function UnsubscribeContent({
           });
           txHash = result.txHash;
         } catch (error) {
+          /**
+           * Autopay revoke — the step cancellation depends on.
+           *
+           * The previous condition required the smart account to BE the connected
+           * wallet AND an EIP-7702-specific error, so a provider failure such as
+           * Pimlico's `chain "677" is not supported` was rethrown straight to the
+           * user and the plan could not be cancelled at all.
+           *
+           * Sponsorship is best-effort: if the bundler/paymaster cannot serve the
+           * request for ANY infrastructure reason, revoke the autopay module with
+           * a normal transaction where the user pays gas.
+           */
           const canFallbackToDirectWalletExecution = Boolean(
             resolvedWalletAddress &&
-              smartAccountAddress &&
-              resolvedWalletAddress.toLowerCase() ===
-                smartAccountAddress.toLowerCase() &&
-              isUnsupportedEip7702AuthorizationError(error),
+              (isSmartAccountProviderUnavailableError(error) ||
+                (smartAccountAddress &&
+                  resolvedWalletAddress.toLowerCase() ===
+                    smartAccountAddress.toLowerCase() &&
+                  isUnsupportedEip7702AuthorizationError(error))),
           );
 
           if (!canFallbackToDirectWalletExecution) {

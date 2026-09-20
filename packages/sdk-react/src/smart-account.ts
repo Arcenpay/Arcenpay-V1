@@ -1,7 +1,10 @@
 export {
   deploySmartAccount,
   getCounterfactualSmartAccountAddress,
+  HOSTED_SMART_ACCOUNT_SUPPORTED_CHAIN_IDS,
+  isHostedSmartAccountUrlForUnsupportedChain,
   isSmartAccountInfrastructureError,
+  isSmartAccountProviderUnavailableError,
   isUnsupportedEip7702AuthorizationError,
   isPrefundError,
   isRecoverableSmartAccountFundingError,

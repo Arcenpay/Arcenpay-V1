@@ -149,13 +149,84 @@ function resolveSmartAccountUrls(params: {
   };
 }
 
+/**
+ * Chains the HOSTED smart-account provider (Pimlico) documents support for,
+ * restricted to the networks ArcenPay actually targets.
+ *
+ * WHY THIS EXISTS
+ * ---------------
+ * `resolveSmartAccountUrls()` synthesises a Pimlico endpoint for whatever chain
+ * is active, purely because an API key is present:
+ *
+ *     https://api.pimlico.io/v2/<chainId>/rpc?apikey=…
+ *
+ * That makes `hasSmartAccountInfrastructure()` report `true` on EVERY chain —
+ * including chains Pimlico does not serve. The SDK then attempted a sponsored
+ * (ERC-4337) execution that could never succeed and surfaced a raw provider
+ * error to the end user:
+ *
+ *     Details: chain "677" is not supported   (pimlico_getUserOperationGasPrice)
+ *
+ * 677 (BOT Chain Mainnet) and 968 (BOT Chain Testnet / BOHR) are NOT in
+ * Pimlico's supported list, so sponsorship is unavailable there. On those
+ * chains the correct behaviour is a normal transaction where the connected
+ * wallet pays its own gas — which this gate allows by reporting no
+ * infrastructure, letting the SDK take the direct-wallet path.
+ *
+ * Source: https://docs.pimlico.io/guides/supported-chains
+ * Note 5042 (Arc Mainnet) and 5042002 (Arc Testnet) ARE supported.
+ */
+export const HOSTED_SMART_ACCOUNT_SUPPORTED_CHAIN_IDS: ReadonlySet<number> = new Set([
+  1, // Ethereum
+  11155111, // Ethereum Sepolia
+  8453, // Base
+  84532, // Base Sepolia
+  137, // Polygon
+  42161, // Arbitrum One
+  10, // Optimism
+  5042, // Arc Mainnet
+  5042002, // Arc Testnet
+]);
+
+/**
+ * True when `url` is a Pimlico endpoint for a chain Pimlico cannot serve.
+ *
+ * Deliberately narrow: only Pimlico URLs are judged, so a self-hosted or
+ * third-party bundler configured for any chain is never second-guessed. Slug
+ * URLs (e.g. `/v2/base/rpc`) are left alone for the same reason.
+ */
+export function isHostedSmartAccountUrlForUnsupportedChain(
+  url: string | null | undefined,
+): boolean {
+  if (!url) return false;
+  const match = /api\.pimlico\.io\/v2\/([^/?#]+)\/rpc/i.exec(url);
+  if (!match) return false;
+
+  const chainId = Number.parseInt(match[1], 10);
+  if (!Number.isFinite(chainId) || chainId <= 0) return false;
+
+  return !HOSTED_SMART_ACCOUNT_SUPPORTED_CHAIN_IDS.has(chainId);
+}
+
 export function hasSmartAccountInfrastructure(input: {
   projectId?: string;
   chainId: number;
   bundlerUrl?: string;
   paymasterUrl?: string;
 }): boolean {
-  return resolveSmartAccountUrls(input).hasConfiguredUrls;
+  const resolved = resolveSmartAccountUrls(input);
+
+  // A Pimlico endpoint for an unsupported chain is not infrastructure — it is a
+  // guaranteed runtime failure. Report "none" so the caller uses the direct
+  // wallet transaction path (the user pays gas) instead of throwing.
+  if (
+    isHostedSmartAccountUrlForUnsupportedChain(resolved.bundlerUrl) ||
+    isHostedSmartAccountUrlForUnsupportedChain(resolved.paymasterUrl)
+  ) {
+    return false;
+  }
+
+  return resolved.hasConfiguredUrls;
 }
 
 function resolveSmartAccountHeaders(_params: {
@@ -361,6 +432,63 @@ export function isUnsupportedEip7702AuthorizationError(
     lower.includes("does not support json-rpc accounts") ||
     lower.includes("wallet returned an unsupported") ||
     lower.includes("user rejected")
+  );
+}
+
+/**
+ * True when the failure is on the PROVIDER/infrastructure side rather than a
+ * genuine business-logic rejection.
+ *
+ * The sponsored (ERC-4337) path depends on an external bundler and paymaster.
+ * When either cannot serve the request — unsupported chain, method not found,
+ * malformed parameters for that provider, transport failure, credit exhausted —
+ * the user should still be able to complete the action, paying gas from their
+ * own wallet. That is the documented fallback contract, and previously it only
+ * fired for EIP-7702-specific errors, so a Pimlico "chain not supported" error
+ * was shown to the end user as a dead end:
+ *
+ *     Details: chain "677" is not supported
+ *
+ * Explicitly EXCLUDES user rejection: if the user declined in their wallet we
+ * must never silently submit a second transaction behind their back.
+ */
+export function isSmartAccountProviderUnavailableError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error ?? "");
+  const lower = message.toLowerCase();
+
+  if (lower.includes("user rejected") || lower.includes("user denied")) {
+    return false;
+  }
+
+  return (
+    // Provider cannot serve this chain / method.
+    lower.includes("is not supported") ||
+    lower.includes("not supported") ||
+    lower.includes("unsupported") ||
+    lower.includes("method not found") ||
+    lower.includes("-32601") ||
+    lower.includes("invalid params") ||
+    lower.includes("invalid parameters") ||
+    lower.includes("missing or invalid parameters") ||
+    // Provider/transport failures.
+    lower.includes("failed to fetch") ||
+    lower.includes("fetch failed") ||
+    lower.includes("network") ||
+    lower.includes("timeout") ||
+    lower.includes("timed out") ||
+    lower.includes("econnrefused") ||
+    lower.includes("enotfound") ||
+    lower.includes("rate limit") ||
+    lower.includes("429") ||
+    lower.includes("unauthorized") ||
+    lower.includes("forbidden") ||
+    lower.includes("api key") ||
+    // Anything the smart-account layer itself named after the provider.
+    lower.includes("pimlico") ||
+    lower.includes("bundler") ||
+    lower.includes("paymaster") ||
+    lower.includes("useroperation") ||
+    lower.includes("gas sponsorship")
   );
 }
 
