@@ -1,6 +1,6 @@
 import type { Context } from "hono";
 import { z } from "zod";
-import { authEmailStartProtect } from "../../../lib/auth/arcjet.js";
+import { authEmailStartProtect, arcjetNodeRequest } from "../../../lib/auth/arcjet.js";
 import {
   EMAIL_AUTH_PURPOSE_LOGIN,
   EMAIL_AUTH_RESEND_COOLDOWN_MS,
@@ -48,7 +48,7 @@ export async function startEmail(c: Context) {
   const email = normalizeEmail(parsed.data.email);
 
   // Arcjet rate limit: 5 req/10min per IP
-  const decision = await authEmailStartProtect.protect(c.req.raw as any);
+  const decision = await authEmailStartProtect.protect(arcjetNodeRequest(c.req.raw) as any);
   if (decision.isDenied()) {
     console.warn("[DEBUG-auth-20260907] email start denied", {
       reason: decision.reason.isBot() ? "bot" : "rate_limited",

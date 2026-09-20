@@ -11,6 +11,7 @@ vi.mock("../../../src/lib/auth/arcjet.js", () => ({
   fixedWindow: () => ({}),
   isDocsApiOrigin: vi.fn(() => false),
   shouldBypassGlobalProtection: vi.fn(() => false),
+  arcjetNodeRequest: vi.fn((r: any) => r),
 }));
 
 vi.mock("../../../src/lib/auth/auth.server.js", () => ({

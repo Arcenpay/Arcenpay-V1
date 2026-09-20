@@ -4,7 +4,7 @@ import { requireInvoiceAuth, isInvoiceAuthError } from "../../../lib/auth/invoic
 import { sendInvoiceEmail } from "../../../lib/billing/email.js";
 import { writeAuditEvent } from "../../../lib/platform/audit.js";
 import { ensureInvoicePdfForTeam } from "../../../lib/billing/invoice-documents.js";
-import { invoiceResendProtect } from "../../../lib/auth/arcjet.js";
+import { invoiceResendProtect, arcjetNodeRequest } from "../../../lib/auth/arcjet.js";
 import { deliverWebhook } from "../../../lib/webhooks/deliver-webhook.js";
 
 export async function POST(c: Context) {
@@ -13,7 +13,10 @@ export async function POST(c: Context) {
 
   const id = c.req.param("id");
 
-  const decision = await invoiceResendProtect.protect(c, { invoiceId: id! });
+  const decision = await invoiceResendProtect.protect(
+    arcjetNodeRequest(c.req.raw) as any,
+    { invoiceId: id! },
+  );
   if (decision.isDenied()) {
     return c.json({ error: "This invoice has been resent too many times recently. Please wait before retrying." }, 429 as any);
   }

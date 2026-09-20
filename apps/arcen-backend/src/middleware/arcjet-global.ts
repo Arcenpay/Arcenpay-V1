@@ -1,5 +1,5 @@
 import type { Context, Next } from "hono";
-import { aj, shouldBypassGlobalProtection } from "../lib/auth/arcjet.js";
+import { aj, shouldBypassGlobalProtection, arcjetNodeRequest } from "../lib/auth/arcjet.js";
 
 /**
  * Global Arcjet protection middleware (shield + detectBot).
@@ -44,7 +44,9 @@ export async function arcjetGlobalProtect(c: Context, next: Next) {
     return next();
   }
 
-  const decision = await aj.protect(c.req.raw as any);
+  const decision = await aj.protect(
+    arcjetNodeRequest(c.req.raw) as any,
+  );
   if (decision.isDenied()) {
     // Use the Arcjet reason type to give a helpful, non-misleading error.
     const isBotBlock = decision.results.some(

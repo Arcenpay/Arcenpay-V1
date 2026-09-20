@@ -16,7 +16,7 @@
 
 import { createHash, randomBytes } from "crypto";
 import { db } from "../../db.js";
-import { aj, fixedWindow, isDocsApiOrigin } from "./arcjet.js";
+import { aj, fixedWindow, isDocsApiOrigin, arcjetNodeRequest } from "./arcjet.js";
 
 export type ApiKeyTypeName = "SECRET" | "PUBLISHABLE" | "RESTRICTED";
 
@@ -158,13 +158,22 @@ function extractBearerToken(request: Request): string | null {
   return normalizeApiKeyAuth(auth);
 }
 
-/** Per-API-key rate limit — LIVE in production, DRY_RUN in development */
+/**
+ * Per-API-key rate limit — LIVE in production, DRY_RUN in development.
+ *
+ * 5000 req / 60s ≈ 83 req/sec per key. This is deliberately HIGH so the
+ * platform — which is designed to serve a LOT of legitimate requests (flag
+ * checks, entitlement reads, event ingestion, agents, dashboards) — is never
+ * blocked by its own quota. It still stops true runaway/hostile bursts while
+ * letting any real integration breathe. Docs playground requests are exempt
+ * entirely (see requireApiKey below).
+ */
 const apiKeyProtect = aj.withRule(
   fixedWindow({
     mode: process.env.NODE_ENV === "production" ? "LIVE" : "DRY_RUN",
     characteristics: ["apikey"],
     window: "60s",
-    max: 500,
+    max: 5000,
   }),
 );
 
@@ -248,9 +257,12 @@ export async function requireApiKey(
   // bucket, otherwise the playground would break the moment a user explores
   // multiple references. All other requests keep the 500 req/60s limit.
   if (process.env.ARCJET_KEY && !isDocsApiOrigin(request)) {
-    const decision = await apiKeyProtect.protect(request as any, {
-      apikey: apiKey.id,
-    });
+    const decision = await apiKeyProtect.protect(
+      arcjetNodeRequest(request) as any,
+      {
+        apikey: apiKey.id,
+      },
+    );
     if (decision.isDenied()) {
       return { error: "Rate limit exceeded", status: 429 };
     }

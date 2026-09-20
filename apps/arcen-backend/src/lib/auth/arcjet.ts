@@ -15,6 +15,70 @@ const hasArcjetKey = Boolean(
 const isProduction = process.env.NODE_ENV === "production";
 const isLive = isProduction && hasArcjetKey;
 
+// Ensure Arcjet knows whether we're in dev (silences the
+// "Set ARCJET_ENV to development" warning and enables dev log behavior).
+process.env.ARCJET_ENV ??= isProduction ? "production" : "development";
+
+/**
+ * Builds an Arcjet-Node-compatible request with a client IP so fingerprinting
+ * via the `ip.src` characteristic NEVER fails.
+ *
+ * Hono's `c.req.raw` is a Web `Request` — it has no Node `socket.remoteAddress`.
+ * When Arcjet needs `ip.src` (rate limits, shield, bot detection) it extracts
+ * the IP from either the socket or X-Forwarded-For. If both are absent it
+ * throws "Failed to build fingerprint … value was empty", which would 500 the
+ * request. We defensively provide the client IP from the standard forwarded
+ * headers (or the loopback in local dev) so fingerprinting always succeeds.
+ */
+export function arcjetNodeRequest(
+  request: Request | Record<string, any>,
+): Record<string, any> {
+  const headers =
+    request instanceof Request
+      ? request.headers
+      : (request as any).headers;
+  const get =
+    typeof headers?.get === "function" ? headers.get.bind(headers) : null;
+
+  let clientIp: string | undefined;
+  if (get) {
+    const forwarded = get("x-forwarded-for");
+    clientIp = forwarded
+      ? forwarded.split(",")[0]?.trim() || undefined
+      : undefined;
+    clientIp ??= get("x-real-ip") ?? undefined;
+    clientIp ??= get("cf-connecting-ip") ?? undefined;
+  } else {
+    clientIp =
+      (request as any).ip ??
+      (request as any).xForwardedFor ??
+      (request as any).remoteAddress ??
+      undefined;
+  }
+
+  // Dev loopback fallback keeps Arcjet working in environments without a
+  // proxy (Docker/CI/localhost). In production a missing IP would otherwise
+  // be an infra misconfiguration — but we still never 500 requests for it.
+  clientIp ??= "127.0.0.1";
+
+  const method = get
+    ? undefined // tolerate standard Request (method read by Arcjet internally)
+    : (request as any).method ?? undefined;
+  const url = get ? undefined : (request as any).url ?? undefined;
+
+  return {
+    ...(request instanceof Request
+      ? request
+      : request),
+    headers: get
+      ? Object.fromEntries(headers.entries())
+      : (headers ?? {}),
+    ...(method ? { method } : {}),
+    ...(url ? { url } : {}),
+    socket: { remoteAddress: clientIp },
+  };
+}
+
 /**
  * The Mintlify API reference playground (docs.arcenpay.com) is a FIRST-PARTY
  * testing surface: users hit "Try it", and the request is a curl-like call

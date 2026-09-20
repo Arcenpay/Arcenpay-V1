@@ -4,7 +4,7 @@ import { getSessionFromCtx } from "../../../lib/auth/auth.server.js";
 import { resolveTeamContext } from "../../../lib/auth/team-session.js";
 import { db } from "../../../db.js";
 import { writeAuditEvent } from "../../../lib/platform/audit.js";
-import { teamInviteProtect } from "../../../lib/auth/arcjet.js";
+import { teamInviteProtect, arcjetNodeRequest } from "../../../lib/auth/arcjet.js";
 import { assertCanInviteMember } from "../../../lib/catalog/tier-guard.js";
 import { createTeamInvitation, normalizeEmail } from "../../../lib/auth/auth-flow.js";
 
@@ -44,7 +44,7 @@ export async function inviteMember(c: Context) {
         }, 403 as any);
     }
 
-    const decision = await teamInviteProtect.protect(c.req.raw as any, { teamId: team.teamId });
+    const decision = await teamInviteProtect.protect(arcjetNodeRequest(c.req.raw) as any, { teamId: team.teamId });
     if (decision.isDenied()) {
       if (decision.reason.isBot()) {
         return c.json({ ok: false, error: "Forbidden", code: "FORBIDDEN" }, 403 as any);

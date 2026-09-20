@@ -1,6 +1,6 @@
 import type { Context } from "hono";
 import { generateNonce } from "../../../lib/auth/nonce.server.js";
-import { authNonceProtect } from "../../../lib/auth/arcjet.js";
+import { authNonceProtect, arcjetNodeRequest } from "../../../lib/auth/arcjet.js";
 import { getSessionFromCtx } from "../../../lib/auth/auth.server.js";
 
 export async function getNonce(c: Context) {
@@ -9,7 +9,7 @@ export async function getNonce(c: Context) {
     return c.json({ ok: false, error: "Unauthorized", code: "UNAUTHORIZED" }, 401 as any);
   }
 
-  const decision = await authNonceProtect.protect(c.req.raw as any);
+  const decision = await authNonceProtect.protect(arcjetNodeRequest(c.req.raw) as any);
   if (decision.isDenied()) {
     if (decision.reason.isBot()) {
       return c.json({ ok: false, error: "Forbidden", code: "FORBIDDEN" }, 403 as any);

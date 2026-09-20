@@ -1,6 +1,6 @@
 import type { Context } from "hono";
 import { z } from "zod";
-import { authEmailVerifyProtect } from "../../../lib/auth/arcjet.js";
+import { authEmailVerifyProtect, arcjetNodeRequest } from "../../../lib/auth/arcjet.js";
 import {
   EMAIL_AUTH_MAX_ATTEMPTS,
   EMAIL_AUTH_PURPOSE_LOGIN,
@@ -28,7 +28,7 @@ const Schema = z.object({
 });
 
 export async function verifyEmail(c: Context) {
-  const decision = await authEmailVerifyProtect.protect(c.req.raw as any);
+  const decision = await authEmailVerifyProtect.protect(arcjetNodeRequest(c.req.raw) as any);
   if (decision.isDenied()) {
     if (decision.reason.isBot()) {
       return c.json({ ok: false, error: "Forbidden", code: "FORBIDDEN" }, 403 as any);
