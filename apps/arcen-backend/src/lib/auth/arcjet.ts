@@ -138,9 +138,13 @@ export function isDocsApiOrigin(
  *     if (decision.isDenied()) return denyResponse(decision);
  *   }
  *
- * Bypassed traffic (docs playground + any request carrying a valid sk_/rk_
- * API key) is authenticated downstream by the per-key auth path, which keeps
- * its own 500 req/min limit for non-docs callers.
+ * Bypassed traffic:
+ *  - the docs API reference playground (docs.arcenpay.com) — "Try it" testing,
+ *  - ANY request carrying a platform credential (`sk_`/`rk_`/`pk_`).
+ *
+ * Authenticated traffic is trusted API consumption; throttling it would block
+ * legitimate high-volume integrations. Anonymous requests (no key, unknown
+ * origin) still get full shield + bot protection.
  */
 export function shouldBypassGlobalProtection(
   request: Request | Record<string, any>,
@@ -160,7 +164,9 @@ export function shouldBypassGlobalProtection(
     token.startsWith("sk_live_") ||
     token.startsWith("sk_test_") ||
     token.startsWith("rk_live_") ||
-    token.startsWith("rk_test_")
+    token.startsWith("rk_test_") ||
+    token.startsWith("pk_live_") ||
+    token.startsWith("pk_test_")
   );
 }
 

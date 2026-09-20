@@ -35,21 +35,22 @@ describe("ArcenPay docs API playground exemption", () => {
     expect(isDocsApiOrigin(new Request("https://api.arcenpay.com/x"))).toBe(false);
   });
 
-  it("bypasses global protection for docs-origin AND any sk_/rk_ request", () => {
+  it("bypasses global protection for docs-origin AND all credential types (sk_/rk_/pk_)", () => {
     // Docs playground
     expect(shouldBypassGlobalProtection(req({ origin: "https://docs.arcenpay.com" }))).toBe(true);
-    // Secret/restricted key (any origin)
+    // Secret/restricted/publishable keys (any origin) — authenticated traffic
+    // is trusted and never blocked by bot/shield.
     expect(
       shouldBypassGlobalProtection(req({ auth: "Bearer sk_live_xxxxxxxxx" })),
     ).toBe(true);
     expect(
       shouldBypassGlobalProtection(req({ auth: "Bearer rk_test_xxxxxxxxx" })),
     ).toBe(true);
-    // Anonymous / publishable / embed token → NO bypass (still fully protected)
-    expect(shouldBypassGlobalProtection(req())).toBe(false);
     expect(
       shouldBypassGlobalProtection(req({ auth: "Bearer pk_live_xxxxxxxxx" })),
-    ).toBe(false);
+    ).toBe(true);
+    // Anonymous (no key) → NO bypass (still fully protected)
+    expect(shouldBypassGlobalProtection(req())).toBe(false);
   });
 });
 

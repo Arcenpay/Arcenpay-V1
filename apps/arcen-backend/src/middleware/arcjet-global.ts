@@ -14,9 +14,10 @@ import { aj, shouldBypassGlobalProtection, arcjetNodeRequest } from "../lib/auth
  * legitimate first-party API consumers (see shouldBypassGlobalProtection):
  *   1. Requests originating from the docs API reference playground
  *      (https://docs.arcenpay.com) — "Try it" testing must never 429.
- *   2. Requests carrying a valid server API key (sk_live_/sk_test_/rk_live_/
- *      rk_test_) — authenticated API consumers; the per-key rate limiter in
- *      api-key-auth.ts is their real protection.
+ *   2. Requests carrying ANY platform credential (sk_/rk_/pk_) — authenticated
+ *      API consumers. There is deliberately no per-key rate wall for
+ *      credentialed traffic (see api-key-auth.ts); anonymous requests still
+ *      get full shield + bot protection.
  *
  * Everything else (anonymous browsers, potential scrapers, unknown origins)
  * is fully covered by Arcjet shield + detectBot exactly as before.

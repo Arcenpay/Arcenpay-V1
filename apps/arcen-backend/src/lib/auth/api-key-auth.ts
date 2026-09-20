@@ -161,12 +161,11 @@ function extractBearerToken(request: Request): string | null {
 /**
  * Per-API-key rate limit — LIVE in production, DRY_RUN in development.
  *
- * 5000 req / 60s ≈ 83 req/sec per key. This is deliberately HIGH so the
- * platform — which is designed to serve a LOT of legitimate requests (flag
- * checks, entitlement reads, event ingestion, agents, dashboards) — is never
- * blocked by its own quota. It still stops true runaway/hostile bursts while
- * letting any real integration breathe. Docs playground requests are exempt
- * entirely (see requireApiKey below).
+ * Deliberately high ceiling (5000 req / 60s ≈ 83 req/sec) so legitimate
+ * high-volume integrations (SDKs, agents, dashboards, docs playground) are
+ * never blocked by normal usage. It only stops true runaway/hostile bursts.
+ * IMPORTANT: requests from the docs playground (docs.arcenpay.com) are exempt
+ * entirely so "Try it" testing never counts against a key.
  */
 const apiKeyProtect = aj.withRule(
   fixedWindow({
@@ -182,7 +181,6 @@ const apiKeyProtect = aj.withRule(
 export async function requireApiKey(
   request: Request,
   options: {
-    rateLimit?: { limit: number; windowMs: number };
     /** Key types this endpoint accepts. Default: all. */
     allow?: ApiKeyTypeName[];
     /** Permissions required for SECRET/RESTRICTED keys (all must be present). */
@@ -251,11 +249,10 @@ export async function requireApiKey(
     }
   }
 
-  // Apply per-key rate limiting via Arcjet.
-  // Requests from the docs API playground (docs.arcenpay.com) are first-party
-  // "try it" testing traffic — they never count against a user's per-key
-  // bucket, otherwise the playground would break the moment a user explores
-  // multiple references. All other requests keep the 500 req/60s limit.
+  // Per-key rate limiting via Arcjet — a HIGH ceiling (5000 req/60s) so
+  // legitimate high-volume usage is never blocked, and requests from the docs
+  // API playground (docs.arcenpay.com) are exempt entirely. This only stops
+  // true runaway/hostile bursts while keeping the safety valve in place.
   if (process.env.ARCJET_KEY && !isDocsApiOrigin(request)) {
     const decision = await apiKeyProtect.protect(
       arcjetNodeRequest(request) as any,

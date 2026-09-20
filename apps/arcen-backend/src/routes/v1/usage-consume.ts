@@ -86,9 +86,7 @@ export async function POST(c: Context) {
   let userKeys: UserKeys | undefined;
 
   if (isApiKeyToken(bearerToken)) {
-    const ctx = await requireApiKey(c.req.raw, {
-      rateLimit: { limit: 500, windowMs: 60_000 },
-    });
+    const ctx = await requireApiKey(c.req.raw);
     if (isApiKeyError(ctx)) {
       return c.json({ ok: false, error: ctx.error }, ctx.status as any, corsHeaders(c.req.header("origin")));
     }
