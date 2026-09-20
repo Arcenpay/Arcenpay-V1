@@ -519,35 +519,98 @@ export const WALLETCONNECT_PROJECT_ID: string = (() => {
 // ── Platform Activation & Admin ───────────────────────────────────────────────
 
 /**
- * Secret key for authenticating requests to Platform Admin routes (/api/v1/admin/*).
- * In production, this must be set to a strong secret.
+ * Secret key authenticating headless requests to Platform Admin routes
+ * (`/api/v1/admin/*`).
+ *
+ * SECURITY:
+ *  - `NEXT_PUBLIC_PLATFORM_ADMIN_SECRET` is NO LONGER accepted. Next.js inlines
+ *    every `NEXT_PUBLIC_*` variable into the browser bundle, so honouring that
+ *    name would publish the admin secret to every visitor of the dashboard.
+ *  - `ADMIN_SECRET` is kept as a legacy alias only, and is rejected in
+ *    production if it is too weak to be a credential. Prefer the explicit
+ *    `PLATFORM_ADMIN_SECRET`.
+ *  - Production requires an explicit value (fail-fast) and a minimum entropy
+ *    floor. Dev falls back to a fixed local value so local DX is unaffected.
  */
-export const PLATFORM_ADMIN_SECRET: string = (() => {
-  const val = getEnvValue(["PLATFORM_ADMIN_SECRET", "ADMIN_SECRET", "NEXT_PUBLIC_PLATFORM_ADMIN_SECRET"]);
-  return val || (isProd ? requireInProd("PLATFORM_ADMIN_SECRET", val) : "arcenpay_admin_secret_dev");
-})();
+const MIN_SECRET_LENGTH = 32;
 
-/**
- * Whether the platform requires an activation key for workspace access.
- * Defaults to true if PLATFORM_REQUIRE_ACTIVATION_KEY is 'true'.
- */
-export const PLATFORM_REQUIRE_ACTIVATION_KEY: boolean = (() => {
-  const val = getEnvValue(["PLATFORM_REQUIRE_ACTIVATION_KEY", "NEXT_PUBLIC_PLATFORM_REQUIRE_ACTIVATION_KEY"]);
-  if (val === "false") return false;
-  if (val === "true") return true;
-  return isProd;
+export const PLATFORM_ADMIN_SECRET: string = (() => {
+  if (process.env.NEXT_PUBLIC_PLATFORM_ADMIN_SECRET) {
+    if (isProd) {
+      throw new Error(
+        "[config] NEXT_PUBLIC_PLATFORM_ADMIN_SECRET is set. NEXT_PUBLIC_* values " +
+          "are embedded in the client bundle and must never hold a secret. " +
+          "Use PLATFORM_ADMIN_SECRET instead and remove the NEXT_PUBLIC_ variant.",
+      );
+    }
+    console.warn(
+      "[config] Ignoring NEXT_PUBLIC_PLATFORM_ADMIN_SECRET (client-exposed). " +
+        "Set PLATFORM_ADMIN_SECRET instead.",
+    );
+  }
+
+  const val = getEnvValue(["PLATFORM_ADMIN_SECRET", "ADMIN_SECRET"]);
+  const resolved =
+    val || (isProd ? requireInProd("PLATFORM_ADMIN_SECRET", val) : "arcenpay_admin_secret_dev");
+
+  if (isProd && resolved.length < MIN_SECRET_LENGTH) {
+    throw new Error(
+      `[config] PLATFORM_ADMIN_SECRET must be at least ${MIN_SECRET_LENGTH} characters in production. ` +
+        "Generate one with: openssl rand -hex 32",
+    );
+  }
+
+  if (
+    isProd &&
+    !process.env.PLATFORM_ADMIN_SECRET &&
+    process.env.ADMIN_SECRET
+  ) {
+    console.warn(
+      "[config] Using the legacy ADMIN_SECRET variable for the platform admin secret. " +
+        "Rename it to PLATFORM_ADMIN_SECRET — `ADMIN_SECRET` is a generic name that other " +
+        "tooling may set.",
+    );
+  }
+
+  return resolved;
 })();
 
 /**
  * Authorized platform administrator emails.
- * Configured via PLATFORM_ADMIN_EMAILS or ADMIN_EMAILS environment variable (comma-separated).
- * Defaults to admin@arcenpay.com and support@arcenpay.com if not specified.
+ * Configured via PLATFORM_ADMIN_EMAILS env var (comma-separated).
+ *
+ * SECURITY:
+ *  - `NEXT_PUBLIC_PLATFORM_ADMIN_EMAILS` is NO LONGER accepted — it published
+ *    the admin allow-list into the client bundle.
+ *  - The well-known addresses below are seeded ONLY outside production. A
+ *    hardcoded production allow-list cannot be revoked, so anyone able to
+ *    receive mail at `admin@`/`support@` would hold permanent admin rights.
+ *  - Production requires an explicit list (fail-fast with an actionable error)
+ *    rather than silently falling back to a broader default.
  */
 export const PLATFORM_ADMIN_EMAILS: Set<string> = (() => {
-  const envEmails = (getEnvValue(["PLATFORM_ADMIN_EMAILS", "ADMIN_EMAILS", "NEXT_PUBLIC_PLATFORM_ADMIN_EMAILS"]) || "")
+  if (isProd && process.env.NEXT_PUBLIC_PLATFORM_ADMIN_EMAILS) {
+    console.warn(
+      "[config] Ignoring NEXT_PUBLIC_PLATFORM_ADMIN_EMAILS (client-exposed). " +
+        "Use PLATFORM_ADMIN_EMAILS instead.",
+    );
+  }
+
+  const envEmails = (getEnvValue(["PLATFORM_ADMIN_EMAILS", "ADMIN_EMAILS"]) || "")
     .split(",")
     .map((e) => e.trim().toLowerCase())
     .filter(Boolean);
+
+  if (isProd) {
+    if (envEmails.length === 0) {
+      throw new Error(
+        "[config] PLATFORM_ADMIN_EMAILS must be set in production. " +
+          "Provide a comma-separated allow-list of administrator email addresses.",
+      );
+    }
+    return new Set<string>(envEmails);
+  }
+
   return new Set<string>([
     "admin@arcenpay.com",
     "aditya@arcenpay.com",
@@ -563,5 +626,58 @@ export function isPlatformAdminEmail(email?: string | null): boolean {
   if (!email) return false;
   return PLATFORM_ADMIN_EMAILS.has(email.trim().toLowerCase());
 }
+
+// ── Credential separation ─────────────────────────────────────────────────────
+
+/**
+ * Rejects shared secrets across independent security domains.
+ *
+ * `.env` files in the wild here reuse one value for the session-signing secret,
+ * the invoice-URL-signing secret and the admin secret. That collapses the blast
+ * radius: any single leak (a debug dump, a log, a CI variable echo, a
+ * departing engineer's password manager) forges sessions AND admin calls AND
+ * invoice download URLs. Each domain must have its own value.
+ *
+ * Only enforced in production so local development stays frictionless.
+ */
+function assertDistinctSecrets(): void {
+  if (!isProd) return;
+
+  const named: Array<[string, string]> = [
+    ["SIWE_JWT_SECRET", SIWE_JWT_SECRET],
+    ["ACCESS_TOKEN_SECRET", ACCESS_TOKEN_SECRET],
+    ["FACILITATOR_SECRET", FACILITATOR_SECRET],
+    ["INVOICE_DOWNLOAD_SIGNING_SECRET", INVOICE_DOWNLOAD_SIGNING_SECRET],
+    ["PLATFORM_ADMIN_SECRET", PLATFORM_ADMIN_SECRET],
+  ];
+
+  const seen = new Map<string, string>();
+  for (const [name, value] of named) {
+    if (!value) continue;
+    const existing = seen.get(value);
+    if (existing) {
+      throw new Error(
+        `[config] ${name} and ${existing} share the same value. Secrets must be unique ` +
+          "per security domain: a leak of one must not compromise the others. " +
+          "Generate distinct values with: openssl rand -hex 32",
+      );
+    }
+    seen.set(value, name);
+  }
+}
+
+assertDistinctSecrets();
+
+
+/**
+ * Whether the platform requires an activation key for workspace access.
+ * Defaults to true if PLATFORM_REQUIRE_ACTIVATION_KEY is 'true'.
+ */
+export const PLATFORM_REQUIRE_ACTIVATION_KEY: boolean = (() => {
+  const val = getEnvValue(["PLATFORM_REQUIRE_ACTIVATION_KEY", "NEXT_PUBLIC_PLATFORM_REQUIRE_ACTIVATION_KEY"]);
+  if (val === "false") return false;
+  if (val === "true") return true;
+  return isProd;
+})();
 
 

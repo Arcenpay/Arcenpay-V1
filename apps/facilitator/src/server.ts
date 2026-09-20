@@ -94,6 +94,11 @@ import {
 import { DurableJobQueue } from "./queue.js";
 import { X402ReplayProtection } from "./replay-protection.js";
 import {
+  createOperatorAuthMiddleware,
+  readBearerToken,
+  secureCompare,
+} from "./http-security.js";
+import {
   createSubscriptionRouteStore,
   resolveRoutingTeamId as resolveSubscriptionRoutingTeamId,
 } from "./subscription-routing.js";
@@ -625,12 +630,16 @@ function isTrustedOrigin(origin?: string): boolean {
     return (
       lower === "arcenpay.com" ||
       lower.endsWith(".arcenpay.com") ||
-      lower.endsWith(".vercel.app") ||
-      lower.endsWith(".railway.app") ||
+      // SECURITY: `*.vercel.app` / `*.railway.app` are SHARED PUBLIC SUFFIXES.
+      // Anyone can deploy `evil.vercel.app`, so trusting the whole suffix while
+      // `credentials: true` is set hands every attacker a first-party origin
+      // that can read authenticated responses. Exact configured origins only.
       lower === "localhost" ||
       lower === "127.0.0.1" ||
       corsOrigins.includes(origin) ||
-      corsOrigins.includes("*")
+      // A wildcard is only honoured outside production; in production it would
+      // mean "any site may send credentialed requests".
+      (corsOrigins.includes("*") && process.env.NODE_ENV !== "production")
     );
   } catch {
     return false;
@@ -649,6 +658,23 @@ app.use(
   }),
 );
 app.use(express.json({ limit: "50kb" })); // 50KB body limit (PRD §11.2)
+
+// ── Operator authentication (single choke point for the whole API surface) ──
+//
+// SECURITY: previously each endpoint opted in individually, and the ones that
+// forgot were fully anonymous — including `POST /api/webhooks/replay/:id`
+// (forces outbound HTTP + a signed payload), `GET /api/webhooks/log`,
+// `GET /api/usage/:sessionId/logs`, `POST /api/telegram/webhook` (approves
+// fund releases) and `GET /api/agent/dispatch/:requestId`. Enforcing this at
+// the root means a newly added route is protected by default instead of
+// depending on the author remembering to add a guard.
+app.use(
+  createOperatorAuthMiddleware(() => FACILITATOR_SECRET, {
+    allowMetricsPublic: () =>
+      process.env.FACILITATOR_METRICS_PUBLIC === "true",
+  }),
+);
+
 app.use(async (req, res, next) => {
   if (
     FACILITATOR_SECRET &&
@@ -1917,8 +1943,9 @@ function requireFacilitatorSecretIfConfigured(
     });
   }
 
-  const expected = `Bearer ${FACILITATOR_SECRET}`;
-  if (req.headers.authorization !== expected) {
+  // SECURITY: constant-time comparison. `!==` on a shared secret is a timing
+  // oracle that leaks the token byte by byte.
+  if (!secureCompare(readBearerToken(req), FACILITATOR_SECRET)) {
     return res.status(401).json({
       ok: false,
       error: "Unauthorized",
@@ -2982,6 +3009,7 @@ const balanceMonitor = new BalanceMonitor({
       amount: record.amount,
       chatId: provider.chatId || "",
       botToken: provider.botToken || "",
+      createdAt: Date.now(),
     });
 
     // Send Telegram message

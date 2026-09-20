@@ -2064,13 +2064,22 @@ export class ArcenAgent {
     }
 
     if (this.apiUrl) {
+      // The backend requires an authenticated principal on this route: a mandate
+      // is a payment authorisation, so revoking one must not be anonymous. The
+      // recorded revoker is derived server-side from this credential.
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+      };
+      if (this.config.apiKey) {
+        headers.Authorization = `Bearer ${this.config.apiKey}`;
+      }
+
       await globalThis.fetch(`${this.apiUrl}/api/v1/mandates/revoke`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify({
           mandateId,
           reason: effectiveReason,
-          revokedBy: this.address,
         }),
       }).catch((err) => {
         console.warn("[ArcenPayAgent] Mandate revocation broadcast warning:", err);
@@ -2093,7 +2102,11 @@ export class ArcenAgent {
 
     if (this.apiUrl) {
       try {
-        const res = await globalThis.fetch(`${this.apiUrl}/api/v1/mandates/${encodeURIComponent(targetId)}/status`);
+        const headers: Record<string, string> = {};
+        if (this.config.apiKey) {
+          headers.Authorization = `Bearer ${this.config.apiKey}`;
+        }
+        const res = await globalThis.fetch(`${this.apiUrl}/api/v1/mandates/${encodeURIComponent(targetId)}/status`, { headers });
         if (res.ok) {
           const data = await res.json();
           return data as MandateStatus;

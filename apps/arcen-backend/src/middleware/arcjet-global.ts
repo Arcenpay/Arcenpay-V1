@@ -14,10 +14,10 @@ import { aj, shouldBypassGlobalProtection, arcjetNodeRequest } from "../lib/auth
  * legitimate first-party API consumers (see shouldBypassGlobalProtection):
  *   1. Requests originating from the docs API reference playground
  *      (https://docs.arcenpay.com) — "Try it" testing must never 429.
- *   2. Requests carrying ANY platform credential (sk_/rk_/pk_) — authenticated
- *      API consumers. There is deliberately no per-key rate wall for
- *      credentialed traffic (see api-key-auth.ts); anonymous requests still
- *      get full shield + bot protection.
+ *   2. Requests carrying a key that is PROVABLY registered on this platform
+ *      (valid, not revoked, not expired, hash-matched). A fake/foreign key
+ *      that merely imitates sk_/rk_/pk_ does NOT bypass — it falls through to
+ *      bot/shield, so attackers can't dodge protection by guessing a prefix.
  *
  * Everything else (anonymous browsers, potential scrapers, unknown origins)
  * is fully covered by Arcjet shield + detectBot exactly as before.
@@ -40,14 +40,33 @@ export async function arcjetGlobalProtect(c: Context, next: Next) {
     return next();
   }
 
-  // First-party API consumers are exempt from bot/shield edge protection.
-  if (shouldBypassGlobalProtection(c.req.raw)) {
+  // First-party API consumers are exempt from bot/shield edge protection —
+  // but ONLY when the key is registered on this platform (fail-closed: a fake
+  // or foreign sk_/rk_/pk_ key does NOT bypass and still gets bot/shield).
+  if (await shouldBypassGlobalProtection(c.req.raw)) {
     return next();
   }
 
-  const decision = await aj.protect(
-    arcjetNodeRequest(c.req.raw) as any,
-  );
+  // SECURITY vs AVAILABILITY: if Arcjet itself fails (network blip, quota,
+  // malformed rule input such as a missing User-Agent), we must NOT turn that
+  // into a 500 for a legitimate caller. An exception here previously propagated
+  // to Hono's onError and failed every request — which is exactly the kind of
+  // thing that makes the docs playground and a user's first curl appear broken.
+  // We therefore fail OPEN on infrastructure errors and log loudly, matching the
+  // facilitator's existing Arcjet behaviour, while still failing CLOSED on a real
+  // deny decision.
+  let decision: Awaited<ReturnType<typeof aj.protect>>;
+  try {
+    decision = await aj.protect(arcjetNodeRequest(c.req.raw) as any);
+  } catch (err) {
+    console.error(
+      "[arcjet] Global protection failed to evaluate; allowing request. " +
+        "Investigate immediately — protection was skipped for this request.",
+      err,
+    );
+    return next();
+  }
+
   if (decision.isDenied()) {
     // Use the Arcjet reason type to give a helpful, non-misleading error.
     const isBotBlock = decision.results.some(

@@ -4,8 +4,11 @@ import { getCookie } from "hono/cookie";
 import { db, withPrismaReconnect } from "../db.js";
 import { SIWE_JWT_SECRET, PLATFORM_ADMIN_SECRET, isPlatformAdminEmail } from "../config.js";
 import { isApiKeyToken } from "../lib/auth/api-key-auth.js";
+import { verifyFacilitatorToken } from "../lib/auth/facilitator-auth.js";
+import { secureCompare, readCookieValue } from "../lib/auth/secure-compare.js";
 
 const AUTH_COOKIE_NAME = "arcen_session";
+const ADMIN_SECRET_COOKIE_NAME = "arcen_admin_secret";
 const AUTH_SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 
 export interface AuthSession {
@@ -252,8 +255,9 @@ export function requireFacilitatorAuth() {
       return;
     }
 
-    const token = getBearerToken(c);
-    if (token !== secret) {
+    // SECURITY: constant-time comparison. `!==` on a shared secret leaks the
+    // secret byte-by-byte through response timing.
+    if (!verifyFacilitatorToken(c.req.raw.headers)) {
       return c.json({ error: "Forbidden" }, 403 as any);
     }
 
@@ -275,15 +279,42 @@ export function requireApiKeyAuth() {
 
     const hash = createHash("sha256").update(raw).digest("hex");
 
+    // SECURITY: revocation, expiry and key-type must ALL be enforced here.
+    // A previous version looked the key up but never read `revokedAt` /
+    // `expiresAt` / `type`, so a revoked or expired key still authenticated,
+    // and a browser-safe `pk_` publishable key could reach secret-only routes.
     const apiKey = await withPrismaReconnect((client) =>
       client.arcenApiKey.findUnique({
         where: { keyHash: hash },
-        select: { id: true, teamId: true },
+        select: {
+          id: true,
+          teamId: true,
+          type: true,
+          revokedAt: true,
+          expiresAt: true,
+        },
       }),
     );
 
-    if (!apiKey) {
+    if (!apiKey || apiKey.revokedAt) {
       return c.json({ ok: false, error: "Invalid or revoked API key", code: "UNAUTHORIZED" }, 401 as any);
+    }
+
+    if (apiKey.expiresAt && apiKey.expiresAt.getTime() <= Date.now()) {
+      return c.json({ ok: false, error: "API key has expired", code: "UNAUTHORIZED" }, 401 as any);
+    }
+
+    // This middleware guards server-side routes only. Publishable keys are
+    // explicitly client-safe and must never reach them.
+    if (apiKey.type === "PUBLISHABLE") {
+      return c.json(
+        {
+          ok: false,
+          error: "This endpoint cannot be called with a publishable key",
+          code: "FORBIDDEN",
+        },
+        403 as any,
+      );
     }
 
     withPrismaReconnect((client) =>
@@ -298,45 +329,51 @@ export function requireApiKeyAuth() {
   };
 }
 
+/**
+ * Platform admin authentication.
+ *
+ * TWO INDEPENDENT PATHS — both fail closed:
+ *
+ *  A. Session path — an authenticated dashboard session whose user email is in
+ *     the platform-admin allow-list. This is how the admin UI authenticates.
+ *
+ *  B. Headless path — an exact match of `PLATFORM_ADMIN_SECRET` supplied as
+ *     `x-admin-secret`, `Authorization: Bearer …`, or the `arcen_admin_secret`
+ *     cookie. This is how CLI scripts authenticate.
+ *
+ * SECURITY FIXES over the previous implementation:
+ *  - Secret comparisons are constant-time (`secureCompare`), not `===`.
+ *  - The cookie branch parses the cookie and compares the exact value. The old
+ *    `cookie.includes("...=SECRET")` was a substring match that would accept
+ *    `arcen_admin_secret=SECRET<attacker-suffix>`.
+ *  - The unreachable "fall through and authorise anyway" branch is gone. It
+ *    ran in production exactly when the secret check FAILED, i.e. it turned a
+ *    failed secret verification into a success.
+ */
 export function requireAdminAuth() {
   return async (c: Context, next: Next) => {
-    // 1. Check if an active user session is present
+    const headerSecret = c.req.header("x-admin-secret");
+    const bearer = getBearerToken(c);
+    const cookieSecret = readCookieValue(
+      c.req.header("cookie"),
+      ADMIN_SECRET_COOKIE_NAME,
+    );
+
+    const hasValidHeadlessSecret =
+      secureCompare(headerSecret, PLATFORM_ADMIN_SECRET) ||
+      secureCompare(bearer, PLATFORM_ADMIN_SECRET) ||
+      secureCompare(cookieSecret, PLATFORM_ADMIN_SECRET);
+
+    // ── Path B: headless secret (no session required) ──────────────────────
+    if (hasValidHeadlessSecret) {
+      c.set("adminAuthorized", true);
+      await next();
+      return;
+    }
+
+    // ── Path A: authenticated session belonging to an allow-listed admin ───
     const session = await resolveSession(c);
-
-    if (session) {
-      // If a user session is active, the user MUST be an authorized platform admin
-      if (!isPlatformAdminEmail(session.email)) {
-        return c.json(
-          {
-            ok: false,
-            error: "Forbidden. Platform administrator privileges required.",
-            code: "ADMIN_FORBIDDEN",
-          },
-          403 as any
-        );
-      }
-
-      // User email is verified platform admin!
-      const headerSecret = c.req.header("x-admin-secret");
-      const bearer = getBearerToken(c);
-      const cookie = c.req.header("cookie");
-      const hasValidSecret =
-        (headerSecret && headerSecret === PLATFORM_ADMIN_SECRET) ||
-        (bearer && bearer === PLATFORM_ADMIN_SECRET) ||
-        (cookie && cookie.includes(`arcen_admin_secret=${PLATFORM_ADMIN_SECRET}`));
-
-      // If user has a valid session AND is a platform admin, authorize without
-      // requiring the extra secret header (that secret is only needed for API/CLI access)
-      if (hasValidSecret || process.env.NODE_ENV !== "production") {
-        c.set("adminAuthorized", true);
-        c.set("adminUserId", session.userId);
-        c.set("adminEmail", session.email);
-        await next();
-        return;
-      }
-
-      // Fall through to check if session-based admin should still be authorized
-      // Session with admin email already confirmed above — authorize in all environments
+    if (session && isPlatformAdminEmail(session.email)) {
       c.set("adminAuthorized", true);
       c.set("adminUserId", session.userId);
       c.set("adminEmail", session.email);
@@ -344,30 +381,15 @@ export function requireAdminAuth() {
       return;
     }
 
-    // 2. Direct API / CLI scripts check (no user session attached):
-    // Requires exact PLATFORM_ADMIN_SECRET via header, bearer token, or cookie.
-    const headerSecret = c.req.header("x-admin-secret");
-    if (headerSecret && headerSecret === PLATFORM_ADMIN_SECRET) {
-      c.set("adminAuthorized", true);
-      await next();
-      return;
-    }
-
-    const bearer = getBearerToken(c);
-    if (bearer && bearer === PLATFORM_ADMIN_SECRET) {
-      c.set("adminAuthorized", true);
-      await next();
-      return;
-    }
-
-    const cookie = c.req.header("cookie");
-    if (cookie) {
-      const match = cookie.match(/arcen_admin_secret=([^;]+)/);
-      if (match && match[1].trim() === PLATFORM_ADMIN_SECRET) {
-        c.set("adminAuthorized", true);
-        await next();
-        return;
-      }
+    if (session) {
+      return c.json(
+        {
+          ok: false,
+          error: "Forbidden. Platform administrator privileges required.",
+          code: "ADMIN_FORBIDDEN",
+        },
+        403 as any,
+      );
     }
 
     return c.json(
@@ -376,7 +398,7 @@ export function requireAdminAuth() {
         error: "Unauthorized. Admin authentication required.",
         code: "ADMIN_UNAUTHORIZED",
       },
-      401 as any
+      401 as any,
     );
   };
 }

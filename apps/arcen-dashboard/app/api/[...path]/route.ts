@@ -24,10 +24,17 @@ async function handler(request: NextRequest) {
 
   const backendUrl = `${BACKEND}${path}${url.search}`;
 
-  // Forward headers (strip host, add forwarded)
+  // Forward headers (strip hop-by-hop and client-spoofable proxy headers).
   const headers: Record<string, string> = {};
   request.headers.forEach((value, key) => {
-    if (key === "host" || key === "content-length") return;
+    const lower = key.toLowerCase();
+    if (lower === "host" || lower === "content-length") return;
+    // SECURITY: never relay client-supplied forwarding/hop-by-hop headers. We
+    // set `x-forwarded-*` below from values we derive ourselves, so a client
+    // cannot influence the backend's notion of its own origin.
+    if (lower.startsWith("x-forwarded-") || lower === "forwarded") return;
+    if (lower === "connection" || lower === "transfer-encoding") return;
+    if (lower === "upgrade" || lower === "keep-alive") return;
     headers[key] = value;
   });
   headers["x-forwarded-host"] = url.host;
@@ -40,13 +47,19 @@ async function handler(request: NextRequest) {
     res = await fetch(backendUrl, {
       method: request.method,
       headers,
+      // Tenant data must never be cached by the Next.js data cache or an
+      // intermediary — every response here is per-session.
+      cache: "no-store",
+      // Do not follow redirects server-side: the backend is expected to answer
+      // directly, and following a redirect would widen the proxy into a relay.
+      redirect: "manual",
       body: request.method !== "GET" && request.method !== "HEAD"
         ? await request.text()
         : undefined,
     });
   } catch (err) {
     return new Response(
-      JSON.stringify({ error: "Backend unreachable", details: String(err) }),
+      JSON.stringify({ error: "Backend unreachable" }),
       { status: 502, headers: { "Content-Type": "application/json" } },
     );
   }

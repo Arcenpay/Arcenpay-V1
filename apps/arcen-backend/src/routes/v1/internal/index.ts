@@ -17,4 +17,7 @@ export const internalRoutes = new Hono()
   .post("/billing/maintenance/all", requireFacilitatorAuth(), runMaintenanceAll)
   .get("/catalog/resolve-plan", requireFacilitatorAuth(), resolvePlan)
   .patch("/companies/sync-subscription", requireFacilitatorAuth(), syncSubscription)
-  .post("/preview-token", createPreviewToken);
+  // SECURITY: this route previously had no guard, unlike every sibling above.
+  // It mints a short-lived embed access token, so leaving it anonymous made the
+  // surrounding facilitator-only surface trivially bypassable.
+  .post("/preview-token", requireFacilitatorAuth(), createPreviewToken);

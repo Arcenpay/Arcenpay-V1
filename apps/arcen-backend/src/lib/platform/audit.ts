@@ -1,5 +1,6 @@
 import { db } from "../../db.js";
 import { toPrismaNullableJson } from "../../utils/prisma-json.js";
+import { resolveTrustedClientIp } from "../auth/arcjet.js";
 
 export type AuditHeaders = {
   get(name: string): string | null | undefined;
@@ -49,10 +50,10 @@ export async function writeAuditEvent(input: AuditInput): Promise<void> {
         resourceType,
         resourceId,
         requestId,
-        ip:
-          headers.get("x-forwarded-for") ||
-          headers.get("x-real-ip") ||
-          undefined,
+        // SECURITY: only the proxy-appended hop is trustworthy. Reading
+        // `x-forwarded-for` directly would persist an attacker-chosen value
+        // into the audit trail, making incident response actively misleading.
+        ip: resolveTrustedClientIp(headers) ?? undefined,
         userAgent: headers.get("user-agent") || undefined,
         beforeData: toPrismaNullableJson(input.beforeData),
         afterData: toPrismaNullableJson(input.afterData),

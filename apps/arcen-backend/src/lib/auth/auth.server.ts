@@ -32,12 +32,35 @@ function hashAuthValue(value: string): string {
   return createHmac("sha256", SIWE_JWT_SECRET).update(value).digest("hex");
 }
 
+/**
+ * Session cookie `SameSite` policy.
+ *
+ * SECURITY: production previously hardcoded `SameSite=None`. That instructs the
+ * browser to attach the session cookie to requests initiated by ANY other site,
+ * which is precisely the precondition CSRF needs. Because the cookie is scoped
+ * to `.arcenpay.com` (shared by app/api), a genuinely cross-site deployment is
+ * not required: `app.arcenpay.com` → `api.arcenpay.com` is already same-site,
+ * so `Lax` covers the normal dashboard flow.
+ *
+ * `none` remains available for deployments that truly need a third-party
+ * context, but it must be requested explicitly, and the API-level CSRF guard
+ * (`middleware/csrf-origin.ts`) still rejects foreign-origin state changes.
+ */
+const AUTH_COOKIE_SAME_SITE: "lax" | "strict" | "none" = (() => {
+  const raw = process.env.AUTH_COOKIE_SAME_SITE?.trim().toLowerCase();
+  if (raw === "none" || raw === "strict" || raw === "lax") return raw;
+  return "lax";
+})();
+
 function buildCookieOptions(expiresAt: Date) {
   const isProd = process.env.NODE_ENV === "production";
+  // `SameSite=None` is only honoured by browsers when the cookie is also
+  // `Secure`; force it so a misconfiguration cannot silently drop the cookie.
+  const secure = isProd || AUTH_COOKIE_SAME_SITE === "none";
   return {
     httpOnly: true,
-    sameSite: (isProd ? "none" : "lax") as "none" | "lax",
-    secure: isProd,
+    sameSite: AUTH_COOKIE_SAME_SITE,
+    secure,
     ...(isProd
       ? { domain: PRODUCTION_SESSION_COOKIE_DOMAIN }
       : {}),
@@ -53,7 +76,7 @@ function clearLegacyHostOnlySessionCookie(c: Context): void {
     // host-only value first when calling the API.
     deleteCookie(c, AUTH_COOKIE_NAME, {
       httpOnly: true,
-      sameSite: "none",
+      sameSite: AUTH_COOKIE_SAME_SITE,
       secure: true,
       path: "/",
     });
@@ -68,13 +91,7 @@ export async function getSessionFromCtx(
   c: Context,
 ): Promise<DashboardSession | null> {
   const token = await readSessionToken(c);
-  if (!token) {
-    console.warn("[DEBUG-auth-20260907] session rejected", {
-      reason: "missing_cookie",
-      path: new URL(c.req.url).pathname,
-    });
-    return null;
-  }
+  if (!token) return null;
 
   const now = new Date();
   const tokenHash = hashAuthValue(token);
@@ -96,10 +113,6 @@ export async function getSessionFromCtx(
   );
 
   if (!record || record.revokedAt || record.expiresAt <= now) {
-    console.warn("[DEBUG-auth-20260907] session rejected", {
-      reason: !record ? "not_found" : record.revokedAt ? "revoked" : "expired",
-      path: new URL(c.req.url).pathname,
-    });
     return null;
   }
 
@@ -220,12 +233,6 @@ export async function createSession(
 
   clearLegacyHostOnlySessionCookie(c);
   setCookie(c, AUTH_COOKIE_NAME, token, buildCookieOptions(expiresAt));
-  console.info("[DEBUG-auth-20260907] session created", {
-    cookieDomain: process.env.NODE_ENV === "production"
-      ? PRODUCTION_SESSION_COOKIE_DOMAIN
-      : "host-only",
-    secure: process.env.NODE_ENV === "production",
-  });
 
   return {
     sessionId: record.id,

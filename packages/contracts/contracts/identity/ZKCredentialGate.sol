@@ -336,7 +336,17 @@ contract ZKCredentialGate is Ownable {
     //                    INTERNAL HELPERS
     // ============================================================
 
-    /// @dev Recover ECDSA signer from a pre-hashed message and signature
+    /// @dev Recover ECDSA signer from a pre-hashed message and signature.
+    ///
+    /// Hardening applied here:
+    ///  - `s` must be in the lower half of the curve order. Without this check a
+    ///    valid signature can be trivially mutated (`s' = n - s`, `v` flipped)
+    ///    into a SECOND valid signature for the same message. Anywhere a
+    ///    signature is used as a replay/dedup key that mutation is a bypass.
+    ///  - The recovered address must not be `address(0)`. `ecrecover` returns
+    ///    `address(0)` for malformed input, so a caller that compares the result
+    ///    against an unset (zero) expected signer would accept a forged
+    ///    signature.
     function _recoverSigner(bytes32 messageHash, bytes calldata sig) internal pure returns (address) {
         require(sig.length == 65, "ZKCredentialGate: invalid sig length");
         bytes32 r;
@@ -349,7 +359,15 @@ contract ZKCredentialGate is Ownable {
         }
         if (v < 27) v += 27;
         require(v == 27 || v == 28, "ZKCredentialGate: invalid v");
-        return ecrecover(messageHash, v, r, s);
+        // secp256k1n / 2 — reject high-s (malleable) signatures.
+        require(
+            uint256(s) <= 0x7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF5D576E7357A4501DDFE92F46681B20A0,
+            "ZKCredentialGate: invalid s"
+        );
+
+        address recovered = ecrecover(messageHash, v, r, s);
+        require(recovered != address(0), "ZKCredentialGate: invalid signature");
+        return recovered;
     }
 
     /// @dev Decode proof point A from raw bytes

@@ -223,7 +223,11 @@ function BroadcastTab({ hdrs }: any) {
                   <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-50 text-indigo-700">PLATFORM ADMIN</span>
                 </div>
                 {message ? (
-                  <div className="text-slate-700" dangerouslySetInnerHTML={{ __html: message.replace(/\n/g, "<br/>") }} />
+                  // SECURITY: rendered as TEXT, not HTML. The admin email composer
+                  // must never turn typed/pasted markup into live DOM in the preview
+                  // pane (self-XSS → session theft). `whitespace-pre-wrap` preserves
+                  // the line breaks the old `<br/>` substitution provided.
+                  <div className="text-slate-700 whitespace-pre-wrap">{message}</div>
                 ) : (
                   <>
                     <h1 className="text-base font-bold text-slate-900 m-0">ArcenPay is Live!</h1>

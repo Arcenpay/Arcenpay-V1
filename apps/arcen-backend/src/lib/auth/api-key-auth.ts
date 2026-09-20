@@ -16,7 +16,7 @@
 
 import { createHash, randomBytes } from "crypto";
 import { db } from "../../db.js";
-import { aj, fixedWindow, isDocsApiOrigin, arcjetNodeRequest } from "./arcjet.js";
+import { aj, fixedWindow, arcjetNodeRequest } from "./arcjet.js";
 
 export type ApiKeyTypeName = "SECRET" | "PUBLISHABLE" | "RESTRICTED";
 
@@ -250,18 +250,36 @@ export async function requireApiKey(
   }
 
   // Per-key rate limiting via Arcjet — a HIGH ceiling (5000 req/60s) so
-  // legitimate high-volume usage is never blocked, and requests from the docs
-  // API playground (docs.arcenpay.com) are exempt entirely. This only stops
-  // true runaway/hostile bursts while keeping the safety valve in place.
-  if (process.env.ARCJET_KEY && !isDocsApiOrigin(request)) {
-    const decision = await apiKeyProtect.protect(
-      arcjetNodeRequest(request) as any,
-      {
-        apikey: apiKey.id,
-      },
-    );
-    if (decision.isDenied()) {
-      return { error: "Rate limit exceeded", status: 429 };
+  // legitimate high-volume usage is never blocked. This only stops true
+  // runaway/hostile bursts while keeping the safety valve in place.
+  //
+  // SECURITY: there is deliberately NO origin-based exemption here. The docs
+  // playground's `Origin` header is client-controlled, so honouring it would
+  // let any holder of a valid key lift their own ceiling (and any attacker
+  // forge the header outright).
+  //
+  // AVAILABILITY: a failure inside Arcjet (network blip, quota exhausted, a
+  // rule that cannot evaluate) must never reject a request that has already
+  // PROVEN ownership of a valid, unrevoked, unexpired key. Previously any
+  // thrown error propagated out of `requireApiKey`, turning a WAF hiccup into a
+  // 500 on every authenticated call. Fail open, but log loudly.
+  if (process.env.ARCJET_KEY) {
+    try {
+      const decision = await apiKeyProtect.protect(
+        arcjetNodeRequest(request) as any,
+        {
+          apikey: apiKey.id,
+        },
+      );
+      if (decision.isDenied()) {
+        return { error: "Rate limit exceeded", status: 429 };
+      }
+    } catch (err) {
+      console.error(
+        "[api-key-auth] Per-key rate limit failed to evaluate; allowing an " +
+          "already-authenticated request.",
+        err,
+      );
     }
   }
 

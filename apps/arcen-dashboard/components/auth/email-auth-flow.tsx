@@ -259,31 +259,16 @@ export function EmailAuthFlow({
         const keyStatus = data?.currentTeam?.activationKeyStatus;
         const isExpiredOrRevoked =
           keyStatus === "EXPIRED" || keyStatus === "REVOKED";
-        console.info("[DEBUG-auth-20260907] post-auth session", {
-          status: sessionRes.status,
-          hasWallet: Boolean(data?.user?.walletAddress || data?.user?.stellarWalletAddress),
-          isActivated,
-          keyStatus: keyStatus ?? null,
-        });
         if (isActivated || isExpiredOrRevoked) {
           const environments = Array.isArray(data?.environments) ? data.environments : [];
           const destination = environments.length > 0 ? "/" : "/onboarding/provider-profile";
-          console.info("[DEBUG-auth-20260907] post-auth navigation", { destination });
           window.location.href = destination;
           return;
         }
       }
-      console.warn("[DEBUG-auth-20260907] post-auth session did not allow dashboard navigation", {
-        status: sessionRes.status,
-      });
-    } catch (error) {
-      console.warn("[DEBUG-auth-20260907] post-auth session request failed", {
-        message: error instanceof Error ? error.message : "unknown",
-      });
+    } catch {
+      // Fall through to the activation step below.
     }
-    console.info("[DEBUG-auth-20260907] post-auth navigation", {
-      destination: "activate",
-    });
     setStep("activate");
   };
 

@@ -24,6 +24,33 @@ import {
 } from "@/components/ui/sheet";
 import { SkeletonTable } from "@/components/ui/skeleton";
 import { formatRelativeTime } from "@/lib/format";
+import { toast } from "sonner";
+
+/**
+ * Turns a failed API response into a human-readable message.
+ *
+ * SECURITY/UX: the backend already returns actionable, non-sensitive reasons
+ * (PROTOCOL_ACTIVATION_REQUIRED, LIMIT_REACHED, "No workspace environment
+ * selected"). Surfacing them is what stops "I clicked Create and nothing
+ * happened" from looking like a fake/mock feature.
+ */
+async function describeApiError(res: Response): Promise<string> {
+  try {
+    const body = (await res.json()) as {
+      error?: string;
+      message?: string;
+      code?: string;
+    };
+    const detail = body?.message || body?.error || body?.code;
+    if (detail) return String(detail);
+  } catch {
+    // fall through to the status-based message
+  }
+  if (res.status === 401) return "Your session expired. Please sign in again.";
+  if (res.status === 403) return "You do not have permission to manage API keys (OWNER or ADMIN required).";
+  if (res.status === 409) return "Workspace is not ready for API keys yet (check the active environment and activation key).";
+  return `Request failed (HTTP ${res.status}).`;
+}
 
 type ApiKeyType = "SECRET" | "PUBLISHABLE" | "RESTRICTED";
 
@@ -139,7 +166,13 @@ function ApiKeysContent() {
       if (res.ok) {
         const data = await res.json() as { data: ApiKey[] };
         setKeys(data.data);
+      } else {
+        // Previously silent: an unactivated/unauthorised workspace showed an
+        // empty list with no explanation.
+        toast.error(await describeApiError(res));
       }
+    } catch {
+      toast.error("Could not reach the API. Check your connection and try again.");
     } finally {
       setLoading(false);
     }
@@ -164,11 +197,24 @@ function ApiKeysContent() {
       });
       if (res.ok) {
         const data = await res.json() as { data: NewKeyResult };
+        // Guard against a response shape change silently rendering an empty key.
+        if (!data?.data?.key) {
+          toast.error("The API returned no key material. No key was created — please retry.");
+          return;
+        }
         setNewKey(data.data);
         setShowCreate(false);
         setCreateForm({ name: "", description: "", type: "SECRET", permissions: [], expiresInDays: "" });
+        toast.success(`API key created: ${data.data.prefix}…`);
         fetchKeys();
+      } else {
+        // THE key fix: this branch used to be missing entirely, so every
+        // failure (403 activation required, 409 limit reached, 401 session,
+        // 500) closed the sheet abruptly with zero feedback.
+        toast.error(await describeApiError(res));
       }
+    } catch {
+      toast.error("Could not reach the API while creating the key. Nothing was created.");
     } finally {
       setCreating(false);
     }
@@ -178,8 +224,15 @@ function ApiKeysContent() {
     if (!confirm("Revoke this API key? This cannot be undone.")) return;
     setDeletingId(id);
     try {
-      await apiFetch(`/api/v1/api-keys?id=${id}`, { method: "DELETE" });
-      fetchKeys();
+      const res = await apiFetch(`/api/v1/api-keys?id=${id}`, { method: "DELETE" });
+      if (res.ok) {
+        toast.success("API key revoked.");
+        fetchKeys();
+      } else {
+        toast.error(await describeApiError(res));
+      }
+    } catch {
+      toast.error("Could not reach the API while revoking the key.");
     } finally {
       setDeletingId(null);
     }

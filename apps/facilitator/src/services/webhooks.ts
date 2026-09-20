@@ -237,24 +237,36 @@ export class WebhookService {
   /**
    * Verify an incoming webhook signature (for consumers).
    *
+   * SECURITY: inputs are type-checked and the comparison is constant-time. A
+   * malformed `X-ArcenPay-Signature` must yield `false`, never throw — a throw
+   * inside a consumer's webhook handler turns one crafted request into a 500
+   * (denial of service) instead of a clean 401.
+   *
+   * Always verify against the RAW body. Passing `JSON.stringify(req.body)`
+   * changes whitespace and key order and will not match the signature.
+   *
    * @example
    * ```ts
    * import { verifyWebhookSignature } from '@arcenpay/node';
    *
    * app.post('/webhooks/arcenpay', (req, res) => {
-   *   const raw = JSON.stringify(req.body);
-   *   const sig = req.headers['x-arcenpay-signature'] as string;
-   *   if (!verifyWebhookSignature(raw, sig, process.env.ARCENPAY_WEBHOOK_SECRET!)) {
+   *   const raw = req.rawBody ?? JSON.stringify(req.body);
+   *   const sig = req.headers['x-arcenpay-signature'];
+   *   if (!verifyWebhookSignature(raw, sig, process.env.ARCENPAY_WEBHOOK_SECRET)) {
    *     return res.status(401).json({ error: 'Invalid signature' });
    *   }
    * });
    * ```
    */
   static verifySignature(
-    body: string,
-    signature: string,
-    secret: string,
+    body: unknown,
+    signature: unknown,
+    secret: unknown,
   ): boolean {
+    if (typeof body !== "string") return false;
+    if (typeof signature !== "string") return false;
+    if (typeof secret !== "string") return false;
+
     const normalizedSecret = secret.trim();
     const normalizedSignature = signature
       .trim()
@@ -296,9 +308,9 @@ export class WebhookService {
  * @param secret    - Shared HMAC signing secret configured on the provider's webhook endpoint
  */
 export function verifyWebhookSignature(
-  body: string,
-  signature: string,
-  secret: string,
+  body: unknown,
+  signature: unknown,
+  secret: unknown,
 ): boolean {
   return WebhookService.verifySignature(body, signature, secret);
 }
