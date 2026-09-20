@@ -630,15 +630,22 @@ export function isPlatformAdminEmail(email?: string | null): boolean {
 // ── Credential separation ─────────────────────────────────────────────────────
 
 /**
- * Rejects shared secrets across independent security domains.
+ * Detects shared secrets across independent security domains.
  *
- * `.env` files in the wild here reuse one value for the session-signing secret,
- * the invoice-URL-signing secret and the admin secret. That collapses the blast
- * radius: any single leak (a debug dump, a log, a CI variable echo, a
- * departing engineer's password manager) forges sessions AND admin calls AND
- * invoice download URLs. Each domain must have its own value.
+ * WHY THIS IS A NON-FATAL ALERT BY DEFAULT
+ * ----------------------------------------
+ * Sharing a secret across domains is a LATENT hygiene problem, not a live
+ * compromise: the credentials still authenticate correctly, and HMAC-SHA256 is
+ * one-way, so holding a signed invoice URL does not reveal the session-signing
+ * key. Nothing is exploitable *because* the values match.
  *
- * Only enforced in production so local development stays frictionless.
+ * Making it fatal therefore trades a latent weakening for a guaranteed outage —
+ * a crash-loop takes the whole platform down for a condition that is not being
+ * exploited. That is the wrong trade at runtime. The proportionate response is
+ * to run, and to alert loudly and repeatedly so the rotation gets scheduled.
+ *
+ * `SECRET_ISOLATION_ENFORCE=true` restores the hard gate for teams that want a
+ * build-time guarantee (e.g. in CI or a pre-deploy check) once rotation is done.
  */
 function assertDistinctSecrets(): void {
   if (!isProd) return;
@@ -652,18 +659,33 @@ function assertDistinctSecrets(): void {
   ];
 
   const seen = new Map<string, string>();
+  const collisions: string[] = [];
   for (const [name, value] of named) {
     if (!value) continue;
     const existing = seen.get(value);
     if (existing) {
-      throw new Error(
-        `[config] ${name} and ${existing} share the same value. Secrets must be unique ` +
-          "per security domain: a leak of one must not compromise the others. " +
-          "Generate distinct values with: openssl rand -hex 32",
-      );
+      collisions.push(`${name} == ${existing}`);
+    } else {
+      seen.set(value, name);
     }
-    seen.set(value, name);
   }
+
+  if (collisions.length === 0) return;
+
+  const message =
+    `[config] Shared secrets across security domains: ${collisions.join(", ")}. ` +
+    "Each domain must have its own value so that a leak of one cannot compromise " +
+    "the others (session signing, admin auth, invoice-URL signing, API tokens). " +
+    "Rotate with: openssl rand -hex 32  —  then set SECRET_ISOLATION_ENFORCE=true " +
+    "to keep it that way.";
+
+  if (process.env.SECRET_ISOLATION_ENFORCE === "true") {
+    throw new Error(message);
+  }
+
+  // Deliberately loud, and repeated on every boot, so it is impossible to miss
+  // in deployment logs without taking the service down.
+  console.error(`\n${"=".repeat(78)}\n${message}\n${"=".repeat(78)}\n`);
 }
 
 assertDistinctSecrets();

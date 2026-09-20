@@ -16,7 +16,10 @@
 
 import { createHash, randomBytes } from "crypto";
 import { db } from "../../db.js";
-import { aj, fixedWindow, arcjetNodeRequest } from "./arcjet.js";
+import {
+  apiKeyRateLimiter,
+  API_KEY_RATE_LIMIT,
+} from "./per-key-rate-limit.js";
 
 export type ApiKeyTypeName = "SECRET" | "PUBLISHABLE" | "RESTRICTED";
 
@@ -29,7 +32,12 @@ export type ApiKeyContext = {
   environmentMode: "DEVELOPMENT" | "PRODUCTION" | null;
 };
 
-export type ApiKeyError = { error: string; status: number };
+export type ApiKeyError = {
+  error: string;
+  status: number;
+  /** Present on 429 so clients can back off without guessing. */
+  retryAfterSeconds?: number;
+};
 
 // ─── Prefixes & permissions ───────────────────────────────────────────────────
 
@@ -159,22 +167,24 @@ function extractBearerToken(request: Request): string | null {
 }
 
 /**
- * Per-API-key rate limit — LIVE in production, DRY_RUN in development.
+ * ── Per-key rate limiting ────────────────────────────────────────────────────
  *
- * Deliberately high ceiling (5000 req / 60s ≈ 83 req/sec) so legitimate
- * high-volume integrations (SDKs, agents, dashboards, docs playground) are
- * never blocked by normal usage. It only stops true runaway/hostile bursts.
- * IMPORTANT: requests from the docs playground (docs.arcenpay.com) are exempt
- * entirely so "Try it" testing never counts against a key.
+ * Implemented locally in `per-key-rate-limit.ts`. It is intentionally NOT an
+ * Arcjet rule.
+ *
+ * The previous implementation was `aj.withRule(fixedWindow({...}))`. Arcjet's
+ * `withRule()` clones the PARENT client's rules, and the parent carried
+ * `[shield(LIVE), detectBot(LIVE)]`. Every authenticated API request was
+ * therefore re-evaluated for bot detection, and any non-browser client
+ * (`curl`, Postman, server SDKs, CI smoke tests) was rejected as a bot with a
+ * misleading 429 "Rate limit exceeded" before the documented quota was ever
+ * consulted. Keys showed `lastUsedAt: null` because the request never reached
+ * that line.
+ *
+ * Bot detection belongs on ANONYMOUS traffic only — see
+ * `middleware/arcjet-global.ts`, which already exempts requests carrying a
+ * provably-registered key.
  */
-const apiKeyProtect = aj.withRule(
-  fixedWindow({
-    mode: process.env.NODE_ENV === "production" ? "LIVE" : "DRY_RUN",
-    characteristics: ["apikey"],
-    window: "60s",
-    max: 5000,
-  }),
-);
 
 // ─── Main auth function ───────────────────────────────────────────────────────
 
@@ -249,38 +259,27 @@ export async function requireApiKey(
     }
   }
 
-  // Per-key rate limiting via Arcjet — a HIGH ceiling (5000 req/60s) so
-  // legitimate high-volume usage is never blocked. This only stops true
-  // runaway/hostile bursts while keeping the safety valve in place.
+  // Per-key rate limiting.
   //
   // SECURITY: there is deliberately NO origin-based exemption here. The docs
   // playground's `Origin` header is client-controlled, so honouring it would
   // let any holder of a valid key lift their own ceiling (and any attacker
   // forge the header outright).
   //
-  // AVAILABILITY: a failure inside Arcjet (network blip, quota exhausted, a
-  // rule that cannot evaluate) must never reject a request that has already
-  // PROVEN ownership of a valid, unrevoked, unexpired key. Previously any
-  // thrown error propagated out of `requireApiKey`, turning a WAF hiccup into a
-  // 500 on every authenticated call. Fail open, but log loudly.
-  if (process.env.ARCJET_KEY) {
-    try {
-      const decision = await apiKeyProtect.protect(
-        arcjetNodeRequest(request) as any,
-        {
-          apikey: apiKey.id,
-        },
-      );
-      if (decision.isDenied()) {
-        return { error: "Rate limit exceeded", status: 429 };
-      }
-    } catch (err) {
-      console.error(
-        "[api-key-auth] Per-key rate limit failed to evaluate; allowing an " +
-          "already-authenticated request.",
-        err,
-      );
-    }
+  // CORRECTNESS: this must NOT involve Arcjet shield/bot rules. The caller has
+  // already proven ownership of a valid, unrevoked, unexpired key, so bot
+  // detection is inapplicable — applying it is what made `curl`, Postman and
+  // every server SDK fail with a bogus 429. See per-key-rate-limit.ts.
+  const decision = apiKeyRateLimiter.consume(apiKey.id);
+  if (!decision.allowed) {
+    return {
+      error:
+        `Rate limit exceeded for this key (${decision.limit} requests per ` +
+        `${Math.round(API_KEY_RATE_LIMIT.windowMs / 1000)}s). ` +
+        `Retry in ${decision.retryAfterSeconds}s.`,
+      status: 429,
+      retryAfterSeconds: decision.retryAfterSeconds,
+    };
   }
 
   // Update lastUsedAt in background
