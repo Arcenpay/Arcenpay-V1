@@ -16,6 +16,21 @@ function slugify(value: string): string {
     .slice(0, 48);
 }
 
+/**
+ * Maps a stored Prisma `ChainFamily` enum value to the lowercase family
+ * string used in agentic payment-link specs. Unknown/null values fall back
+ * to "evm" (the historical default) but known non-EVM families are preserved
+ * rather than silently mistagged.
+ */
+function resolveLinkChainFamily(
+  value: string | null | undefined,
+): "evm" | "stellar" | "solana" {
+  const normalized = value?.toLowerCase();
+  if (normalized === "stellar") return "stellar";
+  if (normalized === "solana") return "solana";
+  return "evm";
+}
+
 export function toAgenticSpecification(
   link: {
     id: string;
@@ -57,7 +72,7 @@ export function toAgenticSpecification(
     currency: link.currency,
     acceptedToken: link.acceptedToken,
     chainId: link.chainId,
-    chainFamily: link.chainFamily?.toLowerCase() === "stellar" ? "stellar" : "evm",
+    chainFamily: resolveLinkChainFamily(link.chainFamily),
     recipientWallet: link.recipientWallet,
     status: link.status as any,
     isAgentic,

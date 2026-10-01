@@ -93,6 +93,7 @@ export async function getSession(c: Context) {
       email: session.email,
       walletAddress: session.walletAddress,
       stellarWalletAddress: session.stellarWalletAddress,
+      solanaWalletAddress: session.solanaWalletAddress,
       isPlatformAdmin: isAdmin,
     },
     currentTeam: currentTeam

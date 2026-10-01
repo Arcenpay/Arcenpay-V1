@@ -108,7 +108,7 @@ import {
   resolveEnvironmentChainId,
 } from "@/lib/default-chain";
 import { toast } from "sonner";
-import { PlanFactoryABI, YEARLY_INTERVAL, isEvmChain } from "@arcenpay/internal-core";
+import { PlanFactoryABI, YEARLY_INTERVAL, isEvmChain, getChainFamily, getSolanaRpcUrl, isStellarChainId, isSolanaChainId } from "@arcenpay/internal-core";
 import { contract as stellarContract } from "@stellar/stellar-sdk";
 import {
   isSmartAccountInfrastructureError,
@@ -116,6 +116,7 @@ import {
 } from "@arcenpay/react/smart-account";
 import { useDashboardWallet } from "@/hooks/use-dashboard-wallet";
 import { useStellarWallet } from "@/hooks/use-stellar-wallet";
+import { useSolanaWallet } from "@/hooks/use-solana-wallet";
 import { useTeamTier } from "@/hooks/use-team-tier";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -3384,6 +3385,7 @@ function PlansTable({
   const { activeEnvironment } = useEnvironment();
   const { address, isConnected } = useAccount();
   const stellar = useStellarWallet(activeEnvironment?.chainId ?? 9_000_001);
+  const solana = useSolanaWallet(activeEnvironment?.chainId ?? 9_100_001);
   const chainId = useChainId();
   const publicClient = usePublicClient({ chainId: chainId || DEFAULT_CHAIN_ID });
   const { signTypedDataAsync } = useSignTypedData();
@@ -3446,10 +3448,16 @@ function PlansTable({
   async function registerOnChain(plan: CatalogPlan) {
     const planChainId = plan.chainId ?? activeEnvironment?.chainId ?? 0;
     const isEvmPlan = isEvmChain(planChainId);
+    const isSolanaPlan = getChainFamily(planChainId) === "solana";
 
     if (isEvmPlan) {
       if (!isConnected || !address) {
         toast.error("Connect your EVM wallet to continue");
+        return;
+      }
+    } else if (isSolanaPlan) {
+      if (!solana.isConnected || !solana.address) {
+        toast.error("Connect your Solana wallet to continue");
         return;
       }
     } else {
@@ -3491,6 +3499,14 @@ function PlansTable({
         signatureMode?: "create" | "update";
         needsTokenApproval?: boolean;
         tokenAddress?: string;
+        // Solana
+        programId?: string;
+        rpcUrl?: string;
+        planId?: string;
+        instruction?: {
+          keys: Array<{ pubkey: string; isSigner: boolean; isWritable: boolean }>;
+          data: string;
+        };
         error?: string;
       };
 
@@ -3508,7 +3524,7 @@ function PlansTable({
       }
 
       // ── Stellar Soroban path ─────────────────────────────────────────────
-      if (!isEvmPlan) {
+      if (!isEvmPlan && !isSolanaPlan) {
         const {
           planFactoryAddress,
           networkPassphrase,
@@ -3592,6 +3608,95 @@ function PlansTable({
 
         toast.success(
           `Plan registered on-chain (${onChainPlanId}) via Stellar`,
+        );
+        load();
+        return;
+      }
+
+      // ── Solana path ───────────────────────────────────────────────────────
+      if (isSolanaPlan) {
+        const { programId, instruction, planId: preparedPlanId, rpcUrl } =
+          noncePayload;
+        if (!programId || !instruction || !preparedPlanId) {
+          throw new Error("Solana registration payload missing from server");
+        }
+        const rpc = rpcUrl ?? getSolanaRpcUrl(planChainId);
+        if (!rpc) {
+          throw new Error("No Solana RPC URL configured for this plan.");
+        }
+        const { Connection, PublicKey, Transaction, TransactionInstruction } =
+          await import("@solana/web3.js");
+        const txIx = new TransactionInstruction({
+          programId: new PublicKey(programId),
+          keys: instruction.keys.map((k) => ({
+            pubkey: new PublicKey(k.pubkey),
+            isSigner: k.isSigner,
+            isWritable: k.isWritable,
+          })),
+          data: Buffer.from(instruction.data, "base64"),
+        });
+        const connection = new Connection(rpc, "confirmed");
+        const tx = new Transaction().add(txIx);
+        tx.feePayer = new PublicKey(solana.address!);
+        tx.recentBlockhash = (
+          await connection.getLatestBlockhash("confirmed")
+        ).blockhash;
+        // Pre-flight: the program requires the connected wallet to sign as the
+        // `provider` AND pay rent for the new plan account. If that simulation
+        // fails, wallets only surface an opaque "User rejected" — so surface the
+        // real program error ourselves first.
+        const instructionProvider =
+          instruction.keys.find((k) => k.isSigner)?.pubkey ?? null;
+        const simulation = await connection.simulateTransaction(tx);
+        if (simulation.value.err) {
+          const logs = (simulation.value.logs ?? []).join(" | ");
+          const providerMismatch =
+            solana.address &&
+            instructionProvider &&
+            solana.address !== instructionProvider;
+          throw new Error(
+            providerMismatch
+              ? `Connected wallet ${solana.address} is not this environment's provider wallet ${instructionProvider}. Reconnect the linked Solana wallet to register plans on-chain.`
+              : `Solana simulation failed: ${JSON.stringify(simulation.value.err)}${logs ? ` — ${logs}` : ""}`,
+          );
+        }
+
+        const solanaTxHash = await solana.sendTransaction(tx, rpc);
+        const confirmBody = {
+          onChainPlanId: preparedPlanId,
+          txHash: solanaTxHash,
+          userAddress: solana.address,
+        };
+
+        // The backend verifies the tx on-chain before accepting it. A fresh
+        // signature is usually not visible at "confirmed" commitment yet, so it
+        // answers 425 (Too Early) until the RPC can see it — poll instead of
+        // failing the whole registration on that first, expected response.
+        let confirmRes: Response | null = null;
+        let confirmData: {
+          error?: string;
+          onChainPlanId?: string;
+          status?: string;
+        } = {};
+        for (let attempt = 0; attempt < 12; attempt += 1) {
+          confirmRes = await apiFetch(
+            `/api/catalog/plans/${plan.id}/register-on-chain`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(confirmBody),
+            },
+          );
+          confirmData = (await confirmRes.json().catch(() => ({}))) as typeof confirmData;
+          if (confirmRes.status !== 425) break;
+          await new Promise((resolve) => setTimeout(resolve, 1500));
+        }
+        if (!confirmRes || !confirmRes.ok) {
+          throw new Error(confirmData.error || "Backend confirmation failed");
+        }
+
+        toast.success(
+          `Plan registered on-chain (${preparedPlanId}) via Solana`,
         );
         load();
         return;
@@ -5691,8 +5796,28 @@ function ConfigurationTab() {
   const hasPublishedPlans = catalogPlans.length > 0;
   const hasPublishedAddOns = configAddOns.length > 0;
   const hasPublishedCreditBundles = liveCreditCandidates.length > 0;
-  const walletOnConfiguredChain = chainId === configuredChainId;
-  const walletOnSupportedChain = isSupportedDashboardChainId(chainId);
+  const isStellarEnv = isStellarChainId(configuredChainId);
+  const isSolanaEnv = isSolanaChainId(configuredChainId);
+  const stellarWallet = useStellarWallet(configuredChainId);
+  const solanaWallet = useSolanaWallet(configuredChainId);
+  // Family-aware wallet status: on a Solana/Stellar environment the status bar
+  // must reflect THAT wallet, not wagmi's (unrelated) EVM connection.
+  const envWalletConnected = isStellarEnv
+    ? stellarWallet.isConnected
+    : isSolanaEnv
+      ? solanaWallet.isConnected
+      : isConnected;
+  const envWalletAddress = isStellarEnv
+    ? stellarWallet.address
+    : isSolanaEnv
+      ? solanaWallet.address
+      : address;
+  const walletOnConfiguredChain = isStellarEnv || isSolanaEnv
+    ? envWalletConnected
+    : chainId === configuredChainId;
+  const walletOnSupportedChain = isStellarEnv || isSolanaEnv
+    ? true
+    : isSupportedDashboardChainId(chainId);
   const configuredChainLabel = getChainLabel(configuredChainId);
 
   return (
@@ -5717,7 +5842,7 @@ function ConfigurationTab() {
           </Badge>
         </div>
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          {isConnected ? (
+          {envWalletConnected ? (
             <>
               <div className={cn(
                 "w-2 h-2 rounded-full",
@@ -5729,9 +5854,9 @@ function ConfigurationTab() {
                   : walletOnSupportedChain
                     ? `Wallet on ${getChainLabel(chainId)}`
                     : "Unsupported chain"}
-                {address && (
+                {envWalletAddress && (
                   <span className="ml-1 font-mono">
-                    {address.slice(0, 6)}…{address.slice(-4)}
+                    {envWalletAddress.slice(0, 6)}…{envWalletAddress.slice(-4)}
                   </span>
                 )}
               </span>

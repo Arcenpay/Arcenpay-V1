@@ -277,6 +277,7 @@ enum ActivationKeyStatus {
 enum ChainFamily {
   EVM
   STELLAR
+  SOLANA
 }
 
 // ─── Core identity ────────────────────────────────────────────────────────────
@@ -290,6 +291,7 @@ model User {
   emailVerified Boolean @default(false)
   walletAddress String? @unique
   stellarWalletAddress String? @unique
+  solanaWalletAddress String? @unique
 
   currentTeamId String?
 
@@ -301,6 +303,7 @@ model User {
   @@index([email])
   @@index([walletAddress])
   @@index([stellarWalletAddress])
+  @@index([solanaWalletAddress])
 }
 
 // ─── Dashboard auth ───────────────────────────────────────────────────────────

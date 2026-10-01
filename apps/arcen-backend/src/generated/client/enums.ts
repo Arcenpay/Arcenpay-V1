@@ -376,7 +376,8 @@ export type ActivationKeyStatus = (typeof ActivationKeyStatus)[keyof typeof Acti
 
 export const ChainFamily = {
   EVM: 'EVM',
-  STELLAR: 'STELLAR'
+  STELLAR: 'STELLAR',
+  SOLANA: 'SOLANA'
 } as const
 
 export type ChainFamily = (typeof ChainFamily)[keyof typeof ChainFamily]

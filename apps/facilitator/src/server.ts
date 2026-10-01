@@ -125,6 +125,7 @@ import { LitProtocolService } from "./services/lit.js";
 import { ProofOrchestrator } from "./services/proof-orchestrator.js";
 import { BillingKeeper } from "./services/keeper.js";
 import { StellarRenewalDriver } from "./services/stellar-renewal-driver.js";
+import { SolanaRenewalDriver } from "./services/solana-renewal-driver.js";
 import { AxelarTransport } from "./services/transport-axelar.js";
 import { CCIPTransport } from "./services/transport-ccip.js";
 import {
@@ -133,6 +134,7 @@ import {
 } from "./services/chain-adapter.js";
 import { EvmChainAdapter } from "./services/evm-adapter.js";
 import { StellarChainAdapter } from "./services/stellar-adapter.js";
+import { SolanaChainAdapter } from "./services/solana-adapter.js";
 
 const app = express();
 const PORT = process.env.PORT || 3402;
@@ -157,8 +159,9 @@ const chainClient: ReturnType<typeof createResilientFacilitatorClient> =
         {
           get(_target, prop) {
             throw new Error(
-              `[Facilitator] chainClient.${String(prop)} is EVM-only but the runtime chain ${CHAIN_ID} is Stellar. ` +
-                `Use the StellarChainAdapter / Soroban client instead.`,
+              `[Facilitator] chainClient.${String(prop)} is EVM-only but the runtime chain ${CHAIN_ID} is ` +
+                `${getChainFamily(CHAIN_ID) ?? "unknown"}. ` +
+                `Use the family ChainAdapter instead.`,
             );
           },
         },
@@ -750,6 +753,9 @@ function normalizePrivateKey(value: string): `0x${string}` {
   return hex as `0x${string}`;
 }
 
+// On-chain settlement (EVM, Stellar and Solana). For Solana the writer needs
+// the Anchor program id (ARCENPAY_CONTRACT_<chainId>_sessionVault); if it is
+// not configured the writer constructor throws and settlement stays disabled.
 const enableOnchainSettlement =
   process.env.X402_ENABLE_SETTLEMENT === "true" ||
   Boolean(process.env.SETTLEMENT_PRIVATE_KEY || process.env.PRIVATE_KEY);
@@ -765,14 +771,16 @@ if (enableOnchainSettlement) {
     );
   } else {
     try {
-      // For Stellar chains the key is an S… secret (handled by the
-      // SettlementWriterService Keypair branch). For EVM chains it must be a
-      // 32-byte hex private key.
-      const isStellarChain = getChainFamily(CHAIN_ID) === "stellar";
+      // For Stellar the key is an S… secret and for Solana a base58 keypair —
+      // both handled by the SettlementWriterService family branch. For EVM
+      // chains it must be a 32-byte hex private key.
+      const settlementFamily = getChainFamily(CHAIN_ID);
+      const isNonEvmKey =
+        settlementFamily === "stellar" || settlementFamily === "solana";
       settlementWriter = new SettlementWriterService({
         rpcUrl: RPC_URL,
         chainId: CHAIN_ID,
-        privateKey: isStellarChain
+        privateKey: isNonEvmKey
           ? privateKeyRaw.trim()
           : normalizePrivateKey(privateKeyRaw),
         providerAddress: process.env.X402_PROVIDER_ADDRESS || undefined,
@@ -1169,12 +1177,19 @@ if (chainFamily === "evm") {
     // Soroban RPC URL via getStellarSorobanRpcUrl() honoring env vars.
   });
   registerChainAdapter(primaryChainAdapter);
+} else if (chainFamily === "solana") {
+  primaryChainAdapter = new SolanaChainAdapter({
+    chainId: CHAIN_ID,
+    // Likewise: the adapter resolves the Solana JSON-RPC URL via
+    // getSolanaRpcUrl() honouring ARCENPAY_SOLANA_RPC_URL_<id> / SOLANA_RPC_URL_<id>.
+  });
+  registerChainAdapter(primaryChainAdapter);
 } else {
   // Unknown family — cannot arm any listener. Fatal: the facilitator has no
   // meaningful chain work to do and silently running would mask the misconfig.
   throw new Error(
     `[Facilitator] No ChainAdapter available for chainId ${CHAIN_ID} ` +
-      `(family ${chainFamily ?? "unknown"}). Supported families: evm, stellar.`,
+      `(family ${chainFamily ?? "unknown"}). Supported families: evm, stellar, solana.`,
   );
 }
 
@@ -1541,7 +1556,10 @@ async function enqueueSubscriptionSync(input: {
 }): Promise<void> {
   const dedupeParts = [
     input.event,
-    input.wallet?.toLowerCase() ?? input.sourceTokenId ?? "unknown",
+    // Family-aware normalization: EVM lowercases, Stellar/Solana keep case.
+    (input.wallet
+      ? normalizeWalletForChain(input.wallet, input.chainId ?? CHAIN_ID)
+      : null) ?? input.sourceTokenId ?? "unknown",
     input.sourceTxHash ??
       input.sourceTokenId ??
       input.occurredAt ??
@@ -1569,7 +1587,8 @@ async function enqueueSubscriptionSync(input: {
 async function lookupSubscriberEmail(
   walletAddress: string,
 ): Promise<string | null> {
-  const key = walletAddress.toLowerCase();
+  // Family-aware key: EVM lowercases, Stellar/Solana keep their exact case.
+  const key = normalizeWalletForChain(walletAddress, CHAIN_ID) ?? walletAddress;
 
   // 1 — check memory first
   const cached = subscriberEmailsByWallet.get(key);
@@ -2549,17 +2568,20 @@ eventListener?.on("cancelled", async (event) => {
   );
 });
 
-// ── Stellar event handlers ─────────────────────────────────────────────────
-// When the runtime chain is Stellar, register the billing pipeline on the
-// StellarChainAdapter instead of the viem eventListener. The adapter emits
-// NormalisedSubscriptionEvent (already stringified, wallet case preserved),
-// so these handlers drive the same route-store + dashboard-sync + billing
-// seams the EVM handlers use, without viem chain re-reads.
-if (chainFamily === "stellar") {
+// ── Non-EVM (Stellar / Solana) event handlers ──────────────────────────────
+// When the runtime chain is Stellar or Solana, register the billing pipeline on
+// the family ChainAdapter instead of the viem eventListener. Both adapters emit
+// NormalisedSubscriptionEvent (already stringified, wallet case preserved), so
+// these handlers drive the same route-store + dashboard-sync + billing seams the
+// EVM handlers use, without viem chain re-reads.
+const isNonEvmAdapterChain =
+  chainFamily === "stellar" || chainFamily === "solana";
+if (isNonEvmAdapterChain) {
   const routeStoreWallet = (
     wallet: string | null | undefined,
   ): string | null => {
-    // Stellar addresses are case-sensitive base32 — never lowercase them.
+    // Stellar (base32) and Solana (base58) addresses are case-sensitive —
+    // never lowercase them.
     return wallet && wallet.length > 0 ? wallet : null;
   };
 
@@ -2578,7 +2600,7 @@ if (chainFamily === "stellar") {
 
   primaryChainAdapter.on("*", (event) => {
     console.log(
-      `[Facilitator] Stellar event: ${event.type} tokenId=${event.tokenId} tx=${event.transactionHash}`,
+      `[Facilitator] ${chainFamily} event: ${event.type} tokenId=${event.tokenId} tx=${event.transactionHash}`,
     );
   });
 
@@ -2612,7 +2634,7 @@ if (chainFamily === "stellar") {
         chainId: CHAIN_ID,
       }).catch((err) =>
         console.error(
-          "[Facilitator] sync-subscription (stellar minted) failed:",
+          `[Facilitator] sync-subscription (${chainFamily} minted) failed:`,
           err,
         ),
       );
@@ -2652,7 +2674,7 @@ if (chainFamily === "stellar") {
         chainId: CHAIN_ID,
       }).catch((err) =>
         console.error(
-          "[Facilitator] sync-subscription (stellar renewed) failed:",
+          `[Facilitator] sync-subscription (${chainFamily} renewed) failed:`,
           err,
         ),
       );
@@ -2748,7 +2770,7 @@ if (chainFamily === "stellar") {
         chainId: CHAIN_ID,
       }).catch((err) =>
         console.error(
-          "[Facilitator] sync-subscription (stellar billing_executed) failed:",
+          `[Facilitator] sync-subscription (${chainFamily} billing_executed) failed:`,
           err,
         ),
       );
@@ -2788,7 +2810,7 @@ if (chainFamily === "stellar") {
         chainId: CHAIN_ID,
       }).catch((err) =>
         console.error(
-          "[Facilitator] sync-subscription (stellar plan_changed) failed:",
+          `[Facilitator] sync-subscription (${chainFamily} plan_changed) failed:`,
           err,
         ),
       );
@@ -2835,7 +2857,7 @@ if (chainFamily === "stellar") {
         chainId: CHAIN_ID,
       }).catch((err) =>
         console.error(
-          "[Facilitator] sync-subscription (stellar cancelled) failed:",
+          `[Facilitator] sync-subscription (${chainFamily} cancelled) failed:`,
           err,
         ),
       );
@@ -3179,6 +3201,37 @@ if (
   }
 }
 
+// ============================================================
+//  Solana Renewal Driver
+// ============================================================
+
+let solanaRenewalDriver: SolanaRenewalDriver | null = null;
+
+if (
+  chainFamily === "solana" &&
+  process.env.SOLANA_RENEWAL_DRIVER_ENABLED === "true"
+) {
+  try {
+    solanaRenewalDriver = new SolanaRenewalDriver({
+      chainId: CHAIN_ID,
+      intervalMs: Number(process.env.SOLANA_RENEWAL_DRIVER_INTERVAL_MS || 60_000),
+      subscriberKeys: process.env.SOLANA_RENEWAL_KEYS || "",
+    });
+    solanaRenewalDriver.onRenewal((result) => {
+      console.log(
+        `[Facilitator] Solana renewal result: wallet=${result.wallet} ` +
+          `due=${result.due} charged=${result.charged} ${result.txHash ? `tx=${result.txHash}` : ""}` +
+          (result.error ? ` error=${result.error}` : ""),
+      );
+    });
+    solanaRenewalDriver.start();
+    console.log("[Facilitator] SolanaRenewalDriver active");
+  } catch (err) {
+    console.error("[Facilitator] SolanaRenewalDriver init failed:", err);
+    solanaRenewalDriver = null;
+  }
+}
+
 startBillingMaintenanceScheduler();
 
 // ============================================================
@@ -3345,17 +3398,23 @@ app.get("/info", (_req, res) => {
       ? CHAIN_ID === 9_000_000
         ? "stellar-mainnet"
         : "stellar-testnet"
-      : CHAIN_ID === 677
-        ? "bot-mainnet"
-        : CHAIN_ID === 968
-          ? "bot-testnet"
-          : CHAIN_ID === 5042002
-            ? "arc-testnet"
-            : CHAIN_ID === 8453
-              ? "base-mainnet"
-              : CHAIN_ID === 11155111
-                ? "ethereum-sepolia"
-                : "base-sepolia");
+      : getChainFamily(CHAIN_ID) === "solana"
+        ? CHAIN_ID === 9_100_000
+          ? "solana-mainnet"
+          : CHAIN_ID === 9_100_002
+            ? "solana-testnet"
+            : "solana-devnet"
+        : CHAIN_ID === 677
+          ? "bot-mainnet"
+          : CHAIN_ID === 968
+            ? "bot-testnet"
+            : CHAIN_ID === 5042002
+              ? "arc-testnet"
+              : CHAIN_ID === 8453
+                ? "base-mainnet"
+                : CHAIN_ID === 11155111
+                  ? "ethereum-sepolia"
+                  : "base-sepolia");
   res.json({
     protocol: "ArcenPay + ZKVUB",
     version: "0.1.0",
@@ -4345,14 +4404,18 @@ app.post("/api/subscriber/email", (req, res) => {
       ? String(req.body.planId).trim()
       : undefined;
 
-  if (!isValidAddress(walletAddress)) {
+  if (!isValidAddressForChain(walletAddress, CHAIN_ID)) {
     return res.status(400).json({ ok: false, error: "Invalid walletAddress." });
   }
   if (!isValidEmail(email)) {
     return res.status(400).json({ ok: false, error: "Invalid email address." });
   }
 
-  subscriberEmailsByWallet.set(walletAddress.toLowerCase(), {
+  // Family-aware: EVM lowercases; Stellar/Solana keep their exact case.
+  const normalizedWalletAddress =
+    normalizeWalletForChain(walletAddress, CHAIN_ID) ?? walletAddress;
+
+  subscriberEmailsByWallet.set(normalizedWalletAddress, {
     email,
     planId,
     updatedAt: Date.now(),
@@ -4360,7 +4423,7 @@ app.post("/api/subscriber/email", (req, res) => {
 
   return res.status(201).json({
     ok: true,
-    walletAddress: walletAddress.toLowerCase(),
+    walletAddress: normalizedWalletAddress,
     email,
     planId: planId || null,
   });
@@ -5047,15 +5110,21 @@ void (async () => {
 
     // Start event listener before printing the banner so status is accurate.
     // Which listener runs depends on the runtime chain family: EVM chains use
-    // the viem EventListenerService; Stellar chains use the StellarChainAdapter
-    // (Soroban getEvents polling). Never point the viem listener at a Stellar
-    // RPC — it would poll a Soroban/Horizon endpoint and fail forever.
+    // the viem EventListenerService; Stellar/Solana chains use their family
+    // ChainAdapter. Never point the viem listener at a non-EVM RPC — it would
+    // poll an incompatible endpoint and fail forever.
     try {
       if (chainFamily === "stellar") {
         await primaryChainAdapter.startEventListener(12000);
         eventListenerActive = true;
         console.log(
           `[Facilitator] StellarChainAdapter started — watching Soroban events for chain ${CHAIN_ID}`,
+        );
+      } else if (chainFamily === "solana") {
+        await primaryChainAdapter.startEventListener(12000);
+        eventListenerActive = true;
+        console.log(
+          `[Facilitator] SolanaChainAdapter started — watching Solana events for chain ${CHAIN_ID}`,
         );
       } else {
         await eventListener!.start(12000);
@@ -5090,7 +5159,7 @@ void (async () => {
 
 // Graceful shutdown
 function stopEventListener() {
-  if (chainFamily === "stellar") {
+  if (chainFamily === "stellar" || chainFamily === "solana") {
     primaryChainAdapter.stopEventListener();
   } else {
     eventListener?.stop();
@@ -5101,6 +5170,7 @@ process.on("SIGTERM", () => {
   console.log("[Facilitator] Shutting down after SIGTERM...");
   stopEventListener();
   stellarRenewalDriver?.stop();
+  solanaRenewalDriver?.stop();
   settlementService?.stop();
   proofOrchestrator.stop();
   billingKeeper?.stop();
@@ -5116,6 +5186,7 @@ process.on("SIGINT", () => {
   console.log("[Facilitator] Shutting down after SIGINT...");
   stopEventListener();
   stellarRenewalDriver?.stop();
+  solanaRenewalDriver?.stop();
   settlementService?.stop();
   proofOrchestrator.stop();
   billingKeeper?.stop();

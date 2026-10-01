@@ -1,5 +1,18 @@
 import { describe, expect, it } from "vitest";
-import { normalizeWalletForChain } from "../src/chain-family";
+import {
+  normalizeWalletForChain,
+  getChainFamily,
+  isSolanaChain,
+  isSolanaChainId,
+  isEvmChain,
+  isValidAddressForChain,
+  isValidTxHashForChain,
+  getSolanaRpcUrl,
+  unsetAddressForFamily,
+  SOLANA_MAINNET_CHAIN_ID,
+  SOLANA_DEVNET_CHAIN_ID,
+  SOLANA_TESTNET_CHAIN_ID,
+} from "../src/chain-family";
 import { normalizeX402AmountToDecimal } from "../src/format";
 
 describe("normalizeWalletForChain", () => {
@@ -33,6 +46,52 @@ describe("normalizeWalletForChain", () => {
     expect(normalizeWalletForChain("   ", 84532)).toBeNull();
     expect(normalizeWalletForChain(null, 84532)).toBeNull();
     expect(normalizeWalletForChain(undefined, 84532)).toBeNull();
+  });
+
+  it("preserves Solana base58 addresses exactly (case-sensitive)", () => {
+    const solana = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
+    expect(normalizeWalletForChain(solana, SOLANA_MAINNET_CHAIN_ID)).toBe(solana);
+    expect(normalizeWalletForChain(solana, SOLANA_DEVNET_CHAIN_ID)).toBe(solana);
+  });
+});
+
+describe("Solana chain identity", () => {
+  it("assigns synthetic chainIds in the reserved 9_100_000+ range", () => {
+    expect(SOLANA_MAINNET_CHAIN_ID).toBe(9_100_000);
+    expect(SOLANA_DEVNET_CHAIN_ID).toBe(9_100_001);
+    expect(SOLANA_TESTNET_CHAIN_ID).toBe(9_100_002);
+  });
+
+  it("resolves the solana family", () => {
+    expect(getChainFamily(SOLANA_MAINNET_CHAIN_ID)).toBe("solana");
+    expect(getChainFamily(SOLANA_DEVNET_CHAIN_ID)).toBe("solana");
+    expect(isSolanaChain(SOLANA_MAINNET_CHAIN_ID)).toBe(true);
+    expect(isSolanaChainId(SOLANA_DEVNET_CHAIN_ID)).toBe(true);
+    expect(isEvmChain(SOLANA_MAINNET_CHAIN_ID)).toBe(false);
+    // Solana ids must NOT be treated as Stellar.
+    expect(getChainFamily(9_000_001)).toBe("stellar");
+  });
+
+  it("validates Solana addresses and tx signatures by family", () => {
+    const addr = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
+    expect(isValidAddressForChain(addr, SOLANA_MAINNET_CHAIN_ID)).toBe(true);
+    // A 0x EVM address is not valid on Solana.
+    expect(
+      isValidAddressForChain("0xabcdef1234567890abcdef1234567890abcdef12", SOLANA_MAINNET_CHAIN_ID),
+    ).toBe(false);
+    // Base58 tx signature (~88 chars).
+    const sig =
+      "5VERv8NMvzbJMEkV8xnrLkEaWRtSz9CosKDYjCJjBRnbJLgp8uirBgmQpjKhoR4tjF3ZpRzrFmBV6UjKdiSZkQUW";
+    expect(isValidTxHashForChain(sig, SOLANA_MAINNET_CHAIN_ID)).toBe(true);
+  });
+
+  it("uses the empty string as the Solana unset-address sentinel", () => {
+    expect(unsetAddressForFamily("solana")).toBe("");
+  });
+
+  it("resolves Solana RPC URLs from the registry with env override", () => {
+    expect(getSolanaRpcUrl(SOLANA_MAINNET_CHAIN_ID)).toContain("mainnet-beta");
+    expect(getSolanaRpcUrl(SOLANA_DEVNET_CHAIN_ID)).toContain("devnet");
   });
 });
 

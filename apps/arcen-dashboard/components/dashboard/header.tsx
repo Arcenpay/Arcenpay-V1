@@ -15,7 +15,9 @@ import {
   SUPPORTED_WALLET_CHAIN_LABEL,
 } from "@/hooks/use-dashboard-wallet";
 import { useUnifiedDashboardWallet } from "@/hooks/use-unified-dashboard-wallet";
+import { SolanaWalletBalance } from "@/components/dashboard/solana-wallet-balance";
 import { useEnvironment } from "@/contexts/environment-context";
+import { isStellarChainId, isSolanaChainId } from "@arcenpay/internal-core";
 
 type AuditEntry = {
   id: string;
@@ -87,6 +89,10 @@ export function Header({ activeSection, onMobileMenuToggle }: HeaderProps) {
   const { data: sessionData, refresh: refreshSessionData } = useDashboardSession();
   const configuredChainId = activeEnvironment?.chainId ?? resolveEnvironmentChainId(envMode);
   const configuredChainLabel = getChainLabel(configuredChainId);
+  // Solana/Stellar wallets have no wagmi "account modal" — the wallet-specific
+  // picker (Phantom/Solflare, Freighter) is opened via reconnect instead.
+  const isNonEvmEnv =
+    isStellarChainId(configuredChainId) || isSolanaChainId(configuredChainId);
   const {
     storedWallet,
     connectedWalletLabel,
@@ -108,6 +114,7 @@ export function Header({ activeSection, onMobileMenuToggle }: HeaderProps) {
     configuredChainId,
     sessionData?.user.walletAddress ?? null,
     sessionData?.user.stellarWalletAddress ?? null,
+    sessionData?.user.solanaWalletAddress ?? null,
   );
 
   const [showNotifications, setShowNotifications] = useState(false);
@@ -313,6 +320,9 @@ export function Header({ activeSection, onMobileMenuToggle }: HeaderProps) {
                 <p className="mt-1 text-xs text-muted-foreground">
                   Network: {currentNetworkLabel ?? "Not connected"}
                 </p>
+                {isSolanaChainId(configuredChainId) ? (
+                  <SolanaWalletBalance />
+                ) : null}
               </div>
               <div className="mt-2 rounded-lg border border-border px-3 py-3">
                 <p className="text-[11px] font-medium uppercase tracking-[0.1em] text-muted-foreground">
@@ -370,9 +380,11 @@ export function Header({ activeSection, onMobileMenuToggle }: HeaderProps) {
                     size="sm"
                     variant="ghost"
                     className="w-full"
-                    onClick={() => void openAccountModal()}
+                    onClick={() =>
+                      void (isNonEvmEnv ? reconnectWallet() : openAccountModal())
+                    }
                   >
-                    Open wallet modal
+                    {isNonEvmEnv ? "Change wallet" : "Open wallet modal"}
                   </Button>
                 ) : null}
                 {hasConnectedWallet ? (

@@ -278,6 +278,8 @@ export interface ChainServiceEndpoints {
   rpcUrl: string;
   /** Stellar-only: Soroban RPC URL for contract reads/simulation. */
   sorobanRpcUrl?: string;
+  /** Solana-only: JSON-RPC URL (also available via descriptor.rpcUrl). */
+  solanaRpcUrl?: string;
   subgraphUrl?: string;
   facilitatorUrl?: string;
 }
@@ -750,7 +752,7 @@ export interface AgenticPaymentLinkSpec {
   currency: string;
   acceptedToken: string;
   chainId: number;
-  chainFamily: "evm" | "stellar";
+  chainFamily: "evm" | "stellar" | "solana";
   recipientWallet: string;
   status: "ACTIVE" | "INACTIVE" | "ARCHIVED";
   isAgentic: boolean;
@@ -773,7 +775,7 @@ export interface AgentPaymentReceipt {
   amount: string;
   currency: string;
   chainId: number;
-  chainFamily: "evm" | "stellar";
+  chainFamily: "evm" | "stellar" | "solana";
   payerWallet: string;
   recipientWallet: string;
   timestamp: string;

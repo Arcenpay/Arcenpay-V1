@@ -344,15 +344,20 @@ function collectRpcCandidates(chainId: number): string[] {
   const seen = new Set<string>();
   const candidates: string[] = [];
 
-  // Non-EVM families (Stellar…) have no viem Chain definition. Prefer the
-  // Soroban RPC URL (env override first), falling back to the registry's
-  // Horizon URL for reads.
-  if (ArcenPayCore.getChainFamily(chainId) !== "evm") {
+  // Non-EVM families (Stellar, Solana) have no viem Chain definition. Prefer
+  // the family-specific RPC URL (env override first), falling back to the
+  // registry descriptor URL for reads.
+  const family = ArcenPayCore.getChainFamily(chainId);
+  if (family !== "evm") {
+    const familyRpc =
+      family === "solana"
+        ? ArcenPayCore.getSolanaRpcUrl(chainId)
+        : ArcenPayCore.getStellarSorobanRpcUrl(chainId);
     for (const value of [
       ...parseRpcList(rawSpecific ?? ""),
       ...parseRpcList(rawGlobal ?? ""),
       ...parseRpcList(rawManifest ?? ""),
-      ArcenPayCore.getStellarSorobanRpcUrl(chainId) || "",
+      familyRpc || "",
     ]) {
       if (!value || seen.has(value)) continue;
       seen.add(value);
@@ -420,10 +425,14 @@ export function getRpcUrl(chainId: number): string {
   const fromPublic = publicRpcs[chainId];
   if (fromPublic) return fromPublic;
 
-  // Stellar dev fallback: the Soroban RPC URL from the registry descriptor.
-  if (ArcenPayCore.getChainFamily(chainId) !== "evm") {
-    const sorobanUrl = ArcenPayCore.getStellarSorobanRpcUrl(chainId);
-    if (sorobanUrl) return sorobanUrl;
+  // Non-EVM dev fallback: the family RPC URL from the registry descriptor.
+  const fallbackFamily = ArcenPayCore.getChainFamily(chainId);
+  if (fallbackFamily !== "evm") {
+    const familyUrl =
+      fallbackFamily === "solana"
+        ? ArcenPayCore.getSolanaRpcUrl(chainId)
+        : ArcenPayCore.getStellarSorobanRpcUrl(chainId);
+    if (familyUrl) return familyUrl;
     return ArcenPayCore.getChainDescriptor(chainId)?.rpcUrl ?? "";
   }
 

@@ -91,8 +91,9 @@ import {
 } from "viem";
 import { resolveDashboardBaseUrl } from "../lib/api";
 import { useArcenPay } from "../providers/ArcenPayProvider";
-import { sanitizeSvg, isEvmChain, getStellarNetworkPassphrase } from "../internal/core";
+import { sanitizeSvg, isEvmChain, getChainFamily, getStellarNetworkPassphrase, getChainDescriptor } from "../internal/core";
 import { useStellarEmbedWallet } from "../hooks/useStellarEmbedWallet";
+import { useSolanaEmbedWallet } from "../hooks/useSolanaEmbedWallet";
 
 export interface ArcenEmbedProps {
   /** Short-lived access token. When omitted, auto-reads from NEXT_PUBLIC_ARCENPAY_ACCESS_TOKEN env var. */
@@ -512,6 +513,14 @@ type PlanChangeSubmissionResult = {
     value?: string;
     data?: string;
     functionSignature?: string;
+    /** Solana shape (prepared `change_plan` instruction). */
+    family?: string;
+    rpcUrl?: string;
+    programId?: string;
+    instruction?: {
+      keys: Array<{ pubkey: string; isSigner: boolean; isWritable: boolean }>;
+      data: string;
+    };
   };
 };
 
@@ -968,14 +977,10 @@ function formatMoney(amount: string | number, currency = "USD"): string {
 
 function formatChainLabel(chainId?: number | null): string | null {
   if (!chainId) return null;
-  if (chainId === 11155111) return "Sepolia";
-  if (chainId === 84532) return "Base Sepolia";
-  if (chainId === 8453) return "Base";
-  if (chainId === 5042002) return "Arc Testnet";
-  // Stellar synthetic chain ids (9_000_000+)
-  if (chainId === 9_000_000) return "Stellar";
-  if (chainId === 9_000_001) return "Stellar Testnet";
-  if (chainId === 9_000_002) return "Stellar Futurenet";
+  // Prefer the canonical chain descriptor (covers EVM + Stellar + Solana)
+  // so labels never drift from the registry.
+  const descriptor = getChainDescriptor(chainId);
+  if (descriptor) return descriptor.name;
   return `Chain ${chainId}`;
 }
 
@@ -1787,16 +1792,20 @@ function WalletSelector({
   tokens,
   connecting,
   isStellar,
+  isSolana,
   onConnectMetaMask,
   onConnectBase,
   onConnectFreighter,
+  onConnectSolana,
 }: {
   tokens: Tokens;
   connecting: boolean;
   isStellar?: boolean;
+  isSolana?: boolean;
   onConnectMetaMask: () => void;
   onConnectBase: () => void;
   onConnectFreighter: () => void;
+  onConnectSolana: () => void;
 }) {
   if (connecting) {
     return (
@@ -1830,6 +1839,87 @@ function WalletSelector({
             Connecting…
           </div>
         </PrimaryButton>
+      </div>
+    );
+  }
+
+  if (isSolana) {
+    return (
+      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        <button
+          onClick={onConnectSolana}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 12,
+            width: "100%",
+            padding: "12px 16px",
+            background: "#fff",
+            border: "2px solid #e5e7eb",
+            borderRadius: 10,
+            cursor: "pointer",
+            transition: "border-color 0.15s, box-shadow 0.15s",
+            textAlign: "left",
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.borderColor = "#9945FF";
+            e.currentTarget.style.boxShadow = "0 0 0 2px rgba(153,69,255,0.15)";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.borderColor = "#e5e7eb";
+            e.currentTarget.style.boxShadow = "none";
+          }}
+        >
+          <div
+            style={{
+              width: 40,
+              height: 40,
+              borderRadius: 10,
+              background: "#f3e8ff",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              flexShrink: 0,
+            }}
+          >
+            <span style={{ fontSize: 22 }}>◎</span>
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div
+              style={{
+                fontWeight: 600,
+                fontSize: tokens.size - 1,
+                color: tokens.textColor,
+              }}
+            >
+              Phantom / Solflare
+            </div>
+            <div
+              style={{
+                fontSize: 11,
+                color: tokens.mutedColor,
+                marginTop: 2,
+              }}
+            >
+              Solana wallet for devnet &amp; mainnet
+            </div>
+          </div>
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 16 16"
+            fill="none"
+            style={{ flexShrink: 0, opacity: 0.4 }}
+          >
+            <path
+              d="M6 4L10 8L6 12"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </button>
       </div>
     );
   }
@@ -2078,7 +2168,15 @@ function WalletSelector({
   );
 }
 
-function NoWalletSelector({ tokens, isStellar }: { tokens: Tokens; isStellar?: boolean }) {
+function NoWalletSelector({
+  tokens,
+  isStellar,
+  isSolana,
+}: {
+  tokens: Tokens;
+  isStellar?: boolean;
+  isSolana?: boolean;
+}) {
   const cbWalletDeepLink =
     typeof window !== "undefined"
       ? "https://go.cb-w.com/dapp?cb_url=" +
@@ -2114,7 +2212,9 @@ function NoWalletSelector({ tokens, isStellar }: { tokens: Tokens; isStellar?: b
       >
         {isStellar
           ? "Install Freighter to connect your Stellar wallet:"
-          : "Install one of these wallets to connect:"}
+          : isSolana
+            ? "Install Phantom or Solflare to connect your Solana wallet:"
+            : "Install one of these wallets to connect:"}
       </div>
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         {isStellar ? (
@@ -2145,6 +2245,55 @@ function NoWalletSelector({ tokens, isStellar }: { tokens: Tokens; isStellar?: b
               Install Freighter
             </span>
           </a>
+        ) : isSolana ? (
+          <>
+            <a
+              href="https://phantom.app/"
+              target="_blank"
+              rel="noreferrer"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                padding: "8px 10px",
+                background: "#fff",
+                border: "1px solid #fde68a",
+                borderRadius: 8,
+                textDecoration: "none",
+                cursor: "pointer",
+              }}
+            >
+              <span style={{ fontSize: 20 }}>👻</span>
+              <span
+                style={{ fontSize: tokens.size - 2, fontWeight: 600, color: "#92400e" }}
+              >
+                Install Phantom
+              </span>
+            </a>
+            <a
+              href="https://solflare.com/"
+              target="_blank"
+              rel="noreferrer"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                padding: "8px 10px",
+                background: "#fff",
+                border: "1px solid #fde68a",
+                borderRadius: 8,
+                textDecoration: "none",
+                cursor: "pointer",
+              }}
+            >
+              <span style={{ fontSize: 20 }}>🔥</span>
+              <span
+                style={{ fontSize: tokens.size - 2, fontWeight: 600, color: "#92400e" }}
+              >
+                Install Solflare
+              </span>
+            </a>
+          </>
         ) : (
           <>
             <a
@@ -2478,7 +2627,7 @@ function useSafeStellarAccount(chainId: number | null): {
   disconnect: () => Promise<void>;
   signTransaction: (xdr: string, opts?: { networkPassphrase?: string }) => Promise<{ signedTxXdr: string }>;
 } {
-  const isStellar = chainId !== null && !isEvmChain(chainId);
+  const isStellar = chainId !== null && getChainFamily(chainId) === "stellar";
   // Stellar mainnet is synthetic chainId 9_000_000; everything else in the
   // Stellar range is testnet. Signing must use the matching network or the
   // wallet passphrase check fails on-chain.
@@ -7056,18 +7205,25 @@ function PaymentContent({
     activePlan?.acceptedChainId ??
     paymentMethod?.chainId ??
     runtimeChainId;
-  const isStellarChain = planChainId !== 0 && !isEvmChain(planChainId);
+  const isStellarChain = planChainId !== 0 && getChainFamily(planChainId) === "stellar";
+  const isSolanaChain = planChainId !== 0 && getChainFamily(planChainId) === "solana";
   const stellarWallet = useSafeStellarAccount(planChainId);
+  const solanaWallet = useSolanaEmbedWallet();
+  const isNonEvmChain = isStellarChain || isSolanaChain;
 
   const finalAddress = isStellarChain
     ? (stellarWallet.address ?? undefined)
-    : (address || localAddress);
+    : isSolanaChain
+      ? (solanaWallet.address ?? undefined)
+      : (address || localAddress);
   const finalConnected = isStellarChain
     ? stellarWallet.isConnected
-    : (isConnected || !!localAddress);
+    : isSolanaChain
+      ? solanaWallet.isConnected
+      : (isConnected || !!localAddress);
 
   const resolvedWalletClient =
-    isStellarChain
+    isNonEvmChain
       ? null
       : (wagmiWalletClient ??
          (chainId
@@ -7079,7 +7235,9 @@ function PaymentContent({
            : null));
   const resolvedWalletAddress = isStellarChain
     ? (stellarWallet.address ?? null)
-    : (resolvedWalletClient?.account?.address ?? finalAddress ?? null);
+    : isSolanaChain
+      ? (solanaWallet.address ?? null)
+      : (resolvedWalletClient?.account?.address ?? finalAddress ?? null);
   const requiresSmartAccountPlanChangeExecution = Boolean(
     isOnChainPlanChange &&
     smartAccountAddress &&
@@ -7108,6 +7266,8 @@ function PaymentContent({
     try {
       if (isStellarChain) {
         await stellarWallet.connect();
+      } else if (isSolanaChain) {
+        await solanaWallet.connect();
       } else {
         const result = await requestWindowEthereumAccounts(walletKind);
         setPreferredWindowEthereum(result.provider);
@@ -7245,6 +7405,30 @@ function PaymentContent({
     return { txHash: hash };
   }
 
+  async function submitSolanaTransaction(params: {
+    programId: string;
+    rpcUrl?: string;
+    instruction: {
+      keys: Array<{ pubkey: string; isSigner: boolean; isWritable: boolean }>;
+      data: string;
+    };
+  }): Promise<{ txHash: string }> {
+    if (!solanaWallet.address) {
+      throw new Error("Solana wallet not connected.");
+    }
+    const { getSolanaRpcUrl } = await import("../internal/core");
+    const rpcUrl = params.rpcUrl || getSolanaRpcUrl(planChainId);
+    if (!rpcUrl) {
+      throw new Error("No Solana RPC URL configured for this plan.");
+    }
+    const signature = await solanaWallet.sendTransaction(
+      params.programId,
+      params.instruction,
+      rpcUrl,
+    );
+    return { txHash: signature };
+  }
+
   async function ensureBillingSmartAccount(): Promise<`0x${string}`> {
     if (!chainId || !resolvedWalletClient) {
       throw new Error(
@@ -7309,6 +7493,18 @@ function PaymentContent({
           value?: string;
           data?: string;
           functionSignature?: string;
+          /** Stellar Soroban shape. */
+          contractId?: string;
+          method?: string;
+          args?: Record<string, unknown>;
+          /** Solana shape. */
+          family?: string;
+          rpcUrl?: string;
+          programId?: string;
+          instruction?: {
+            keys: Array<{ pubkey: string; isSigner: boolean; isWritable: boolean }>;
+            data: string;
+          };
         };
       };
     };
@@ -7830,14 +8026,16 @@ function PaymentContent({
       setTxStatus("approving");
       let activationTx: { txHash: string } | undefined;
       try {
-        // Stellar: skip EVM autopay setup, use connected wallet directly
-        const readyPaymentAccount = isStellarChain
-          ? (resolvedWalletAddress ?? stellarWallet.address ?? "")
+        // Stellar/Solana: skip EVM autopay setup, use the connected wallet directly
+        const readyPaymentAccount = isNonEvmChain
+          ? (resolvedWalletAddress ?? stellarWallet.address ?? solanaWallet.address ?? "")
           : await ensureAutopayReadyForActivation(selectedOnChainPlanId);
 
-        if (isStellarChain && !readyPaymentAccount) {
+        if (isNonEvmChain && !readyPaymentAccount) {
           throw new Error(
-            "Stellar wallet is not connected. Please connect Freighter before activating.",
+            isSolanaChain
+              ? "Solana wallet is not connected. Please connect Phantom or Solflare before activating."
+              : "Stellar wallet is not connected. Please connect Freighter before activating.",
           );
         }
 
@@ -7931,6 +8129,47 @@ function PaymentContent({
               txHash: stellarTxHash,
               pending: false,
             };
+          } else if (isSolanaChain) {
+            // Solana: the backend returns a prepared `subscribe` instruction.
+            // Sign/send it with the connected wallet, then re-query with the
+            // signature so the backend can verify and finalize billing state.
+            let currentJson = json;
+            let solanaTxHash = "";
+            let stepCount = 0;
+            const maxSteps = 3;
+
+            while (currentJson.data?.activationRequired && stepCount < maxSteps) {
+              stepCount += 1;
+              const prepared = currentJson.data.preparedTransaction;
+              if (!prepared?.programId || !prepared.instruction) {
+                throw new Error(
+                  "Hosted activation returned an invalid Solana transaction payload.",
+                );
+              }
+
+              activationTx = await submitSolanaTransaction({
+                programId: prepared.programId,
+                rpcUrl: prepared.rpcUrl,
+                instruction: prepared.instruction,
+              });
+              solanaTxHash = activationTx.txHash;
+
+              const next = await requestHostedActivation({
+                ...body,
+                activationTxHash: solanaTxHash,
+              });
+
+              if (!next.res.ok) {
+                throw new Error(next.json.error ?? `HTTP ${next.res.status}`);
+              }
+
+              currentJson = next.json;
+            }
+
+            activationResult = {
+              txHash: solanaTxHash,
+              pending: false,
+            };
           } else {
             const preparedTarget = json.data.preparedTransaction?.target;
             const preparedData = json.data.preparedTransaction?.data;
@@ -7997,13 +8236,83 @@ function PaymentContent({
     }
 
     if (isStellarChain) {
-      // Stellar plan changes require a Soroban autopay-account plan_change
-      // flow that is not yet wired into this embed. Fail clearly instead of
+      // Stellar plan changes need a Soroban autopay-account plan_change flow
+      // that is not yet wired into this embed. Fail clearly instead of
       // surfacing a confusing EVM-only viem error.
       setTxStatus("error");
       setTxError(
         "On-chain plan changes are not yet supported on Stellar from this embed. Please contact support to change plans.",
       );
+      return;
+    }
+
+    if (isSolanaChain && !isOnChainPlanChange) {
+      setTxStatus("error");
+      setTxError(
+        "This embed does not support direct payments for Solana plan changes.",
+      );
+      return;
+    }
+
+    if (isSolanaChain) {
+      if (!resolvedWalletAddress) {
+        setTxStatus("error");
+        setTxError("Connect your Solana wallet before making plan changes.");
+        return;
+      }
+      setTxStatus("approving");
+      try {
+        // Solana plan changes are backend-driven: the backend returns a prepared
+        // `change_plan` instruction, we sign/send it, then confirm with the
+        // signature. None of the EVM autopay contract reads apply here.
+        const submissionResult = await onConfirm({});
+        if (submissionResult?.accessChangeRequired) {
+          const prepared = submissionResult.preparedTransaction;
+          if (
+            prepared?.family !== "solana" ||
+            !prepared.programId ||
+            !prepared.instruction
+          ) {
+            throw new Error(
+              submissionResult.accessChangeNote ??
+                "The Solana subscription access-change instruction was missing.",
+            );
+          }
+
+          const solanaTx = await submitSolanaTransaction({
+            programId: prepared.programId,
+            rpcUrl: prepared.rpcUrl,
+            instruction: prepared.instruction,
+          });
+
+          const finalResult = await onConfirm({
+            txHash: solanaTx.txHash,
+            accessChangeTxHash: solanaTx.txHash,
+          });
+          if (finalResult?.accessChangeRequired) {
+            throw new Error(
+              finalResult.accessChangeNote ??
+                "The subscription access change is still pending verification.",
+            );
+          }
+
+          lastPaymentRef.current = {
+            txHash: solanaTx.txHash,
+            accessChangeTxHash: solanaTx.txHash,
+          };
+        }
+
+        clearStoredPlanChangePayment(planChangePaymentStorageKey);
+        setTxStatus("confirmed");
+      } catch (err: unknown) {
+        setTxStatus("error");
+        const msg = err instanceof Error ? err.message : "Transaction failed";
+        if (isUserRejectedWalletAction(err)) {
+          setTxError("Transaction cancelled");
+        } else {
+          setTxError(msg.slice(0, 120));
+        }
+      }
       return;
     }
 
@@ -8147,37 +8456,54 @@ function PaymentContent({
 
       const submissionResult = await onConfirm(confirmation);
       if (submissionResult?.accessChangeRequired) {
-        const preparedTarget =
-          submissionResult.preparedTransaction?.target ?? null;
-        const preparedData =
-          submissionResult.preparedTransaction?.data ?? null;
-
-        if (!preparedTarget || !isAddress(preparedTarget) || !preparedData) {
-          throw new Error(
-            submissionResult.accessChangeNote ??
-              "The subscription access-change transaction was missing.",
-          );
-        }
-
+        const prepared = submissionResult.preparedTransaction;
         setTxStatus("approving");
-        const accessChangeTx = await submitPaymentAccountTransaction({
-          to: preparedTarget as `0x${string}`,
-          data: preparedData as `0x${string}`,
-          smartAccountAddressOverride:
-            smartAccountAddress && isAddress(smartAccountAddress)
-              ? (smartAccountAddress as `0x${string}`)
-              : undefined,
-        });
+
+        let accessChangeTxHash: string;
+        if (prepared?.family === "solana") {
+          if (!prepared.programId || !prepared.instruction) {
+            throw new Error(
+              submissionResult.accessChangeNote ??
+                "The Solana subscription access-change instruction was missing.",
+            );
+          }
+          const solanaTx = await submitSolanaTransaction({
+            programId: prepared.programId,
+            rpcUrl: prepared.rpcUrl,
+            instruction: prepared.instruction,
+          });
+          accessChangeTxHash = solanaTx.txHash;
+        } else {
+          const preparedTarget = prepared?.target ?? null;
+          const preparedData = prepared?.data ?? null;
+
+          if (!preparedTarget || !isAddress(preparedTarget) || !preparedData) {
+            throw new Error(
+              submissionResult.accessChangeNote ??
+                "The subscription access-change transaction was missing.",
+            );
+          }
+
+          const accessChangeTx = await submitPaymentAccountTransaction({
+            to: preparedTarget as `0x${string}`,
+            data: preparedData as `0x${string}`,
+            smartAccountAddressOverride:
+              smartAccountAddress && isAddress(smartAccountAddress)
+                ? (smartAccountAddress as `0x${string}`)
+                : undefined,
+          });
+          accessChangeTxHash = accessChangeTx.txHash;
+        }
 
         const finalConfirmation = {
           ...confirmation,
-          txHash: accessChangeTx.txHash,
-          accessChangeTxHash: accessChangeTx.txHash,
+          txHash: accessChangeTxHash,
+          accessChangeTxHash,
         };
         lastPaymentRef.current = {
           ...lastPaymentRef.current,
           txHash: finalConfirmation.txHash,
-          accessChangeTxHash: accessChangeTx.txHash,
+          accessChangeTxHash,
         };
         writeStoredPlanChangePayment(
           planChangePaymentStorageKey,
@@ -8347,11 +8673,12 @@ function PaymentContent({
                     before authorizing this
                     {isImmediateOnChainUpgrade ? "upgrade" : "plan change"}.
                   </div>
-                  {isStellarChain || hasWindowEth || isMobileDevice() ? (
+                  {isNonEvmChain || hasWindowEth || isMobileDevice() ? (
                     <WalletSelector
                       tokens={tokens}
                       connecting={connecting}
                       isStellar={isStellarChain}
+                      isSolana={isSolanaChain}
                       onConnectMetaMask={() => {
                         if (isMobileDevice() && !getWindowEthereum()) {
                           openMetaMaskDeepLink();
@@ -8373,9 +8700,16 @@ function PaymentContent({
                       onConnectFreighter={() => {
                         connectWallet();
                       }}
+                      onConnectSolana={() => {
+                        connectWallet();
+                      }}
                     />
                   ) : (
-                    <NoWalletSelector tokens={tokens} isStellar={isStellarChain} />
+                    <NoWalletSelector
+                      tokens={tokens}
+                      isStellar={isStellarChain}
+                      isSolana={isSolanaChain}
+                    />
                   )}
                   <div
                     style={{
@@ -8440,7 +8774,7 @@ function PaymentContent({
                           fontSize: tokens.size - 1,
                         }}
                       >
-                        {isStellarChain ? "Freighter" : "Wallet"} connected
+                        {isStellarChain ? "Freighter" : isSolanaChain ? "Solana wallet" : "Wallet"} connected
                       </div>
                       <div
                         style={{
@@ -8457,6 +8791,8 @@ function PaymentContent({
                       onClick={async () => {
                         if (isStellarChain) {
                           await stellarWallet.disconnect();
+                        } else if (isSolanaChain) {
+                          await solanaWallet.disconnect();
                         }
                         setLocalAddress(null);
                         setLocalProvider(null);
@@ -8857,11 +9193,12 @@ function PaymentContent({
               </div>
 
               {needsWallet ? (
-                isStellarChain || hasWindowEth || isMobileDevice() ? (
+                isNonEvmChain || hasWindowEth || isMobileDevice() ? (
                   <WalletSelector
                     tokens={tokens}
                     connecting={connecting}
                     isStellar={isStellarChain}
+                    isSolana={isSolanaChain}
                     onConnectMetaMask={() => {
                       if (isMobileDevice() && !getWindowEthereum()) {
                         openMetaMaskDeepLink();
@@ -8883,9 +9220,16 @@ function PaymentContent({
                     onConnectFreighter={() => {
                       connectWallet();
                     }}
+                    onConnectSolana={() => {
+                      connectWallet();
+                    }}
                   />
                 ) : (
-                  <NoWalletSelector tokens={tokens} isStellar={isStellarChain} />
+                  <NoWalletSelector
+                    tokens={tokens}
+                    isStellar={isStellarChain}
+                    isSolana={isSolanaChain}
+                  />
                 )
               ) : (
                 <div>
@@ -9364,8 +9708,10 @@ function UnsubscribeContent({
   const [txError, setTxError] = useState("");
   const paymentMethod = data.paymentMethod as ComponentPaymentMethod | null;
   const chainId = paymentMethod?.chainId ?? runtimeChainId;
-  const isStellarChain = chainId !== 0 && !isEvmChain(chainId);
+  const isStellarChain = chainId !== 0 && getChainFamily(chainId) === "stellar";
+  const isSolanaChain = chainId !== 0 && getChainFamily(chainId) === "solana";
   const stellarWallet = useSafeStellarAccount(chainId);
+  const solanaWallet = useSolanaEmbedWallet();
   const smartAccountAddress =
     typeof paymentMethod?.walletAddress === "string"
       ? paymentMethod.walletAddress
@@ -9380,12 +9726,16 @@ function UnsubscribeContent({
   );
   const finalAddress = isStellarChain
     ? (stellarWallet.address ?? undefined)
-    : (address || localAddress);
+    : isSolanaChain
+      ? (solanaWallet.address ?? undefined)
+      : (address || localAddress);
   const finalConnected = isStellarChain
     ? stellarWallet.isConnected
-    : (isConnected || !!localAddress);
+    : isSolanaChain
+      ? solanaWallet.isConnected
+      : (isConnected || !!localAddress);
   const resolvedWalletClient =
-    isStellarChain
+    isStellarChain || isSolanaChain
       ? null
       : (wagmiWalletClient ??
          (chainId
@@ -9397,7 +9747,9 @@ function UnsubscribeContent({
            : null));
   const resolvedWalletAddress = isStellarChain
     ? (stellarWallet.address ?? null)
-    : (resolvedWalletClient?.account?.address ?? finalAddress ?? null);
+    : isSolanaChain
+      ? (solanaWallet.address ?? null)
+      : (resolvedWalletClient?.account?.address ?? finalAddress ?? null);
   const requiresOnChainCancellation = Boolean(
     activePlan?.onChainPlanId && smartAccountAddress && price > 0,
   );
@@ -9415,6 +9767,8 @@ function UnsubscribeContent({
     try {
       if (isStellarChain) {
         await stellarWallet.connect();
+      } else if (isSolanaChain) {
+        await solanaWallet.connect();
       } else {
         const result = await requestWindowEthereumAccounts(walletKind);
         setPreferredWindowEthereum(result.provider);
@@ -9726,6 +10080,7 @@ function UnsubscribeContent({
               tokens={tokens}
               connecting={connecting}
               isStellar={isStellarChain}
+              isSolana={isSolanaChain}
               onConnectMetaMask={() => {
                 if (isMobileDevice() && !getWindowEthereum()) {
                   openMetaMaskDeepLink();
@@ -9745,6 +10100,9 @@ function UnsubscribeContent({
                 connectWallet("coinbase");
               }}
               onConnectFreighter={() => {
+                connectWallet();
+              }}
+              onConnectSolana={() => {
                 connectWallet();
               }}
             />

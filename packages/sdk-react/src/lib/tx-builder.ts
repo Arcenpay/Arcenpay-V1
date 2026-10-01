@@ -6,9 +6,10 @@
  * the concrete builder handles HOW (EVM calldata vs Soroban simulation).
  */
 
-import { type WalletAdapter, type EvmTxParams, type StellarTxParams } from "./wallet-adapter";
+import { type WalletAdapter, type EvmTxParams, type StellarTxParams, type SolanaTxParams } from "./wallet-adapter";
 import { EvmWalletAdapter } from "./evm-wallet-adapter";
 import { StellarWalletAdapter } from "./stellar-wallet-adapter";
+import { SolanaWalletAdapter } from "./solana-wallet-adapter";
 import {
   encodeFunctionData,
   type Abi,
@@ -121,6 +122,52 @@ export class StellarTxBuilder implements TxBuilder {
   }
 }
 
+// ─── Solana implementation ────────────────────────────────────────────────
+
+export class SolanaTxBuilder implements TxBuilder {
+  readonly family = "solana";
+  readonly adapter: SolanaWalletAdapter;
+  private rpcUrl: string;
+
+  constructor(adapter: SolanaWalletAdapter, rpcUrl: string) {
+    this.adapter = adapter;
+    this.rpcUrl = rpcUrl;
+  }
+
+  async send(call: ContractCall): Promise<{ txHash: string; result?: unknown }> {
+    const args = (call.args ?? {}) as {
+      keys?: SolanaTxParams["keys"];
+      data?: string;
+    };
+    if (!args.keys || !args.data) {
+      throw new Error(
+        "SolanaTxBuilder.send requires args { keys, data } (a prepared instruction from the backend).",
+      );
+    }
+    return this.sendPrepared({
+      family: "solana",
+      programId: call.contractId,
+      keys: args.keys,
+      data: args.data,
+      rpcUrl: this.rpcUrl,
+    });
+  }
+
+  /** Send a backend-prepared instruction. */
+  async sendPrepared(
+    params: SolanaTxParams,
+  ): Promise<{ txHash: string; result?: unknown }> {
+    const { txHash } = await this.adapter.sendTransaction(params);
+    return { txHash };
+  }
+
+  async read(_call: ReadCall): Promise<unknown> {
+    throw new Error(
+      "SolanaTxBuilder.read: use a @solana/web3.js Connection directly",
+    );
+  }
+}
+
 // ─── Factory ───────────────────────────────────────────────────────────────
 
 export function createTxBuilder(
@@ -136,6 +183,12 @@ export function createTxBuilder(
       throw new Error("StellarTxBuilder requires rpcUrl and networkPassphrase");
     }
     return new StellarTxBuilder(adapter as StellarWalletAdapter, rpcUrl, networkPassphrase);
+  }
+  if (adapter.family === "solana") {
+    if (!rpcUrl) {
+      throw new Error("SolanaTxBuilder requires rpcUrl");
+    }
+    return new SolanaTxBuilder(adapter as SolanaWalletAdapter, rpcUrl);
   }
   throw new Error(`Unsupported chain family: ${adapter.family}`);
 }

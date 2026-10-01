@@ -67,17 +67,16 @@ import { getBlockExplorerUrl } from "@/lib/format";
 import { CANONICAL_WEBHOOK_EVENTS } from "@/lib/webhook-events";
 import { useDashboardSession } from "@/hooks/use-dashboard-session";
 import { useStellarWallet } from "@/hooks/use-stellar-wallet";
+import { useSolanaWallet } from "@/hooks/use-solana-wallet";
 import {
   DEFAULT_CHAIN_ID,
   getChainLabel,
   resolveEnvironmentChainId,
 } from "@/lib/default-chain";
-import {
-  SUPPORTED_WALLET_CHAIN_LABEL,
-  useDashboardWallet,
-} from "@/hooks/use-dashboard-wallet";
+import { SUPPORTED_WALLET_CHAIN_LABEL } from "@/hooks/use-dashboard-wallet";
+import { useUnifiedDashboardWallet } from "@/hooks/use-unified-dashboard-wallet";
 import { useEnvironment } from "@/contexts/environment-context";
-import { isStellarChainId } from "@arcenpay/internal-core";
+import { isStellarChainId, isSolanaChainId } from "@arcenpay/internal-core";
 import { isPlatformAdminEmail } from "@/lib/admin";
 
 const NOTIFICATION_DEFAULTS = CANONICAL_WEBHOOK_EVENTS.map((event) => ({
@@ -127,7 +126,9 @@ export function SettingsSection() {
     selectEnvironment,
     refreshEnvironments,
   } = useEnvironment();
-  const { isConnected, address: connectedAddress } = useAccount();
+  // EVM-only wagmi state, used solely for EVM-specific reads below. All
+  // user-facing wallet display goes through the family-aware facade.
+  const { isConnected } = useAccount();
   const { data: sessionData } = useDashboardSession();
   const isPlatformAdmin =
     sessionData?.user?.isPlatformAdmin === true ||
@@ -135,19 +136,29 @@ export function SettingsSection() {
   const chainId = useChainId();
   const configuredChainId = activeEnvironment?.chainId ?? resolveEnvironmentChainId(envMode);
   const stellar = useStellarWallet(configuredChainId);
+  const solanaWallet = useSolanaWallet(configuredChainId);
   const isStellarEnv = isStellarChainId(configuredChainId);
+  const isSolanaEnv = isSolanaChainId(configuredChainId);
+  const isNonEvmEnv = isStellarEnv || isSolanaEnv;
 
   const linkedWallet = isStellarEnv
     ? (sessionData?.user.stellarWalletAddress ?? undefined)
-    : (sessionData?.user.walletAddress ?? undefined);
+    : isSolanaEnv
+      ? (sessionData?.user.solanaWalletAddress ?? undefined)
+      : (sessionData?.user.walletAddress ?? undefined);
 
+  // Family-aware wallet facade: for a Solana/Stellar environment the
+  // "connected wallet" is the Solana/Stellar wallet, NOT the (possibly
+  // unrelated) EVM wallet that wagmi happens to see.
   const {
+    connectedAddress,
     connectedWalletLabel,
     disconnectWallet,
     hasConnectedWallet,
     hasLinkedWallet,
     isDisconnecting,
     isLinkedWalletConnected,
+    isOnConfiguredNetwork,
     isSwitchingChain,
     isWrongWalletConnected,
     linkedWalletLabel,
@@ -156,18 +167,26 @@ export function SettingsSection() {
     reconnectWallet,
     switchToRequiredNetwork,
     currentNetworkLabel,
-  } = useDashboardWallet(isStellarEnv ? undefined : linkedWallet);
+  } = useUnifiedDashboardWallet(
+    configuredChainId,
+    sessionData?.user.walletAddress ?? null,
+    sessionData?.user.stellarWalletAddress ?? null,
+    sessionData?.user.solanaWalletAddress ?? null,
+  );
 
   const displayLinkedWallet = linkedWallet ?? "No wallet linked yet";
   const displayConnectedWallet = isStellarEnv
     ? (stellar.address ? `${stellar.address.slice(0, 6)}…${stellar.address.slice(-4)}` : "Not connected")
-    : (connectedWalletLabel ?? "Not connected");
+    : isSolanaEnv
+      ? (solanaWallet.address ? `${solanaWallet.address.slice(0, 6)}…${solanaWallet.address.slice(-4)}` : "Not connected")
+      : (connectedWalletLabel ?? "Not connected");
   const displayNetworkLabel = isStellarEnv
     ? getChainLabel(configuredChainId)
-    : (currentNetworkLabel ?? "Not connected");
+    : isSolanaEnv
+      ? getChainLabel(configuredChainId)
+      : (currentNetworkLabel ?? "Not connected");
   const contractAddresses = useContractAddresses(configuredChainId);
   const configuredChainLabel = getChainLabel(configuredChainId);
-  const isOnConfiguredNetwork = hasConnectedWallet && chainId === configuredChainId;
   const activeUsdcAddress = getUsdcAddress(configuredChainId);
   const activePlanFactoryAddress =
     typeof contractAddresses.planFactory === "string"
@@ -826,6 +845,13 @@ export function SettingsSection() {
                 </div>
               ) : null}
 
+              {isSolanaEnv && solanaWallet.isConnected ? (
+                <div className="flex items-start gap-2 rounded-lg border border-border bg-secondary p-3 text-sm text-foreground">
+                  <Check className="w-4 h-4 shrink-0 mt-0.5" />
+                  Solana wallet connected on {configuredChainLabel}.
+                </div>
+              ) : null}
+
               <div className="grid gap-2 md:grid-cols-2">
                 {isStellarEnv ? (
                   !stellar.isConnected ? (
@@ -837,6 +863,18 @@ export function SettingsSection() {
                     <Button variant="ghost" onClick={() => void stellar.disconnect()}>
                       <Wallet className="w-4 h-4 mr-2" />
                       Disconnect Stellar wallet
+                    </Button>
+                  )
+                ) : isSolanaEnv ? (
+                  !solanaWallet.isConnected ? (
+                    <Button onClick={() => void solanaWallet.connect()}>
+                      <Wallet className="w-4 h-4 mr-2" />
+                      Connect Solana wallet
+                    </Button>
+                  ) : (
+                    <Button variant="ghost" onClick={() => void solanaWallet.disconnect()}>
+                      <Wallet className="w-4 h-4 mr-2" />
+                      Disconnect Solana wallet
                     </Button>
                   )
                 ) : (
@@ -1484,7 +1522,7 @@ export function SettingsSection() {
                         </Button>
                       </div>
                     </div>
-                    {connectedAddress && connectedAddress.toLowerCase() !== linkedWallet.toLowerCase() && (
+                    {isWrongWalletConnected && connectedAddress && (
                       <div className="flex items-start gap-2 p-3 rounded-lg bg-secondary border border-border">
                         <AlertTriangle className="w-4 h-4 text-warning shrink-0 mt-0.5" />
                         <p className="text-xs text-muted-foreground">
@@ -1573,6 +1611,58 @@ export function SettingsSection() {
                     <Info className="w-4 h-4 text-muted-foreground shrink-0 mt-0.5" />
                     <p className="text-xs text-muted-foreground">
                       Keep your Freighter wallet connected when you need to sign Stellar transactions.
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Solana Account Identity — only if user has a Solana wallet */}
+          {sessionData?.user.solanaWalletAddress && (
+            <Card className="border-accent/30 bg-card">
+              <CardHeader>
+                <CardTitle className="text-base font-medium flex items-center gap-2">
+                  <Wallet className="w-4 h-4 text-accent" />
+                  Solana Account Identity
+                </CardTitle>
+                <CardDescription>
+                  Your linked Solana wallet is used for Anchor program interactions on Solana Devnet.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between p-4 rounded-xl bg-secondary/50 border border-border">
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1">Linked Solana address</p>
+                      <code className="text-sm font-mono text-foreground break-all">{sessionData.user.solanaWalletAddress}</code>
+                    </div>
+                    <div className="flex items-center gap-2 ml-4 shrink-0">
+                      <Badge variant="secondary" className="bg-secondary text-foreground border-border">
+                        Linked
+                      </Badge>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8"
+                        onClick={() => {
+                          navigator.clipboard.writeText(sessionData.user.solanaWalletAddress!);
+                          setCopiedAddress("solana");
+                          setTimeout(() => setCopiedAddress(null), 2000);
+                        }}
+                      >
+                        {copiedAddress === "solana" ? (
+                          <Check className="w-3.5 h-3.5 text-success" />
+                        ) : (
+                          <Copy className="w-3.5 h-3.5" />
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-2 p-3 rounded-lg bg-secondary/50 border border-border">
+                    <Info className="w-4 h-4 text-muted-foreground shrink-0 mt-0.5" />
+                    <p className="text-xs text-muted-foreground">
+                      Keep your Phantom or Solflare wallet connected when you need to sign Solana transactions.
                     </p>
                   </div>
                 </div>
@@ -1839,7 +1929,7 @@ export function SettingsSection() {
               </CardTitle>
               <CardDescription>
                 Smart contracts deployed on{" "}
-                {getChainLabel(chainId)}.
+                {getChainLabel(configuredChainId)}.
                 Read-only — connect wallet to interact.
               </CardDescription>
             </CardHeader>
@@ -1904,7 +1994,7 @@ export function SettingsSection() {
                           >
                             <a
                               href={getBlockExplorerUrl(
-                                chainId,
+                                configuredChainId,
                                 "address",
                                 addr,
                               )}

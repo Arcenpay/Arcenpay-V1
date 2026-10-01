@@ -10,6 +10,7 @@ import { sendInvoiceEmail } from "../../../lib/billing/email.js";
 import { billingAddressSchema } from "../../../lib/billing/invoice-tax.js";
 import { deliverWebhook } from "../../../lib/webhooks/deliver-webhook.js";
 import { requireResolvedActiveEnvironment } from "../../../lib/environments/workspace-environments.js";
+import { WALLET_ADDRESS_REGEX } from "../../../lib/platform/chain-family.js";
 
 const listSchema = z.object({
   status: z.enum(["DRAFT", "ISSUED", "PAID", "VOID", "OVERDUE"]).optional(),
@@ -125,7 +126,7 @@ const createSchema = z.object({
   customerName: z.string().trim().min(1).optional(),
   customerWallet: z
     .string()
-    .regex(/^0x[a-fA-F0-9]{40}$/)
+    .regex(WALLET_ADDRESS_REGEX)
     .optional(),
   currency: z.string().default("USDC"),
   dueAt: z.string().datetime().optional(),

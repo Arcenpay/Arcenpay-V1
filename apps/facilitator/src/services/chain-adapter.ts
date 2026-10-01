@@ -39,7 +39,8 @@ export type NormalisedSubscriptionEventType =
   | "renewed"
   | "cancelled"
   | "plan_changed"
-  | "billing_executed";
+  | "billing_executed"
+  | "billing_settled";
 
 export interface NormalisedSubscriptionEvent {
   type: NormalisedSubscriptionEventType;
@@ -55,6 +56,8 @@ export interface NormalisedSubscriptionEvent {
   expiration?: number;
   /** Gross amount paid in micros (1 USDC = 1_000_000), or 0 if N/A. */
   amountPaidMicros?: string;
+  /** Settlement call count (usage verification). */
+  callCount?: number;
   /** Merchant/recipient wallet (family-encoded). */
   account?: string;
   merchant?: string;

@@ -38,6 +38,7 @@ import { resolveDashboardSessionIdentityDefaults } from "../../lib/auth/dashboar
 import { getSession } from "../../lib/auth/auth.server.js";
 import { resolvePublishedInitialPlan } from "../../lib/catalog/catalog-billing.js";
 import { requireResolvedActiveEnvironment } from "../../lib/environments/workspace-environments.js";
+import { normalizeWallet } from "../../lib/billing/utils.js";
 
 // ─── Simple JWT-like token (HMAC-SHA256, no external dep) ─────────────────────
 
@@ -65,7 +66,8 @@ function toNormalizedEmail(value: string | undefined): string | null {
 function toNormalizedWallet(value: string | undefined): string | null {
   const trimmed = toNullableTrimmed(value);
   if (!trimmed) return null;
-  return trimmed.startsWith("G") && trimmed.length === 56 ? trimmed : trimmed.toLowerCase();
+  // EVM lowercases; Stellar/Solana are case-sensitive and preserved.
+  return normalizeWallet(trimmed);
 }
 
 function isPrismaUniqueError(error: unknown): boolean {

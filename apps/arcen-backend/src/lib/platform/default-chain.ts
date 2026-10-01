@@ -1,4 +1,4 @@
-import { getChain, getChainDescriptor, getConfiguredRuntimeChainId, STELLAR_MAINNET_CHAIN_ID, STELLAR_TESTNET_CHAIN_ID, STELLAR_FUTURENET_CHAIN_ID } from "@arcenpay/internal-core";
+import { getChain, getChainDescriptor, getConfiguredRuntimeChainId, STELLAR_MAINNET_CHAIN_ID, STELLAR_TESTNET_CHAIN_ID, STELLAR_FUTURENET_CHAIN_ID, SOLANA_MAINNET_CHAIN_ID, SOLANA_DEVNET_CHAIN_ID, SOLANA_TESTNET_CHAIN_ID } from "@arcenpay/internal-core";
 
 export const SEPOLIA_CHAIN_ID = 11155111 as const;
 export const BASE_SEPOLIA_CHAIN_ID = 84532 as const;
@@ -7,17 +7,22 @@ export const ARC_TESTNET_CHAIN_ID = 5042002 as const;
 export const BOT_MAINNET_CHAIN_ID = 677 as const;
 export const BOT_TESTNET_CHAIN_ID = 968 as const;
 export { STELLAR_MAINNET_CHAIN_ID, STELLAR_TESTNET_CHAIN_ID, STELLAR_FUTURENET_CHAIN_ID };
+export { SOLANA_MAINNET_CHAIN_ID, SOLANA_DEVNET_CHAIN_ID, SOLANA_TESTNET_CHAIN_ID };
 
 // All supported chains (testnet + mainnet) for the backend.
 // NOTE: BOT Chain Testnet (968) is intentionally EXCLUDED — its deployment is a
 // stub (all-zero addresses), so no usable contracts exist there. Only chains
 // with real, deployed contracts are listed below (available whether mainnet or
 // testnet).
+// NOTE: Solana Devnet (9_100_001) is listed for DEVELOPMENT environments; once
+// the Anchor program is deployed to Solana Mainnet Beta, add
+// SOLANA_MAINNET_CHAIN_ID here.
 export const TESTNET_CHAIN_IDS = [
   BASE_SEPOLIA_CHAIN_ID,
   ARC_TESTNET_CHAIN_ID,
   STELLAR_TESTNET_CHAIN_ID,
   STELLAR_FUTURENET_CHAIN_ID,
+  SOLANA_DEVNET_CHAIN_ID,
 ] as const;
 // Production environments are strictly restricted to BOT Chain Mainnet,
 // as BOT Chain is the only network with verified production contract deployments.

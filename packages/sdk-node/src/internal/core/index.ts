@@ -129,22 +129,28 @@ export type {
   TokenInfo,
 } from "./chains";
 
-// Chain family + multi-chain registry (EVM, Stellar, …)
+// Chain family + multi-chain registry (EVM, Stellar, Solana)
 export {
   CHAIN_FAMILY_METADATA,
   CHAIN_REGISTRY,
   STELLAR_MAINNET_CHAIN_ID,
   STELLAR_TESTNET_CHAIN_ID,
   STELLAR_FUTURENET_CHAIN_ID,
+  SOLANA_MAINNET_CHAIN_ID,
+  SOLANA_DEVNET_CHAIN_ID,
+  SOLANA_TESTNET_CHAIN_ID,
   getChainFamily,
   getChainDescriptor,
   getStellarNetworkPassphrase,
   getStellarSorobanRpcUrl,
+  getSolanaRpcUrl,
   getAllRegisteredChainIds,
   getChainIdsForFamily,
   isEvmChain,
   isStellarChain,
   isStellarChainId,
+  isSolanaChain,
+  isSolanaChainId,
   isValidAddress,
   isValidTxHash,
   isValidAddressForChain,

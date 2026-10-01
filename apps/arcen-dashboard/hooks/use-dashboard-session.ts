@@ -9,6 +9,7 @@ export type DashboardSessionPayload = {
     email: string | null;
     walletAddress: string | null;
     stellarWalletAddress: string | null;
+    solanaWalletAddress: string | null;
     isPlatformAdmin?: boolean;
   };
   currentTeam: {

@@ -96,6 +96,12 @@ export class EvmChainAdapter implements ChainAdapter {
     eventType: NormalisedSubscriptionEventType | "*",
     callback: EventCallback,
   ): () => void {
+    // EVM settlement events are produced by SettlementService (which polls
+    // ZKUsageVerifier), not by the v1 EventListenerService — so there is
+    // nothing to forward for this type here.
+    if (eventType === "billing_settled") {
+      return () => {};
+    }
     // The existing EventListenerService uses its own SubscriptionEventData
     // shape with bigint fields. We normalise to string here so the
     // billing-event pipeline is family-agnostic.

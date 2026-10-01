@@ -31,6 +31,7 @@
     "@prisma/adapter-pg": "^7.4.2",
     "@prisma/client": "^7.4.2",
     "@sentry/node": "^8.55.0",
+    "@solana/web3.js": "^1.98.4",
     "@stellar/stellar-sdk": "^16.2.0",
     "date-fns": "4.1.0",
     "dotenv": "^16.4.0",
@@ -40,6 +41,7 @@
     "resend": "^6.9.3",
     "svix": "^1.84.1",
     "tsx": "^4.19.0",
+    "tweetnacl": "^1.0.3",
     "viem": "^2.46.3",
     "zod": "3.25.76"
   },

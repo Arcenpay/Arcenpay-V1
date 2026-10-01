@@ -14,6 +14,7 @@ import { getContractAddresses } from "./addresses";
 import {
   getChainDescriptor,
   getChainFamily,
+  getSolanaRpcUrl,
   getStellarNetworkPassphrase,
   getStellarSorobanRpcUrl,
   isUnsetAddressForChain,
@@ -88,6 +89,11 @@ const SERVICE_ENV_KEYS: Record<ServiceKey, (chainId: number) => string[]> = {
     `STELLAR_RPC_URL_${chainId}`,
     "STELLAR_RPC_URL",
   ],
+  solanaRpcUrl: (chainId) => [
+    `ARCENPAY_SOLANA_RPC_URL_${chainId}`,
+    `SOLANA_RPC_URL_${chainId}`,
+    "SOLANA_RPC_URL",
+  ],
   subgraphUrl: (chainId) => [
     `ARCENPAY_SUBGRAPH_URL_${chainId}`,
     `GRAPH_URL_${chainId}`,
@@ -153,17 +159,20 @@ export function getChainEnvironment(chainId: number): ChainEnvironmentManifest {
       isTestnet: Boolean(descriptor.testnet),
       contracts: getContractAddresses(chainId),
       services: {
-        rpcUrl: resolveServiceUrl(
-          chainId,
-          "rpcUrl",
-          descriptor.rpcUrl ?? "",
-        ),
+        rpcUrl:
+          family === "solana"
+            ? getSolanaRpcUrl(chainId)
+            : resolveServiceUrl(chainId, "rpcUrl", descriptor.rpcUrl ?? ""),
         sorobanRpcUrl:
-          (process.env[`ARCENPAY_STELLAR_RPC_URL_${chainId}`] ??
-            process.env[`STELLAR_RPC_URL_${chainId}`] ??
-            getStellarSorobanRpcUrl(chainId)) ||
-          descriptor.sorobanRpcUrl ||
-          "",
+          family === "stellar"
+            ? (process.env[`ARCENPAY_STELLAR_RPC_URL_${chainId}`] ??
+                process.env[`STELLAR_RPC_URL_${chainId}`] ??
+                getStellarSorobanRpcUrl(chainId)) ||
+              descriptor.sorobanRpcUrl ||
+              ""
+            : "",
+        solanaRpcUrl:
+          family === "solana" ? getSolanaRpcUrl(chainId) : "",
         subgraphUrl: resolveServiceUrl(chainId, "subgraphUrl"),
         facilitatorUrl: resolveServiceUrl(chainId, "facilitatorUrl"),
       },

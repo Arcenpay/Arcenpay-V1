@@ -17,9 +17,13 @@ import {
   getChain,
   getContractAddresses,
   isEvmChain,
+  isSolanaChainId,
+  getSolanaRpcUrl,
   getStellarSorobanRpcUrl,
   getStellarNetworkPassphrase,
 } from "@arcenpay/internal-core";
+import { Connection } from "@solana/web3.js";
+import { decodePlanRecord, findPlanPda } from "@arcenpay/internal-core/solana";
 import { rpc, contract as stellarContract } from "@stellar/stellar-sdk";
 import { z } from "zod";
 
@@ -183,7 +187,9 @@ export async function registerPlanOnChain(c: Context) {
   const chainId = resolvedNetwork.chainId;
   const providerAddress = isEvmChain(chainId)
     ? auth.team.walletAddress
-    : auth.team.stellarWalletAddress;
+    : isSolanaChainId(chainId)
+      ? auth.team.solanaWalletAddress
+      : auth.team.stellarWalletAddress;
 
   if (!providerAddress) {
     return c.json({ error: "No provider wallet is available for on-chain registration." }, 400 as any);
@@ -237,6 +243,108 @@ export async function registerPlanOnChain(c: Context) {
       { error: `Plan chain ${plan.chainId} is not supported by this deployment.` },
       400 as any,
     );
+  }
+
+  // ── Solana confirmation path ───────────────────────────────────────────────
+  if (isSolanaChainId(chainId)) {
+    if (!onChainPlanId) {
+      return c.json({ error: "onChainPlanId is required for Solana confirmation." }, 400 as any);
+    }
+    if (!txHash) {
+      return c.json({ error: "txHash is required for Solana confirmation." }, 400 as any);
+    }
+
+    const rpcUrl = getSolanaRpcUrl(chainId);
+    const programId = getContractAddresses(chainId).planFactory;
+    try {
+      const connection = new Connection(rpcUrl, "confirmed");
+      const tx = await connection.getParsedTransaction(txHash, {
+        maxSupportedTransactionVersion: 0,
+        commitment: "confirmed",
+      });
+      if (!tx) {
+        return c.json({ error: "Solana transaction is not confirmed yet." }, 425 as any);
+      }
+      if (tx.meta?.err) {
+        return c.json({ error: "Solana transaction failed on-chain." }, 409 as any);
+      }
+
+      const invoked = (tx.transaction.message.accountKeys ?? []).some((k: any) => {
+        const pk =
+          typeof k?.pubkey?.toBase58 === "function"
+            ? k.pubkey.toBase58()
+            : String(k?.pubkey ?? k);
+        return pk === programId;
+      });
+      if (!invoked) {
+        return c.json(
+          { error: "Transaction did not invoke the ArcenPay Solana program." },
+          409 as any,
+        );
+      }
+
+      const [planPda] = findPlanPda(programId, BigInt(onChainPlanId));
+      const accountInfo = await connection.getAccountInfo(planPda, "confirmed");
+      if (!accountInfo) {
+        return c.json({ error: `Plan ${onChainPlanId} not found on-chain.` }, 404 as any);
+      }
+      const onChainPlan = decodePlanRecord(Buffer.from(accountInfo.data));
+      if (!onChainPlan) {
+        return c.json({ error: "Unable to decode the on-chain plan account." }, 500 as any);
+      }
+
+      const priceMicros = BigInt(
+        Math.round(parseFloat(plan.price.toString()) * 1_000_000),
+      );
+      if (
+        onChainPlan.provider !== providerAddress ||
+        onChainPlan.price !== priceMicros ||
+        Number(onChainPlan.billingInterval) !== plan.billingInterval ||
+        onChainPlan.acceptedToken !== plan.acceptedToken ||
+        !onChainPlan.active
+      ) {
+        return c.json(
+          { error: "On-chain plan details do not match the catalog plan." },
+          409 as any,
+        );
+      }
+
+      const updated = await db.catalogPlan.update({
+        where: { id: plan.id },
+        data: {
+          onChainPlanId,
+          chainSyncStatus: "SYNCED",
+          chainSyncError: null,
+          chainSyncedAt: new Date(),
+        },
+      });
+
+      await writeAuditEvent({
+        headers: c.req.raw.headers,
+        teamId: auth.team.teamId,
+        userId: auth.team.userId,
+        walletAddress: providerAddress,
+        action: "PLAN_REGISTERED_ON_CHAIN",
+        resourceType: "CatalogPlan",
+        resourceId: plan.id,
+        metadata: {
+          chainId,
+          onChainPlanId,
+          txHash: txHash ?? null,
+          family: "solana",
+        },
+      });
+
+      return c.json({
+        success: true,
+        onChainPlanId: updated.onChainPlanId,
+        status: updated.chainSyncStatus,
+      });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error("[plan-register-onchain] Solana verification failed:", msg);
+      return c.json({ error: `Solana verification failed: ${msg}` }, 500 as any);
+    }
   }
 
   // ── Stellar Soroban confirmation path ──────────────────────────────────────

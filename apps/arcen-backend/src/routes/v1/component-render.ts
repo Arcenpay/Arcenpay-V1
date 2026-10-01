@@ -33,6 +33,7 @@ import {
 import { ensureInvoicePdfForTeam } from "../../lib/billing/invoice-documents.js";
 import { upsertSubscriptionLedgerState } from "../../lib/billing/billing-ledger.js";
 import { findScopedSubscriberEmail } from "../../lib/billing/subscriber-emails.js";
+import { normalizeWallet } from "../../lib/billing/utils.js";
 import { getLatestSubscriptionChangeRequest } from "../../lib/billing/subscription-change-requests.js";
 import { corsHeaders } from "../../middleware/cors.js";
 import { toPrismaJson } from "../../utils/prisma-json.js";
@@ -1012,7 +1013,13 @@ export async function GET(c: Context) {
           OR: [
             { companyId: company.id },
             ...(company.walletAddress
-              ? [{ companyId: null, customerWallet: company.walletAddress.toLowerCase() }]
+              ? [
+                  {
+                    companyId: null,
+                    customerWallet:
+                      normalizeWallet(company.walletAddress) ?? company.walletAddress,
+                  },
+                ]
               : []),
             ...(company.email
               ? [{ companyId: null, customerEmail: company.email }]

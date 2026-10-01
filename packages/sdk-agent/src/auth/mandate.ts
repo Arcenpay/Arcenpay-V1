@@ -4,7 +4,7 @@
 //  Stellar Ed25519 signing and scope-narrowing delegation checks.
 // ============================================================
 
-import { randomUUID } from "node:crypto";
+import { randomUUID, createPublicKey, verify as cryptoVerify } from "node:crypto";
 import {
   type Address,
   verifyTypedData,
@@ -25,6 +25,33 @@ import { matchDomain } from "./policy";
 export const MANDATE_DOMAIN_NAME = "ArcenPay Agent Mandate";
 export const MANDATE_DOMAIN_VERSION = "1";
 export const STELLAR_MANDATE_SIGNING_PREFIX = "ArcenPay Agent Mandate\n";
+export const SOLANA_MANDATE_SIGNING_PREFIX = "ArcenPay Agent Mandate\n";
+
+/** SPKI DER prefix for a raw ed25519 public key (RFC 8410). */
+const ED25519_SPKI_PREFIX = Buffer.from("302a300506032b6570032100", "hex");
+
+function verifyEd25519(
+  rawPublicKey: Uint8Array,
+  message: Uint8Array,
+  signature: Uint8Array,
+): boolean {
+  const publicKey = createPublicKey({
+    key: Buffer.concat([ED25519_SPKI_PREFIX, Buffer.from(rawPublicKey)]),
+    format: "der",
+    type: "spki",
+  });
+  return cryptoVerify(null, message, publicKey, signature);
+}
+
+function isSolanaPrivateKey(privateKey: string): boolean {
+  // EVM keys are 0x-prefixed 32-byte hex; Stellar keys are "S…" (56 chars).
+  // Everything else (base58 ~88 chars, or a JSON byte array) is Solana.
+  return (
+    !privateKey.startsWith("0x") &&
+    !/^S[A-Z2-7]{55}$/.test(privateKey) &&
+    (privateKey.startsWith("[") || /^[1-9A-HJ-NP-Za-km-z]{80,100}$/.test(privateKey))
+  );
+}
 
 export const MANDATE_EIP712_TYPES = {
   Mandate: [
@@ -131,6 +158,31 @@ export async function signAgentMandate(
     };
   }
 
+  if (isSolanaPrivateKey(privateKey)) {
+    const [{ Keypair }, { parseSolanaSecretKey }] = await Promise.all([
+      import("@solana/web3.js"),
+      import("../internal/core/solana"),
+    ]);
+    const keypair = Keypair.fromSecretKey(
+      parseSolanaSecretKey(privateKey),
+    ) as unknown as { sign(message: Uint8Array): Uint8Array };
+    const payload = {
+      mandateId: mandate.mandateId,
+      issuer: mandate.issuer,
+      subject: mandate.subject,
+      scope: mandate.scope,
+      issuedAt: mandate.issuedAt,
+    };
+    const message = Buffer.from(
+      SOLANA_MANDATE_SIGNING_PREFIX + canonicalJson(payload),
+    );
+    const signature = keypair.sign(message);
+    return {
+      ...mandate,
+      signature: `solana:${Buffer.from(signature).toString("base64")}`,
+    };
+  }
+
   const account = privateKeyToAccount(privateKey as `0x${string}`);
   const signature = await account.signTypedData({
     domain: {
@@ -226,6 +278,33 @@ export async function verifyAgentMandate(
         : { valid: false, reason: "Invalid Stellar Ed25519 mandate signature" };
     } catch (err: any) {
       return { valid: false, reason: `Stellar signature verification error: ${err?.message}` };
+    }
+  }
+
+  if (mandate.signature.startsWith("solana:")) {
+    const rawSig = mandate.signature.replace("solana:", "");
+    try {
+      const { decodeBase58 } = await import("../internal/core/solana");
+      const payload = {
+        mandateId: mandate.mandateId,
+        issuer: mandate.issuer,
+        subject: mandate.subject,
+        scope: mandate.scope,
+        issuedAt: mandate.issuedAt,
+      };
+      const message = Buffer.from(
+        SOLANA_MANDATE_SIGNING_PREFIX + canonicalJson(payload),
+      );
+      const ok = verifyEd25519(
+        decodeBase58(mandate.issuer.address),
+        message,
+        Buffer.from(rawSig, "base64"),
+      );
+      return ok
+        ? { valid: true, recoveredIssuer: mandate.issuer.address }
+        : { valid: false, reason: "Invalid Solana Ed25519 mandate signature" };
+    } catch (err: any) {
+      return { valid: false, reason: `Solana signature verification error: ${err?.message}` };
     }
   }
 

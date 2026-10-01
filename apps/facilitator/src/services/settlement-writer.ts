@@ -17,10 +17,33 @@ import {
   getContractAddresses,
   getChainFamily,
   getChain,
+  getSolanaRpcUrl,
   getStellarNetworkPassphrase,
   getStellarSorobanRpcUrl,
 } from "@arcenpay/internal-core";
 import { Keypair } from "@stellar/stellar-sdk";
+import {
+  Connection,
+  Keypair as SolanaKeypair,
+  PublicKey as SolanaPublicKey,
+  Transaction as SolanaTransaction,
+  TransactionInstruction,
+  sendAndConfirmTransaction,
+} from "@solana/web3.js";
+import {
+  encodeSettle,
+  findConfigPda,
+  findSessionPda,
+  findSettlerPda,
+  findNullifierPda,
+  findVaultAuthorityPda,
+  findAssociatedTokenAddress,
+  parseSolanaSecretKey,
+  TOKEN_PROGRAM_ID,
+} from "./solana-instruction-codec.js";
+import { decodeSessionRecord } from "./solana-event-codec.js";
+import { createHash } from "node:crypto";
+import { SYSTEM_PROGRAM_ID } from "@arcenpay/internal-core/solana";
 
 type SessionState = {
   agent: `0x${string}`;
@@ -54,6 +77,12 @@ export interface SettleForSignerInput {
   amount: bigint;
   sessionIdHint: string;
   providerAddress?: string;
+  /**
+   * Solana-only: 32-byte settlement nullifier (e.g. the x402 payment nonce).
+   * When omitted a time-based nullifier is derived. It is recorded on-chain so
+   * the same nullifier cannot settle twice.
+   */
+  nullifier?: Uint8Array;
 }
 
 export interface SettlementWriteResult {
@@ -126,15 +155,20 @@ export class SettlementWriterService {
   private readonly signerAddress: string;
   private readonly waitForReceipt: boolean;
   private readonly isStellar: boolean;
+  private readonly isSolana: boolean;
   private readonly publicClient: any;
   private readonly walletClient: any;
   private stellarKeypair: any = null;
   private stellarRpcUrl: string = "";
   private stellarPassphrase: string = "";
+  private solanaKeypair: SolanaKeypair | null = null;
+  private solanaConnection: Connection | null = null;
+  private solanaProgramId: string = "";
 
   constructor(config: SettlementWriterConfig) {
     this.chainId = config.chainId ?? DEFAULT_CHAIN_ID;
     this.isStellar = getChainFamily(this.chainId) === "stellar";
+    this.isSolana = getChainFamily(this.chainId) === "solana";
     const contracts = getContractAddresses(this.chainId);
 
     this.sessionVaultAddress =
@@ -165,6 +199,37 @@ export class SettlementWriterService {
       if (!this.providerAddress) {
         throw new Error("Invalid provider address for SettlementWriterService");
       }
+      return;
+    }
+
+    if (this.isSolana) {
+      // Solana settlement runs through the ArcenPay Anchor program's
+      // session-vault `settle` instruction. The "sessionVault" contract slot
+      // holds the Anchor program id (one program serves all roles).
+      if (!this.sessionVaultAddress) {
+        throw new Error(
+          "Solana SessionVault program id is not configured for SettlementWriterService " +
+            `(ARCENPAY_CONTRACT_${this.chainId}_sessionVault).`,
+        );
+      }
+
+      const keypair = SolanaKeypair.fromSecretKey(
+        parseSolanaSecretKey(config.privateKey),
+      );
+      this.solanaKeypair = keypair;
+      this.signerAddress = keypair.publicKey.toBase58();
+      this.providerAddress = config.providerAddress || this.signerAddress;
+
+      const rpcUrl = config.rpcUrl || getSolanaRpcUrl(this.chainId);
+      if (!rpcUrl) {
+        throw new Error(
+          "No Solana RPC URL configured for SettlementWriterService.",
+        );
+      }
+      this.solanaConnection = new Connection(rpcUrl, "confirmed");
+      this.solanaProgramId = this.sessionVaultAddress;
+      this.publicClient = null;
+      this.walletClient = null;
       return;
     }
 
@@ -224,6 +289,18 @@ export class SettlementWriterService {
   async isSignerAuthorized(
     address: string = this.signerAddress,
   ): Promise<boolean> {
+    if (this.isSolana) {
+      // A settler is authorized iff its `["settler", settler]` registry PDA
+      // exists (created by the program's `authorize_settler`).
+      if (!this.solanaConnection) return false;
+      try {
+        const [record] = findSettlerPda(this.solanaProgramId, address);
+        const info = await this.solanaConnection.getAccountInfo(record);
+        return info !== null;
+      } catch {
+        return false;
+      }
+    }
     if (this.isStellar) {
       // Stellar vault exposes `is_settler` — no authorizedSettlers mapping.
       try {
@@ -287,9 +364,104 @@ export class SettlementWriterService {
     throw new Error("No active billing session found for signer");
   }
 
+  /**
+   * Solana settlement: build + send the ArcenPay Anchor program's `settle`
+   * instruction, moving `amount` from the session vault to the provider.
+   */
+  private async settleSolana(
+    input: SettleForSignerInput,
+  ): Promise<SettlementWriteResult> {
+    const connection = this.solanaConnection;
+    const keypair = this.solanaKeypair;
+    if (!connection || !keypair) {
+      throw new Error("Solana settlement writer is not initialized");
+    }
+    if (input.amount <= 0n) {
+      throw new Error("Settlement amount must be greater than zero");
+    }
+
+    const sessionIdHint = input.sessionIdHint.trim();
+    if (!/^\d+$/.test(sessionIdHint)) {
+      throw new Error("Solana settlement requires a numeric session id");
+    }
+    const sessionId = BigInt(sessionIdHint);
+
+    const agent = new SolanaPublicKey(input.signer);
+    const programId = new SolanaPublicKey(this.solanaProgramId);
+    const [session] = findSessionPda(programId, agent, sessionId);
+    const info = await connection.getAccountInfo(session);
+    if (!info) throw new Error("Usage session not found for signer");
+    const record = decodeSessionRecord(info.data);
+    if (!record) throw new Error("Failed to decode usage session account");
+    if (record.agent !== agent.toBase58()) {
+      throw new Error("Session owner does not match payment signer");
+    }
+    if (!record.active) throw new Error("Session is not active");
+    if (record.balance < input.amount) {
+      throw new Error(
+        `Session balance too low for settlement (balance=${record.balance.toString()}, required=${input.amount.toString()})`,
+      );
+    }
+
+    const mint = new SolanaPublicKey(record.token);
+    const providerAddress = input.providerAddress || this.providerAddress;
+    if (!providerAddress) throw new Error("Invalid settlement provider address");
+
+    const [config] = findConfigPda(programId);
+    const [settlerRecord] = findSettlerPda(programId, keypair.publicKey);
+    const [vaultAuthority] = findVaultAuthorityPda(programId);
+    const vaultToken = findAssociatedTokenAddress(vaultAuthority, mint);
+    const providerToken = findAssociatedTokenAddress(providerAddress, mint);
+    const nullifier =
+      input.nullifier ??
+      createHash("sha256")
+        .update(`${sessionId}:${input.amount}:${Date.now()}`)
+        .digest();
+    const [nullifierRecord] = findNullifierPda(programId, nullifier);
+
+    const instruction = new TransactionInstruction({
+      programId,
+      keys: [
+        { pubkey: config, isSigner: false, isWritable: false },
+        { pubkey: settlerRecord, isSigner: false, isWritable: false },
+        // writable: pays rent for the nullifier record.
+        { pubkey: keypair.publicKey, isSigner: true, isWritable: true },
+        { pubkey: session, isSigner: false, isWritable: true },
+        { pubkey: nullifierRecord, isSigner: false, isWritable: true },
+        { pubkey: vaultAuthority, isSigner: false, isWritable: false },
+        { pubkey: mint, isSigner: false, isWritable: false },
+        { pubkey: vaultToken, isSigner: false, isWritable: true },
+        { pubkey: providerToken, isSigner: false, isWritable: true },
+        { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
+        { pubkey: SYSTEM_PROGRAM_ID, isSigner: false, isWritable: false },
+        // Anchor optional account: the program id signals `None`. The proof
+        // gate is off unless `set_proof_verification` was called on-chain.
+        { pubkey: programId, isSigner: false, isWritable: false },
+      ],
+      data: encodeSettle(input.amount, 0n, nullifier),
+    });
+
+    const signature = await sendAndConfirmTransaction(
+      connection,
+      new SolanaTransaction().add(instruction),
+      [keypair],
+      { commitment: "confirmed" },
+    );
+
+    return {
+      transactionHash: signature,
+      settledAmount: input.amount,
+      sessionId: String(sessionId),
+      providerAddress,
+    };
+  }
+
   async settleForSigner(
     input: SettleForSignerInput,
   ): Promise<SettlementWriteResult> {
+    if (this.isSolana) {
+      return this.settleSolana(input);
+    }
     if (this.isStellar) {
       if (!/^G[A-Z2-7]{55}$/.test(input.signer)) {
         throw new Error("Invalid signer address for settlement");

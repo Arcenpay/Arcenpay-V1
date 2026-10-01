@@ -19,7 +19,7 @@
 //  Synthetic ID ranges (reserved, never to be used by EVM):
 //    9_000_000–9_999_999   non-EVM chains
 //      9_000_000/9_000_001  Stellar (mainnet/testnet)
-//      9_100_000+           future (Solana, …)
+//      9_100_000+           Solana / future chains
 //
 //  All Stellar/Stellar testnet chainIds in the codebase MUST be
 //  sourced from the constants below — never hardcode.
@@ -37,7 +37,7 @@
  *   4. Implement a `ChainAdapter` in the facilitator for the family.
  *   5. Wire a wallet provider in the dashboard.
  */
-export type ChainFamily = "evm" | "stellar";
+export type ChainFamily = "evm" | "stellar" | "solana";
 
 /**
  * Metadata describing the on-chain encoding rules for a chain family.
@@ -78,6 +78,17 @@ export const CHAIN_FAMILY_METADATA: Record<ChainFamily, ChainFamilyMetadata> = {
     syntheticIdRangeStart: 9_000_000,
     syntheticIdRangeEnd: 9_999_999,
   },
+  solana: {
+    displayName: "Solana",
+    // Solana addresses are base58-encoded ed25519 public keys: 32–44 chars.
+    // Program/user accounts share the same encoding (no prefix distinction).
+    addressPattern: "^[1-9A-HJ-NP-Za-km-z]{32,44}$",
+    // Solana transaction signature: base58-encoded 64-byte signature (~87–88 chars).
+    txHashPattern: "^[1-9A-HJ-NP-Za-km-z]{86,90}$",
+    // Solana gets its own sub-range so it never collides with Stellar's.
+    syntheticIdRangeStart: 9_100_000,
+    syntheticIdRangeEnd: 9_199_999,
+  },
 };
 
 // ─── Synthetic chainId registry (non-EVM only) ──────────────────────────────
@@ -104,6 +115,29 @@ const STELLAR_SYNTHETIC_IDS = [
   STELLAR_MAINNET_CHAIN_ID,
   STELLAR_TESTNET_CHAIN_ID,
   STELLAR_FUTURENET_CHAIN_ID,
+] as const;
+
+// ─── Solana synthetic chainIds (reserved 9_100_000+) ────────────────────────
+
+/**
+ * Solana Mainnet Beta. Synthetic chainId 9_100_000.
+ */
+export const SOLANA_MAINNET_CHAIN_ID = 9_100_000 as const;
+
+/**
+ * Solana Devnet (used for development/testing). Synthetic chainId 9_100_001.
+ */
+export const SOLANA_DEVNET_CHAIN_ID = 9_100_001 as const;
+
+/**
+ * Solana Testnet (validator test network). Synthetic chainId 9_100_002.
+ */
+export const SOLANA_TESTNET_CHAIN_ID = 9_100_002 as const;
+
+const SOLANA_SYNTHETIC_IDS = [
+  SOLANA_MAINNET_CHAIN_ID,
+  SOLANA_DEVNET_CHAIN_ID,
+  SOLANA_TESTNET_CHAIN_ID,
 ] as const;
 
 // ─── Chain registry ──────────────────────────────────────────────────────────
@@ -269,6 +303,42 @@ export const CHAIN_REGISTRY: Record<number, ChainDescriptor> = {
     blockExplorerUrl: "https://stellar.expert/explorer/futurenet",
     nativeCurrencySymbol: "XLM",
   },
+
+  // ── Solana ──
+  // Solana has no network passphrase — the RPC endpoint itself identifies the
+  // cluster. `rpcUrl` holds the JSON-RPC endpoint; program ids live in
+  // addresses.ts. Native currency is SOL (9 decimals) — not a stablecoin;
+  // USDC is the Circle SPL mint registered in chains.ts TOKENS.
+  [SOLANA_MAINNET_CHAIN_ID]: {
+    chainId: SOLANA_MAINNET_CHAIN_ID,
+    name: "Solana",
+    family: "solana",
+    testnet: false,
+    networkPassphrase: null,
+    rpcUrl: "https://api.mainnet-beta.solana.com",
+    blockExplorerUrl: "https://explorer.solana.com",
+    nativeCurrencySymbol: "SOL",
+  },
+  [SOLANA_DEVNET_CHAIN_ID]: {
+    chainId: SOLANA_DEVNET_CHAIN_ID,
+    name: "Solana Devnet",
+    family: "solana",
+    testnet: true,
+    networkPassphrase: null,
+    rpcUrl: "https://api.devnet.solana.com",
+    blockExplorerUrl: "https://explorer.solana.com/?cluster=devnet",
+    nativeCurrencySymbol: "SOL",
+  },
+  [SOLANA_TESTNET_CHAIN_ID]: {
+    chainId: SOLANA_TESTNET_CHAIN_ID,
+    name: "Solana Testnet",
+    family: "solana",
+    testnet: true,
+    networkPassphrase: null,
+    rpcUrl: "https://api.testnet.solana.com",
+    blockExplorerUrl: "https://explorer.solana.com/?cluster=testnet",
+    nativeCurrencySymbol: "SOL",
+  },
 };
 
 // ─── Chain-family lookup helpers ─────────────────────────────────────────────
@@ -308,6 +378,16 @@ export function isStellarChain(chainId: number): boolean {
 /** True if the chain is one of the known Stellar synthetic IDs. */
 export function isStellarChainId(chainId: number): boolean {
   return (STELLAR_SYNTHETIC_IDS as readonly number[]).includes(chainId);
+}
+
+/** True if the chainId belongs to the Solana family. */
+export function isSolanaChain(chainId: number): boolean {
+  return getChainFamily(chainId) === "solana";
+}
+
+/** True if the chain is one of the known Solana synthetic IDs. */
+export function isSolanaChainId(chainId: number): boolean {
+  return (SOLANA_SYNTHETIC_IDS as readonly number[]).includes(chainId);
 }
 
 /**
@@ -362,6 +442,33 @@ export function getStellarSorobanRpcUrl(chainId: number): string {
     if (global && global.trim()) return global.trim();
   }
   return CHAIN_REGISTRY[chainId]?.sorobanRpcUrl ?? "";
+}
+
+/**
+ * Returns the Solana JSON-RPC URL for a Solana chainId, applying env override
+ * if set. The env var pattern (consistent with the other families) is:
+ *   ARCENPAY_SOLANA_RPC_URL_<chainId>  ── primary
+ *   SOLANA_RPC_URL_<chainId>           ── legacy alias
+ *   SOLANA_RPC_URL                     ── global default
+ *
+ * Throws if the chainId is not a Solana chain.
+ */
+export function getSolanaRpcUrl(chainId: number): string {
+  if (!isSolanaChain(chainId)) {
+    throw new Error(
+      `[getSolanaRpcUrl] chainId ${chainId} is not a Solana chain. ` +
+        `Known Solana chainIds: ${SOLANA_SYNTHETIC_IDS.join(", ")}`,
+    );
+  }
+  if (typeof process !== "undefined") {
+    const specific =
+      process.env[`ARCENPAY_SOLANA_RPC_URL_${chainId}`] ||
+      process.env[`SOLANA_RPC_URL_${chainId}`];
+    if (specific && specific.trim()) return specific.trim();
+    const global = process.env.SOLANA_RPC_URL;
+    if (global && global.trim()) return global.trim();
+  }
+  return CHAIN_REGISTRY[chainId]?.rpcUrl ?? "";
 }
 
 /** Returns all registered chainIds (across all families). */
@@ -444,7 +551,9 @@ export function normalizeWalletForChain(
   const trimmed = value.trim();
   if (!trimmed) return null;
   const family = getChainFamily(chainId);
-  if (family === "stellar") return trimmed;
+  // EVM addresses are case-insensitive hex; every other family (Stellar G…/C…,
+  // Solana base58) is case-sensitive and must be returned untouched.
+  if (family === "stellar" || family === "solana") return trimmed;
   return trimmed.toLowerCase();
 }
 
@@ -463,6 +572,7 @@ export function unsetAddressForFamily(family: ChainFamily): string {
     case "evm":
       return "0x0000000000000000000000000000000000000000";
     case "stellar":
+    case "solana":
       return "";
   }
 }

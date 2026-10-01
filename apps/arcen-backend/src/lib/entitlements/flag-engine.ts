@@ -18,6 +18,7 @@ import { getChain, getContractAddresses, getChainFamily } from "@arcenpay/intern
 import { getRpcUrl } from "../../config.js";
 import { DEFAULT_CHAIN_ID } from "../platform/default-chain.js";
 import { normalizeCatalogBillingPeriod } from "../catalog/catalog-entitlements.js";
+import { normalizeWallet } from "../billing/utils.js";
 
 const viemClients = new Map<number, unknown>();
 
@@ -210,9 +211,8 @@ export async function resolveCompany(
    */
   if (keys.id) where.push({ id: keys.id }, { externalId: keys.id });
   if (keys.wallet) {
-    const normalizedWallet = keys.wallet.trim();
-    const isStellar = normalizedWallet.startsWith("G") && normalizedWallet.length === 56;
-    where.push({ walletAddress: isStellar ? normalizedWallet : normalizedWallet.toLowerCase() });
+    // EVM lowercases; Stellar/Solana are case-sensitive and preserved.
+    where.push({ walletAddress: normalizeWallet(keys.wallet) ?? keys.wallet });
   }
   if (keys.email) {
     where.push({
@@ -285,12 +285,11 @@ export async function resolveCompany(
 
   // On-chain fallback: if activePlanId is null but we have a wallet, try to resolve from chain
   if (!activePlanId && keys.wallet && !company.subscriptionState) {
-    const normalizedWallet = keys.wallet.trim();
-    const isStellar = normalizedWallet.startsWith("G") && normalizedWallet.length === 56;
+    const normalizedWallet = normalizeWallet(keys.wallet) ?? keys.wallet;
     const onChainPlanId = await resolveOnChainPlan(
       teamId,
       company.id,
-      isStellar ? normalizedWallet : normalizedWallet.toLowerCase(),
+      normalizedWallet,
       keys.environmentId,
     );
     if (onChainPlanId) activePlanId = onChainPlanId;
@@ -345,7 +344,7 @@ export async function resolveUser(
   // mirroring resolveCompany. Team-scoped, so no cross-tenant reach.
   if (keys.id) where.push({ id: keys.id }, { externalId: keys.id });
   if (keys.clerkUserId) where.push({ clerkUserId: keys.clerkUserId });
-  if (keys.wallet) where.push({ walletAddress: keys.wallet.toLowerCase() });
+  if (keys.wallet) where.push({ walletAddress: normalizeWallet(keys.wallet) ?? keys.wallet });
   if (keys.email) {
     where.push({
       email: { equals: keys.email.trim(), mode: "insensitive" },

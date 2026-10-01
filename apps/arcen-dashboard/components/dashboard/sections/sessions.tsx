@@ -59,8 +59,10 @@ import {
 import { useEnvironment } from "@/contexts/environment-context";
 import { resolveEnvironmentChainId } from "@/lib/default-chain";
 import { useStellarWallet } from "@/hooks/use-stellar-wallet";
+import { useSolanaWallet } from "@/hooks/use-solana-wallet";
 import {
   isStellarChainId,
+  isSolanaChainId,
   getStellarNetworkPassphrase,
   getStellarSorobanRpcUrl,
 } from "@arcenpay/internal-core";
@@ -147,10 +149,28 @@ export function SessionsSection() {
   const environmentKey = activeEnvironment?.id ?? envMode;
   const contractAddresses = useContractAddresses(configuredChainId);
   const isStellar = isStellarChainId(configuredChainId);
+  const isSolana = isSolanaChainId(configuredChainId);
   const stellar = useStellarWallet(configuredChainId);
+  const solana = useSolanaWallet(configuredChainId);
   // Family-aware connection: wagmi's isConnected is EVM-only and always false
-  // for Freighter users on a Stellar environment.
-  const walletConnected = isStellar ? stellar.isConnected : isConnected;
+  // for Freighter/Phantom users on a Stellar/Solana environment.
+  const walletConnected = isStellar
+    ? stellar.isConnected
+    : isSolana
+      ? solana.isConnected
+      : isConnected;
+
+  // Family-aware connected wallet. Base58/Stellar addresses are case-sensitive,
+  // so only EVM addresses may be compared case-insensitively.
+  const connectedWalletAddress = isStellar
+    ? stellar.address
+    : isSolana
+      ? solana.address
+      : userAddress;
+  const sameWallet = (a: string, b: string): boolean =>
+    isStellar || isSolana
+      ? a === b
+      : a.toLowerCase() === b.toLowerCase();
 
   const [mounted, setMounted] = useState(false);
   const [payload, setPayload] = useState<SessionsPayload | null>(null);
@@ -394,7 +414,7 @@ export function SessionsSection() {
   };
 
   // ── Read: YieldSessionVault stats (EVM-only) ─────────────
-  const yieldVaultAddress = isStellar
+  const yieldVaultAddress = isStellar || isSolana
     ? undefined
     : (contractAddresses.yieldSessionVault as `0x${string}` | undefined);
 
@@ -578,8 +598,12 @@ export function SessionsSection() {
               {!sessionsLoading &&
                 sessions.map((session, index) => {
                   const lastSettlement = session.settlements?.[0];
-                  const isUser = userAddress && session.agent.toLowerCase() === userAddress.toLowerCase();
-                  const isAgent = agentWalletAddress && session.agent.toLowerCase() === agentWalletAddress.toLowerCase();
+                  const isUser = Boolean(
+                    connectedWalletAddress && sameWallet(session.agent, connectedWalletAddress),
+                  );
+                  const isAgent = Boolean(
+                    agentWalletAddress && sameWallet(session.agent, agentWalletAddress),
+                  );
 
                   return (
                     <tr
@@ -952,7 +976,7 @@ export function SessionsSection() {
             <div className="p-2.5 rounded-lg bg-secondary/50 border border-border text-xs space-y-1">
               <span className="text-muted-foreground">Session Owner on Ledger:</span>
               <div className="flex items-center gap-1.5 font-mono font-medium text-foreground">
-                <span>{isStellar ? (stellar.address ? truncateAddress(stellar.address) : "Not connected") : (userAddress ? truncateAddress(userAddress) : "Not connected")}</span>
+                <span>{connectedWalletAddress ? truncateAddress(connectedWalletAddress) : "Not connected"}</span>
                 <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20">
                   Your Connected Wallet
                 </Badge>

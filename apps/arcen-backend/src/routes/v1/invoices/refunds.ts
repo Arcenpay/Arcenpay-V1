@@ -3,6 +3,7 @@ import { z } from "zod";
 import { db } from "../../../db.js";
 import { requireInvoiceAuth, isInvoiceAuthError } from "../../../lib/auth/invoice-auth.js";
 import { writeAuditEvent } from "../../../lib/platform/audit.js";
+import { WALLET_ADDRESS_REGEX } from "../../../lib/platform/chain-family.js";
 import {
   decimalToAtomicUnits,
   normalizeTxHash,
@@ -17,7 +18,7 @@ const createSchema = z.object({
     txHash: z.string().min(1),
     recipientWallet: z
       .string()
-      .regex(/^0x[0-9a-fA-F]{40}$/i)
+      .regex(WALLET_ADDRESS_REGEX)
       .optional(),
   }),
 });

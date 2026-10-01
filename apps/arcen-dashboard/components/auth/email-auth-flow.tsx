@@ -31,6 +31,8 @@ import {
   useDashboardWallet,
 } from "@/hooks/use-dashboard-wallet";
 import { useStellarWallet } from "@/hooks/use-stellar-wallet";
+import { useSolanaWallet } from "@/hooks/use-solana-wallet";
+import { SOLANA_DEVNET_CHAIN_ID } from "@/lib/default-chain";
 import {
   getOnboardingChainFamily,
   setOnboardingChainFamily,
@@ -85,10 +87,13 @@ export function EmailAuthFlow({
     switchToRequiredNetwork,
   } = useDashboardWallet();
   const stellarWallet = useStellarWallet();
+  const solanaWallet = useSolanaWallet(SOLANA_DEVNET_CHAIN_ID);
   const [step, setStep] = useState<Step>(initialStep ?? "chain");
   const [chainFamily, setChainFamily] = useState<ChainFamily | null>(() =>
     getOnboardingChainFamily(),
   );
+  const isStellar = chainFamily === "stellar";
+  const isSolana = chainFamily === "solana";
 
   const selectChainFamily = (family: ChainFamily) => {
     setOnboardingChainFamily(family);
@@ -105,6 +110,9 @@ export function EmailAuthFlow({
   const [timerLabel, setTimerLabel] = useState("00:30");
   const [isLinkingWallet, setIsLinkingWallet] = useState(false);
   const [isPending, startTransition] = useTransition();
+  // Set when the entered email already has an account with a different wallet —
+  // the user is adding another chain family's wallet to an existing account.
+  const [existingAccountWallet, setExistingAccountWallet] = useState<string | null>(null);
 
   /* Activation key states */
   const [activationKey, setActivationKey] = useState(initialKey?.trim() || "");
@@ -329,6 +337,63 @@ export function EmailAuthFlow({
       }
     }
 
+    // Solana path
+    if (chainFamily === "solana") {
+      if (!solanaWallet.address || !solanaWallet.isConnected) {
+        setError("Reconnect your Solana wallet to finish signing.");
+        setStep("wallet");
+        return false;
+      }
+      setIsLinkingWallet(true);
+      setError(null);
+      try {
+        const nonceResponse = await apiFetch("/api/auth/nonce");
+        if (!nonceResponse.ok)
+          throw new Error("Could not start wallet verification.");
+        const noncePayload = await nonceResponse.json();
+        const nonce = noncePayload?.nonce as string | undefined;
+        const issuedAt = noncePayload?.issuedAt as string | undefined;
+        if (!nonce || !issuedAt)
+          throw new Error("Wallet verification challenge is invalid.");
+
+        // Must match the backend's expected message exactly (link-wallet.ts).
+        const message = `ArcenPay Solana Sign-In\n\nAddress: ${solanaWallet.address}\nNonce: ${nonce}\nIssued At: ${issuedAt}\nDomain: ${window.location.host}`;
+        const { signedMessage } = await solanaWallet.signMessage(message);
+
+        const linkResponse = await apiFetch("/api/auth/link-wallet", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            message,
+            signature: signedMessage,
+            address: solanaWallet.address,
+            chainId: SOLANA_DEVNET_CHAIN_ID,
+            nonce,
+          }),
+        });
+        const linkPayload = await linkResponse.json().catch(() => ({}));
+        if (!linkResponse.ok) {
+          if (linkResponse.status === 409 && linkPayload.maskedOwnerEmail)
+            throw new Error(
+              `This wallet is already linked (${linkPayload.maskedOwnerEmail}).`,
+            );
+          throw new Error(linkPayload.error || "Could not link this wallet.");
+        }
+        setOnboardingChainFamily("solana");
+        await navigatePostAuth();
+        return true;
+      } catch (err) {
+        const msg =
+          err instanceof Error ? err.message : "Could not link wallet.";
+        setError(
+          msg.toLowerCase().includes("rejected") ? "Signature cancelled." : msg,
+        );
+        return false;
+      } finally {
+        setIsLinkingWallet(false);
+      }
+    }
+
     // EVM path (existing)
     if (!isConnected || !address) {
       setError("Reconnect your wallet to finish signing.");
@@ -488,11 +553,15 @@ export function EmailAuthFlow({
   };
 
   const submitEmail = () => {
-    const walletAddr =
-      chainFamily === "stellar" ? stellarWallet.address : address;
-    const walletConnected =
-      chainFamily === "stellar"
-        ? stellarWallet.isConnected && stellarWallet.address
+    const walletAddr = isStellar
+      ? stellarWallet.address
+      : isSolana
+        ? solanaWallet.address
+        : address;
+    const walletConnected = isStellar
+      ? stellarWallet.isConnected && stellarWallet.address
+      : isSolana
+        ? solanaWallet.isConnected && solanaWallet.address
         : isConnected && address;
 
     if (!walletConnected) {
@@ -538,6 +607,11 @@ export function EmailAuthFlow({
       setDebugCode(payload.debugCode ?? null);
       setRetryAt(payload.retryAt ?? null);
       setExpiresAt(payload.expiresAt ?? null);
+      setExistingAccountWallet(
+        typeof payload.existingAccountWallet === "string"
+          ? payload.existingAccountWallet
+          : null,
+      );
       setCode("");
       setStep("code");
     });
@@ -553,9 +627,10 @@ export function EmailAuthFlow({
         body: JSON.stringify({
           email,
           code,
-          walletAddress:
-            chainFamily === "stellar"
-              ? stellarWallet.address
+          walletAddress: isStellar
+            ? stellarWallet.address
+            : isSolana
+              ? solanaWallet.address
               : address || undefined,
           ...(inviteToken ? { inviteToken } : {}),
         }),
@@ -610,11 +685,11 @@ export function EmailAuthFlow({
             <div className="mb-6 sm:mb-8">
               <h1 className="text-2xl sm:text-[28px] font-semibold text-foreground tracking-tight">
                 {step === "chain" && "Choose your blockchain"}
+                {step === "wallet" && isStellar && "Connect Stellar wallet"}
+                {step === "wallet" && isSolana && "Connect Solana wallet"}
                 {step === "wallet" &&
-                  chainFamily === "stellar" &&
-                  "Connect Stellar wallet"}
-                {step === "wallet" &&
-                  chainFamily !== "stellar" &&
+                  !isStellar &&
+                  !isSolana &&
                   "Connect your wallet"}
                 {step === "email" && "Continue with email"}
                 {step === "code" && "Enter verification code"}
@@ -625,11 +700,15 @@ export function EmailAuthFlow({
                 {step === "chain" &&
                   "Select your blockchain ecosystem first. You'll connect the appropriate wallet next."}
                 {step === "wallet" &&
-                  chainFamily !== "stellar" &&
+                  !isStellar &&
+                  !isSolana &&
                   "Connect an EVM wallet (Base, Arc, BOT Chain, Ethereum). After email verification, we'll request one signature and complete setup."}
                 {step === "wallet" &&
-                  chainFamily === "stellar" &&
+                  isStellar &&
                   "Connect a Stellar wallet (Freighter, xBull, LOBSTR). After email verification, we'll request one signature and complete setup."}
+                {step === "wallet" &&
+                  isSolana &&
+                  "Connect a Solana wallet (Phantom, Solflare). After email verification, we'll request one signature and complete setup."}
                 {step === "email" &&
                   "Once your wallet is connected, we'll send a 6-digit code to your email."}
                 {step === "code" &&
@@ -722,6 +801,127 @@ export function EmailAuthFlow({
                   </div>
                   <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-brand transition-colors shrink-0" />
                 </button>
+
+                {/* Solana Card */}
+                <button
+                  onClick={() => selectChainFamily("solana")}
+                  className="w-full flex items-center gap-4 p-5 rounded-xl border-2 border-border hover:border-brand/40 hover:bg-accent/5 transition-all text-left group"
+                >
+                  <div className="w-[44px] h-[44px] rounded-full bg-white dark:bg-white flex items-center justify-center shrink-0 ring-2 ring-background">
+                    <NetworkIcon name="solana" variant="branded" size={30} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-sm font-semibold text-foreground group-hover:text-brand transition-colors">
+                      Solana Networks
+                    </h3>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Solana Devnet — Phantom, Solflare
+                    </p>
+                  </div>
+                  <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-brand transition-colors shrink-0" />
+                </button>
+              </div>
+            ) : step === "wallet" && chainFamily === "solana" ? (
+              <div className="space-y-5">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
+                  <NetworkIcon
+                    name="solana"
+                    variant="branded"
+                    size={20}
+                    className="rounded-full"
+                  />
+                  <span>Select a Solana wallet to connect</span>
+                </div>
+
+                {solanaWallet.error && (
+                  <div className="p-3 rounded-lg bg-red-50 text-red-700 text-sm">
+                    {solanaWallet.error}
+                  </div>
+                )}
+
+                {solanaWallet.address ? (
+                  <>
+                    <div className="p-4 rounded-xl bg-brand/5 border border-brand/20">
+                      <div className="flex items-center gap-3">
+                        <CheckCircle2 className="w-5 h-5 text-brand shrink-0" />
+                        <div>
+                          <p className="text-sm font-medium text-foreground">
+                            Connected
+                          </p>
+                          <code className="text-xs font-mono text-muted-foreground">
+                            {stellarShortAddress(solanaWallet.address)}
+                          </code>
+                        </div>
+                      </div>
+                    </div>
+                    <Button
+                      type="button"
+                      className="h-12 w-full bg-brand hover:bg-brand-dark text-primary-foreground"
+                      onClick={() => {
+                        setError(null);
+                        setStep("email");
+                      }}
+                    >
+                      Continue
+                    </Button>
+                    <div className="flex items-center gap-4 text-xs">
+                      <button
+                        type="button"
+                        className="text-muted-foreground underline underline-offset-2 hover:text-foreground"
+                        onClick={() => void solanaWallet.disconnect()}
+                      >
+                        Disconnect
+                      </button>
+                      <button
+                        type="button"
+                        className="text-muted-foreground underline underline-offset-2 hover:text-foreground"
+                        onClick={async () => {
+                          await solanaWallet.disconnect();
+                          await solanaWallet.connect();
+                        }}
+                      >
+                        Use a different wallet
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <button
+                    type="button"
+                    className="h-12 w-full bg-brand hover:bg-brand-dark text-primary-foreground rounded-lg flex items-center justify-center gap-2 font-medium disabled:opacity-60"
+                    onClick={() => void solanaWallet.connect()}
+                    disabled={solanaWallet.isLoading}
+                  >
+                    {solanaWallet.isLoading ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Connecting...
+                      </>
+                    ) : (
+                      <>
+                        <NetworkIcon
+                          name="solana"
+                          variant="branded"
+                          size={18}
+                          className="rounded-full"
+                        />
+                        Connect Solana wallet
+                      </>
+                    )}
+                  </button>
+                )}
+
+                <div className="flex gap-2 text-xs">
+                  <button
+                    type="button"
+                    className="text-muted-foreground hover:text-foreground underline underline-offset-2"
+                    onClick={() => {
+                      setChainFamily(null);
+                      setStep("chain");
+                    }}
+                  >
+                    Back
+                  </button>
+                </div>
               </div>
             ) : step === "wallet" && chainFamily === "stellar" ? (
               <div className="space-y-5">
@@ -766,6 +966,25 @@ export function EmailAuthFlow({
                     >
                       Continue
                     </Button>
+                    <div className="flex items-center gap-4 text-xs">
+                      <button
+                        type="button"
+                        className="text-muted-foreground underline underline-offset-2 hover:text-foreground"
+                        onClick={() => void stellarWallet.disconnect()}
+                      >
+                        Disconnect
+                      </button>
+                      <button
+                        type="button"
+                        className="text-muted-foreground underline underline-offset-2 hover:text-foreground"
+                        onClick={async () => {
+                          await stellarWallet.disconnect();
+                          await stellarWallet.connect();
+                        }}
+                      >
+                        Use a different wallet
+                      </button>
+                    </div>
                   </>
                 ) : (
                   <button
@@ -891,7 +1110,7 @@ export function EmailAuthFlow({
             {step === "email" ? (
               <div className="space-y-6">
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  {chainFamily === "stellar" ? (
+                  {isStellar ? (
                     <>
                       <NetworkIcon
                         name="stellar"
@@ -902,6 +1121,20 @@ export function EmailAuthFlow({
                       <span className="font-mono">
                         {stellarWallet.address
                           ? stellarShortAddress(stellarWallet.address)
+                          : "Not connected"}
+                      </span>
+                    </>
+                  ) : isSolana ? (
+                    <>
+                      <NetworkIcon
+                        name="solana"
+                        variant="branded"
+                        size={14}
+                        className="rounded-full"
+                      />
+                      <span className="font-mono">
+                        {solanaWallet.address
+                          ? stellarShortAddress(solanaWallet.address)
                           : "Not connected"}
                       </span>
                     </>
@@ -972,8 +1205,23 @@ export function EmailAuthFlow({
 
             {step === "code" ? (
               <div className="space-y-6">
+                {existingAccountWallet ? (
+                  <div className="rounded-xl border border-amber-500/30 bg-amber-50 p-3 text-xs text-amber-800">
+                    <p className="font-medium">You already have an ArcEnPay account</p>
+                    <p className="mt-1 leading-relaxed">
+                      This email is linked to{" "}
+                      <code className="font-mono">
+                        {stellarShortAddress(existingAccountWallet)}
+                      </code>
+                      . Continuing links your{" "}
+                      {isSolana ? "Solana" : isStellar ? "Stellar" : "EVM"} wallet to that
+                      same account — your existing workspaces stay intact, and you can
+                      create a new {chainFamily ?? "chain"} environment afterwards.
+                    </p>
+                  </div>
+                ) : null}
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  {chainFamily === "stellar" ? (
+                  {isStellar ? (
                     <>
                       <NetworkIcon
                         name="stellar"
@@ -984,6 +1232,20 @@ export function EmailAuthFlow({
                       <span className="font-mono">
                         {stellarWallet.address
                           ? stellarShortAddress(stellarWallet.address)
+                          : "Not connected"}
+                      </span>
+                    </>
+                  ) : isSolana ? (
+                    <>
+                      <NetworkIcon
+                        name="solana"
+                        variant="branded"
+                        size={14}
+                        className="rounded-full"
+                      />
+                      <span className="font-mono">
+                        {solanaWallet.address
+                          ? stellarShortAddress(solanaWallet.address)
                           : "Not connected"}
                       </span>
                     </>
@@ -1077,7 +1339,7 @@ export function EmailAuthFlow({
             {step === "sign" ? (
               <div className="space-y-6">
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  {chainFamily === "stellar" ? (
+                  {isStellar ? (
                     <>
                       <NetworkIcon
                         name="stellar"
@@ -1088,6 +1350,20 @@ export function EmailAuthFlow({
                       <span className="font-mono">
                         {stellarWallet.address
                           ? stellarShortAddress(stellarWallet.address)
+                          : "Not connected"}
+                      </span>
+                    </>
+                  ) : isSolana ? (
+                    <>
+                      <NetworkIcon
+                        name="solana"
+                        variant="branded"
+                        size={14}
+                        className="rounded-full"
+                      />
+                      <span className="font-mono">
+                        {solanaWallet.address
+                          ? stellarShortAddress(solanaWallet.address)
                           : "Not connected"}
                       </span>
                     </>
@@ -1150,6 +1426,53 @@ export function EmailAuthFlow({
                       </div>
                     ) : null}
                   </>
+                ) : isSolana ? (
+                  <>
+                    {solanaWallet.address ? (
+                      <div className="p-4 rounded-xl bg-brand/5 border border-brand/20">
+                        <div className="flex items-center gap-3">
+                          <CheckCircle2 className="w-5 h-5 text-brand shrink-0" />
+                          <div>
+                            <p className="text-sm font-medium text-foreground">
+                              Solana wallet connected
+                            </p>
+                            <code className="text-xs font-mono text-muted-foreground">
+                              {stellarShortAddress(solanaWallet.address)}
+                            </code>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <Button
+                        type="button"
+                        className="h-12 w-full bg-brand hover:bg-brand-dark text-primary-foreground"
+                        onClick={() => void solanaWallet.connect()}
+                        disabled={solanaWallet.isLoading}
+                      >
+                        {solanaWallet.isLoading ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Connecting...
+                          </>
+                        ) : (
+                          <>
+                            <NetworkIcon
+                              name="solana"
+                              variant="branded"
+                              size={18}
+                              className="rounded-full mr-2"
+                            />
+                            Connect Solana wallet
+                          </>
+                        )}
+                      </Button>
+                    )}
+                    {solanaWallet.error ? (
+                      <div className="text-sm text-red-600">
+                        {solanaWallet.error}
+                      </div>
+                    ) : null}
+                  </>
                 ) : (
                   <>
                     <Button
@@ -1194,9 +1517,11 @@ export function EmailAuthFlow({
                   }}
                   disabled={
                     isLinkingWallet ||
-                    (chainFamily === "stellar"
+                    (isStellar
                       ? !stellarWallet.isConnected || !stellarWallet.address
-                      : !isConnected || !address || !isOnRequiredNetwork)
+                      : isSolana
+                        ? !solanaWallet.isConnected || !solanaWallet.address
+                        : !isConnected || !address || !isOnRequiredNetwork)
                   }
                   className="h-12 w-full bg-brand hover:bg-brand-dark text-primary-foreground"
                 >
@@ -1242,7 +1567,7 @@ export function EmailAuthFlow({
                 )}
 
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  {chainFamily === "stellar" ? (
+                  {isStellar ? (
                     <>
                       <NetworkIcon
                         name="stellar"
@@ -1253,6 +1578,20 @@ export function EmailAuthFlow({
                       <span className="font-mono">
                         {stellarWallet.address
                           ? stellarShortAddress(stellarWallet.address)
+                          : "Connected"}
+                      </span>
+                    </>
+                  ) : isSolana ? (
+                    <>
+                      <NetworkIcon
+                        name="solana"
+                        variant="branded"
+                        size={14}
+                        className="rounded-full"
+                      />
+                      <span className="font-mono">
+                        {solanaWallet.address
+                          ? stellarShortAddress(solanaWallet.address)
                           : "Connected"}
                       </span>
                     </>

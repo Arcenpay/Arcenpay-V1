@@ -19,6 +19,11 @@ import {
   verifyStellarPayment,
   type VerifyStellarPaymentInput,
 } from "./stellar-payment-verification.js";
+import {
+  normalizeSolanaTxHash,
+  verifySolanaPayment,
+  type VerifySolanaPaymentInput,
+} from "./solana-payment-verification.js";
 
 const ERC20_TRANSFER_ABI = [
   {
@@ -80,6 +85,10 @@ export function normalizeTxHashForFamily(
     if (!/^[a-fA-F0-9]{64}$/.test(clean)) return null;
     return clean;
   }
+  // Solana signatures are base58 (case-sensitive, no prefix).
+  if (getChainFamily(chainId) === "solana") {
+    return normalizeSolanaTxHash(trimmed);
+  }
   if (!/^0x[0-9a-fA-F]{64}$/.test(trimmed)) return null;
   return trimmed;
 }
@@ -109,7 +118,8 @@ export type VerifyDirectPaymentResult =
 
 /**
  * Dispatches direct-payment verification to the right chain family:
- * EVM → ERC-20 transfer receipt decoding; Stellar → Soroban + Horizon.
+ * EVM → ERC-20 transfer receipt decoding; Stellar → Soroban + Horizon;
+ * Solana → parsed-transaction token balance deltas.
  */
 export async function verifyDirectPayment(
   params: VerifyDirectPaymentInput,
@@ -133,6 +143,28 @@ export async function verifyDirectPayment(
       senderWallet: result.senderWallet,
       recipientWallet: result.recipientWallet,
       amountAtomic: result.amountMicros,
+    };
+  }
+
+  if (getChainFamily(params.chainId) === "solana") {
+    const solanaInput: VerifySolanaPaymentInput = {
+      chainId: params.chainId,
+      txHash: params.txHash,
+      acceptedToken: params.acceptedToken,
+      expectedAmountAtomic: params.expectedAmountAtomic,
+      recipientWallet: params.recipientWallet,
+      senderWallet: params.senderWallet,
+    };
+    const result = await verifySolanaPayment(solanaInput);
+    if (!result.ok) {
+      return { ok: false, status: result.status, error: result.error };
+    }
+    return {
+      ok: true,
+      txHash: result.txHash,
+      senderWallet: result.senderWallet,
+      recipientWallet: result.recipientWallet,
+      amountAtomic: result.amountAtomic,
     };
   }
 

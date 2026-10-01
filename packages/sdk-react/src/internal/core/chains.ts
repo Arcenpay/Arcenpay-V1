@@ -123,6 +123,9 @@ import {
   STELLAR_MAINNET_CHAIN_ID,
   STELLAR_TESTNET_CHAIN_ID,
   STELLAR_FUTURENET_CHAIN_ID,
+  SOLANA_MAINNET_CHAIN_ID,
+  SOLANA_DEVNET_CHAIN_ID,
+  SOLANA_TESTNET_CHAIN_ID,
   isValidAddressForChain,
   normalizeWalletForChain,
 } from "./chain-family";
@@ -145,6 +148,9 @@ export const SUPPORTED_CHAIN_IDS = [
   STELLAR_MAINNET_CHAIN_ID,
   STELLAR_TESTNET_CHAIN_ID,
   STELLAR_FUTURENET_CHAIN_ID,
+  SOLANA_MAINNET_CHAIN_ID,
+  SOLANA_DEVNET_CHAIN_ID,
+  SOLANA_TESTNET_CHAIN_ID,
 ] as const;
 
 export type SupportedChainId = (typeof SUPPORTED_CHAIN_IDS)[number];
@@ -216,6 +222,14 @@ export const TOKENS = {
   // Address verified against Stellar testnet SAC deployment docs.
   [STELLAR_TESTNET_CHAIN_ID]: {
     USDC: { address: 'GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5' as const, decimals: 6 },
+  },
+  // Solana Mainnet — Circle USDC SPL mint (base58 mint address, 6 decimals).
+  [SOLANA_MAINNET_CHAIN_ID]: {
+    USDC: { address: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v' as const, decimals: 6 },
+  },
+  // Solana Devnet — Circle devnet USDC SPL mint (base58, 6 decimals).
+  [SOLANA_DEVNET_CHAIN_ID]: {
+    USDC: { address: '4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU' as const, decimals: 6 },
   },
 } as const;
 

@@ -43,7 +43,8 @@ export interface WalletAdapter {
 
 export type AdapterTxParams =
   | EvmTxParams
-  | StellarTxParams;
+  | StellarTxParams
+  | SolanaTxParams;
 
 export interface EvmTxParams {
   family: "evm";
@@ -59,6 +60,22 @@ export interface StellarTxParams {
   method: string;
   args: Record<string, unknown>;
   networkPassphrase: string;
+  rpcUrl: string;
+}
+
+/**
+ * A prepared Solana instruction, assembled by the caller/backend and signed +
+ * sent by the connected wallet (Phantom/Solflare/…).
+ */
+export interface SolanaTxParams {
+  family: "solana";
+  /** Base58 program id. */
+  programId: string;
+  /** Account metas in program order. */
+  keys: Array<{ pubkey: string; isSigner: boolean; isWritable: boolean }>;
+  /** Base64-encoded instruction data (Anchor discriminator + args). */
+  data: string;
+  /** RPC endpoint used to fetch the blockhash and confirm. */
   rpcUrl: string;
 }
 

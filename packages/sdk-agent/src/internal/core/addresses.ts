@@ -25,6 +25,9 @@ import {
   STELLAR_MAINNET_CHAIN_ID,
   STELLAR_TESTNET_CHAIN_ID,
   STELLAR_FUTURENET_CHAIN_ID,
+  SOLANA_MAINNET_CHAIN_ID,
+  SOLANA_DEVNET_CHAIN_ID,
+  SOLANA_TESTNET_CHAIN_ID,
 } from './chain-family';
 
 // --- Contract Addresses per Chain ---
@@ -126,6 +129,41 @@ const ADDRESSES: Record<number, ContractAddresses> = {
     sessionVault: STELLAR_UNSET,
     zkUsageVerifier: STELLAR_UNSET,
     mirrorRegistry: STELLAR_UNSET,
+  },
+
+  // ── Solana ──
+  // Addresses hold base58 program ids. Deploy via env overrides
+  // (ARCENPAY_CONTRACT_<chainId>_<key>) or `setContractAddresses` after the
+  // Anchor program is deployed. Empty string is the family "unset" sentinel.
+  [SOLANA_MAINNET_CHAIN_ID]: {
+    subscriptionRegistry: "",
+    autopayModule: "",
+    planFactory: "",
+    feeCollector: "",
+    sessionVault: "",
+    zkUsageVerifier: "",
+    mirrorRegistry: "",
+  },
+  // ── Solana Devnet — synthetic chainId 9_100_001 ──
+  // Deployed 2026-09-30. The ArcenPay Anchor program serves all roles, so
+  // every slot holds the same program id.
+  [SOLANA_DEVNET_CHAIN_ID]: {
+    subscriptionRegistry: "D4ECHyomENvFHrdXWHcRncTwwQ1EQbyY4ga3CkcaYCP3",
+    autopayModule: "D4ECHyomENvFHrdXWHcRncTwwQ1EQbyY4ga3CkcaYCP3",
+    planFactory: "D4ECHyomENvFHrdXWHcRncTwwQ1EQbyY4ga3CkcaYCP3",
+    feeCollector: "D4ECHyomENvFHrdXWHcRncTwwQ1EQbyY4ga3CkcaYCP3",
+    sessionVault: "D4ECHyomENvFHrdXWHcRncTwwQ1EQbyY4ga3CkcaYCP3",
+    zkUsageVerifier: "D4ECHyomENvFHrdXWHcRncTwwQ1EQbyY4ga3CkcaYCP3",
+    mirrorRegistry: "D4ECHyomENvFHrdXWHcRncTwwQ1EQbyY4ga3CkcaYCP3",
+  },
+  [SOLANA_TESTNET_CHAIN_ID]: {
+    subscriptionRegistry: "",
+    autopayModule: "",
+    planFactory: "",
+    feeCollector: "",
+    sessionVault: "",
+    zkUsageVerifier: "",
+    mirrorRegistry: "",
   },
 };
 

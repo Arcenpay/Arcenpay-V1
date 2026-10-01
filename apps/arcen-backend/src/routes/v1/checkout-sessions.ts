@@ -21,6 +21,8 @@ const createSchema = z
     amount: z.coerce.number().positive().optional(),
     acceptedToken: z.string().trim().optional(),
     recipientWallet: z.string().trim().optional(),
+    /** Chain the session settles on (EVM id, or Stellar/Solana synthetic id). */
+    chainId: z.number().int().optional(),
     successUrl: z.string().url().optional(),
     cancelUrl: z.string().url().optional(),
     expiresAt: z.string().datetime().optional(),
@@ -167,7 +169,9 @@ export async function POST(c: Context) {
     amount: parsed.data.amount!,
     currency: "USDC",
     acceptedToken: parsed.data.acceptedToken!,
-    chainId: activeEnvironment?.chainId ?? RUNTIME_CHAIN_ID,
+    // An explicit chainId wins so a Solana/Stellar session isn't created on the
+    // team's default (EVM) chain; otherwise fall back to the active environment.
+    chainId: parsed.data.chainId ?? activeEnvironment?.chainId ?? RUNTIME_CHAIN_ID,
     recipientWallet: parsed.data.recipientWallet!,
     successUrl: parsed.data.successUrl,
     cancelUrl: parsed.data.cancelUrl,

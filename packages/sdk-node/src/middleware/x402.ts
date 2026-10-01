@@ -20,6 +20,8 @@ import {
   isValidAddressForChain,
   getStellarSorobanRpcUrl,
   getStellarNetworkPassphrase,
+  getSolanaRpcUrl,
+  isSolanaChain,
   normalizeX402AmountToDecimal,
   arcTestnet,
   botMainnet,
@@ -105,6 +107,38 @@ const PAYMENT_DOMAIN = {
  * `PREFIX + JSON.stringify({...})` with ed25519 instead of EIP-712.
  */
 const STELLAR_X402_SIGNING_PREFIX = "ArcenPay x402 Payment\n";
+
+/**
+ * Solana x402 signing prefix — must match @arcenpay/agent. The agent signs
+ * `PREFIX + JSON.stringify({...})` with ed25519 (base58 signature on the wire).
+ */
+const SOLANA_X402_SIGNING_PREFIX = "ArcenPay x402 Payment\n";
+
+/** Verifies a Solana ed25519 signature (base58) over a UTF-8 message. */
+async function verifySolanaMessageSignature(
+  address: string,
+  message: string,
+  signatureBase58: string,
+): Promise<boolean> {
+  try {
+    const { PublicKey } = await import("@solana/web3.js");
+    const { createPublicKey, verify } = await import("node:crypto");
+    const { decodeBase58 } = await import("../internal/core/solana");
+    const signature = decodeBase58(signatureBase58.trim());
+    if (signature.length !== 64) return false;
+    const publicKey = new PublicKey(address).toBytes();
+    // Wrap the raw ed25519 key in a minimal SPKI DER so node:crypto can verify.
+    const spkiPrefix = Buffer.from("302a300506032b6570032100", "hex");
+    const keyObject = createPublicKey({
+      key: Buffer.concat([spkiPrefix, Buffer.from(publicKey)]),
+      format: "der",
+      type: "spki",
+    });
+    return verify(null, Buffer.from(message, "utf8"), keyObject, Buffer.from(signature));
+  } catch {
+    return false;
+  }
+}
 
 const PAYMENT_TYPES = {
   Payment: [
@@ -294,26 +328,32 @@ export function x402Middleware(options: X402MiddlewareOptions) {
     "0x0000000000000000000000000000000000000000";
 
   const isStellar = getChainFamily(chainId) === "stellar";
+  const isSolana = getChainFamily(chainId) === "solana";
+
   const stellarPassphrase = isStellar
     ? getStellarNetworkPassphrase(chainId)
     : null;
   const stellarRpcUrl = isStellar
     ? rpcUrl || getStellarSorobanRpcUrl(chainId)
     : null;
+  const solanaRpcUrl = isSolana
+    ? rpcUrl || getSolanaRpcUrl(chainId)
+    : null;
 
-  // Create viem public client for on-chain reads (EVM only)
-  const chain = resolveEvmChain(
-    chainId,
-    rpcUrl || chainEnv.services.rpcUrl,
-  );
-  const publicClient = isStellar
-    ? null
-    : createPublicClient({
+  // Create viem public client for on-chain reads (EVM only — Stellar and
+  // Solana use their own RPC paths).
+  const isEvmFamily = !isStellar && !isSolana;
+  const chain = isEvmFamily
+    ? resolveEvmChain(chainId, rpcUrl || chainEnv.services.rpcUrl)
+    : null;
+  const publicClient = chain
+    ? createPublicClient({
         chain,
         transport: http(
           rpcUrl || chainEnv.services.rpcUrl || chain.rpcUrls.default.http[0],
         ),
-      });
+      })
+    : null;
 
   // Stellar balance check via Soroban `get_agent_balance`.
   async function checkStellarBalance(signer: string): Promise<bigint | null> {
@@ -331,6 +371,35 @@ export function x402Middleware(options: X402MiddlewareOptions) {
       return BigInt(result?.result ?? 0);
     } catch (err) {
       console.warn("[x402] Stellar balance check failed:", err);
+      return null;
+    }
+  }
+
+  // Solana balance check: read the Session PDA's balance for (agent, sessionId).
+  // Session layout: disc(8) agent(32) session_id(8) token(32) balance(u64) …
+  async function checkSolanaBalance(
+    signer: string,
+    sessionIdValue: string,
+  ): Promise<bigint | null> {
+    try {
+      if (!contracts.sessionVault || !solanaRpcUrl) return null;
+      const trimmed = sessionIdValue.trim();
+      if (!/^\d+$/.test(trimmed)) {
+        throw new Error("Solana x402 requires a numeric sessionId");
+      }
+      const { Connection, PublicKey } = await import("@solana/web3.js");
+      const { findSessionPda } = await import("../internal/core/solana");
+      const programId = new PublicKey(contracts.sessionVault);
+      const agent = new PublicKey(signer);
+      const [session] = findSessionPda(programId, agent, BigInt(trimmed));
+      const connection = new Connection(solanaRpcUrl, "confirmed");
+      const info = await connection.getAccountInfo(session);
+      if (!info) return 0n;
+      if (info.data.length < 8 + 32 + 8 + 32 + 8) return 0n;
+      const buf = Buffer.from(info.data);
+      return buf.readBigUInt64LE(8 + 32 + 8 + 32);
+    } catch (err) {
+      console.warn("[x402] Solana balance check failed:", err);
       return null;
     }
   }
@@ -393,7 +462,7 @@ export function x402Middleware(options: X402MiddlewareOptions) {
       const { signature, payload: payloadRaw } = paymentData;
       if (
         typeof signature !== "string" ||
-        (isStellar ? signature.length === 0 : !signature.startsWith("0x")) ||
+        (isStellar || isSolana ? signature.length === 0 : !signature.startsWith("0x")) ||
         !payloadRaw
       ) {
         sendRejection(
@@ -517,6 +586,41 @@ export function x402Middleware(options: X402MiddlewareOptions) {
           );
           return;
         }
+      } else if (isSolana) {
+        try {
+          const signedMessage = {
+            from: signerClaimed,
+            amount: normalizeAmountAsDecimal(payload.amount, requestedAmount),
+            resource: String(payload.resource || ""),
+            sessionId,
+            nonce: normalizeNonce(payload.nonce).toString(),
+            timestamp: normalizeTimestamp(payload.timestamp).toString(),
+            chainId,
+          };
+          const messageText =
+            SOLANA_X402_SIGNING_PREFIX + JSON.stringify(signedMessage);
+          const valid = await verifySolanaMessageSignature(
+            signerClaimed,
+            messageText,
+            signature,
+          );
+          if (!valid) {
+            sendRejection(
+              res,
+              "INVALID_SIGNATURE",
+              "Unable to validate the payment signature",
+            );
+            return;
+          }
+          recoveredSigner = signerClaimed;
+        } catch {
+          sendRejection(
+            res,
+            "INVALID_SIGNATURE",
+            "Unable to validate the payment signature",
+          );
+          return;
+        }
       } else {
         try {
           recoveredSigner = await recoverTypedDataAddress({
@@ -594,6 +698,10 @@ export function x402Middleware(options: X402MiddlewareOptions) {
             const stellarBalance = await checkStellarBalance(verifiedSigner);
             if (stellarBalance === null) throw new Error("Stellar balance check failed");
             balance = stellarBalance;
+          } else if (isSolana) {
+            const solanaBalance = await checkSolanaBalance(verifiedSigner, sessionId);
+            if (solanaBalance === null) throw new Error("Solana balance check failed");
+            balance = solanaBalance;
           } else {
             const safeVault = isAddress(contracts.sessionVault) ? getAddress(contracts.sessionVault) : (contracts.sessionVault as `0x${string}`);
             const safeSigner = isAddress(verifiedSigner) ? getAddress(verifiedSigner) : (verifiedSigner as `0x${string}`);

@@ -12,7 +12,7 @@ import {
 } from "./billing-ledger.js";
 import { projectPlatformBillingEntitlement } from "./platform-billing-customer.js";
 import { grantPlanCreditsForCompany } from "./usage-credits.js";
-import { deriveBillingPeriodFromInterval } from "./utils.js";
+import { deriveBillingPeriodFromInterval, normalizeWallet } from "./utils.js";
 
 export type BillingEventType =
   | "SUBSCRIPTION_MINTED"
@@ -159,7 +159,7 @@ export async function createIssuedChargeInvoice(
       number,
       currency: "USDC",
       customerEmail: input.customerEmail ?? null,
-      customerWallet: input.customerWallet?.toLowerCase() ?? null,
+      customerWallet: normalizeWallet(input.customerWallet),
       subtotal: toSix(input.amount),
       taxTotal: toSix(0),
       total: toSix(input.amount),
@@ -449,6 +449,7 @@ async function processStoredBillingEvent(
             : "SUBSCRIPTION_RENEWAL",
         amount,
         currency: "USDC",
+        chainId: payloadChainId ?? undefined,
         payerWallet: customerWallet,
         txHash: typeof payload.txHash === "string" ? payload.txHash : null,
         occurredAt,
@@ -532,6 +533,7 @@ async function processStoredBillingEvent(
       kind: "SUBSCRIPTION_RENEWAL",
       amount: Number.isFinite(amount) ? amount : 0,
       currency: "USDC",
+      chainId: payloadChainId ?? undefined,
       txHash: typeof payload.txHash === "string" ? payload.txHash : null,
       occurredAt,
       errorMessage:
@@ -604,7 +606,7 @@ async function processStoredBillingEvent(
       planId: catalogPlanId,
       onChainPlanId,
       tokenId: onChainTokenId,
-      customerWallet: customerWallet?.toLowerCase() ?? null,
+      customerWallet: normalizeWallet(customerWallet),
       amount: Number.isFinite(amount) ? amount : null,
       currency:
         typeof payload.currency === "string" && payload.currency.trim()

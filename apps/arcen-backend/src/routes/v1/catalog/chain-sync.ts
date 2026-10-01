@@ -6,7 +6,13 @@ import { writeAuditEvent } from "../../../lib/platform/audit.js";
 
 const syncSchema = z.object({
   planId: z.string().min(1, "planId required"),
-  txHash: z.string().regex(/^0x[0-9a-fA-F]{64}$/, "Invalid tx hash"),
+  // EVM `0x…` 32-byte hash, or a Solana base58 transaction signature (~64-88 chars).
+  txHash: z
+    .string()
+    .regex(
+      /^(0x[0-9a-fA-F]{64}|[1-9A-HJ-NP-Za-km-z]{64,88})$/,
+      "Invalid tx hash",
+    ),
   onChainPlanId: z.string().optional(),
   success: z.boolean(),
   errorMessage: z.string().optional(),

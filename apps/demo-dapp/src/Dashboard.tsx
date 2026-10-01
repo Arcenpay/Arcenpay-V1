@@ -5,6 +5,7 @@ import {
   useArcenPay,
   useFlag,
   useCompanyEntitlements,
+  useSolanaEmbedWallet,
   ArcenEmbed,
 } from '@arcenpay/react'
 import { requestAccess, isConnected } from '@stellar/freighter-api'
@@ -14,18 +15,42 @@ export default function Dashboard({ onResetComponent }: { onResetComponent?: () 
   const hasAiFeatures = useFlag('aifetures')
   const { entitlements, loading: entsLoading } = useCompanyEntitlements()
 
+  // Reflect the configured chain instead of a hardcoded label.
+  const chainLabel = (() => {
+    const raw = Number(import.meta.env.VITE_ARCENPAY_CHAIN_ID) || 677
+    const labels: Record<number, string> = {
+      677: 'BOT Chain Mainnet',
+      968: 'BOT Chain Testnet',
+      8453: 'Base Mainnet',
+      84532: 'Base Sepolia',
+      11155111: 'Sepolia',
+      5042002: 'Arc Testnet',
+      9000000: 'Stellar Mainnet',
+      9000001: 'Stellar Testnet',
+      9000002: 'Stellar Futurenet',
+      9100000: 'Solana Mainnet',
+      9100001: 'Solana Devnet',
+      9100002: 'Solana Testnet',
+    }
+    return `${labels[raw] ?? 'Chain'} (${raw})`
+  })()
+
   const { address: evmAddress, isConnected: isEvmConnected } = useAccount()
   const { connectAsync } = useConnect()
   const { disconnectAsync } = useDisconnect()
 
   const [walletAddress, setWalletAddress] = useState<string | null>(null)
-  const [walletType, setWalletType] = useState<'evm' | 'stellar' | null>(null)
+  const [walletType, setWalletType] = useState<'evm' | 'stellar' | 'solana' | null>(null)
   const [walletConnecting, setWalletConnecting] = useState(false)
   const [identifyError, setIdentifyError] = useState<string | null>(null)
   const [connectionStatus, setConnectionStatus] = useState<'idle' | 'connecting' | 'connected' | 'identifying' | 'ready' | 'error'>('idle')
   const [identified, setIdentified] = useState(false)
 
-  const doIdentify = useCallback(async (address: string, type: 'evm' | 'stellar') => {
+  // Solana wallet (Phantom/Solflare via Wallet Standard) — the Solana
+  // counterpart to wagmi for EVM and Freighter for Stellar.
+  const solana = useSolanaEmbedWallet()
+
+  const doIdentify = useCallback(async (address: string, type: 'evm' | 'stellar' | 'solana') => {
     setConnectionStatus('identifying')
     setWalletType(type)
     try {
@@ -82,6 +107,33 @@ export default function Dashboard({ onResetComponent }: { onResetComponent?: () 
     }
   }, [doIdentify])
 
+  const connectSolana = useCallback(async () => {
+    setWalletConnecting(true)
+    setConnectionStatus('connecting')
+    setIdentifyError(null)
+    try {
+      await solana.connect()
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err)
+      if (!msg.toLowerCase().includes('rejected') && !msg.toLowerCase().includes('cancelled')) {
+        setIdentifyError(msg)
+      }
+      setConnectionStatus('error')
+    } finally {
+      setWalletConnecting(false)
+    }
+  }, [solana])
+
+  // Once Phantom/Solflare reports a connected address, identify with it.
+  useEffect(() => {
+    if (solana.address && walletType !== 'solana') {
+      setWalletAddress(solana.address)
+      setWalletType('solana')
+      setConnectionStatus('connected')
+      doIdentify(solana.address, 'solana')
+    }
+  }, [solana.address, walletType, doIdentify])
+
   useEffect(() => {
     if (isEvmConnected && evmAddress && !walletAddress) {
       setWalletAddress(evmAddress)
@@ -93,6 +145,7 @@ export default function Dashboard({ onResetComponent }: { onResetComponent?: () 
 
   const disconnectWallet = useCallback(async () => {
     try { await disconnectAsync() } catch {}
+    try { await solana.disconnect() } catch {}
     try { localStorage.removeItem('arcenpay:embed:stellar-wallet') } catch {}
     setWalletAddress(null)
     setWalletType(null)
@@ -129,7 +182,7 @@ export default function Dashboard({ onResetComponent }: { onResetComponent?: () 
               <div style={styles.walletBadge}>
                 <span style={styles.walletDot} />
                 <span style={styles.walletText}>{walletAddress.slice(0, 6)}...{walletAddress.slice(-4)}</span>
-                <span style={styles.walletLabel}>{walletType === 'stellar' ? 'Freighter' : 'EVM'}</span>
+                <span style={styles.walletLabel}>{walletType === 'stellar' ? 'Freighter' : walletType === 'solana' ? 'Phantom' : 'EVM'}</span>
                 <button onClick={disconnectWallet} style={styles.disconnectBtn}>✕</button>
               </div>
             ) : (
@@ -139,6 +192,9 @@ export default function Dashboard({ onResetComponent }: { onResetComponent?: () 
                 </button>
                 <button onClick={connectStellar} disabled={walletConnecting} style={styles.connectBtn}>
                   {walletConnecting ? 'Connecting...' : '✦ Connect Stellar'}
+                </button>
+                <button onClick={connectSolana} disabled={walletConnecting} style={styles.connectBtn}>
+                  {walletConnecting ? 'Connecting...' : '◎ Connect Solana'}
                 </button>
               </div>
             )}
@@ -151,7 +207,7 @@ export default function Dashboard({ onResetComponent }: { onResetComponent?: () 
           <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', alignItems: 'center' }}>
             <StatusBadge status={connectionStatus} />
             <span style={{ fontSize: 13, color: '#64748b' }}>
-              {walletAddress ? `${walletType === 'stellar' ? 'Stellar' : 'EVM'}: ${walletAddress.slice(0, 8)}...` : 'No wallet connected'}
+              {walletAddress ? `${walletType === 'stellar' ? 'Stellar' : walletType === 'solana' ? 'Solana' : 'EVM'}: ${walletAddress.slice(0, 8)}...` : 'No wallet connected'}
             </span>
             {session.isReady && <span style={{ fontSize: 12, color: '#22c55e' }}>✅ Session ready</span>}
           </div>
@@ -159,7 +215,7 @@ export default function Dashboard({ onResetComponent }: { onResetComponent?: () 
             <div style={styles.errorBanner}><strong>Error:</strong> {identifyError}</div>
           )}
           <p style={{ fontSize: 13, color: '#94a3b8', marginTop: 8 }}>
-            API: api.arcenpay.com · Chain: BOT Mainnet (677)
+            API: api.arcenpay.com · Chain: {chainLabel}
             {onResetComponent && (
               <button onClick={onResetComponent} style={{ marginLeft: 16, background: 'none', border: 'none', color: '#6366f1', cursor: 'pointer', fontSize: 13, textDecoration: 'underline' }}>
                 Change component
