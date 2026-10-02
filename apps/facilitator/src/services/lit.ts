@@ -2,9 +2,11 @@
 //  @arcenpay/node — Lit Protocol Access Control Integration
 // ============================================================
 
-import { LIT_NETWORK } from "@lit-protocol/constants";
-import { decryptToString, encryptString } from "@lit-protocol/encryption";
-import { LitNodeClient } from "@lit-protocol/lit-node-client";
+// The Lit SDK is large and only needed once a Lit session actually connects.
+// Importing it statically made EVERY facilitator process (one per chain) pay
+// that memory cost at boot, which is what pushed the container into an OOM
+// kill. Load it lazily in connect()/encrypt()/decrypt() instead.
+import type { LitNodeClient } from "@lit-protocol/lit-node-client";
 import type { PlanTier } from "@arcenpay/internal-core";
 
 export interface LitAccessCondition {
@@ -45,6 +47,11 @@ export class LitProtocolService {
   }
 
   async connect(): Promise<void> {
+    const [{ LIT_NETWORK }, { LitNodeClient }] = await Promise.all([
+      import("@lit-protocol/constants"),
+      import("@lit-protocol/lit-node-client"),
+    ]);
+
     const litNetwork = (() => {
       switch (this.config.network) {
         case "habanero":
@@ -120,6 +127,7 @@ export class LitProtocolService {
   ): Promise<{ ciphertext: string; dataToEncryptHash: string }> {
     this.ensureConnected();
 
+    const { encryptString } = await import("@lit-protocol/encryption");
     const result = await encryptString(
       {
         accessControlConditions: accessConditions as any,
@@ -149,6 +157,7 @@ export class LitProtocolService {
       );
     }
 
+    const { decryptToString } = await import("@lit-protocol/encryption");
     const decrypted = await decryptToString(
       {
         accessControlConditions: accessConditions as any,
