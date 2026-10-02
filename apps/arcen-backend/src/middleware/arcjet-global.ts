@@ -1,5 +1,10 @@
 import type { Context, Next } from "hono";
-import { aj, shouldBypassGlobalProtection, arcjetNodeRequest } from "../lib/auth/arcjet.js";
+import {
+  aj,
+  shouldBypassGlobalProtection,
+  arcjetNodeRequest,
+  resolveTrustedClientIp,
+} from "../lib/auth/arcjet.js";
 
 /**
  * Global Arcjet protection middleware (shield + detectBot).
@@ -37,6 +42,16 @@ export async function arcjetGlobalProtect(c: Context, next: Next) {
   // Never block the health check.
   const pathname = new URL(c.req.url).pathname;
   if (pathname === "/health") {
+    return next();
+  }
+
+  // Internal/machine traffic (Railway health checks, in-container calls from the
+  // co-located facilitator) arrives with no proxy-appended client IP. Arcjet
+  // cannot fingerprint it, so evaluating shield/bot here only produces
+  // "Failed to build fingerprint" noise on every poll and burns quota. Such a
+  // request never came from the public internet — Railway's edge always sets
+  // X-Forwarded-For for external traffic — so it is safe to pass through.
+  if (!resolveTrustedClientIp(c.req.raw.headers)) {
     return next();
   }
 

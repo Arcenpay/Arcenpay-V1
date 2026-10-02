@@ -55,6 +55,46 @@ function spawnProcess(name, command, args, extraEnv = {}) {
   return child;
 }
 
+let shuttingDown = false;
+
+// Railway's restart policy only covers the container's main process, so a
+// facilitator that crashes at boot (bad config, RPC failure) would otherwise
+// stay dead while the backend keeps serving. Supervise each facilitator with
+// exponential backoff so the node self-heals instead of silently degrading.
+function superviseProcess(name, command, args, extraEnv = {}, options = {}) {
+  const maxRestarts = options.maxRestarts ?? 20;
+  const baseDelayMs = options.baseDelayMs ?? 3000;
+  let restarts = 0;
+
+  const start = () => {
+    const child = spawnProcess(name, command, args, extraEnv);
+
+    child.on("exit", (code, signal) => {
+      if (shuttingDown || signal === "SIGTERM" || signal === "SIGINT") return;
+
+      restarts += 1;
+      if (restarts > maxRestarts) {
+        console.error(
+          `[Railway: ${name}] Crashed ${restarts} times — giving up.`,
+        );
+        if (typeof options.onGiveUp === "function") options.onGiveUp();
+        return;
+      }
+
+      const delay = Math.min(baseDelayMs * 2 ** (restarts - 1), 60000);
+      console.warn(
+        `[Railway: ${name}] Exited (code: ${code}) — restarting in ${delay}ms ` +
+          `(attempt ${restarts}/${maxRestarts}).`,
+      );
+      setTimeout(start, delay);
+    });
+
+    return child;
+  };
+
+  return start();
+}
+
 function runCommandSync(command, args) {
   return new Promise((resolve, reject) => {
     const child = spawn(command, args, {
@@ -140,15 +180,15 @@ async function main() {
   if (runMode === "facilitator") {
     // ── Mode: Facilitator Only ─────────────────────────────
     console.log("[Railway] Launching Facilitator node(s)...");
-    const children = facilitatorChains.map((chainId, i) =>
-      spawnProcess(
+    facilitatorChains.forEach((chainId, i) =>
+      superviseProcess(
         `Facilitator[${chainId}]`,
         "node",
         ["apps/facilitator/dist/server.js"],
         facilitatorEnvFor(chainId, i),
+        { onGiveUp: () => process.exit(1) },
       ),
     );
-    children[0]?.on("exit", (code) => process.exit(code ?? 0));
     return;
   }
 
@@ -192,7 +232,7 @@ async function main() {
     // so no per-chain FACILITATOR_BASE_URL_<id> is required for billing. The
     // backend's single FACILITATOR_URL only serves single-chain endpoints
     // (paymaster, ZK proofs, sessions, ops health).
-    return spawnProcess(
+    return superviseProcess(
       `Facilitator[${chainId}]`,
       "node",
       ["apps/facilitator/dist/server.js"],
@@ -203,6 +243,7 @@ async function main() {
   // If Backend exits, exit container
   backend.on("exit", (code) => {
     console.error("[Railway] Backend process exited, terminating container...");
+    shuttingDown = true;
     for (const f of facilitators) f.kill("SIGTERM");
     process.exit(code ?? 0);
   });
