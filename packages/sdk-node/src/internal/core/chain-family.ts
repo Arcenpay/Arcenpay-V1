@@ -471,6 +471,22 @@ export function getSolanaRpcUrl(chainId: number): string {
   return CHAIN_REGISTRY[chainId]?.rpcUrl ?? "";
 }
 
+/**
+ * Ordered list of Solana RPC endpoints for a chain.
+ *
+ * A single env var may hold several comma/whitespace-separated URLs, so a chain
+ * can be given a failover set (e.g. a primary provider + a free fallback)
+ * without any code change. `getSolanaRpcUrl` keeps returning the first one, so
+ * existing callers are unaffected.
+ */
+export function getSolanaRpcUrls(chainId: number): string[] {
+  const urls = getSolanaRpcUrl(chainId)
+    .split(/[\s,]+/)
+    .map((url) => url.trim())
+    .filter(Boolean);
+  return [...new Set(urls)];
+}
+
 /** Returns all registered chainIds (across all families). */
 export function getAllRegisteredChainIds(): number[] {
   return Object.keys(CHAIN_REGISTRY).map((k) => Number(k));

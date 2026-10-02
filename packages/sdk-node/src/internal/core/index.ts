@@ -144,6 +144,7 @@ export {
   getStellarNetworkPassphrase,
   getStellarSorobanRpcUrl,
   getSolanaRpcUrl,
+  getSolanaRpcUrls,
   getAllRegisteredChainIds,
   getChainIdsForFamily,
   isEvmChain,

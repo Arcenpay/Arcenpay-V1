@@ -43,6 +43,7 @@ test("keeps token routing isolated per team", async () => {
   const storage = createMemoryStorage();
   const store = createSubscriptionRouteStore({
     keyPrefix: "arcenpay",
+    chainId: "5042002",
     maxAgeMs: 60_000,
     storage,
     now: () => 10_000,
@@ -87,6 +88,7 @@ test("recovers token routing from persisted storage after restart", async () => 
   const storage = createMemoryStorage();
   const firstStore = createSubscriptionRouteStore({
     keyPrefix: "arcenpay",
+    chainId: "5042002",
     maxAgeMs: 60_000,
     storage,
     now: () => 10_000,
@@ -103,6 +105,7 @@ test("recovers token routing from persisted storage after restart", async () => 
 
   const restartedStore = createSubscriptionRouteStore({
     keyPrefix: "arcenpay",
+    chainId: "5042002",
     maxAgeMs: 60_000,
     storage,
     now: () => 10_000,
@@ -124,7 +127,7 @@ test("evicts stale persisted routing state before it can be reused", async () =>
   const storage = createMemoryStorage();
   const tokenId = "token-stale";
   storage.backingStore.set(
-    getSubscriptionRouteStateKey("arcenpay", tokenId),
+    getSubscriptionRouteStateKey("arcenpay", tokenId, "5042002"),
     JSON.stringify(
       createRouteState({
         teamId: "team-stale",
@@ -135,6 +138,7 @@ test("evicts stale persisted routing state before it can be reused", async () =>
 
   const store = createSubscriptionRouteStore({
     keyPrefix: "arcenpay",
+    chainId: "5042002",
     maxAgeMs: 1_000,
     storage,
     now: () => 5_000,
@@ -144,9 +148,50 @@ test("evicts stale persisted routing state before it can be reused", async () =>
 
   assert.equal(recovered, null);
   assert.equal(
-    storage.backingStore.has(getSubscriptionRouteStateKey("arcenpay", tokenId)),
+    storage.backingStore.has(
+      getSubscriptionRouteStateKey("arcenpay", tokenId, "5042002"),
+    ),
     false,
   );
+});
+
+test("isolates the same tokenId across chains (no cross-chain collision)", async () => {
+  // tokenId is per-chain: EVM tokenId=1 and Solana tokenId=1 are DIFFERENT
+  // subscriptions. Before chain-scoping, one chain's routing state (and, through
+  // it, its billing event) could be suppressed as a duplicate of the other's.
+  const storage = createMemoryStorage();
+  const evmStore = createSubscriptionRouteStore({
+    keyPrefix: "arcenpay",
+    chainId: "5042002",
+    maxAgeMs: 60_000,
+    storage,
+    now: () => 10_000,
+  });
+  const solanaStore = createSubscriptionRouteStore({
+    keyPrefix: "arcenpay",
+    chainId: "9100001",
+    maxAgeMs: 60_000,
+    storage,
+    now: () => 10_000,
+  });
+
+  await evmStore.write(
+    "1",
+    createRouteState({ teamId: "team-evm", wallet: "0xabc" }),
+  );
+  await solanaStore.write(
+    "1",
+    createRouteState({ teamId: "team-solana", wallet: "AcarKdAa" }),
+  );
+
+  // Distinct storage keys…
+  assert.notEqual(
+    getSubscriptionRouteStateKey("arcenpay", "1", "5042002"),
+    getSubscriptionRouteStateKey("arcenpay", "1", "9100001"),
+  );
+  // …and each chain reads back its own state.
+  assert.equal((await evmStore.read("1"))?.teamId, "team-evm");
+  assert.equal((await solanaStore.read("1"))?.teamId, "team-solana");
 });
 
 test("falls back to plan resolution when no token routing state exists", async () => {

@@ -38,6 +38,7 @@ import {
   findNullifierPda,
   findVaultAuthorityPda,
   findAssociatedTokenAddress,
+  createSolanaConnection,
   parseSolanaSecretKey,
   TOKEN_PROGRAM_ID,
 } from "./solana-instruction-codec.js";
@@ -226,7 +227,7 @@ export class SettlementWriterService {
           "No Solana RPC URL configured for SettlementWriterService.",
         );
       }
-      this.solanaConnection = new Connection(rpcUrl, "confirmed");
+      this.solanaConnection = createSolanaConnection(this.chainId);
       this.solanaProgramId = this.sessionVaultAddress;
       this.publicClient = null;
       this.walletClient = null;

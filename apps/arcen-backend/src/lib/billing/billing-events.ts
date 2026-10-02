@@ -171,11 +171,58 @@ export interface CreateChargeInvoiceInput {
   issuedAt?: Date;
   metadata?: Record<string, unknown>;
   sendInvoiceEmail?: boolean;
+  /**
+   * On-chain transaction this invoice is for. Used to make invoice creation
+   * idempotent per payment — see the guard below.
+   */
+  paymentTxHash?: string | null;
 }
 
 export async function createIssuedChargeInvoice(
   input: CreateChargeInvoiceInput,
 ) {
+  // Idempotency: one on-chain payment ⇒ exactly ONE invoice.
+  //
+  // A subscription is projected by TWO independent paths — the synchronous
+  // activation (`finalizeSubscriptionActivation`, which already dedups) and this
+  // event path (the facilitator). Without this guard the event path issued a
+  // SECOND invoice for a payment that was already invoiced, which also produced
+  // a second receipt email. The payment itself was never duplicated (txHash is
+  // unique), so this was a double-invoice bug, not a double-charge.
+  const paymentTxHash = input.paymentTxHash?.trim();
+  if (paymentTxHash) {
+    const existingInvoiceId =
+      (
+        await db.payment.findUnique({
+          where: { txHash: paymentTxHash },
+          select: { invoiceId: true },
+        })
+      )?.invoiceId ??
+      (
+        await db.invoice.findFirst({
+          where: {
+            teamId: input.teamId,
+            metadata: { path: ["txHash"], equals: paymentTxHash } as any,
+          },
+          select: { id: true },
+        })
+      )?.id ??
+      null;
+
+    if (existingInvoiceId) {
+      const existingInvoice = await db.invoice.findUnique({
+        where: { id: existingInvoiceId },
+      });
+      if (existingInvoice) {
+        const { downloadUrl } = await ensureInvoicePdfForTeam(
+          input.teamId,
+          existingInvoice.id,
+        );
+        return { invoice: existingInvoice, downloadUrl };
+      }
+    }
+  }
+
   const team = await db.team.findUnique({
     where: { id: input.teamId },
     select: { slug: true, invoicePrefix: true, environmentMode: true },
@@ -378,6 +425,8 @@ async function processStoredBillingEvent(
         environmentId: payloadEnvironmentId,
         amount,
         description: String(payload.description || options.canonicalEventName),
+        paymentTxHash:
+          typeof payload.txHash === "string" ? payload.txHash : null,
         customerEmail: await resolveInvoiceCustomerEmail({
           payloadEmail:
             typeof payload.email === "string" ? payload.email : null,

@@ -14,7 +14,8 @@
 // ============================================================
 
 import { createHash } from "node:crypto";
-import { PublicKey } from "@solana/web3.js";
+import { Connection, PublicKey, type Commitment } from "@solana/web3.js";
+import { getSolanaRpcUrls } from "../chain-family.js";
 
 export const TOKEN_PROGRAM_ID = new PublicKey(
   "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
@@ -25,6 +26,54 @@ export const ASSOCIATED_TOKEN_PROGRAM_ID = new PublicKey(
 export const SYSTEM_PROGRAM_ID = new PublicKey(
   "11111111111111111111111111111111",
 );
+
+// ─── RPC connection (env-driven, with endpoint failover) ────────────────────
+
+/**
+ * A Solana `Connection` with endpoint failover.
+ *
+ * The RPC endpoint comes from env (`ARCENPAY_SOLANA_RPC_URL_<chainId>` /
+ * `SOLANA_RPC_URL_<chainId>`). If that value holds several comma-separated URLs,
+ * a request answered with 429/5xx (or a network error) is retried against the
+ * next endpoint and the healthy one is remembered — so a chain keeps working
+ * when one provider rate-limits, and upgrading to a paid RPC is purely an env
+ * change (`...=https://paid.example,https://api.devnet.solana.com`).
+ */
+export function createSolanaConnection(
+  chainId: number,
+  commitment: Commitment = "confirmed",
+): Connection {
+  const urls = getSolanaRpcUrls(chainId);
+  if (urls.length === 0) {
+    throw new Error(`[createSolanaConnection] No RPC URL configured for Solana chain ${chainId}.`);
+  }
+  if (urls.length === 1) return new Connection(urls[0], commitment);
+
+  let preferred = 0;
+  const fetchWithFailover: typeof fetch = async (_input, init) => {
+    let lastError: unknown = null;
+    for (let attempt = 0; attempt < urls.length; attempt += 1) {
+      const index = (preferred + attempt) % urls.length;
+      const target = urls[index];
+      try {
+        const response = await fetch(target, init);
+        if (response.status === 429 || response.status >= 500) {
+          lastError = new Error(`RPC ${target} responded ${response.status}`);
+          continue;
+        }
+        preferred = index;
+        return response;
+      } catch (error) {
+        lastError = error;
+      }
+    }
+    throw lastError instanceof Error
+      ? lastError
+      : new Error("All Solana RPC endpoints failed");
+  };
+
+  return new Connection(urls[0], { commitment, fetch: fetchWithFailover });
+}
 
 // ─── base58 ─────────────────────────────────────────────────────────────────
 

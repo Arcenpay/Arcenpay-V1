@@ -37,6 +37,7 @@ import {
   findSubscriptionPda,
   findSubscriptionDelegatePda,
   findConfigPda,
+  createSolanaConnection,
   parseSolanaSecretKey,
   TOKEN_PROGRAM_ID,
 } from "./solana-instruction-codec.js";
@@ -161,7 +162,7 @@ export class SolanaRenewalDriver {
 
   start(): void {
     if (this.pollTimer) return;
-    this.connection = new Connection(this.rpcUrl, "confirmed");
+    this.connection = createSolanaConnection(this.chainId);
     // Immediate first pass, then poll.
     void this.runOnce().catch((err) =>
       console.error("[SolanaRenewalDriver] initial run error:", err),
