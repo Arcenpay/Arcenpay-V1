@@ -207,6 +207,11 @@ export interface ChargeCustomerInput {
   recipientWallet: string;
   /** Display name for the payment link */
   name: string;
+  /**
+   * Chain the charge settles on. Accepts EVM, Stellar and Solana synthetic
+   * chain ids (e.g. 9_100_001 for Solana devnet). Omit to use the team default.
+   */
+  chainId?: number;
   /** Optional description shown on checkout */
   description?: string;
   /** Company to associate this charge with */
@@ -691,6 +696,7 @@ export class ArcenClient {
       description: input.description,
       amount: input.amount,
       recipientWallet: input.recipientWallet,
+      chainId: input.chainId,
       companyId: input.company?.id,
       successUrl: input.successUrl,
       cancelUrl: input.cancelUrl,

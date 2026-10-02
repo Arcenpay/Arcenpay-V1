@@ -1,4 +1,5 @@
 import { db } from "../../db.js";
+import { normalizeWallet } from "./utils.js";
 
 function normalizeName(value?: string | null): string | null {
   if (typeof value !== "string") return null;
@@ -7,12 +8,6 @@ function normalizeName(value?: string | null): string | null {
 }
 
 function normalizeEmail(value?: string | null): string | null {
-  if (typeof value !== "string") return null;
-  const normalized = value.trim().toLowerCase();
-  return normalized.length > 0 ? normalized : null;
-}
-
-function normalizeWallet(value?: string | null): string | null {
   if (typeof value !== "string") return null;
   const normalized = value.trim().toLowerCase();
   return normalized.length > 0 ? normalized : null;
@@ -87,7 +82,7 @@ export async function syncCustomerUserIdentity(input: {
   }
   if (
     walletAddress &&
-    user.walletAddress?.trim().toLowerCase() !== walletAddress
+    normalizeWallet(user.walletAddress) !== walletAddress
   ) {
     updates.walletAddress = walletAddress;
   }

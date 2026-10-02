@@ -1,0 +1,30 @@
+[package]
+name = "arcenpay-solana"
+version = "0.1.0"
+description = "ArcenPay subscription billing program for Solana"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+name = "arcenpay_solana"
+
+[features]
+default = []
+devnet = []
+mainnet = []
+no-entrypoint = []
+no-idl = []
+no-log-ix-name = []
+cpi = ["no-entrypoint"]
+idl-build = ["anchor-lang/idl-build", "anchor-spl/idl-build"]
+
+[dependencies]
+anchor-lang = { version = "0.30.1", features = ["init-if-needed"] }
+anchor-spl = "0.30.1"
+
+[dev-dependencies]
+solana-program-test = "1.18.26"
+solana-sdk = "1.18.26"
+spl-token = { version = "4.0", features = ["no-entrypoint"] }
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
+mock-groth16-verifier = { path = "../mock-groth16-verifier" }

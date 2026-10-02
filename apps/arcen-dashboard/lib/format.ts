@@ -70,6 +70,18 @@ export function getBlockExplorerUrl(
     return `https://stellar.expert/explorer/${network}/${stellarType}/${hash}`;
   }
 
+  // Solana chains use solscan.io (cluster query param for non-mainnet).
+  const SOLANA_CLUSTER: Record<number, string | null> = {
+    9100000: null,
+    9100001: "devnet",
+    9100002: "testnet",
+  };
+  if (chainId in SOLANA_CLUSTER) {
+    const cluster = SOLANA_CLUSTER[chainId];
+    const suffix = cluster ? `?cluster=${cluster}` : "";
+    return `https://solscan.io/${type}/${hash}${suffix}`;
+  }
+
   const BASE_URLS: Record<number, string> = {
     1: "https://etherscan.io",
     11155111: "https://sepolia.etherscan.io",
@@ -92,6 +104,16 @@ export function getBlockExplorerBase(chainId: number): string {
   };
   if (STELLAR_NETWORK[chainId]) {
     return `https://stellar.expert/explorer/${STELLAR_NETWORK[chainId]}`;
+  }
+
+  const SOLANA_CLUSTER: Record<number, string | null> = {
+    9100000: null,
+    9100001: "devnet",
+    9100002: "testnet",
+  };
+  if (chainId in SOLANA_CLUSTER) {
+    const cluster = SOLANA_CLUSTER[chainId];
+    return `https://solscan.io${cluster ? `?cluster=${cluster}` : ""}`;
   }
 
   const BASE_URLS: Record<number, string> = {

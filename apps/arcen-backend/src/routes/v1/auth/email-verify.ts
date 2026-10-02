@@ -4,6 +4,7 @@ import { authEmailVerifyProtect, arcjetNodeRequest } from "../../../lib/auth/arc
 import {
   EMAIL_AUTH_MAX_ATTEMPTS,
   EMAIL_AUTH_PURPOSE_LOGIN,
+  WALLET_ADDRESS_REGEX,
   acceptTeamInvitation,
   findWalletConflict,
   findEmailWalletConflict,
@@ -14,11 +15,6 @@ import {
 } from "../../../lib/auth/auth-flow.js";
 import { createSession } from "../../../lib/auth/auth.server.js";
 import { db } from "../../../db.js";
-
-// Accepts both EVM (0x + 40 hex) and Stellar (G + 55 base32, C + 55, or 64-hex)
-// wallet addresses. Lowercasing is applied later only for EVM addresses.
-const WALLET_ADDRESS_REGEX =
-  /^(0x[a-fA-F0-9]{40}|G[A-Z2-7]{55}|C[A-Z0-9]{55}|[A-Fa-f0-9]{64})$/;
 
 const Schema = z.object({
   email: z.string().email(),
@@ -81,6 +77,10 @@ export async function verifyEmail(c: Context) {
     return c.json({ ok: false, error: message, code: "UNAUTHORIZED" }, 401 as any);
   }
 
+  // Set when this email already has a DIFFERENT wallet linked (the user is
+  // adding another chain family's wallet to their existing account).
+  let existingAccountWallet: string | null = null;
+
   if (parsed.data.walletAddress) {
     const conflict = await findWalletConflict(parsed.data.walletAddress, email);
     if (conflict.conflict) {
@@ -94,12 +94,10 @@ export async function verifyEmail(c: Context) {
 
     const emailConflict = await findEmailWalletConflict(email, parsed.data.walletAddress);
     if (emailConflict.conflict) {
-      return c.json({
-          ok: false,
-          error: "This email is already linked to a different wallet. Please sign in with the wallet registered for this email.",
-          code: "CONFLICT",
-          ownerWallet: emailConflict.ownerWallet,
-        }, 409 as any);
+      // Informational only — the user is adding another chain family's wallet
+      // to their existing account. Linking still requires this verified email
+      // code plus a wallet signature below.
+      existingAccountWallet = emailConflict.ownerWallet;
     }
   }
 
@@ -135,6 +133,11 @@ export async function verifyEmail(c: Context) {
     ok: true,
     inviteAccepted,
     inviteError,
+    // Present when the email already had a different wallet linked — the
+    // onboarding UI confirms before adding the new one.
+    ...(existingAccountWallet
+      ? { existingAccountWallet, existingAccount: true }
+      : {}),
     redirectTo: refreshedUser.walletAddress ? "/" : "/onboarding/wallet",
   });
 }

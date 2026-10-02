@@ -2,7 +2,6 @@
 import { apiFetch } from "@/lib/api-client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useAccount, useChainId } from "wagmi";
 import {
   Copy,
   CreditCard,
@@ -63,7 +62,9 @@ import {
 } from "@/lib/payment-link-checkout";
 import { toast } from "sonner";
 import { useEnvironment } from "@/contexts/environment-context";
-import { isStellarChainId } from "@arcenpay/internal-core";
+import { useDashboardSession } from "@/hooks/use-dashboard-session";
+import { useUnifiedDashboardWallet } from "@/hooks/use-unified-dashboard-wallet";
+import { isStellarChainId, isSolanaChainId } from "@arcenpay/internal-core";
 
 type CompanyOption = {
   id: string;
@@ -222,17 +223,29 @@ function CollapsibleSection({
 }
 
 export function PaymentsSection() {
-  const { address } = useAccount();
   const { envMode, activeEnvironment } = useEnvironment();
   const configuredChainId = activeEnvironment?.chainId ?? resolveEnvironmentChainId(envMode);
   const environmentKey = activeEnvironment?.id ?? envMode;
+  // Family-aware wallet: a Solana/Stellar environment must default the payment
+  // link recipient to THAT chain's wallet — never the unrelated EVM wallet.
+  const { data: sessionData } = useDashboardSession();
+  const wallet = useUnifiedDashboardWallet(
+    configuredChainId,
+    sessionData?.user?.walletAddress ?? null,
+    sessionData?.user?.stellarWalletAddress ?? null,
+    sessionData?.user?.solanaWalletAddress ?? null,
+  );
+  const defaultRecipientWallet = wallet.connectedAddress ?? wallet.storedWallet ?? "";
   const runtimeUsdc = getUsdcAddress(configuredChainId);
   const runtimeChainLabel = getChainLabel(configuredChainId);
   // Recipient wallet shape depends on the active environment's chain family:
-  // Stellar environments take G… base32 accounts, EVM take 0x hex addresses.
+  // Stellar environments take G… base32 accounts, Solana base58 addresses, and
+  // EVM environments 0x hex addresses.
   const recipientPlaceholder = isStellarChainId(configuredChainId)
     ? "G... (Stellar account)"
-    : "0x...";
+    : isSolanaChainId(configuredChainId)
+      ? "Base58 (Solana address)"
+      : "0x...";
   const [paymentLinks, setPaymentLinks] = useState<PaymentLinkRow[]>([]);
   const [checkoutSessions, setCheckoutSessions] = useState<CheckoutSessionRow[]>([]);
   const [companies, setCompanies] = useState<CompanyOption[]>([]);
@@ -243,7 +256,7 @@ export function PaymentsSection() {
   const [form, setForm] = useState({
     name: "",
     amount: "",
-    recipientWallet: address ?? "",
+    recipientWallet: defaultRecipientWallet,
     successUrl: "",
     cancelUrl: "",
     description: "",
@@ -380,12 +393,12 @@ export function PaymentsSection() {
   }, [load]);
 
   useEffect(() => {
-    if (address) {
+    if (defaultRecipientWallet) {
       setForm((current) =>
-        current.recipientWallet ? current : { ...current, recipientWallet: address },
+        current.recipientWallet ? current : { ...current, recipientWallet: defaultRecipientWallet },
       );
     }
-  }, [address]);
+  }, [defaultRecipientWallet]);
 
   async function createCustomPaymentLink() {
     if (!form.name.trim() || !form.amount.trim() || !form.recipientWallet.trim()) {
@@ -433,7 +446,7 @@ export function PaymentsSection() {
       setForm({
         name: "",
         amount: "",
-        recipientWallet: address ?? "",
+        recipientWallet: defaultRecipientWallet,
         successUrl: "",
         cancelUrl: "",
         description: "",

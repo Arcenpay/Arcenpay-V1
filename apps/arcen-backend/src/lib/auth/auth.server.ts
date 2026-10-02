@@ -25,6 +25,7 @@ export type DashboardSession = {
   activeEnvironmentId: string | null;
   walletAddress: string | null;
   stellarWalletAddress: string | null;
+  solanaWalletAddress: string | null;
   expiresAt: Date;
 };
 
@@ -106,6 +107,7 @@ export async function getSessionFromCtx(
             currentTeamId: true,
             walletAddress: true,
             stellarWalletAddress: true,
+            solanaWalletAddress: true,
           },
         },
       },
@@ -138,6 +140,7 @@ export async function getSessionFromCtx(
       activeEnvironmentId: record.activeEnvironmentId ?? null,
       walletAddress: record.user.walletAddress ?? null,
       stellarWalletAddress: record.user.stellarWalletAddress ?? null,
+      solanaWalletAddress: record.user.solanaWalletAddress ?? null,
       expiresAt,
     };
   }
@@ -151,6 +154,7 @@ export async function getSessionFromCtx(
     activeEnvironmentId: record.activeEnvironmentId ?? null,
     walletAddress: record.user.walletAddress ?? null,
     stellarWalletAddress: record.user.stellarWalletAddress ?? null,
+    solanaWalletAddress: record.user.solanaWalletAddress ?? null,
     expiresAt: record.expiresAt,
   };
 }
@@ -191,6 +195,7 @@ export async function createSession(
           currentTeamId: true,
           walletAddress: true,
           stellarWalletAddress: true,
+          solanaWalletAddress: true,
         },
       }),
     ),
@@ -243,6 +248,7 @@ export async function createSession(
     activeEnvironmentId,
     walletAddress: user.walletAddress ?? null,
     stellarWalletAddress: user.stellarWalletAddress ?? null,
+    solanaWalletAddress: user.solanaWalletAddress ?? null,
     expiresAt,
   };
 }

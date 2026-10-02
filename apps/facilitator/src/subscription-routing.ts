@@ -18,6 +18,13 @@ export type ResolvedPlanScope = {
 
 type SubscriptionRouteStoreOptions = {
   keyPrefix: string;
+  /**
+   * Chain this store belongs to. Included in every cache/storage key so the
+   * same `tokenId` on two chains cannot collide — tokenId is per-chain, so
+   * EVM tokenId=1 and Solana tokenId=1 are different subscriptions. One store
+   * instance is created per chain context.
+   */
+  chainId: number | string;
   maxAgeMs: number;
   storage?: SubscriptionRouteStorage | null;
   getStorage?: () => SubscriptionRouteStorage | null | undefined;
@@ -58,8 +65,10 @@ function isSubscriptionRouteStateFresh(
 export function getSubscriptionRouteStateKey(
   keyPrefix: string,
   tokenId: string,
+  chainId?: number | string,
 ): string {
-  return `${keyPrefix}:subscription-route:${tokenId}`;
+  const scope = chainId === undefined || chainId === "" ? "" : `${chainId}:`;
+  return `${keyPrefix}:subscription-route:${scope}${tokenId}`;
 }
 
 export function createSubscriptionRouteStore(
@@ -68,6 +77,9 @@ export function createSubscriptionRouteStore(
   const cache = options.cache ?? new Map<string, SubscriptionRouteState>();
   const now = options.now ?? (() => Date.now());
   const onWarn = options.onWarn ?? (() => undefined);
+  const chainId = options.chainId;
+  // The in-memory cache must be scoped the same way as the storage key.
+  const cacheKey = (tokenId: string) => `${chainId}:${tokenId}`;
 
   function getStorage(): SubscriptionRouteStorage | null | undefined {
     return options.getStorage?.() ?? options.storage;
@@ -78,7 +90,9 @@ export function createSubscriptionRouteStore(
     if (!storage?.del) return;
 
     try {
-      await storage.del(getSubscriptionRouteStateKey(options.keyPrefix, tokenId));
+      await storage.del(
+        getSubscriptionRouteStateKey(options.keyPrefix, tokenId, chainId),
+      );
     } catch (error) {
       onWarn(
         `Failed deleting subscription routing state for token ${tokenId}`,
@@ -89,14 +103,14 @@ export function createSubscriptionRouteStore(
 
   return {
     async read(tokenId: string): Promise<SubscriptionRouteState | null> {
-      const cached = cache.get(tokenId);
+      const cached = cache.get(cacheKey(tokenId));
       if (cached) {
         if (
           isSubscriptionRouteStateFresh(cached, now(), options.maxAgeMs)
         ) {
           return cached;
         }
-        cache.delete(tokenId);
+        cache.delete(cacheKey(tokenId));
       }
 
       const storage = getStorage();
@@ -104,7 +118,7 @@ export function createSubscriptionRouteStore(
 
       try {
         const raw = await storage.get(
-          getSubscriptionRouteStateKey(options.keyPrefix, tokenId),
+          getSubscriptionRouteStateKey(options.keyPrefix, tokenId, chainId),
         );
         if (!raw) return null;
 
@@ -112,12 +126,12 @@ export function createSubscriptionRouteStore(
         if (
           !isSubscriptionRouteStateFresh(parsed, now(), options.maxAgeMs)
         ) {
-          cache.delete(tokenId);
+          cache.delete(cacheKey(tokenId));
           await removePersistedState(tokenId);
           return null;
         }
 
-        cache.set(tokenId, parsed);
+        cache.set(cacheKey(tokenId), parsed);
         return parsed;
       } catch (error) {
         onWarn(
@@ -132,14 +146,14 @@ export function createSubscriptionRouteStore(
       tokenId: string,
       nextState: SubscriptionRouteState,
     ): Promise<void> {
-      cache.set(tokenId, nextState);
+      cache.set(cacheKey(tokenId), nextState);
 
       const storage = getStorage();
       if (!storage?.set) return;
 
       try {
         await storage.set(
-          getSubscriptionRouteStateKey(options.keyPrefix, tokenId),
+          getSubscriptionRouteStateKey(options.keyPrefix, tokenId, chainId),
           JSON.stringify(nextState),
         );
       } catch (error) {
@@ -151,7 +165,7 @@ export function createSubscriptionRouteStore(
     },
 
     async remove(tokenId: string): Promise<void> {
-      cache.delete(tokenId);
+      cache.delete(cacheKey(tokenId));
       await removePersistedState(tokenId);
     },
   };

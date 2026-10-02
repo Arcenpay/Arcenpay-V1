@@ -263,6 +263,19 @@ export const BillingRecoveryTaskStatus = {
 export type BillingRecoveryTaskStatus = (typeof BillingRecoveryTaskStatus)[keyof typeof BillingRecoveryTaskStatus]
 
 
+export const SolanaActivationStatus = {
+  INTENT_CREATED: 'INTENT_CREATED',
+  SUBMITTED: 'SUBMITTED',
+  FINALIZED: 'FINALIZED',
+  PROVISIONING: 'PROVISIONING',
+  ACTIVE: 'ACTIVE',
+  FAILED: 'FAILED',
+  REQUIRES_ATTENTION: 'REQUIRES_ATTENTION'
+} as const
+
+export type SolanaActivationStatus = (typeof SolanaActivationStatus)[keyof typeof SolanaActivationStatus]
+
+
 export const SubscriptionChangeType = {
   UPGRADE: 'UPGRADE',
   DOWNGRADE: 'DOWNGRADE',
@@ -376,7 +389,8 @@ export type ActivationKeyStatus = (typeof ActivationKeyStatus)[keyof typeof Acti
 
 export const ChainFamily = {
   EVM: 'EVM',
-  STELLAR: 'STELLAR'
+  STELLAR: 'STELLAR',
+  SOLANA: 'SOLANA'
 } as const
 
 export type ChainFamily = (typeof ChainFamily)[keyof typeof ChainFamily]

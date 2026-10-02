@@ -1,7 +1,10 @@
 import type { Context } from "hono";
 import { db } from "../../../db.js";
 import { requireFacilitatorAuth } from "../../../lib/auth/facilitator-auth.js";
-import { findScopedSubscriberEmail } from "../../../lib/billing/subscriber-emails.js";
+import {
+  findScopedSubscriberEmail,
+  normalizeSubscriberWallet,
+} from "../../../lib/billing/subscriber-emails.js";
 
 export async function lookupSubscriber(c: Context) {
   const authError = requireFacilitatorAuth(c.req.raw.headers);
@@ -11,7 +14,10 @@ export async function lookupSubscriber(c: Context) {
   const teamId = c.req.query("teamId")?.trim() || null;
   const environmentId = c.req.query("environmentId")?.trim() || null;
 
-  if (!wallet || !/^0x[0-9a-fA-F]{40}$/.test(wallet)) {
+  // Accept any supported family (EVM/Stellar/Solana); the old 0x-only regex
+  // rejected every non-EVM subscriber wallet.
+  const normalizedWallet = normalizeSubscriberWallet(wallet);
+  if (!normalizedWallet) {
     return c.json({ error: "Invalid wallet address" }, 400 as any);
   }
 
@@ -19,13 +25,13 @@ export async function lookupSubscriber(c: Context) {
     ? await findScopedSubscriberEmail({
         teamId,
         environmentId,
-        walletAddress: wallet,
+        walletAddress: normalizedWallet,
       }).catch(() => null)
     : await db.subscriberEmail
         .findFirst({
           where: {
             scopeKey: "legacy",
-            walletAddress: wallet.toLowerCase(),
+            walletAddress: normalizedWallet,
           },
           select: { email: true, planId: true },
           orderBy: { updatedAt: "desc" },

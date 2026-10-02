@@ -6,7 +6,8 @@ import { useAccount } from "wagmi";
 import { useEnvironment } from "@/contexts/environment-context";
 import { useDashboardSession } from "@/hooks/use-dashboard-session";
 import { useStellarWallet } from "@/hooks/use-stellar-wallet";
-import { isStellarChainId } from "@arcenpay/internal-core";
+import { useSolanaWallet } from "@/hooks/use-solana-wallet";
+import { isStellarChainId, isSolanaChainId } from "@arcenpay/internal-core";
 import {
   AlertTriangle,
   DollarSign,
@@ -123,13 +124,19 @@ export function OverviewSection() {
   const overviewChainId =
     activeEnvironment?.chainId ?? resolveEnvironmentChainId(envMode);
   const stellar = useStellarWallet(overviewChainId);
+  const solana = useSolanaWallet(overviewChainId);
 
   const isStellarEnv = overviewChainId
     ? isStellarChainId(overviewChainId)
     : false;
+  const isSolanaEnv = overviewChainId
+    ? isSolanaChainId(overviewChainId)
+    : false;
   const isWalletConnected = isStellarEnv
     ? stellar.isConnected
-    : isEvmConnected;
+    : isSolanaEnv
+      ? solana.isConnected
+      : isEvmConnected;
   const [mounted, setMounted] = useState(false);
 
   const [overview, setOverview] = useState<OverviewPayload | null>(null);

@@ -278,6 +278,8 @@ export interface ChainServiceEndpoints {
   rpcUrl: string;
   /** Stellar-only: Soroban RPC URL for contract reads/simulation. */
   sorobanRpcUrl?: string;
+  /** Solana-only: JSON-RPC URL (also available via descriptor.rpcUrl). */
+  solanaRpcUrl?: string;
   subgraphUrl?: string;
   facilitatorUrl?: string;
 }
@@ -481,6 +483,21 @@ export interface ComponentRenderData {
   paymentMethod?: ComponentPaymentMethod | null;
   recentInvoices?: ComponentInvoiceSummary[];
   subscriptionTransition?: ComponentSubscriptionTransition | null;
+  /**
+   * Solana-only: an owner-signed `pause_autopay` instruction the wallet can
+   * submit to stop autopay before scheduling a cancellation. Solana has no
+   * ERC-7579 module — the program's SPL delegate is the autopay authority — so
+   * cancellation needs this explicit on-chain step. Prepared server-side
+   * because the instruction codec is Node-only.
+   */
+  solanaCancellation?: {
+    programId: string;
+    rpcUrl: string;
+    instruction: {
+      keys: Array<{ pubkey: string; isSigner: boolean; isWritable: boolean }>;
+      data: string;
+    };
+  } | null;
   /**
    * Server-enforced branding policy for the embed.
    * `hideBrandingAllowed === true` when the provider's platform tier
@@ -750,7 +767,7 @@ export interface AgenticPaymentLinkSpec {
   currency: string;
   acceptedToken: string;
   chainId: number;
-  chainFamily: "evm" | "stellar";
+  chainFamily: "evm" | "stellar" | "solana";
   recipientWallet: string;
   status: "ACTIVE" | "INACTIVE" | "ARCHIVED";
   isAgentic: boolean;
@@ -773,7 +790,7 @@ export interface AgentPaymentReceipt {
   amount: string;
   currency: string;
   chainId: number;
-  chainFamily: "evm" | "stellar";
+  chainFamily: "evm" | "stellar" | "solana";
   payerWallet: string;
   recipientWallet: string;
   timestamp: string;

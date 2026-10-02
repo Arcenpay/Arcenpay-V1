@@ -7,6 +7,7 @@ import {
   sendEmailAuthCode,
   sendTeamInviteEmail,
 } from "../billing/email.js";
+import { isValidSolanaAddress } from "../payments/solana-signature.js";
 export const EMAIL_AUTH_PURPOSE_LOGIN = "login";
 export const EMAIL_AUTH_CODE_TTL_MS = 10 * 60 * 1000;
 export const EMAIL_AUTH_RESEND_COOLDOWN_MS = 30 * 1000;
@@ -28,6 +29,12 @@ export function normalizeWalletAddress(address: string): string {
   return address;
 }
 
+/**
+ * Wallet address format accepted by the email auth routes. Single-sourced from
+ * `lib/platform/chain-family.ts` and re-exported here for route convenience.
+ */
+export { WALLET_ADDRESS_REGEX } from "../platform/chain-family.js";
+
 export function maskEmail(email: string): string {
   const [local, domain] = email.split("@");
   if (!local || !domain) return "***@***";
@@ -42,11 +49,18 @@ export async function findWalletConflict(
   const normalizedWallet = normalizeWalletAddress(walletAddress);
   const normalizedAttemptEmail = normalizeEmail(attemptEmail);
 
-  // Stellar addresses (G…) live in stellarWalletAddress; EVM addresses (0x…) in walletAddress.
-  const isStellar = normalizedWallet.startsWith("G");
+  // Stellar addresses (G…/C…) live in stellarWalletAddress; Solana base58
+  // addresses in solanaWalletAddress; EVM (0x…) in walletAddress. Stellar
+  // account/contract ids are exactly 56 chars, so length disambiguates them
+  // from shorter (≤44 char) Solana base58 addresses.
+  const isStellar =
+    normalizedWallet.length === 56 &&
+    (normalizedWallet.startsWith("G") || normalizedWallet.startsWith("C"));
   const where = isStellar
     ? { stellarWalletAddress: normalizedWallet }
-    : { walletAddress: normalizedWallet };
+    : isValidSolanaAddress(normalizedWallet)
+      ? { solanaWalletAddress: normalizedWallet }
+      : { walletAddress: normalizedWallet };
 
   const walletOwner = await db.user.findUnique({
     where,
@@ -77,7 +91,7 @@ export async function findEmailWalletConflict(
 
   const emailOwner = await db.user.findUnique({
     where: { email: normalizedEmail },
-    select: { id: true, walletAddress: true, stellarWalletAddress: true },
+    select: { id: true, walletAddress: true, stellarWalletAddress: true, solanaWalletAddress: true },
   });
 
   if (!emailOwner) {
@@ -89,6 +103,7 @@ export async function findEmailWalletConflict(
   const ownerWallets = [
     emailOwner.walletAddress,
     emailOwner.stellarWalletAddress,
+    emailOwner.solanaWalletAddress,
   ].filter(Boolean) as string[];
 
   if (ownerWallets.length === 0) {

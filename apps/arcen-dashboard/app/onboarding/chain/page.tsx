@@ -17,7 +17,11 @@ export default function ChainFamilyPage() {
     apiFetch("/api/auth/session")
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
-        if (data?.user?.walletAddress || data?.user?.stellarWalletAddress) {
+        if (
+          data?.user?.walletAddress ||
+          data?.user?.stellarWalletAddress ||
+          data?.user?.solanaWalletAddress
+        ) {
           const environments = Array.isArray(data?.environments) ? data.environments : [];
           router.replace(environments.length > 0 ? "/" : "/onboarding/provider-profile");
         }
@@ -128,6 +132,37 @@ export default function ChainFamilyPage() {
                 </p>
                 <div className="flex flex-wrap gap-1.5 mt-3">
                   {["Stellar Testnet", "Stellar Mainnet"].map((c) => (
+                    <span
+                      key={c}
+                      className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground font-medium"
+                    >
+                      {c}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </Card>
+
+          {/* Solana Card */}
+          <Card
+            className="p-5 cursor-pointer hover:border-brand/40 hover:bg-accent/5 transition-colors border-2 group"
+            onClick={() => select("solana")}
+          >
+            <div className="flex items-start gap-4">
+              <div className="w-[44px] h-[44px] rounded-full bg-white dark:bg-white flex items-center justify-center shrink-0 ring-2 ring-background">
+                <NetworkIcon name="solana" variant="branded" size={30} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="text-base font-semibold text-foreground group-hover:text-brand transition-colors">
+                  Solana Networks
+                </h3>
+                <p className="text-sm text-muted-foreground mt-1.5 leading-relaxed">
+                  Solana Devnet with the ArcenPay Anchor program — connect with
+                  Phantom or Solflare.
+                </p>
+                <div className="flex flex-wrap gap-1.5 mt-3">
+                  {["Solana Devnet", "Solana Mainnet (soon)"].map((c) => (
                     <span
                       key={c}
                       className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground font-medium"

@@ -259,6 +259,7 @@ export type ArcenCompanyWhereInput = {
   refunds?: Prisma.RefundListRelationFilter
   billingAdjustments?: Prisma.BillingAdjustmentListRelationFilter
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskListRelationFilter
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptListRelationFilter
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestListRelationFilter
   addOnGrants?: Prisma.CompanyAddOnGrantListRelationFilter
   creditGrants?: Prisma.CompanyCreditGrantListRelationFilter
@@ -296,6 +297,7 @@ export type ArcenCompanyOrderByWithRelationInput = {
   refunds?: Prisma.RefundOrderByRelationAggregateInput
   billingAdjustments?: Prisma.BillingAdjustmentOrderByRelationAggregateInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskOrderByRelationAggregateInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptOrderByRelationAggregateInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestOrderByRelationAggregateInput
   addOnGrants?: Prisma.CompanyAddOnGrantOrderByRelationAggregateInput
   creditGrants?: Prisma.CompanyCreditGrantOrderByRelationAggregateInput
@@ -338,6 +340,7 @@ export type ArcenCompanyWhereUniqueInput = Prisma.AtLeast<{
   refunds?: Prisma.RefundListRelationFilter
   billingAdjustments?: Prisma.BillingAdjustmentListRelationFilter
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskListRelationFilter
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptListRelationFilter
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestListRelationFilter
   addOnGrants?: Prisma.CompanyAddOnGrantListRelationFilter
   creditGrants?: Prisma.CompanyCreditGrantListRelationFilter
@@ -413,6 +416,7 @@ export type ArcenCompanyCreateInput = {
   refunds?: Prisma.RefundCreateNestedManyWithoutCompanyInput
   billingAdjustments?: Prisma.BillingAdjustmentCreateNestedManyWithoutCompanyInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskCreateNestedManyWithoutCompanyInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptCreateNestedManyWithoutCompanyInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestCreateNestedManyWithoutCompanyInput
   addOnGrants?: Prisma.CompanyAddOnGrantCreateNestedManyWithoutCompanyInput
   creditGrants?: Prisma.CompanyCreditGrantCreateNestedManyWithoutCompanyInput
@@ -448,6 +452,7 @@ export type ArcenCompanyUncheckedCreateInput = {
   refunds?: Prisma.RefundUncheckedCreateNestedManyWithoutCompanyInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedCreateNestedManyWithoutCompanyInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedCreateNestedManyWithoutCompanyInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUncheckedCreateNestedManyWithoutCompanyInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedCreateNestedManyWithoutCompanyInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedCreateNestedManyWithoutCompanyInput
   creditGrants?: Prisma.CompanyCreditGrantUncheckedCreateNestedManyWithoutCompanyInput
@@ -483,6 +488,7 @@ export type ArcenCompanyUpdateInput = {
   refunds?: Prisma.RefundUpdateManyWithoutCompanyNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUpdateManyWithoutCompanyNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUpdateManyWithoutCompanyNestedInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUpdateManyWithoutCompanyNestedInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUpdateManyWithoutCompanyNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUpdateManyWithoutCompanyNestedInput
   creditGrants?: Prisma.CompanyCreditGrantUpdateManyWithoutCompanyNestedInput
@@ -518,6 +524,7 @@ export type ArcenCompanyUncheckedUpdateInput = {
   refunds?: Prisma.RefundUncheckedUpdateManyWithoutCompanyNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedUpdateManyWithoutCompanyNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedUpdateManyWithoutCompanyNestedInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUncheckedUpdateManyWithoutCompanyNestedInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedUpdateManyWithoutCompanyNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedUpdateManyWithoutCompanyNestedInput
   creditGrants?: Prisma.CompanyCreditGrantUncheckedUpdateManyWithoutCompanyNestedInput
@@ -859,6 +866,20 @@ export type ArcenCompanyUpdateOneWithoutBillingRecoveryTasksNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.ArcenCompanyUpdateToOneWithWhereWithoutBillingRecoveryTasksInput, Prisma.ArcenCompanyUpdateWithoutBillingRecoveryTasksInput>, Prisma.ArcenCompanyUncheckedUpdateWithoutBillingRecoveryTasksInput>
 }
 
+export type ArcenCompanyCreateNestedOneWithoutSolanaActivationAttemptsInput = {
+  create?: Prisma.XOR<Prisma.ArcenCompanyCreateWithoutSolanaActivationAttemptsInput, Prisma.ArcenCompanyUncheckedCreateWithoutSolanaActivationAttemptsInput>
+  connectOrCreate?: Prisma.ArcenCompanyCreateOrConnectWithoutSolanaActivationAttemptsInput
+  connect?: Prisma.ArcenCompanyWhereUniqueInput
+}
+
+export type ArcenCompanyUpdateOneRequiredWithoutSolanaActivationAttemptsNestedInput = {
+  create?: Prisma.XOR<Prisma.ArcenCompanyCreateWithoutSolanaActivationAttemptsInput, Prisma.ArcenCompanyUncheckedCreateWithoutSolanaActivationAttemptsInput>
+  connectOrCreate?: Prisma.ArcenCompanyCreateOrConnectWithoutSolanaActivationAttemptsInput
+  upsert?: Prisma.ArcenCompanyUpsertWithoutSolanaActivationAttemptsInput
+  connect?: Prisma.ArcenCompanyWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.ArcenCompanyUpdateToOneWithWhereWithoutSolanaActivationAttemptsInput, Prisma.ArcenCompanyUpdateWithoutSolanaActivationAttemptsInput>, Prisma.ArcenCompanyUncheckedUpdateWithoutSolanaActivationAttemptsInput>
+}
+
 export type ArcenCompanyCreateNestedOneWithoutPlatformBillingCustomerInput = {
   create?: Prisma.XOR<Prisma.ArcenCompanyCreateWithoutPlatformBillingCustomerInput, Prisma.ArcenCompanyUncheckedCreateWithoutPlatformBillingCustomerInput>
   connectOrCreate?: Prisma.ArcenCompanyCreateOrConnectWithoutPlatformBillingCustomerInput
@@ -1032,6 +1053,7 @@ export type ArcenCompanyCreateWithoutTeamInput = {
   refunds?: Prisma.RefundCreateNestedManyWithoutCompanyInput
   billingAdjustments?: Prisma.BillingAdjustmentCreateNestedManyWithoutCompanyInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskCreateNestedManyWithoutCompanyInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptCreateNestedManyWithoutCompanyInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestCreateNestedManyWithoutCompanyInput
   addOnGrants?: Prisma.CompanyAddOnGrantCreateNestedManyWithoutCompanyInput
   creditGrants?: Prisma.CompanyCreditGrantCreateNestedManyWithoutCompanyInput
@@ -1066,6 +1088,7 @@ export type ArcenCompanyUncheckedCreateWithoutTeamInput = {
   refunds?: Prisma.RefundUncheckedCreateNestedManyWithoutCompanyInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedCreateNestedManyWithoutCompanyInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedCreateNestedManyWithoutCompanyInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUncheckedCreateNestedManyWithoutCompanyInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedCreateNestedManyWithoutCompanyInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedCreateNestedManyWithoutCompanyInput
   creditGrants?: Prisma.CompanyCreditGrantUncheckedCreateNestedManyWithoutCompanyInput
@@ -1146,6 +1169,7 @@ export type ArcenCompanyCreateWithoutEnvironmentInput = {
   refunds?: Prisma.RefundCreateNestedManyWithoutCompanyInput
   billingAdjustments?: Prisma.BillingAdjustmentCreateNestedManyWithoutCompanyInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskCreateNestedManyWithoutCompanyInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptCreateNestedManyWithoutCompanyInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestCreateNestedManyWithoutCompanyInput
   addOnGrants?: Prisma.CompanyAddOnGrantCreateNestedManyWithoutCompanyInput
   creditGrants?: Prisma.CompanyCreditGrantCreateNestedManyWithoutCompanyInput
@@ -1180,6 +1204,7 @@ export type ArcenCompanyUncheckedCreateWithoutEnvironmentInput = {
   refunds?: Prisma.RefundUncheckedCreateNestedManyWithoutCompanyInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedCreateNestedManyWithoutCompanyInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedCreateNestedManyWithoutCompanyInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUncheckedCreateNestedManyWithoutCompanyInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedCreateNestedManyWithoutCompanyInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedCreateNestedManyWithoutCompanyInput
   creditGrants?: Prisma.CompanyCreditGrantUncheckedCreateNestedManyWithoutCompanyInput
@@ -1240,6 +1265,7 @@ export type ArcenCompanyCreateWithoutInvoicesInput = {
   refunds?: Prisma.RefundCreateNestedManyWithoutCompanyInput
   billingAdjustments?: Prisma.BillingAdjustmentCreateNestedManyWithoutCompanyInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskCreateNestedManyWithoutCompanyInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptCreateNestedManyWithoutCompanyInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestCreateNestedManyWithoutCompanyInput
   addOnGrants?: Prisma.CompanyAddOnGrantCreateNestedManyWithoutCompanyInput
   creditGrants?: Prisma.CompanyCreditGrantCreateNestedManyWithoutCompanyInput
@@ -1274,6 +1300,7 @@ export type ArcenCompanyUncheckedCreateWithoutInvoicesInput = {
   refunds?: Prisma.RefundUncheckedCreateNestedManyWithoutCompanyInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedCreateNestedManyWithoutCompanyInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedCreateNestedManyWithoutCompanyInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUncheckedCreateNestedManyWithoutCompanyInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedCreateNestedManyWithoutCompanyInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedCreateNestedManyWithoutCompanyInput
   creditGrants?: Prisma.CompanyCreditGrantUncheckedCreateNestedManyWithoutCompanyInput
@@ -1324,6 +1351,7 @@ export type ArcenCompanyUpdateWithoutInvoicesInput = {
   refunds?: Prisma.RefundUpdateManyWithoutCompanyNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUpdateManyWithoutCompanyNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUpdateManyWithoutCompanyNestedInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUpdateManyWithoutCompanyNestedInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUpdateManyWithoutCompanyNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUpdateManyWithoutCompanyNestedInput
   creditGrants?: Prisma.CompanyCreditGrantUpdateManyWithoutCompanyNestedInput
@@ -1358,6 +1386,7 @@ export type ArcenCompanyUncheckedUpdateWithoutInvoicesInput = {
   refunds?: Prisma.RefundUncheckedUpdateManyWithoutCompanyNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedUpdateManyWithoutCompanyNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedUpdateManyWithoutCompanyNestedInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUncheckedUpdateManyWithoutCompanyNestedInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedUpdateManyWithoutCompanyNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedUpdateManyWithoutCompanyNestedInput
   creditGrants?: Prisma.CompanyCreditGrantUncheckedUpdateManyWithoutCompanyNestedInput
@@ -1392,6 +1421,7 @@ export type ArcenCompanyCreateWithoutSubscriptionStateInput = {
   refunds?: Prisma.RefundCreateNestedManyWithoutCompanyInput
   billingAdjustments?: Prisma.BillingAdjustmentCreateNestedManyWithoutCompanyInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskCreateNestedManyWithoutCompanyInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptCreateNestedManyWithoutCompanyInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestCreateNestedManyWithoutCompanyInput
   addOnGrants?: Prisma.CompanyAddOnGrantCreateNestedManyWithoutCompanyInput
   creditGrants?: Prisma.CompanyCreditGrantCreateNestedManyWithoutCompanyInput
@@ -1426,6 +1456,7 @@ export type ArcenCompanyUncheckedCreateWithoutSubscriptionStateInput = {
   refunds?: Prisma.RefundUncheckedCreateNestedManyWithoutCompanyInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedCreateNestedManyWithoutCompanyInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedCreateNestedManyWithoutCompanyInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUncheckedCreateNestedManyWithoutCompanyInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedCreateNestedManyWithoutCompanyInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedCreateNestedManyWithoutCompanyInput
   creditGrants?: Prisma.CompanyCreditGrantUncheckedCreateNestedManyWithoutCompanyInput
@@ -1476,6 +1507,7 @@ export type ArcenCompanyUpdateWithoutSubscriptionStateInput = {
   refunds?: Prisma.RefundUpdateManyWithoutCompanyNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUpdateManyWithoutCompanyNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUpdateManyWithoutCompanyNestedInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUpdateManyWithoutCompanyNestedInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUpdateManyWithoutCompanyNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUpdateManyWithoutCompanyNestedInput
   creditGrants?: Prisma.CompanyCreditGrantUpdateManyWithoutCompanyNestedInput
@@ -1510,6 +1542,7 @@ export type ArcenCompanyUncheckedUpdateWithoutSubscriptionStateInput = {
   refunds?: Prisma.RefundUncheckedUpdateManyWithoutCompanyNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedUpdateManyWithoutCompanyNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedUpdateManyWithoutCompanyNestedInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUncheckedUpdateManyWithoutCompanyNestedInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedUpdateManyWithoutCompanyNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedUpdateManyWithoutCompanyNestedInput
   creditGrants?: Prisma.CompanyCreditGrantUncheckedUpdateManyWithoutCompanyNestedInput
@@ -1545,6 +1578,7 @@ export type ArcenCompanyCreateWithoutSubscriptionChangeRequestsInput = {
   refunds?: Prisma.RefundCreateNestedManyWithoutCompanyInput
   billingAdjustments?: Prisma.BillingAdjustmentCreateNestedManyWithoutCompanyInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskCreateNestedManyWithoutCompanyInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptCreateNestedManyWithoutCompanyInput
   addOnGrants?: Prisma.CompanyAddOnGrantCreateNestedManyWithoutCompanyInput
   creditGrants?: Prisma.CompanyCreditGrantCreateNestedManyWithoutCompanyInput
   creditLedgerEntries?: Prisma.CreditLedgerEntryCreateNestedManyWithoutCompanyInput
@@ -1579,6 +1613,7 @@ export type ArcenCompanyUncheckedCreateWithoutSubscriptionChangeRequestsInput = 
   refunds?: Prisma.RefundUncheckedCreateNestedManyWithoutCompanyInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedCreateNestedManyWithoutCompanyInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedCreateNestedManyWithoutCompanyInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUncheckedCreateNestedManyWithoutCompanyInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedCreateNestedManyWithoutCompanyInput
   creditGrants?: Prisma.CompanyCreditGrantUncheckedCreateNestedManyWithoutCompanyInput
   creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedCreateNestedManyWithoutCompanyInput
@@ -1629,6 +1664,7 @@ export type ArcenCompanyUpdateWithoutSubscriptionChangeRequestsInput = {
   refunds?: Prisma.RefundUpdateManyWithoutCompanyNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUpdateManyWithoutCompanyNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUpdateManyWithoutCompanyNestedInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUpdateManyWithoutCompanyNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUpdateManyWithoutCompanyNestedInput
   creditGrants?: Prisma.CompanyCreditGrantUpdateManyWithoutCompanyNestedInput
   creditLedgerEntries?: Prisma.CreditLedgerEntryUpdateManyWithoutCompanyNestedInput
@@ -1663,6 +1699,7 @@ export type ArcenCompanyUncheckedUpdateWithoutSubscriptionChangeRequestsInput = 
   refunds?: Prisma.RefundUncheckedUpdateManyWithoutCompanyNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedUpdateManyWithoutCompanyNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedUpdateManyWithoutCompanyNestedInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUncheckedUpdateManyWithoutCompanyNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedUpdateManyWithoutCompanyNestedInput
   creditGrants?: Prisma.CompanyCreditGrantUncheckedUpdateManyWithoutCompanyNestedInput
   creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedUpdateManyWithoutCompanyNestedInput
@@ -1696,6 +1733,7 @@ export type ArcenCompanyCreateWithoutPaymentsInput = {
   refunds?: Prisma.RefundCreateNestedManyWithoutCompanyInput
   billingAdjustments?: Prisma.BillingAdjustmentCreateNestedManyWithoutCompanyInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskCreateNestedManyWithoutCompanyInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptCreateNestedManyWithoutCompanyInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestCreateNestedManyWithoutCompanyInput
   addOnGrants?: Prisma.CompanyAddOnGrantCreateNestedManyWithoutCompanyInput
   creditGrants?: Prisma.CompanyCreditGrantCreateNestedManyWithoutCompanyInput
@@ -1730,6 +1768,7 @@ export type ArcenCompanyUncheckedCreateWithoutPaymentsInput = {
   refunds?: Prisma.RefundUncheckedCreateNestedManyWithoutCompanyInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedCreateNestedManyWithoutCompanyInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedCreateNestedManyWithoutCompanyInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUncheckedCreateNestedManyWithoutCompanyInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedCreateNestedManyWithoutCompanyInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedCreateNestedManyWithoutCompanyInput
   creditGrants?: Prisma.CompanyCreditGrantUncheckedCreateNestedManyWithoutCompanyInput
@@ -1780,6 +1819,7 @@ export type ArcenCompanyUpdateWithoutPaymentsInput = {
   refunds?: Prisma.RefundUpdateManyWithoutCompanyNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUpdateManyWithoutCompanyNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUpdateManyWithoutCompanyNestedInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUpdateManyWithoutCompanyNestedInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUpdateManyWithoutCompanyNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUpdateManyWithoutCompanyNestedInput
   creditGrants?: Prisma.CompanyCreditGrantUpdateManyWithoutCompanyNestedInput
@@ -1814,6 +1854,7 @@ export type ArcenCompanyUncheckedUpdateWithoutPaymentsInput = {
   refunds?: Prisma.RefundUncheckedUpdateManyWithoutCompanyNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedUpdateManyWithoutCompanyNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedUpdateManyWithoutCompanyNestedInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUncheckedUpdateManyWithoutCompanyNestedInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedUpdateManyWithoutCompanyNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedUpdateManyWithoutCompanyNestedInput
   creditGrants?: Prisma.CompanyCreditGrantUncheckedUpdateManyWithoutCompanyNestedInput
@@ -1848,6 +1889,7 @@ export type ArcenCompanyCreateWithoutBillingAdjustmentsInput = {
   invoices?: Prisma.InvoiceCreateNestedManyWithoutCompanyInput
   refunds?: Prisma.RefundCreateNestedManyWithoutCompanyInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskCreateNestedManyWithoutCompanyInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptCreateNestedManyWithoutCompanyInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestCreateNestedManyWithoutCompanyInput
   addOnGrants?: Prisma.CompanyAddOnGrantCreateNestedManyWithoutCompanyInput
   creditGrants?: Prisma.CompanyCreditGrantCreateNestedManyWithoutCompanyInput
@@ -1882,6 +1924,7 @@ export type ArcenCompanyUncheckedCreateWithoutBillingAdjustmentsInput = {
   invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutCompanyInput
   refunds?: Prisma.RefundUncheckedCreateNestedManyWithoutCompanyInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedCreateNestedManyWithoutCompanyInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUncheckedCreateNestedManyWithoutCompanyInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedCreateNestedManyWithoutCompanyInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedCreateNestedManyWithoutCompanyInput
   creditGrants?: Prisma.CompanyCreditGrantUncheckedCreateNestedManyWithoutCompanyInput
@@ -1932,6 +1975,7 @@ export type ArcenCompanyUpdateWithoutBillingAdjustmentsInput = {
   invoices?: Prisma.InvoiceUpdateManyWithoutCompanyNestedInput
   refunds?: Prisma.RefundUpdateManyWithoutCompanyNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUpdateManyWithoutCompanyNestedInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUpdateManyWithoutCompanyNestedInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUpdateManyWithoutCompanyNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUpdateManyWithoutCompanyNestedInput
   creditGrants?: Prisma.CompanyCreditGrantUpdateManyWithoutCompanyNestedInput
@@ -1966,6 +2010,7 @@ export type ArcenCompanyUncheckedUpdateWithoutBillingAdjustmentsInput = {
   invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutCompanyNestedInput
   refunds?: Prisma.RefundUncheckedUpdateManyWithoutCompanyNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedUpdateManyWithoutCompanyNestedInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUncheckedUpdateManyWithoutCompanyNestedInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedUpdateManyWithoutCompanyNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedUpdateManyWithoutCompanyNestedInput
   creditGrants?: Prisma.CompanyCreditGrantUncheckedUpdateManyWithoutCompanyNestedInput
@@ -2000,6 +2045,7 @@ export type ArcenCompanyCreateWithoutBillingBalanceInput = {
   refunds?: Prisma.RefundCreateNestedManyWithoutCompanyInput
   billingAdjustments?: Prisma.BillingAdjustmentCreateNestedManyWithoutCompanyInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskCreateNestedManyWithoutCompanyInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptCreateNestedManyWithoutCompanyInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestCreateNestedManyWithoutCompanyInput
   addOnGrants?: Prisma.CompanyAddOnGrantCreateNestedManyWithoutCompanyInput
   creditGrants?: Prisma.CompanyCreditGrantCreateNestedManyWithoutCompanyInput
@@ -2034,6 +2080,7 @@ export type ArcenCompanyUncheckedCreateWithoutBillingBalanceInput = {
   refunds?: Prisma.RefundUncheckedCreateNestedManyWithoutCompanyInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedCreateNestedManyWithoutCompanyInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedCreateNestedManyWithoutCompanyInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUncheckedCreateNestedManyWithoutCompanyInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedCreateNestedManyWithoutCompanyInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedCreateNestedManyWithoutCompanyInput
   creditGrants?: Prisma.CompanyCreditGrantUncheckedCreateNestedManyWithoutCompanyInput
@@ -2084,6 +2131,7 @@ export type ArcenCompanyUpdateWithoutBillingBalanceInput = {
   refunds?: Prisma.RefundUpdateManyWithoutCompanyNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUpdateManyWithoutCompanyNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUpdateManyWithoutCompanyNestedInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUpdateManyWithoutCompanyNestedInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUpdateManyWithoutCompanyNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUpdateManyWithoutCompanyNestedInput
   creditGrants?: Prisma.CompanyCreditGrantUpdateManyWithoutCompanyNestedInput
@@ -2118,6 +2166,7 @@ export type ArcenCompanyUncheckedUpdateWithoutBillingBalanceInput = {
   refunds?: Prisma.RefundUncheckedUpdateManyWithoutCompanyNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedUpdateManyWithoutCompanyNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedUpdateManyWithoutCompanyNestedInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUncheckedUpdateManyWithoutCompanyNestedInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedUpdateManyWithoutCompanyNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedUpdateManyWithoutCompanyNestedInput
   creditGrants?: Prisma.CompanyCreditGrantUncheckedUpdateManyWithoutCompanyNestedInput
@@ -2152,6 +2201,7 @@ export type ArcenCompanyCreateWithoutRefundsInput = {
   invoices?: Prisma.InvoiceCreateNestedManyWithoutCompanyInput
   billingAdjustments?: Prisma.BillingAdjustmentCreateNestedManyWithoutCompanyInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskCreateNestedManyWithoutCompanyInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptCreateNestedManyWithoutCompanyInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestCreateNestedManyWithoutCompanyInput
   addOnGrants?: Prisma.CompanyAddOnGrantCreateNestedManyWithoutCompanyInput
   creditGrants?: Prisma.CompanyCreditGrantCreateNestedManyWithoutCompanyInput
@@ -2186,6 +2236,7 @@ export type ArcenCompanyUncheckedCreateWithoutRefundsInput = {
   invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutCompanyInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedCreateNestedManyWithoutCompanyInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedCreateNestedManyWithoutCompanyInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUncheckedCreateNestedManyWithoutCompanyInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedCreateNestedManyWithoutCompanyInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedCreateNestedManyWithoutCompanyInput
   creditGrants?: Prisma.CompanyCreditGrantUncheckedCreateNestedManyWithoutCompanyInput
@@ -2236,6 +2287,7 @@ export type ArcenCompanyUpdateWithoutRefundsInput = {
   invoices?: Prisma.InvoiceUpdateManyWithoutCompanyNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUpdateManyWithoutCompanyNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUpdateManyWithoutCompanyNestedInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUpdateManyWithoutCompanyNestedInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUpdateManyWithoutCompanyNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUpdateManyWithoutCompanyNestedInput
   creditGrants?: Prisma.CompanyCreditGrantUpdateManyWithoutCompanyNestedInput
@@ -2270,6 +2322,7 @@ export type ArcenCompanyUncheckedUpdateWithoutRefundsInput = {
   invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutCompanyNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedUpdateManyWithoutCompanyNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedUpdateManyWithoutCompanyNestedInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUncheckedUpdateManyWithoutCompanyNestedInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedUpdateManyWithoutCompanyNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedUpdateManyWithoutCompanyNestedInput
   creditGrants?: Prisma.CompanyCreditGrantUncheckedUpdateManyWithoutCompanyNestedInput
@@ -2304,6 +2357,7 @@ export type ArcenCompanyCreateWithoutBillingRecoveryTasksInput = {
   invoices?: Prisma.InvoiceCreateNestedManyWithoutCompanyInput
   refunds?: Prisma.RefundCreateNestedManyWithoutCompanyInput
   billingAdjustments?: Prisma.BillingAdjustmentCreateNestedManyWithoutCompanyInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptCreateNestedManyWithoutCompanyInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestCreateNestedManyWithoutCompanyInput
   addOnGrants?: Prisma.CompanyAddOnGrantCreateNestedManyWithoutCompanyInput
   creditGrants?: Prisma.CompanyCreditGrantCreateNestedManyWithoutCompanyInput
@@ -2338,6 +2392,7 @@ export type ArcenCompanyUncheckedCreateWithoutBillingRecoveryTasksInput = {
   invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutCompanyInput
   refunds?: Prisma.RefundUncheckedCreateNestedManyWithoutCompanyInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedCreateNestedManyWithoutCompanyInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUncheckedCreateNestedManyWithoutCompanyInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedCreateNestedManyWithoutCompanyInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedCreateNestedManyWithoutCompanyInput
   creditGrants?: Prisma.CompanyCreditGrantUncheckedCreateNestedManyWithoutCompanyInput
@@ -2388,6 +2443,7 @@ export type ArcenCompanyUpdateWithoutBillingRecoveryTasksInput = {
   invoices?: Prisma.InvoiceUpdateManyWithoutCompanyNestedInput
   refunds?: Prisma.RefundUpdateManyWithoutCompanyNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUpdateManyWithoutCompanyNestedInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUpdateManyWithoutCompanyNestedInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUpdateManyWithoutCompanyNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUpdateManyWithoutCompanyNestedInput
   creditGrants?: Prisma.CompanyCreditGrantUpdateManyWithoutCompanyNestedInput
@@ -2422,6 +2478,163 @@ export type ArcenCompanyUncheckedUpdateWithoutBillingRecoveryTasksInput = {
   invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutCompanyNestedInput
   refunds?: Prisma.RefundUncheckedUpdateManyWithoutCompanyNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedUpdateManyWithoutCompanyNestedInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUncheckedUpdateManyWithoutCompanyNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedUpdateManyWithoutCompanyNestedInput
+  addOnGrants?: Prisma.CompanyAddOnGrantUncheckedUpdateManyWithoutCompanyNestedInput
+  creditGrants?: Prisma.CompanyCreditGrantUncheckedUpdateManyWithoutCompanyNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedUpdateManyWithoutCompanyNestedInput
+  paymentLinks?: Prisma.PaymentLinkUncheckedUpdateManyWithoutCompanyNestedInput
+  checkoutSessions?: Prisma.CheckoutSessionUncheckedUpdateManyWithoutCompanyNestedInput
+  platformBillingCustomer?: Prisma.PlatformBillingCustomerUncheckedUpdateOneWithoutCompanyNestedInput
+}
+
+export type ArcenCompanyCreateWithoutSolanaActivationAttemptsInput = {
+  id?: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  lastSeenAt?: Date | string
+  name: string
+  walletAddress?: string | null
+  email?: string | null
+  externalId?: string | null
+  logoUrl?: string | null
+  traits?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  activePlanId?: string | null
+  activeAddOnIds?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  team: Prisma.TeamCreateNestedOneWithoutArcenCompaniesInput
+  environment?: Prisma.WorkspaceEnvironmentCreateNestedOneWithoutArcenCompaniesInput
+  users?: Prisma.ArcenUserCreateNestedManyWithoutCompanyInput
+  overrides?: Prisma.CompanyOverrideCreateNestedManyWithoutCompanyInput
+  events?: Prisma.ArcenEventCreateNestedManyWithoutCompanyInput
+  zkProofs?: Prisma.ZkTlsProofCreateNestedManyWithoutCompanyInput
+  subscriptionState?: Prisma.SubscriptionStateCreateNestedOneWithoutCompanyInput
+  billingBalance?: Prisma.BillingBalanceCreateNestedOneWithoutCompanyInput
+  payments?: Prisma.PaymentCreateNestedManyWithoutCompanyInput
+  invoices?: Prisma.InvoiceCreateNestedManyWithoutCompanyInput
+  refunds?: Prisma.RefundCreateNestedManyWithoutCompanyInput
+  billingAdjustments?: Prisma.BillingAdjustmentCreateNestedManyWithoutCompanyInput
+  billingRecoveryTasks?: Prisma.BillingRecoveryTaskCreateNestedManyWithoutCompanyInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestCreateNestedManyWithoutCompanyInput
+  addOnGrants?: Prisma.CompanyAddOnGrantCreateNestedManyWithoutCompanyInput
+  creditGrants?: Prisma.CompanyCreditGrantCreateNestedManyWithoutCompanyInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryCreateNestedManyWithoutCompanyInput
+  paymentLinks?: Prisma.PaymentLinkCreateNestedManyWithoutCompanyInput
+  checkoutSessions?: Prisma.CheckoutSessionCreateNestedManyWithoutCompanyInput
+  platformBillingCustomer?: Prisma.PlatformBillingCustomerCreateNestedOneWithoutCompanyInput
+}
+
+export type ArcenCompanyUncheckedCreateWithoutSolanaActivationAttemptsInput = {
+  id?: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  lastSeenAt?: Date | string
+  teamId: string
+  environmentId?: string | null
+  name: string
+  walletAddress?: string | null
+  email?: string | null
+  externalId?: string | null
+  logoUrl?: string | null
+  traits?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  activePlanId?: string | null
+  activeAddOnIds?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  users?: Prisma.ArcenUserUncheckedCreateNestedManyWithoutCompanyInput
+  overrides?: Prisma.CompanyOverrideUncheckedCreateNestedManyWithoutCompanyInput
+  events?: Prisma.ArcenEventUncheckedCreateNestedManyWithoutCompanyInput
+  zkProofs?: Prisma.ZkTlsProofUncheckedCreateNestedManyWithoutCompanyInput
+  subscriptionState?: Prisma.SubscriptionStateUncheckedCreateNestedOneWithoutCompanyInput
+  billingBalance?: Prisma.BillingBalanceUncheckedCreateNestedOneWithoutCompanyInput
+  payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutCompanyInput
+  invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutCompanyInput
+  refunds?: Prisma.RefundUncheckedCreateNestedManyWithoutCompanyInput
+  billingAdjustments?: Prisma.BillingAdjustmentUncheckedCreateNestedManyWithoutCompanyInput
+  billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedCreateNestedManyWithoutCompanyInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedCreateNestedManyWithoutCompanyInput
+  addOnGrants?: Prisma.CompanyAddOnGrantUncheckedCreateNestedManyWithoutCompanyInput
+  creditGrants?: Prisma.CompanyCreditGrantUncheckedCreateNestedManyWithoutCompanyInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedCreateNestedManyWithoutCompanyInput
+  paymentLinks?: Prisma.PaymentLinkUncheckedCreateNestedManyWithoutCompanyInput
+  checkoutSessions?: Prisma.CheckoutSessionUncheckedCreateNestedManyWithoutCompanyInput
+  platformBillingCustomer?: Prisma.PlatformBillingCustomerUncheckedCreateNestedOneWithoutCompanyInput
+}
+
+export type ArcenCompanyCreateOrConnectWithoutSolanaActivationAttemptsInput = {
+  where: Prisma.ArcenCompanyWhereUniqueInput
+  create: Prisma.XOR<Prisma.ArcenCompanyCreateWithoutSolanaActivationAttemptsInput, Prisma.ArcenCompanyUncheckedCreateWithoutSolanaActivationAttemptsInput>
+}
+
+export type ArcenCompanyUpsertWithoutSolanaActivationAttemptsInput = {
+  update: Prisma.XOR<Prisma.ArcenCompanyUpdateWithoutSolanaActivationAttemptsInput, Prisma.ArcenCompanyUncheckedUpdateWithoutSolanaActivationAttemptsInput>
+  create: Prisma.XOR<Prisma.ArcenCompanyCreateWithoutSolanaActivationAttemptsInput, Prisma.ArcenCompanyUncheckedCreateWithoutSolanaActivationAttemptsInput>
+  where?: Prisma.ArcenCompanyWhereInput
+}
+
+export type ArcenCompanyUpdateToOneWithWhereWithoutSolanaActivationAttemptsInput = {
+  where?: Prisma.ArcenCompanyWhereInput
+  data: Prisma.XOR<Prisma.ArcenCompanyUpdateWithoutSolanaActivationAttemptsInput, Prisma.ArcenCompanyUncheckedUpdateWithoutSolanaActivationAttemptsInput>
+}
+
+export type ArcenCompanyUpdateWithoutSolanaActivationAttemptsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastSeenAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  walletAddress?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  email?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  externalId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  logoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  traits?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  activePlanId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  activeAddOnIds?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  team?: Prisma.TeamUpdateOneRequiredWithoutArcenCompaniesNestedInput
+  environment?: Prisma.WorkspaceEnvironmentUpdateOneWithoutArcenCompaniesNestedInput
+  users?: Prisma.ArcenUserUpdateManyWithoutCompanyNestedInput
+  overrides?: Prisma.CompanyOverrideUpdateManyWithoutCompanyNestedInput
+  events?: Prisma.ArcenEventUpdateManyWithoutCompanyNestedInput
+  zkProofs?: Prisma.ZkTlsProofUpdateManyWithoutCompanyNestedInput
+  subscriptionState?: Prisma.SubscriptionStateUpdateOneWithoutCompanyNestedInput
+  billingBalance?: Prisma.BillingBalanceUpdateOneWithoutCompanyNestedInput
+  payments?: Prisma.PaymentUpdateManyWithoutCompanyNestedInput
+  invoices?: Prisma.InvoiceUpdateManyWithoutCompanyNestedInput
+  refunds?: Prisma.RefundUpdateManyWithoutCompanyNestedInput
+  billingAdjustments?: Prisma.BillingAdjustmentUpdateManyWithoutCompanyNestedInput
+  billingRecoveryTasks?: Prisma.BillingRecoveryTaskUpdateManyWithoutCompanyNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUpdateManyWithoutCompanyNestedInput
+  addOnGrants?: Prisma.CompanyAddOnGrantUpdateManyWithoutCompanyNestedInput
+  creditGrants?: Prisma.CompanyCreditGrantUpdateManyWithoutCompanyNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUpdateManyWithoutCompanyNestedInput
+  paymentLinks?: Prisma.PaymentLinkUpdateManyWithoutCompanyNestedInput
+  checkoutSessions?: Prisma.CheckoutSessionUpdateManyWithoutCompanyNestedInput
+  platformBillingCustomer?: Prisma.PlatformBillingCustomerUpdateOneWithoutCompanyNestedInput
+}
+
+export type ArcenCompanyUncheckedUpdateWithoutSolanaActivationAttemptsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastSeenAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  teamId?: Prisma.StringFieldUpdateOperationsInput | string
+  environmentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  walletAddress?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  email?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  externalId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  logoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  traits?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  activePlanId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  activeAddOnIds?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  users?: Prisma.ArcenUserUncheckedUpdateManyWithoutCompanyNestedInput
+  overrides?: Prisma.CompanyOverrideUncheckedUpdateManyWithoutCompanyNestedInput
+  events?: Prisma.ArcenEventUncheckedUpdateManyWithoutCompanyNestedInput
+  zkProofs?: Prisma.ZkTlsProofUncheckedUpdateManyWithoutCompanyNestedInput
+  subscriptionState?: Prisma.SubscriptionStateUncheckedUpdateOneWithoutCompanyNestedInput
+  billingBalance?: Prisma.BillingBalanceUncheckedUpdateOneWithoutCompanyNestedInput
+  payments?: Prisma.PaymentUncheckedUpdateManyWithoutCompanyNestedInput
+  invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutCompanyNestedInput
+  refunds?: Prisma.RefundUncheckedUpdateManyWithoutCompanyNestedInput
+  billingAdjustments?: Prisma.BillingAdjustmentUncheckedUpdateManyWithoutCompanyNestedInput
+  billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedUpdateManyWithoutCompanyNestedInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedUpdateManyWithoutCompanyNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedUpdateManyWithoutCompanyNestedInput
   creditGrants?: Prisma.CompanyCreditGrantUncheckedUpdateManyWithoutCompanyNestedInput
@@ -2457,6 +2670,7 @@ export type ArcenCompanyCreateWithoutPlatformBillingCustomerInput = {
   refunds?: Prisma.RefundCreateNestedManyWithoutCompanyInput
   billingAdjustments?: Prisma.BillingAdjustmentCreateNestedManyWithoutCompanyInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskCreateNestedManyWithoutCompanyInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptCreateNestedManyWithoutCompanyInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestCreateNestedManyWithoutCompanyInput
   addOnGrants?: Prisma.CompanyAddOnGrantCreateNestedManyWithoutCompanyInput
   creditGrants?: Prisma.CompanyCreditGrantCreateNestedManyWithoutCompanyInput
@@ -2491,6 +2705,7 @@ export type ArcenCompanyUncheckedCreateWithoutPlatformBillingCustomerInput = {
   refunds?: Prisma.RefundUncheckedCreateNestedManyWithoutCompanyInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedCreateNestedManyWithoutCompanyInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedCreateNestedManyWithoutCompanyInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUncheckedCreateNestedManyWithoutCompanyInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedCreateNestedManyWithoutCompanyInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedCreateNestedManyWithoutCompanyInput
   creditGrants?: Prisma.CompanyCreditGrantUncheckedCreateNestedManyWithoutCompanyInput
@@ -2541,6 +2756,7 @@ export type ArcenCompanyUpdateWithoutPlatformBillingCustomerInput = {
   refunds?: Prisma.RefundUpdateManyWithoutCompanyNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUpdateManyWithoutCompanyNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUpdateManyWithoutCompanyNestedInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUpdateManyWithoutCompanyNestedInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUpdateManyWithoutCompanyNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUpdateManyWithoutCompanyNestedInput
   creditGrants?: Prisma.CompanyCreditGrantUpdateManyWithoutCompanyNestedInput
@@ -2575,6 +2791,7 @@ export type ArcenCompanyUncheckedUpdateWithoutPlatformBillingCustomerInput = {
   refunds?: Prisma.RefundUncheckedUpdateManyWithoutCompanyNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedUpdateManyWithoutCompanyNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedUpdateManyWithoutCompanyNestedInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUncheckedUpdateManyWithoutCompanyNestedInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedUpdateManyWithoutCompanyNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedUpdateManyWithoutCompanyNestedInput
   creditGrants?: Prisma.CompanyCreditGrantUncheckedUpdateManyWithoutCompanyNestedInput
@@ -2608,6 +2825,7 @@ export type ArcenCompanyCreateWithoutUsersInput = {
   refunds?: Prisma.RefundCreateNestedManyWithoutCompanyInput
   billingAdjustments?: Prisma.BillingAdjustmentCreateNestedManyWithoutCompanyInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskCreateNestedManyWithoutCompanyInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptCreateNestedManyWithoutCompanyInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestCreateNestedManyWithoutCompanyInput
   addOnGrants?: Prisma.CompanyAddOnGrantCreateNestedManyWithoutCompanyInput
   creditGrants?: Prisma.CompanyCreditGrantCreateNestedManyWithoutCompanyInput
@@ -2642,6 +2860,7 @@ export type ArcenCompanyUncheckedCreateWithoutUsersInput = {
   refunds?: Prisma.RefundUncheckedCreateNestedManyWithoutCompanyInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedCreateNestedManyWithoutCompanyInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedCreateNestedManyWithoutCompanyInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUncheckedCreateNestedManyWithoutCompanyInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedCreateNestedManyWithoutCompanyInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedCreateNestedManyWithoutCompanyInput
   creditGrants?: Prisma.CompanyCreditGrantUncheckedCreateNestedManyWithoutCompanyInput
@@ -2692,6 +2911,7 @@ export type ArcenCompanyUpdateWithoutUsersInput = {
   refunds?: Prisma.RefundUpdateManyWithoutCompanyNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUpdateManyWithoutCompanyNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUpdateManyWithoutCompanyNestedInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUpdateManyWithoutCompanyNestedInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUpdateManyWithoutCompanyNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUpdateManyWithoutCompanyNestedInput
   creditGrants?: Prisma.CompanyCreditGrantUpdateManyWithoutCompanyNestedInput
@@ -2726,6 +2946,7 @@ export type ArcenCompanyUncheckedUpdateWithoutUsersInput = {
   refunds?: Prisma.RefundUncheckedUpdateManyWithoutCompanyNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedUpdateManyWithoutCompanyNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedUpdateManyWithoutCompanyNestedInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUncheckedUpdateManyWithoutCompanyNestedInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedUpdateManyWithoutCompanyNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedUpdateManyWithoutCompanyNestedInput
   creditGrants?: Prisma.CompanyCreditGrantUncheckedUpdateManyWithoutCompanyNestedInput
@@ -2760,6 +2981,7 @@ export type ArcenCompanyCreateWithoutEventsInput = {
   refunds?: Prisma.RefundCreateNestedManyWithoutCompanyInput
   billingAdjustments?: Prisma.BillingAdjustmentCreateNestedManyWithoutCompanyInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskCreateNestedManyWithoutCompanyInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptCreateNestedManyWithoutCompanyInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestCreateNestedManyWithoutCompanyInput
   addOnGrants?: Prisma.CompanyAddOnGrantCreateNestedManyWithoutCompanyInput
   creditGrants?: Prisma.CompanyCreditGrantCreateNestedManyWithoutCompanyInput
@@ -2794,6 +3016,7 @@ export type ArcenCompanyUncheckedCreateWithoutEventsInput = {
   refunds?: Prisma.RefundUncheckedCreateNestedManyWithoutCompanyInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedCreateNestedManyWithoutCompanyInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedCreateNestedManyWithoutCompanyInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUncheckedCreateNestedManyWithoutCompanyInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedCreateNestedManyWithoutCompanyInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedCreateNestedManyWithoutCompanyInput
   creditGrants?: Prisma.CompanyCreditGrantUncheckedCreateNestedManyWithoutCompanyInput
@@ -2844,6 +3067,7 @@ export type ArcenCompanyUpdateWithoutEventsInput = {
   refunds?: Prisma.RefundUpdateManyWithoutCompanyNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUpdateManyWithoutCompanyNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUpdateManyWithoutCompanyNestedInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUpdateManyWithoutCompanyNestedInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUpdateManyWithoutCompanyNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUpdateManyWithoutCompanyNestedInput
   creditGrants?: Prisma.CompanyCreditGrantUpdateManyWithoutCompanyNestedInput
@@ -2878,6 +3102,7 @@ export type ArcenCompanyUncheckedUpdateWithoutEventsInput = {
   refunds?: Prisma.RefundUncheckedUpdateManyWithoutCompanyNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedUpdateManyWithoutCompanyNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedUpdateManyWithoutCompanyNestedInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUncheckedUpdateManyWithoutCompanyNestedInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedUpdateManyWithoutCompanyNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedUpdateManyWithoutCompanyNestedInput
   creditGrants?: Prisma.CompanyCreditGrantUncheckedUpdateManyWithoutCompanyNestedInput
@@ -2913,6 +3138,7 @@ export type ArcenCompanyCreateWithoutAddOnGrantsInput = {
   refunds?: Prisma.RefundCreateNestedManyWithoutCompanyInput
   billingAdjustments?: Prisma.BillingAdjustmentCreateNestedManyWithoutCompanyInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskCreateNestedManyWithoutCompanyInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptCreateNestedManyWithoutCompanyInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestCreateNestedManyWithoutCompanyInput
   creditGrants?: Prisma.CompanyCreditGrantCreateNestedManyWithoutCompanyInput
   creditLedgerEntries?: Prisma.CreditLedgerEntryCreateNestedManyWithoutCompanyInput
@@ -2947,6 +3173,7 @@ export type ArcenCompanyUncheckedCreateWithoutAddOnGrantsInput = {
   refunds?: Prisma.RefundUncheckedCreateNestedManyWithoutCompanyInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedCreateNestedManyWithoutCompanyInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedCreateNestedManyWithoutCompanyInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUncheckedCreateNestedManyWithoutCompanyInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedCreateNestedManyWithoutCompanyInput
   creditGrants?: Prisma.CompanyCreditGrantUncheckedCreateNestedManyWithoutCompanyInput
   creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedCreateNestedManyWithoutCompanyInput
@@ -2997,6 +3224,7 @@ export type ArcenCompanyUpdateWithoutAddOnGrantsInput = {
   refunds?: Prisma.RefundUpdateManyWithoutCompanyNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUpdateManyWithoutCompanyNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUpdateManyWithoutCompanyNestedInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUpdateManyWithoutCompanyNestedInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUpdateManyWithoutCompanyNestedInput
   creditGrants?: Prisma.CompanyCreditGrantUpdateManyWithoutCompanyNestedInput
   creditLedgerEntries?: Prisma.CreditLedgerEntryUpdateManyWithoutCompanyNestedInput
@@ -3031,6 +3259,7 @@ export type ArcenCompanyUncheckedUpdateWithoutAddOnGrantsInput = {
   refunds?: Prisma.RefundUncheckedUpdateManyWithoutCompanyNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedUpdateManyWithoutCompanyNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedUpdateManyWithoutCompanyNestedInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUncheckedUpdateManyWithoutCompanyNestedInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedUpdateManyWithoutCompanyNestedInput
   creditGrants?: Prisma.CompanyCreditGrantUncheckedUpdateManyWithoutCompanyNestedInput
   creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedUpdateManyWithoutCompanyNestedInput
@@ -3065,6 +3294,7 @@ export type ArcenCompanyCreateWithoutCreditGrantsInput = {
   refunds?: Prisma.RefundCreateNestedManyWithoutCompanyInput
   billingAdjustments?: Prisma.BillingAdjustmentCreateNestedManyWithoutCompanyInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskCreateNestedManyWithoutCompanyInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptCreateNestedManyWithoutCompanyInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestCreateNestedManyWithoutCompanyInput
   addOnGrants?: Prisma.CompanyAddOnGrantCreateNestedManyWithoutCompanyInput
   creditLedgerEntries?: Prisma.CreditLedgerEntryCreateNestedManyWithoutCompanyInput
@@ -3099,6 +3329,7 @@ export type ArcenCompanyUncheckedCreateWithoutCreditGrantsInput = {
   refunds?: Prisma.RefundUncheckedCreateNestedManyWithoutCompanyInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedCreateNestedManyWithoutCompanyInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedCreateNestedManyWithoutCompanyInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUncheckedCreateNestedManyWithoutCompanyInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedCreateNestedManyWithoutCompanyInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedCreateNestedManyWithoutCompanyInput
   creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedCreateNestedManyWithoutCompanyInput
@@ -3149,6 +3380,7 @@ export type ArcenCompanyUpdateWithoutCreditGrantsInput = {
   refunds?: Prisma.RefundUpdateManyWithoutCompanyNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUpdateManyWithoutCompanyNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUpdateManyWithoutCompanyNestedInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUpdateManyWithoutCompanyNestedInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUpdateManyWithoutCompanyNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUpdateManyWithoutCompanyNestedInput
   creditLedgerEntries?: Prisma.CreditLedgerEntryUpdateManyWithoutCompanyNestedInput
@@ -3183,6 +3415,7 @@ export type ArcenCompanyUncheckedUpdateWithoutCreditGrantsInput = {
   refunds?: Prisma.RefundUncheckedUpdateManyWithoutCompanyNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedUpdateManyWithoutCompanyNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedUpdateManyWithoutCompanyNestedInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUncheckedUpdateManyWithoutCompanyNestedInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedUpdateManyWithoutCompanyNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedUpdateManyWithoutCompanyNestedInput
   creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedUpdateManyWithoutCompanyNestedInput
@@ -3217,6 +3450,7 @@ export type ArcenCompanyCreateWithoutCreditLedgerEntriesInput = {
   refunds?: Prisma.RefundCreateNestedManyWithoutCompanyInput
   billingAdjustments?: Prisma.BillingAdjustmentCreateNestedManyWithoutCompanyInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskCreateNestedManyWithoutCompanyInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptCreateNestedManyWithoutCompanyInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestCreateNestedManyWithoutCompanyInput
   addOnGrants?: Prisma.CompanyAddOnGrantCreateNestedManyWithoutCompanyInput
   creditGrants?: Prisma.CompanyCreditGrantCreateNestedManyWithoutCompanyInput
@@ -3251,6 +3485,7 @@ export type ArcenCompanyUncheckedCreateWithoutCreditLedgerEntriesInput = {
   refunds?: Prisma.RefundUncheckedCreateNestedManyWithoutCompanyInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedCreateNestedManyWithoutCompanyInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedCreateNestedManyWithoutCompanyInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUncheckedCreateNestedManyWithoutCompanyInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedCreateNestedManyWithoutCompanyInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedCreateNestedManyWithoutCompanyInput
   creditGrants?: Prisma.CompanyCreditGrantUncheckedCreateNestedManyWithoutCompanyInput
@@ -3301,6 +3536,7 @@ export type ArcenCompanyUpdateWithoutCreditLedgerEntriesInput = {
   refunds?: Prisma.RefundUpdateManyWithoutCompanyNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUpdateManyWithoutCompanyNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUpdateManyWithoutCompanyNestedInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUpdateManyWithoutCompanyNestedInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUpdateManyWithoutCompanyNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUpdateManyWithoutCompanyNestedInput
   creditGrants?: Prisma.CompanyCreditGrantUpdateManyWithoutCompanyNestedInput
@@ -3335,6 +3571,7 @@ export type ArcenCompanyUncheckedUpdateWithoutCreditLedgerEntriesInput = {
   refunds?: Prisma.RefundUncheckedUpdateManyWithoutCompanyNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedUpdateManyWithoutCompanyNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedUpdateManyWithoutCompanyNestedInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUncheckedUpdateManyWithoutCompanyNestedInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedUpdateManyWithoutCompanyNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedUpdateManyWithoutCompanyNestedInput
   creditGrants?: Prisma.CompanyCreditGrantUncheckedUpdateManyWithoutCompanyNestedInput
@@ -3369,6 +3606,7 @@ export type ArcenCompanyCreateWithoutPaymentLinksInput = {
   refunds?: Prisma.RefundCreateNestedManyWithoutCompanyInput
   billingAdjustments?: Prisma.BillingAdjustmentCreateNestedManyWithoutCompanyInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskCreateNestedManyWithoutCompanyInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptCreateNestedManyWithoutCompanyInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestCreateNestedManyWithoutCompanyInput
   addOnGrants?: Prisma.CompanyAddOnGrantCreateNestedManyWithoutCompanyInput
   creditGrants?: Prisma.CompanyCreditGrantCreateNestedManyWithoutCompanyInput
@@ -3403,6 +3641,7 @@ export type ArcenCompanyUncheckedCreateWithoutPaymentLinksInput = {
   refunds?: Prisma.RefundUncheckedCreateNestedManyWithoutCompanyInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedCreateNestedManyWithoutCompanyInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedCreateNestedManyWithoutCompanyInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUncheckedCreateNestedManyWithoutCompanyInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedCreateNestedManyWithoutCompanyInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedCreateNestedManyWithoutCompanyInput
   creditGrants?: Prisma.CompanyCreditGrantUncheckedCreateNestedManyWithoutCompanyInput
@@ -3453,6 +3692,7 @@ export type ArcenCompanyUpdateWithoutPaymentLinksInput = {
   refunds?: Prisma.RefundUpdateManyWithoutCompanyNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUpdateManyWithoutCompanyNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUpdateManyWithoutCompanyNestedInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUpdateManyWithoutCompanyNestedInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUpdateManyWithoutCompanyNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUpdateManyWithoutCompanyNestedInput
   creditGrants?: Prisma.CompanyCreditGrantUpdateManyWithoutCompanyNestedInput
@@ -3487,6 +3727,7 @@ export type ArcenCompanyUncheckedUpdateWithoutPaymentLinksInput = {
   refunds?: Prisma.RefundUncheckedUpdateManyWithoutCompanyNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedUpdateManyWithoutCompanyNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedUpdateManyWithoutCompanyNestedInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUncheckedUpdateManyWithoutCompanyNestedInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedUpdateManyWithoutCompanyNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedUpdateManyWithoutCompanyNestedInput
   creditGrants?: Prisma.CompanyCreditGrantUncheckedUpdateManyWithoutCompanyNestedInput
@@ -3521,6 +3762,7 @@ export type ArcenCompanyCreateWithoutCheckoutSessionsInput = {
   refunds?: Prisma.RefundCreateNestedManyWithoutCompanyInput
   billingAdjustments?: Prisma.BillingAdjustmentCreateNestedManyWithoutCompanyInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskCreateNestedManyWithoutCompanyInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptCreateNestedManyWithoutCompanyInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestCreateNestedManyWithoutCompanyInput
   addOnGrants?: Prisma.CompanyAddOnGrantCreateNestedManyWithoutCompanyInput
   creditGrants?: Prisma.CompanyCreditGrantCreateNestedManyWithoutCompanyInput
@@ -3555,6 +3797,7 @@ export type ArcenCompanyUncheckedCreateWithoutCheckoutSessionsInput = {
   refunds?: Prisma.RefundUncheckedCreateNestedManyWithoutCompanyInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedCreateNestedManyWithoutCompanyInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedCreateNestedManyWithoutCompanyInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUncheckedCreateNestedManyWithoutCompanyInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedCreateNestedManyWithoutCompanyInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedCreateNestedManyWithoutCompanyInput
   creditGrants?: Prisma.CompanyCreditGrantUncheckedCreateNestedManyWithoutCompanyInput
@@ -3605,6 +3848,7 @@ export type ArcenCompanyUpdateWithoutCheckoutSessionsInput = {
   refunds?: Prisma.RefundUpdateManyWithoutCompanyNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUpdateManyWithoutCompanyNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUpdateManyWithoutCompanyNestedInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUpdateManyWithoutCompanyNestedInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUpdateManyWithoutCompanyNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUpdateManyWithoutCompanyNestedInput
   creditGrants?: Prisma.CompanyCreditGrantUpdateManyWithoutCompanyNestedInput
@@ -3639,6 +3883,7 @@ export type ArcenCompanyUncheckedUpdateWithoutCheckoutSessionsInput = {
   refunds?: Prisma.RefundUncheckedUpdateManyWithoutCompanyNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedUpdateManyWithoutCompanyNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedUpdateManyWithoutCompanyNestedInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUncheckedUpdateManyWithoutCompanyNestedInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedUpdateManyWithoutCompanyNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedUpdateManyWithoutCompanyNestedInput
   creditGrants?: Prisma.CompanyCreditGrantUncheckedUpdateManyWithoutCompanyNestedInput
@@ -3672,6 +3917,7 @@ export type ArcenCompanyCreateWithoutOverridesInput = {
   refunds?: Prisma.RefundCreateNestedManyWithoutCompanyInput
   billingAdjustments?: Prisma.BillingAdjustmentCreateNestedManyWithoutCompanyInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskCreateNestedManyWithoutCompanyInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptCreateNestedManyWithoutCompanyInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestCreateNestedManyWithoutCompanyInput
   addOnGrants?: Prisma.CompanyAddOnGrantCreateNestedManyWithoutCompanyInput
   creditGrants?: Prisma.CompanyCreditGrantCreateNestedManyWithoutCompanyInput
@@ -3706,6 +3952,7 @@ export type ArcenCompanyUncheckedCreateWithoutOverridesInput = {
   refunds?: Prisma.RefundUncheckedCreateNestedManyWithoutCompanyInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedCreateNestedManyWithoutCompanyInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedCreateNestedManyWithoutCompanyInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUncheckedCreateNestedManyWithoutCompanyInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedCreateNestedManyWithoutCompanyInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedCreateNestedManyWithoutCompanyInput
   creditGrants?: Prisma.CompanyCreditGrantUncheckedCreateNestedManyWithoutCompanyInput
@@ -3756,6 +4003,7 @@ export type ArcenCompanyUpdateWithoutOverridesInput = {
   refunds?: Prisma.RefundUpdateManyWithoutCompanyNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUpdateManyWithoutCompanyNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUpdateManyWithoutCompanyNestedInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUpdateManyWithoutCompanyNestedInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUpdateManyWithoutCompanyNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUpdateManyWithoutCompanyNestedInput
   creditGrants?: Prisma.CompanyCreditGrantUpdateManyWithoutCompanyNestedInput
@@ -3790,6 +4038,7 @@ export type ArcenCompanyUncheckedUpdateWithoutOverridesInput = {
   refunds?: Prisma.RefundUncheckedUpdateManyWithoutCompanyNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedUpdateManyWithoutCompanyNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedUpdateManyWithoutCompanyNestedInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUncheckedUpdateManyWithoutCompanyNestedInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedUpdateManyWithoutCompanyNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedUpdateManyWithoutCompanyNestedInput
   creditGrants?: Prisma.CompanyCreditGrantUncheckedUpdateManyWithoutCompanyNestedInput
@@ -3824,6 +4073,7 @@ export type ArcenCompanyCreateWithoutZkProofsInput = {
   refunds?: Prisma.RefundCreateNestedManyWithoutCompanyInput
   billingAdjustments?: Prisma.BillingAdjustmentCreateNestedManyWithoutCompanyInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskCreateNestedManyWithoutCompanyInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptCreateNestedManyWithoutCompanyInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestCreateNestedManyWithoutCompanyInput
   addOnGrants?: Prisma.CompanyAddOnGrantCreateNestedManyWithoutCompanyInput
   creditGrants?: Prisma.CompanyCreditGrantCreateNestedManyWithoutCompanyInput
@@ -3858,6 +4108,7 @@ export type ArcenCompanyUncheckedCreateWithoutZkProofsInput = {
   refunds?: Prisma.RefundUncheckedCreateNestedManyWithoutCompanyInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedCreateNestedManyWithoutCompanyInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedCreateNestedManyWithoutCompanyInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUncheckedCreateNestedManyWithoutCompanyInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedCreateNestedManyWithoutCompanyInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedCreateNestedManyWithoutCompanyInput
   creditGrants?: Prisma.CompanyCreditGrantUncheckedCreateNestedManyWithoutCompanyInput
@@ -3908,6 +4159,7 @@ export type ArcenCompanyUpdateWithoutZkProofsInput = {
   refunds?: Prisma.RefundUpdateManyWithoutCompanyNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUpdateManyWithoutCompanyNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUpdateManyWithoutCompanyNestedInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUpdateManyWithoutCompanyNestedInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUpdateManyWithoutCompanyNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUpdateManyWithoutCompanyNestedInput
   creditGrants?: Prisma.CompanyCreditGrantUpdateManyWithoutCompanyNestedInput
@@ -3942,6 +4194,7 @@ export type ArcenCompanyUncheckedUpdateWithoutZkProofsInput = {
   refunds?: Prisma.RefundUncheckedUpdateManyWithoutCompanyNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedUpdateManyWithoutCompanyNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedUpdateManyWithoutCompanyNestedInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUncheckedUpdateManyWithoutCompanyNestedInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedUpdateManyWithoutCompanyNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedUpdateManyWithoutCompanyNestedInput
   creditGrants?: Prisma.CompanyCreditGrantUncheckedUpdateManyWithoutCompanyNestedInput
@@ -3992,6 +4245,7 @@ export type ArcenCompanyUpdateWithoutTeamInput = {
   refunds?: Prisma.RefundUpdateManyWithoutCompanyNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUpdateManyWithoutCompanyNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUpdateManyWithoutCompanyNestedInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUpdateManyWithoutCompanyNestedInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUpdateManyWithoutCompanyNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUpdateManyWithoutCompanyNestedInput
   creditGrants?: Prisma.CompanyCreditGrantUpdateManyWithoutCompanyNestedInput
@@ -4026,6 +4280,7 @@ export type ArcenCompanyUncheckedUpdateWithoutTeamInput = {
   refunds?: Prisma.RefundUncheckedUpdateManyWithoutCompanyNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedUpdateManyWithoutCompanyNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedUpdateManyWithoutCompanyNestedInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUncheckedUpdateManyWithoutCompanyNestedInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedUpdateManyWithoutCompanyNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedUpdateManyWithoutCompanyNestedInput
   creditGrants?: Prisma.CompanyCreditGrantUncheckedUpdateManyWithoutCompanyNestedInput
@@ -4092,6 +4347,7 @@ export type ArcenCompanyUpdateWithoutEnvironmentInput = {
   refunds?: Prisma.RefundUpdateManyWithoutCompanyNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUpdateManyWithoutCompanyNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUpdateManyWithoutCompanyNestedInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUpdateManyWithoutCompanyNestedInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUpdateManyWithoutCompanyNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUpdateManyWithoutCompanyNestedInput
   creditGrants?: Prisma.CompanyCreditGrantUpdateManyWithoutCompanyNestedInput
@@ -4126,6 +4382,7 @@ export type ArcenCompanyUncheckedUpdateWithoutEnvironmentInput = {
   refunds?: Prisma.RefundUncheckedUpdateManyWithoutCompanyNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedUpdateManyWithoutCompanyNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedUpdateManyWithoutCompanyNestedInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUncheckedUpdateManyWithoutCompanyNestedInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedUpdateManyWithoutCompanyNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedUpdateManyWithoutCompanyNestedInput
   creditGrants?: Prisma.CompanyCreditGrantUncheckedUpdateManyWithoutCompanyNestedInput
@@ -4166,6 +4423,7 @@ export type ArcenCompanyCountOutputType = {
   refunds: number
   billingAdjustments: number
   billingRecoveryTasks: number
+  solanaActivationAttempts: number
   subscriptionChangeRequests: number
   addOnGrants: number
   creditGrants: number
@@ -4184,6 +4442,7 @@ export type ArcenCompanyCountOutputTypeSelect<ExtArgs extends runtime.Types.Exte
   refunds?: boolean | ArcenCompanyCountOutputTypeCountRefundsArgs
   billingAdjustments?: boolean | ArcenCompanyCountOutputTypeCountBillingAdjustmentsArgs
   billingRecoveryTasks?: boolean | ArcenCompanyCountOutputTypeCountBillingRecoveryTasksArgs
+  solanaActivationAttempts?: boolean | ArcenCompanyCountOutputTypeCountSolanaActivationAttemptsArgs
   subscriptionChangeRequests?: boolean | ArcenCompanyCountOutputTypeCountSubscriptionChangeRequestsArgs
   addOnGrants?: boolean | ArcenCompanyCountOutputTypeCountAddOnGrantsArgs
   creditGrants?: boolean | ArcenCompanyCountOutputTypeCountCreditGrantsArgs
@@ -4268,6 +4527,13 @@ export type ArcenCompanyCountOutputTypeCountBillingRecoveryTasksArgs<ExtArgs ext
 /**
  * ArcenCompanyCountOutputType without action
  */
+export type ArcenCompanyCountOutputTypeCountSolanaActivationAttemptsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.SolanaActivationAttemptWhereInput
+}
+
+/**
+ * ArcenCompanyCountOutputType without action
+ */
 export type ArcenCompanyCountOutputTypeCountSubscriptionChangeRequestsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   where?: Prisma.SubscriptionChangeRequestWhereInput
 }
@@ -4336,6 +4602,7 @@ export type ArcenCompanySelect<ExtArgs extends runtime.Types.Extensions.Internal
   refunds?: boolean | Prisma.ArcenCompany$refundsArgs<ExtArgs>
   billingAdjustments?: boolean | Prisma.ArcenCompany$billingAdjustmentsArgs<ExtArgs>
   billingRecoveryTasks?: boolean | Prisma.ArcenCompany$billingRecoveryTasksArgs<ExtArgs>
+  solanaActivationAttempts?: boolean | Prisma.ArcenCompany$solanaActivationAttemptsArgs<ExtArgs>
   subscriptionChangeRequests?: boolean | Prisma.ArcenCompany$subscriptionChangeRequestsArgs<ExtArgs>
   addOnGrants?: boolean | Prisma.ArcenCompany$addOnGrantsArgs<ExtArgs>
   creditGrants?: boolean | Prisma.ArcenCompany$creditGrantsArgs<ExtArgs>
@@ -4416,6 +4683,7 @@ export type ArcenCompanyInclude<ExtArgs extends runtime.Types.Extensions.Interna
   refunds?: boolean | Prisma.ArcenCompany$refundsArgs<ExtArgs>
   billingAdjustments?: boolean | Prisma.ArcenCompany$billingAdjustmentsArgs<ExtArgs>
   billingRecoveryTasks?: boolean | Prisma.ArcenCompany$billingRecoveryTasksArgs<ExtArgs>
+  solanaActivationAttempts?: boolean | Prisma.ArcenCompany$solanaActivationAttemptsArgs<ExtArgs>
   subscriptionChangeRequests?: boolean | Prisma.ArcenCompany$subscriptionChangeRequestsArgs<ExtArgs>
   addOnGrants?: boolean | Prisma.ArcenCompany$addOnGrantsArgs<ExtArgs>
   creditGrants?: boolean | Prisma.ArcenCompany$creditGrantsArgs<ExtArgs>
@@ -4450,6 +4718,7 @@ export type $ArcenCompanyPayload<ExtArgs extends runtime.Types.Extensions.Intern
     refunds: Prisma.$RefundPayload<ExtArgs>[]
     billingAdjustments: Prisma.$BillingAdjustmentPayload<ExtArgs>[]
     billingRecoveryTasks: Prisma.$BillingRecoveryTaskPayload<ExtArgs>[]
+    solanaActivationAttempts: Prisma.$SolanaActivationAttemptPayload<ExtArgs>[]
     subscriptionChangeRequests: Prisma.$SubscriptionChangeRequestPayload<ExtArgs>[]
     addOnGrants: Prisma.$CompanyAddOnGrantPayload<ExtArgs>[]
     creditGrants: Prisma.$CompanyCreditGrantPayload<ExtArgs>[]
@@ -4880,6 +5149,7 @@ export interface Prisma__ArcenCompanyClient<T, Null = never, ExtArgs extends run
   refunds<T extends Prisma.ArcenCompany$refundsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.ArcenCompany$refundsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$RefundPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   billingAdjustments<T extends Prisma.ArcenCompany$billingAdjustmentsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.ArcenCompany$billingAdjustmentsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$BillingAdjustmentPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   billingRecoveryTasks<T extends Prisma.ArcenCompany$billingRecoveryTasksArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.ArcenCompany$billingRecoveryTasksArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$BillingRecoveryTaskPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  solanaActivationAttempts<T extends Prisma.ArcenCompany$solanaActivationAttemptsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.ArcenCompany$solanaActivationAttemptsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$SolanaActivationAttemptPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   subscriptionChangeRequests<T extends Prisma.ArcenCompany$subscriptionChangeRequestsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.ArcenCompany$subscriptionChangeRequestsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$SubscriptionChangeRequestPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   addOnGrants<T extends Prisma.ArcenCompany$addOnGrantsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.ArcenCompany$addOnGrantsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$CompanyAddOnGrantPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   creditGrants<T extends Prisma.ArcenCompany$creditGrantsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.ArcenCompany$creditGrantsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$CompanyCreditGrantPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
@@ -5596,6 +5866,30 @@ export type ArcenCompany$billingRecoveryTasksArgs<ExtArgs extends runtime.Types.
   take?: number
   skip?: number
   distinct?: Prisma.BillingRecoveryTaskScalarFieldEnum | Prisma.BillingRecoveryTaskScalarFieldEnum[]
+}
+
+/**
+ * ArcenCompany.solanaActivationAttempts
+ */
+export type ArcenCompany$solanaActivationAttemptsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the SolanaActivationAttempt
+   */
+  select?: Prisma.SolanaActivationAttemptSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the SolanaActivationAttempt
+   */
+  omit?: Prisma.SolanaActivationAttemptOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.SolanaActivationAttemptInclude<ExtArgs> | null
+  where?: Prisma.SolanaActivationAttemptWhereInput
+  orderBy?: Prisma.SolanaActivationAttemptOrderByWithRelationInput | Prisma.SolanaActivationAttemptOrderByWithRelationInput[]
+  cursor?: Prisma.SolanaActivationAttemptWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.SolanaActivationAttemptScalarFieldEnum | Prisma.SolanaActivationAttemptScalarFieldEnum[]
 }
 
 /**

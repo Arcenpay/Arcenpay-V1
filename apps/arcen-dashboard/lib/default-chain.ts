@@ -5,6 +5,8 @@ import {
   STELLAR_MAINNET_CHAIN_ID,
   STELLAR_TESTNET_CHAIN_ID,
   STELLAR_FUTURENET_CHAIN_ID,
+  SOLANA_MAINNET_CHAIN_ID,
+  SOLANA_DEVNET_CHAIN_ID,
 } from "@arcenpay/internal-core";
 
 export const SEPOLIA_CHAIN_ID = 11155111 as const;
@@ -13,22 +15,32 @@ export const BASE_MAINNET_CHAIN_ID = 8453 as const;
 export const ARC_TESTNET_CHAIN_ID = 5042002 as const;
 export const BOT_MAINNET_CHAIN_ID = 677 as const;
 export const BOT_TESTNET_CHAIN_ID = 968 as const;
-export { STELLAR_MAINNET_CHAIN_ID, STELLAR_TESTNET_CHAIN_ID, STELLAR_FUTURENET_CHAIN_ID };
+export {
+  STELLAR_MAINNET_CHAIN_ID,
+  STELLAR_TESTNET_CHAIN_ID,
+  STELLAR_FUTURENET_CHAIN_ID,
+  SOLANA_MAINNET_CHAIN_ID,
+  SOLANA_DEVNET_CHAIN_ID,
+};
 
 // ─── Chain sets by environment type ─────────────────────────────────────────
 // Rule: DEV environment shows ONLY testnet chains.
 //       PROD environment shows ONLY mainnet chains.
-// Stellar synthetic chainIds are included so the chain picker surfaces them.
-// Wallet support is conditional: EVM ids use wagmi/Reown; Stellar ids require
-// a Stellar wallet (Freighter) — handled in the wallet layer, not here.
+// Stellar/Solana synthetic chainIds are included so the chain picker surfaces
+// them. Wallet support is conditional: EVM ids use wagmi/Reown; Stellar ids
+// require Freighter; Solana ids require an injected Solana wallet
+// (Phantom/Solflare) — handled in the wallet layer, not here.
 export const TESTNET_CHAIN_IDS = [
   BASE_SEPOLIA_CHAIN_ID,
   ARC_TESTNET_CHAIN_ID,
   STELLAR_TESTNET_CHAIN_ID,
   STELLAR_FUTURENET_CHAIN_ID,
+  SOLANA_DEVNET_CHAIN_ID,
 ] as const;
 // Production environments are strictly restricted to BOT Chain Mainnet,
-// as BOT Chain is the only network with verified production contract deployments.
+// as BOT Chain is the only network with verified production contract
+// deployments. Solana mainnet is added once the Anchor program is deployed
+// there (see SOLANA_MAINNET_CHAIN_ID).
 export const MAINNET_CHAIN_IDS = [
   BOT_MAINNET_CHAIN_ID,
 ] as const;

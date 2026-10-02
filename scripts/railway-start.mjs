@@ -105,18 +105,50 @@ async function runPrismaMigrations() {
 async function main() {
   const port = process.env.PORT || "3300";
 
+  // The facilitator resolves ONE chain from CHAIN_ID at boot, so a chain family
+  // = a process. FACILITATOR_CHAINS lets a single container run several side by
+  // side (e.g. "5042002,9100001"), each on its own internal port. Defaults to
+  // the single CHAIN_ID, so existing deployments behave exactly as before.
+  const facilitatorChains = (
+    process.env.FACILITATOR_CHAINS ||
+    process.env.CHAIN_ID ||
+    "5042002"
+  )
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  const facilitatorBasePort = Number(process.env.FACILITATOR_PORT || 3402);
+
+  const facilitatorEnvFor = (chainId, index, localBackendUrl) => ({
+    PORT: String(facilitatorBasePort + index),
+    CHAIN_ID: chainId,
+    ...(localBackendUrl
+      ? {
+          INTERNAL_BACKEND_URL: localBackendUrl,
+          INTERNAL_API_BASE_URL: localBackendUrl,
+          BACKEND_URL: localBackendUrl,
+        }
+      : {}),
+  });
+
   console.log("=================================================");
   console.log(`  ArcenPay Railway Launcher (Mode: ${runMode.toUpperCase()})`);
   console.log(`  Public HTTP Port: ${port}                       `);
+  console.log(`  Facilitator chains: ${facilitatorChains.join(", ")}`);
   console.log("=================================================");
 
   if (runMode === "facilitator") {
     // ── Mode: Facilitator Only ─────────────────────────────
-    console.log("[Railway] Launching Facilitator node...");
-    const facilitator = spawnProcess("Facilitator", "node", [
-      "apps/facilitator/dist/server.js",
-    ]);
-    facilitator.on("exit", (code) => process.exit(code ?? 0));
+    console.log("[Railway] Launching Facilitator node(s)...");
+    const children = facilitatorChains.map((chainId, i) =>
+      spawnProcess(
+        `Facilitator[${chainId}]`,
+        "node",
+        ["apps/facilitator/dist/server.js"],
+        facilitatorEnvFor(chainId, i),
+      ),
+    );
+    children[0]?.on("exit", (code) => process.exit(code ?? 0));
     return;
   }
 
@@ -133,8 +165,8 @@ async function main() {
     return;
   }
 
-  // ── Mode: ALL (Unified Backend + Facilitator in 1 Container) ───
-  console.log("[Railway] Unified Deployment: Running BOTH Backend API and Facilitator Node!");
+  // ── Mode: ALL (Unified Backend + Facilitators in 1 Container) ───
+  console.log("[Railway] Unified Deployment: Backend API + Facilitator node(s)!");
 
   // 1. Run migrations
   await runPrismaMigrations();
@@ -147,29 +179,31 @@ async function main() {
     "apps/arcen-backend/dist/server.js",
   ]);
 
-  // 3. Launch Facilitator alongside Backend
-  // Facilitator runs on internal port (default 3402) and points to local Backend
-  const facilitatorPort = process.env.FACILITATOR_PORT || "3402";
+  // 3. Launch one Facilitator per configured chain, each on its own internal
+  //    port, all pointing back at this container's backend (which they POST
+  //    billing events to).
   const localBackendUrl = `http://127.0.0.1:${port}`;
-  console.log(`[Railway] Starting Facilitator on internal port ${facilitatorPort}...`);
-  console.log(`[Railway] Facilitator will forward events to local Backend: ${localBackendUrl}`);
-
-  const facilitator = spawnProcess(
-    "Facilitator",
-    "node",
-    ["apps/facilitator/dist/server.js"],
-    {
-      PORT: facilitatorPort,
-      INTERNAL_BACKEND_URL: localBackendUrl,
-      INTERNAL_API_BASE_URL: localBackendUrl,
-      BACKEND_URL: localBackendUrl,
-    }
-  );
+  const facilitators = facilitatorChains.map((chainId, i) => {
+    const envForChain = facilitatorEnvFor(chainId, i, localBackendUrl);
+    console.log(
+      `[Railway] Facilitator[${chainId}] on internal port ${envForChain.PORT} → ${localBackendUrl}`,
+    );
+    // Billing events flow facilitator → backend (POST /api/v1/billing/events),
+    // so no per-chain FACILITATOR_BASE_URL_<id> is required for billing. The
+    // backend's single FACILITATOR_URL only serves single-chain endpoints
+    // (paymaster, ZK proofs, sessions, ops health).
+    return spawnProcess(
+      `Facilitator[${chainId}]`,
+      "node",
+      ["apps/facilitator/dist/server.js"],
+      envForChain,
+    );
+  });
 
   // If Backend exits, exit container
   backend.on("exit", (code) => {
     console.error("[Railway] Backend process exited, terminating container...");
-    facilitator.kill("SIGTERM");
+    for (const f of facilitators) f.kill("SIGTERM");
     process.exit(code ?? 0);
   });
 }

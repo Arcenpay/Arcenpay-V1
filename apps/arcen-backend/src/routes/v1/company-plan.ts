@@ -15,7 +15,10 @@ import {
 } from "viem";
 import { deliverWebhook } from "../../lib/webhooks/deliver-webhook.js";
 import { resolveEntitlementResults } from "../../lib/entitlements/entitlements.js";
-import { YEARLY_INTERVAL } from "@arcenpay/internal-core";
+import {
+  YEARLY_INTERVAL,
+  isValidAnyFamilyTxHash,
+} from "@arcenpay/internal-core";
 import {
   extractEmbedAccessToken,
   resolveEmbedAccessToken,
@@ -60,9 +63,18 @@ import {
 import { SELF_SERVE_PLAN_CHANGES_ENABLED } from "../../lib/platform/launch-flags.js";
 import {
   getChain,
+  getChainFamily,
   getContractAddresses,
+  getSolanaRpcUrl,
   SubscriptionRegistryABI,
 } from "@arcenpay/internal-core";
+import {
+  decodeSubscriptionRecord,
+  encodeChangePlan,
+  findPlanPda,
+  findSubscriptionPda,
+} from "@arcenpay/internal-core/solana";
+import { Connection } from "@solana/web3.js";
 import { createResilientPublicClient, getRpcUrl } from "../../config.js";
 import { DEFAULT_CHAIN_ID } from "../../lib/platform/default-chain.js";
 
@@ -196,7 +208,7 @@ function readConsumedPaymentTxHashes(
   if (!Array.isArray(txHashes)) return [];
   return txHashes.filter(
     (value): value is string =>
-      typeof value === "string" && /^0x[0-9a-fA-F]{64}$/.test(value),
+      typeof value === "string" && isValidAnyFamilyTxHash(value),
   );
 }
 
@@ -1195,6 +1207,249 @@ export async function handleCompanyPlanRequest(
       );
     }
 
+    // ── Solana plan change ───────────────────────────────────────────────
+    // Solana has no AutopayModule.updateConfig, so the EVM autopay-tx check
+    // below would reject a base58 hash with a 400. Prepare the `change_plan`
+    // instruction for the subscriber wallet to sign instead.
+    const solanaChangeChainId = company.subscriptionState?.chainId;
+    if (
+      solanaChangeChainId &&
+      getChainFamily(solanaChangeChainId) === "solana" &&
+      !accessChangeTxHash
+    ) {
+      const solanaProgramId =
+        getContractAddresses(solanaChangeChainId).subscriptionRegistry;
+      const solanaRpcUrl = getSolanaRpcUrl(solanaChangeChainId);
+      const solanaTokenId = company.subscriptionState?.onChainTokenId;
+      const solanaTargetPlanId = plan.onChainPlanId;
+      if (
+        !solanaProgramId ||
+        !solanaRpcUrl ||
+        !solanaTokenId ||
+        !solanaTargetPlanId
+      ) {
+        return c.json(
+          {
+            error:
+              "Solana plan-change configuration is incomplete for this subscription.",
+          },
+          503,
+          corsHeaders(origin),
+        );
+      }
+
+      const [subscriptionPda] = findSubscriptionPda(
+        solanaProgramId,
+        BigInt(solanaTokenId),
+      );
+      const [solanaNewPlanPda] = findPlanPda(
+        solanaProgramId,
+        BigInt(solanaTargetPlanId),
+      );
+
+      return c.json(
+        {
+          data: {
+            ...buildLifecycleResponse({
+              changeType: isUpgrade
+                ? "upgrade"
+                : isDowngrade
+                  ? "downgrade"
+                  : "billing_period_change",
+              stage: "pending_verification",
+              scheduled: false,
+              mode: isUpgrade
+                ? "immediate_prorated_upgrade"
+                : "scheduled_downgrade",
+              pendingVerification: true,
+              data: {
+                planId,
+                planName: plan.name,
+                previousPlanId: previousPlanId ?? null,
+                accessChangeRequired: true,
+                accessChangeScope: "subscription_registry_plan_change",
+                accessChangeNote:
+                  "Submit the prepared Solana change_plan transaction from the subscriber wallet, then call this endpoint again with accessChangeTxHash.",
+                preparedTransaction: {
+                  family: "solana",
+                  chainId: solanaChangeChainId,
+                  rpcUrl: solanaRpcUrl,
+                  programId: solanaProgramId,
+                  instruction: {
+                    keys: [
+                      {
+                        pubkey: subscriptionPda.toBase58(),
+                        isSigner: false,
+                        isWritable: true,
+                      },
+                      {
+                        pubkey: solanaNewPlanPda.toBase58(),
+                        isSigner: false,
+                        isWritable: false,
+                      },
+                      {
+                        pubkey: companyPaymentAccount,
+                        isSigner: true,
+                        isWritable: false,
+                      },
+                    ],
+                    data: encodeChangePlan(
+                      BigInt(solanaTargetPlanId),
+                    ).toString("base64"),
+                  },
+                },
+              },
+            }),
+          },
+        },
+        202,
+        corsHeaders(origin),
+      );
+    }
+
+    // ── Solana plan change (confirm) ─────────────────────────────────────
+    // The subscriber submitted the prepared `change_plan` transaction. Verify
+    // it on-chain rather than running the EVM autopay verification below.
+    if (
+      solanaChangeChainId &&
+      getChainFamily(solanaChangeChainId) === "solana" &&
+      accessChangeTxHash
+    ) {
+      const solanaProgramId =
+        getContractAddresses(solanaChangeChainId).subscriptionRegistry;
+      const solanaRpcUrl = getSolanaRpcUrl(solanaChangeChainId);
+      const solanaTokenId = company.subscriptionState?.onChainTokenId;
+      const solanaTargetPlanId = plan.onChainPlanId;
+      if (
+        !solanaProgramId ||
+        !solanaRpcUrl ||
+        !solanaTokenId ||
+        !solanaTargetPlanId
+      ) {
+        return c.json(
+          {
+            error:
+              "Solana plan-change configuration is incomplete for this subscription.",
+          },
+          503,
+          corsHeaders(origin),
+        );
+      }
+
+      const connection = new Connection(solanaRpcUrl, "confirmed");
+      // Wait for the transaction to propagate to our RPC node rather than
+      // failing a wallet-confirmed action on the first miss (same rationale as
+      // the activation path).
+      const maxWaitMs = Number(process.env.SOLANA_TX_WAIT_MS || 15_000);
+      const pollMs = 1_500;
+      const deadline = Date.now() + maxWaitMs;
+      const fetchTx = async () =>
+        connection
+          .getParsedTransaction(accessChangeTxHash, {
+            maxSupportedTransactionVersion: 0,
+            commitment: "confirmed",
+          })
+          .catch(() => null);
+      let tx = await fetchTx();
+      while (!tx && Date.now() < deadline) {
+        await new Promise((resolve) => setTimeout(resolve, pollMs));
+        tx = await fetchTx();
+      }
+      if (!tx) {
+        return c.json(
+          { error: "Solana transaction is still propagating to our RPC node." },
+          425,
+          corsHeaders(origin),
+        );
+      }
+      if (tx.meta?.err) {
+        return c.json(
+          { error: "Solana plan-change transaction failed on-chain." },
+          409,
+          corsHeaders(origin),
+        );
+      }
+      const invoked = (tx.transaction.message.accountKeys ?? []).some(
+        (k: { pubkey?: { toBase58?: () => string } | string }) => {
+          const pk =
+            typeof k?.pubkey === "object" && typeof k.pubkey?.toBase58 === "function"
+              ? k.pubkey.toBase58()
+              : String(k?.pubkey ?? k);
+          return pk === solanaProgramId;
+        },
+      );
+      if (!invoked) {
+        return c.json(
+          { error: "Transaction did not invoke the ArcenPay Solana program." },
+          409,
+          corsHeaders(origin),
+        );
+      }
+
+      const [subscriptionPda] = findSubscriptionPda(
+        solanaProgramId,
+        BigInt(solanaTokenId),
+      );
+      const accountInfo = await connection.getAccountInfo(
+        subscriptionPda,
+        "confirmed",
+      );
+      if (!accountInfo) {
+        return c.json(
+          { error: "Subscription account not found on-chain." },
+          404,
+          corsHeaders(origin),
+        );
+      }
+      const onChainSubscription = decodeSubscriptionRecord(
+        Buffer.from(accountInfo.data),
+      );
+      if (!onChainSubscription) {
+        return c.json(
+          { error: "Unable to decode the on-chain subscription account." },
+          500,
+          corsHeaders(origin),
+        );
+      }
+      if (onChainSubscription.planId !== BigInt(solanaTargetPlanId)) {
+        return c.json(
+          {
+            error:
+              "On-chain subscription plan does not match the requested target plan.",
+          },
+          409,
+          corsHeaders(origin),
+        );
+      }
+
+      return c.json(
+        {
+          data: {
+            ...buildLifecycleResponse({
+              changeType: isUpgrade
+                ? "upgrade"
+                : isDowngrade
+                  ? "downgrade"
+                  : "billing_period_change",
+              stage: "applied",
+              scheduled: false,
+              mode: isUpgrade
+                ? "immediate_prorated_upgrade"
+                : "scheduled_downgrade",
+              data: {
+                planId,
+                planName: plan.name,
+                previousPlanId: previousPlanId ?? null,
+                accessChangeTxHash,
+              },
+            }),
+          },
+        },
+        200,
+        corsHeaders(origin),
+      );
+    }
+
     const normalizedAutopayConfigTxHash = normalizeTxHash(
       autopayConfigTxHash ?? planChangeTxHash ?? txHash,
     );
@@ -1566,6 +1821,107 @@ export async function handleCompanyPlanRequest(
         accessChangeTxHashLocal = normalizedAutopayConfigTxHash;
       }
       if (!accessChangeTxHashLocal && requiresRegistryAccessChange) {
+        const effectiveChainId = subChainId ?? DEFAULT_CHAIN_ID;
+
+        // Solana: prepare the `change_plan` instruction for the connected
+        // wallet to sign, mirroring the Solana activation flow.
+        if (getChainFamily(effectiveChainId) === "solana") {
+          const solanaProgramId = getContractAddresses(effectiveChainId).subscriptionRegistry;
+          const solanaRpcUrl = getSolanaRpcUrl(effectiveChainId);
+          const targetOnChainPlanId = plan.onChainPlanId;
+          if (!solanaProgramId || !solanaRpcUrl || !targetOnChainPlanId) {
+            return c.json(
+              {
+                error:
+                  "Solana plan-change configuration is incomplete for this subscription.",
+              },
+              503,
+              corsHeaders(origin),
+            );
+          }
+
+          const newPlanId = BigInt(targetOnChainPlanId);
+          const [subscriptionPda] = findSubscriptionPda(
+            solanaProgramId,
+            BigInt(verification.tokenId),
+          );
+          const [newPlanPda] = findPlanPda(solanaProgramId, newPlanId);
+
+          return c.json(
+            {
+              data: {
+                ...buildLifecycleResponse({
+                  changeType: "upgrade",
+                  stage: "pending_verification",
+                  scheduled: false,
+                  mode: "immediate_prorated_upgrade",
+                  pendingVerification: true,
+                  data: {
+                    planId,
+                    planName: plan.name,
+                    previousPlanId: previousPlanId ?? null,
+                    autopayConfigTxHash: normalizedAutopayConfigTxHash,
+                    paymentTxHash: normalizedPaymentTxHash,
+                    proration: proration.response,
+                    accessChangeRequired: true,
+                    accessChangeScope: "subscription_registry_plan_change",
+                    accessChangeNote:
+                      "Submit the prepared Solana change_plan transaction from the subscriber wallet, then call this endpoint again with accessChangeTxHash.",
+                    preparedTransaction: {
+                      family: "solana",
+                      chainId: effectiveChainId,
+                      rpcUrl: solanaRpcUrl,
+                      programId: solanaProgramId,
+                      instruction: {
+                        keys: [
+                          {
+                            pubkey: subscriptionPda.toBase58(),
+                            isSigner: false,
+                            isWritable: true,
+                          },
+                          {
+                            pubkey: newPlanPda.toBase58(),
+                            isSigner: false,
+                            isWritable: false,
+                          },
+                          {
+                            pubkey: companyPaymentAccount,
+                            isSigner: true,
+                            isWritable: false,
+                          },
+                        ],
+                        data: encodeChangePlan(newPlanId).toString("base64"),
+                      },
+                    },
+                    verification: {
+                      paymentAccount: companyPaymentAccount,
+                      tokenId: verification.tokenId,
+                      currentOnChainPlanId: verification.previousOnChainPlanId,
+                      targetOnChainPlanId: plan.onChainPlanId,
+                    },
+                  },
+                }),
+              },
+            },
+            202,
+            corsHeaders(origin),
+          );
+        }
+
+        // This branch builds EVM SubscriptionRegistry calldata. Stellar drives
+        // plan changes through the subscription-change-request lifecycle and
+        // must supply an access-change tx hash — never fall through to
+        // getChain() (which throws for non-EVM ids and would 500).
+        if (getChainFamily(effectiveChainId) !== "evm") {
+          return c.json(
+            {
+              error:
+                "An access-change transaction hash is required for this chain family; the EVM registry-calldata path is not applicable.",
+            },
+            400,
+            corsHeaders(origin),
+          );
+        }
         const { contracts } = createChainClients(subChainId);
         const subscriptionRegistryAddress =
           contracts.subscriptionRegistry as `0x${string}`;

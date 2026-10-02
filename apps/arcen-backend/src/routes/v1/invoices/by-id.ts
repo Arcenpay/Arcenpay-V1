@@ -4,6 +4,7 @@ import { requireInvoiceAuth, isInvoiceAuthError } from "../../../lib/auth/invoic
 import { ensureInvoicePdfForTeam } from "../../../lib/billing/invoice-documents.js";
 import { writeAuditEvent } from "../../../lib/platform/audit.js";
 import { deliverWebhook } from "../../../lib/webhooks/deliver-webhook.js";
+import { WALLET_ADDRESS_REGEX } from "../../../lib/platform/chain-family.js";
 import { toPrismaJson } from "../../../utils/prisma-json.js";
 import { recordSuccessfulPayment } from "../../../lib/billing/billing-ledger.js";
 import { sendPaidInvoiceReceipt } from "../../../lib/billing/invoice-notifications.js";
@@ -58,7 +59,7 @@ const patchSchema = z.object({
       txHash: z.string().min(1),
       payerWallet: z
         .string()
-        .regex(/^0x[0-9a-fA-F]{40}$/i)
+        .regex(WALLET_ADDRESS_REGEX)
         .optional(),
     })
     .optional(),

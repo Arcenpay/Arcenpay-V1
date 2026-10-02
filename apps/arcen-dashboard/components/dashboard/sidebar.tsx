@@ -5,7 +5,6 @@ import React, { useMemo, useState, useEffect } from "react";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
 import type { Section } from "@/app/(dashboard)/page";
-import { useAccount } from "wagmi";
 import {
   LayoutDashboard,
   LayoutGrid,
@@ -37,14 +36,16 @@ import {
   UserRound,
   Search,
   ShieldCheck,
+  Wallet,
+  Unplug,
+  RefreshCw,
 } from "lucide-react";
 import { CommandPalette } from "./command-palette";
 import { useDashboardSession } from "@/hooks/use-dashboard-session";
 import { DASHBOARD_DOCS_URL } from "@/lib/docs-url";
 import { getChainLabel, resolveEnvironmentChainId } from "@/lib/default-chain";
 import { useEnvironment } from "@/contexts/environment-context";
-import { isStellarChainId } from "@arcenpay/internal-core";
-import { useStellarWallet } from "@/hooks/use-stellar-wallet";
+import { useUnifiedDashboardWallet } from "@/hooks/use-unified-dashboard-wallet";
 import { useTheme } from "next-themes";
 import { useRouter } from "next/navigation";
 import { isPlatformAdminEmail } from "@/lib/admin";
@@ -148,7 +149,6 @@ export function Sidebar({
   onMobileOpenChange,
 }: SidebarProps) {
   const router = useRouter();
-  const { address, isConnected: isEvmConnected } = useAccount();
   const { envMode, activeEnvironment } = useEnvironment();
   const { data: sessionData, refresh: refreshSessionData } =
     useDashboardSession();
@@ -166,19 +166,17 @@ export function Sidebar({
   const { theme, setTheme } = useTheme();
   const sidebarChainId =
     activeEnvironment?.chainId ?? resolveEnvironmentChainId(envMode);
-  const stellar = useStellarWallet(sidebarChainId);
+  // Family-aware wallet (EVM / Stellar / Solana) — resolves the connected or
+  // linked address for the active environment's chain family.
+  const wallet = useUnifiedDashboardWallet(
+    sidebarChainId,
+    sessionData?.user?.walletAddress ?? null,
+    sessionData?.user?.stellarWalletAddress ?? null,
+    sessionData?.user?.solanaWalletAddress ?? null,
+  );
 
-  const isStellarEnv = sidebarChainId
-    ? isStellarChainId(sidebarChainId)
-    : false;
-
-  const displayAddress = isStellarEnv
-    ? (stellar.address ?? sessionData?.user?.stellarWalletAddress ?? null)
-    : (address ?? sessionData?.user?.walletAddress ?? null);
-
-  const isConnected = isStellarEnv
-    ? stellar.isConnected
-    : isEvmConnected;
+  const displayAddress = wallet.connectedAddress ?? wallet.storedWallet ?? null;
+  const isConnected = wallet.hasConnectedWallet;
 
   // Accordion: only one group open at a time, default all closed
   const isPlatformAdmin =
@@ -635,6 +633,55 @@ export function Sidebar({
                       </a>
                     )}
                   </div>
+                  <div className="mt-2 border-t border-border pt-2">
+                    <div className="px-3 pb-1 pt-1 text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
+                      Wallet
+                    </div>
+                    {mounted && isConnected ? (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowAccountMenu(false);
+                            void wallet.reconnectWallet();
+                          }}
+                          className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-secondary/50 hover:text-foreground"
+                        >
+                          <RefreshCw className="h-4 w-4" strokeWidth={1.5} />
+                          Change wallet
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowAccountMenu(false);
+                            void wallet.disconnectWallet();
+                          }}
+                          className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-secondary/50 hover:text-foreground"
+                        >
+                          <Unplug className="h-4 w-4" strokeWidth={1.5} />
+                          Disconnect wallet
+                        </button>
+                      </>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowAccountMenu(false);
+                          void wallet.openConnectModal();
+                        }}
+                        className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-secondary/50 hover:text-foreground"
+                      >
+                        <Wallet className="h-4 w-4" strokeWidth={1.5} />
+                        Connect wallet
+                      </button>
+                    )}
+                    <div className="px-3 pt-1 pb-1 font-mono text-[11px] text-muted-foreground/70">
+                      {wallet.connectedWalletLabel ??
+                        wallet.linkedWalletLabel ??
+                        "No wallet linked yet"}
+                    </div>
+                  </div>
+
                   <div className="mt-2 border-t border-border pt-2">
                     <button
                       type="button"

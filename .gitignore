@@ -68,3 +68,12 @@ scripts/data/*
 !scripts/data/launch-recipients.example.csv
 
 .commandcode/
+
+# Solana local validator ledger (regenerable; created by `solana-test-validator`)
+test-ledger/
+
+# Anchor local cache
+.anchor/
+
+# Scratch files from ops/agent sessions
+.tmp-*

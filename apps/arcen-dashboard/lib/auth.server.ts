@@ -17,6 +17,7 @@ export type DashboardSession = {
   currentTeamId: string | null;
   walletAddress: string | null;
   stellarWalletAddress: string | null;
+  solanaWalletAddress: string | null;
   currentTeamRole: string | null;
   isPlatformActivated?: boolean;
   activationKeyStatus?: "ACTIVE" | "EXPIRED" | "REVOKED" | "UNACTIVATED";
@@ -59,6 +60,7 @@ type BackendSessionResponse = {
     email?: string | null;
     walletAddress?: string | null;
     stellarWalletAddress?: string | null;
+    solanaWalletAddress?: string | null;
     isPlatformAdmin?: boolean;
   };
   currentTeam?: {
@@ -138,6 +140,7 @@ export async function getSession(): Promise<DashboardSession | null> {
     currentTeamId: data.currentTeam?.id ?? null,
     walletAddress: data.user.walletAddress ?? null,
     stellarWalletAddress: data.user.stellarWalletAddress ?? null,
+    solanaWalletAddress: data.user.solanaWalletAddress ?? null,
     currentTeamRole: data.currentTeam?.role ?? null,
     isPlatformActivated: isPlatformAdmin ? true : (data.currentTeam?.isPlatformActivated ?? false),
     activationKeyStatus: isPlatformAdmin
@@ -205,6 +208,7 @@ export async function createSession(userId: string): Promise<DashboardSession> {
     currentTeamId: session.currentTeamId ?? null,
     walletAddress: session.walletAddress ?? null,
     stellarWalletAddress: session.stellarWalletAddress ?? null,
+    solanaWalletAddress: session.solanaWalletAddress ?? null,
     currentTeamRole: null,
     activeEnvironment: null,
     environments: [],

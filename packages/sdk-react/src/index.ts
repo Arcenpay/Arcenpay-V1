@@ -63,6 +63,15 @@ export type { UseMeteredEntitlementReturn } from "./hooks/useMeteredEntitlement"
 export { useTrack } from "./hooks/useTrack";
 export type { TrackEventInput } from "./hooks/useTrack";
 export { useStellarEmbedWallet } from "./hooks/useStellarEmbedWallet";
+export { useSolanaEmbedWallet } from "./hooks/useSolanaEmbedWallet";
+export type {
+  SolanaEmbedWalletState,
+  SolanaPreparedInstruction,
+} from "./hooks/useSolanaEmbedWallet";
+export { SolanaWalletAdapter } from "./lib/solana-wallet-adapter";
+export { createWalletAdapter } from "./lib/wallet-adapter-factory";
+export { createTxBuilder } from "./lib/tx-builder";
+export type { SolanaTxParams } from "./lib/wallet-adapter";
 
 // Shared public types — re-exported so app developers only need this package
 export type {

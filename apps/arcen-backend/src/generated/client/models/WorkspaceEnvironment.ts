@@ -267,6 +267,7 @@ export type WorkspaceEnvironmentWhereInput = {
   platformBillingAccount?: Prisma.XOR<Prisma.PlatformBillingAccountNullableScalarRelationFilter, Prisma.PlatformBillingAccountWhereInput> | null
   platformBillingPlans?: Prisma.PlatformBillingPlanListRelationFilter
   platformBillingCustomers?: Prisma.PlatformBillingCustomerListRelationFilter
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptListRelationFilter
 }
 
 export type WorkspaceEnvironmentOrderByWithRelationInput = {
@@ -305,6 +306,7 @@ export type WorkspaceEnvironmentOrderByWithRelationInput = {
   platformBillingAccount?: Prisma.PlatformBillingAccountOrderByWithRelationInput
   platformBillingPlans?: Prisma.PlatformBillingPlanOrderByRelationAggregateInput
   platformBillingCustomers?: Prisma.PlatformBillingCustomerOrderByRelationAggregateInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptOrderByRelationAggregateInput
 }
 
 export type WorkspaceEnvironmentWhereUniqueInput = Prisma.AtLeast<{
@@ -347,6 +349,7 @@ export type WorkspaceEnvironmentWhereUniqueInput = Prisma.AtLeast<{
   platformBillingAccount?: Prisma.XOR<Prisma.PlatformBillingAccountNullableScalarRelationFilter, Prisma.PlatformBillingAccountWhereInput> | null
   platformBillingPlans?: Prisma.PlatformBillingPlanListRelationFilter
   platformBillingCustomers?: Prisma.PlatformBillingCustomerListRelationFilter
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptListRelationFilter
 }, "id" | "teamId_name">
 
 export type WorkspaceEnvironmentOrderByWithAggregationInput = {
@@ -414,6 +417,7 @@ export type WorkspaceEnvironmentCreateInput = {
   platformBillingAccount?: Prisma.PlatformBillingAccountCreateNestedOneWithoutEnvironmentInput
   platformBillingPlans?: Prisma.PlatformBillingPlanCreateNestedManyWithoutEnvironmentInput
   platformBillingCustomers?: Prisma.PlatformBillingCustomerCreateNestedManyWithoutEnvironmentInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptCreateNestedManyWithoutEnvironmentInput
 }
 
 export type WorkspaceEnvironmentUncheckedCreateInput = {
@@ -451,6 +455,7 @@ export type WorkspaceEnvironmentUncheckedCreateInput = {
   platformBillingAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedOneWithoutEnvironmentInput
   platformBillingPlans?: Prisma.PlatformBillingPlanUncheckedCreateNestedManyWithoutEnvironmentInput
   platformBillingCustomers?: Prisma.PlatformBillingCustomerUncheckedCreateNestedManyWithoutEnvironmentInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUncheckedCreateNestedManyWithoutEnvironmentInput
 }
 
 export type WorkspaceEnvironmentUpdateInput = {
@@ -488,6 +493,7 @@ export type WorkspaceEnvironmentUpdateInput = {
   platformBillingAccount?: Prisma.PlatformBillingAccountUpdateOneWithoutEnvironmentNestedInput
   platformBillingPlans?: Prisma.PlatformBillingPlanUpdateManyWithoutEnvironmentNestedInput
   platformBillingCustomers?: Prisma.PlatformBillingCustomerUpdateManyWithoutEnvironmentNestedInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUpdateManyWithoutEnvironmentNestedInput
 }
 
 export type WorkspaceEnvironmentUncheckedUpdateInput = {
@@ -525,6 +531,7 @@ export type WorkspaceEnvironmentUncheckedUpdateInput = {
   platformBillingAccount?: Prisma.PlatformBillingAccountUncheckedUpdateOneWithoutEnvironmentNestedInput
   platformBillingPlans?: Prisma.PlatformBillingPlanUncheckedUpdateManyWithoutEnvironmentNestedInput
   platformBillingCustomers?: Prisma.PlatformBillingCustomerUncheckedUpdateManyWithoutEnvironmentNestedInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUncheckedUpdateManyWithoutEnvironmentNestedInput
 }
 
 export type WorkspaceEnvironmentCreateManyInput = {
@@ -879,6 +886,22 @@ export type WorkspaceEnvironmentUpdateOneWithoutPaymentsNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.WorkspaceEnvironmentUpdateToOneWithWhereWithoutPaymentsInput, Prisma.WorkspaceEnvironmentUpdateWithoutPaymentsInput>, Prisma.WorkspaceEnvironmentUncheckedUpdateWithoutPaymentsInput>
 }
 
+export type WorkspaceEnvironmentCreateNestedOneWithoutSolanaActivationAttemptsInput = {
+  create?: Prisma.XOR<Prisma.WorkspaceEnvironmentCreateWithoutSolanaActivationAttemptsInput, Prisma.WorkspaceEnvironmentUncheckedCreateWithoutSolanaActivationAttemptsInput>
+  connectOrCreate?: Prisma.WorkspaceEnvironmentCreateOrConnectWithoutSolanaActivationAttemptsInput
+  connect?: Prisma.WorkspaceEnvironmentWhereUniqueInput
+}
+
+export type WorkspaceEnvironmentUpdateOneWithoutSolanaActivationAttemptsNestedInput = {
+  create?: Prisma.XOR<Prisma.WorkspaceEnvironmentCreateWithoutSolanaActivationAttemptsInput, Prisma.WorkspaceEnvironmentUncheckedCreateWithoutSolanaActivationAttemptsInput>
+  connectOrCreate?: Prisma.WorkspaceEnvironmentCreateOrConnectWithoutSolanaActivationAttemptsInput
+  upsert?: Prisma.WorkspaceEnvironmentUpsertWithoutSolanaActivationAttemptsInput
+  disconnect?: Prisma.WorkspaceEnvironmentWhereInput | boolean
+  delete?: Prisma.WorkspaceEnvironmentWhereInput | boolean
+  connect?: Prisma.WorkspaceEnvironmentWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.WorkspaceEnvironmentUpdateToOneWithWhereWithoutSolanaActivationAttemptsInput, Prisma.WorkspaceEnvironmentUpdateWithoutSolanaActivationAttemptsInput>, Prisma.WorkspaceEnvironmentUncheckedUpdateWithoutSolanaActivationAttemptsInput>
+}
+
 export type WorkspaceEnvironmentCreateNestedOneWithoutPlatformBillingPlansInput = {
   create?: Prisma.XOR<Prisma.WorkspaceEnvironmentCreateWithoutPlatformBillingPlansInput, Prisma.WorkspaceEnvironmentUncheckedCreateWithoutPlatformBillingPlansInput>
   connectOrCreate?: Prisma.WorkspaceEnvironmentCreateOrConnectWithoutPlatformBillingPlansInput
@@ -1115,6 +1138,7 @@ export type WorkspaceEnvironmentCreateWithoutAuthSessionsInput = {
   platformBillingAccount?: Prisma.PlatformBillingAccountCreateNestedOneWithoutEnvironmentInput
   platformBillingPlans?: Prisma.PlatformBillingPlanCreateNestedManyWithoutEnvironmentInput
   platformBillingCustomers?: Prisma.PlatformBillingCustomerCreateNestedManyWithoutEnvironmentInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptCreateNestedManyWithoutEnvironmentInput
 }
 
 export type WorkspaceEnvironmentUncheckedCreateWithoutAuthSessionsInput = {
@@ -1151,6 +1175,7 @@ export type WorkspaceEnvironmentUncheckedCreateWithoutAuthSessionsInput = {
   platformBillingAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedOneWithoutEnvironmentInput
   platformBillingPlans?: Prisma.PlatformBillingPlanUncheckedCreateNestedManyWithoutEnvironmentInput
   platformBillingCustomers?: Prisma.PlatformBillingCustomerUncheckedCreateNestedManyWithoutEnvironmentInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUncheckedCreateNestedManyWithoutEnvironmentInput
 }
 
 export type WorkspaceEnvironmentCreateOrConnectWithoutAuthSessionsInput = {
@@ -1203,6 +1228,7 @@ export type WorkspaceEnvironmentUpdateWithoutAuthSessionsInput = {
   platformBillingAccount?: Prisma.PlatformBillingAccountUpdateOneWithoutEnvironmentNestedInput
   platformBillingPlans?: Prisma.PlatformBillingPlanUpdateManyWithoutEnvironmentNestedInput
   platformBillingCustomers?: Prisma.PlatformBillingCustomerUpdateManyWithoutEnvironmentNestedInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUpdateManyWithoutEnvironmentNestedInput
 }
 
 export type WorkspaceEnvironmentUncheckedUpdateWithoutAuthSessionsInput = {
@@ -1239,6 +1265,7 @@ export type WorkspaceEnvironmentUncheckedUpdateWithoutAuthSessionsInput = {
   platformBillingAccount?: Prisma.PlatformBillingAccountUncheckedUpdateOneWithoutEnvironmentNestedInput
   platformBillingPlans?: Prisma.PlatformBillingPlanUncheckedUpdateManyWithoutEnvironmentNestedInput
   platformBillingCustomers?: Prisma.PlatformBillingCustomerUncheckedUpdateManyWithoutEnvironmentNestedInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUncheckedUpdateManyWithoutEnvironmentNestedInput
 }
 
 export type WorkspaceEnvironmentCreateWithoutTeamInput = {
@@ -1275,6 +1302,7 @@ export type WorkspaceEnvironmentCreateWithoutTeamInput = {
   platformBillingAccount?: Prisma.PlatformBillingAccountCreateNestedOneWithoutEnvironmentInput
   platformBillingPlans?: Prisma.PlatformBillingPlanCreateNestedManyWithoutEnvironmentInput
   platformBillingCustomers?: Prisma.PlatformBillingCustomerCreateNestedManyWithoutEnvironmentInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptCreateNestedManyWithoutEnvironmentInput
 }
 
 export type WorkspaceEnvironmentUncheckedCreateWithoutTeamInput = {
@@ -1311,6 +1339,7 @@ export type WorkspaceEnvironmentUncheckedCreateWithoutTeamInput = {
   platformBillingAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedOneWithoutEnvironmentInput
   platformBillingPlans?: Prisma.PlatformBillingPlanUncheckedCreateNestedManyWithoutEnvironmentInput
   platformBillingCustomers?: Prisma.PlatformBillingCustomerUncheckedCreateNestedManyWithoutEnvironmentInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUncheckedCreateNestedManyWithoutEnvironmentInput
 }
 
 export type WorkspaceEnvironmentCreateOrConnectWithoutTeamInput = {
@@ -1387,6 +1416,7 @@ export type WorkspaceEnvironmentCreateWithoutProviderProfilesInput = {
   platformBillingAccount?: Prisma.PlatformBillingAccountCreateNestedOneWithoutEnvironmentInput
   platformBillingPlans?: Prisma.PlatformBillingPlanCreateNestedManyWithoutEnvironmentInput
   platformBillingCustomers?: Prisma.PlatformBillingCustomerCreateNestedManyWithoutEnvironmentInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptCreateNestedManyWithoutEnvironmentInput
 }
 
 export type WorkspaceEnvironmentUncheckedCreateWithoutProviderProfilesInput = {
@@ -1423,6 +1453,7 @@ export type WorkspaceEnvironmentUncheckedCreateWithoutProviderProfilesInput = {
   platformBillingAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedOneWithoutEnvironmentInput
   platformBillingPlans?: Prisma.PlatformBillingPlanUncheckedCreateNestedManyWithoutEnvironmentInput
   platformBillingCustomers?: Prisma.PlatformBillingCustomerUncheckedCreateNestedManyWithoutEnvironmentInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUncheckedCreateNestedManyWithoutEnvironmentInput
 }
 
 export type WorkspaceEnvironmentCreateOrConnectWithoutProviderProfilesInput = {
@@ -1475,6 +1506,7 @@ export type WorkspaceEnvironmentUpdateWithoutProviderProfilesInput = {
   platformBillingAccount?: Prisma.PlatformBillingAccountUpdateOneWithoutEnvironmentNestedInput
   platformBillingPlans?: Prisma.PlatformBillingPlanUpdateManyWithoutEnvironmentNestedInput
   platformBillingCustomers?: Prisma.PlatformBillingCustomerUpdateManyWithoutEnvironmentNestedInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUpdateManyWithoutEnvironmentNestedInput
 }
 
 export type WorkspaceEnvironmentUncheckedUpdateWithoutProviderProfilesInput = {
@@ -1511,6 +1543,7 @@ export type WorkspaceEnvironmentUncheckedUpdateWithoutProviderProfilesInput = {
   platformBillingAccount?: Prisma.PlatformBillingAccountUncheckedUpdateOneWithoutEnvironmentNestedInput
   platformBillingPlans?: Prisma.PlatformBillingPlanUncheckedUpdateManyWithoutEnvironmentNestedInput
   platformBillingCustomers?: Prisma.PlatformBillingCustomerUncheckedUpdateManyWithoutEnvironmentNestedInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUncheckedUpdateManyWithoutEnvironmentNestedInput
 }
 
 export type WorkspaceEnvironmentCreateWithoutCatalogPlansInput = {
@@ -1547,6 +1580,7 @@ export type WorkspaceEnvironmentCreateWithoutCatalogPlansInput = {
   platformBillingAccount?: Prisma.PlatformBillingAccountCreateNestedOneWithoutEnvironmentInput
   platformBillingPlans?: Prisma.PlatformBillingPlanCreateNestedManyWithoutEnvironmentInput
   platformBillingCustomers?: Prisma.PlatformBillingCustomerCreateNestedManyWithoutEnvironmentInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptCreateNestedManyWithoutEnvironmentInput
 }
 
 export type WorkspaceEnvironmentUncheckedCreateWithoutCatalogPlansInput = {
@@ -1583,6 +1617,7 @@ export type WorkspaceEnvironmentUncheckedCreateWithoutCatalogPlansInput = {
   platformBillingAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedOneWithoutEnvironmentInput
   platformBillingPlans?: Prisma.PlatformBillingPlanUncheckedCreateNestedManyWithoutEnvironmentInput
   platformBillingCustomers?: Prisma.PlatformBillingCustomerUncheckedCreateNestedManyWithoutEnvironmentInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUncheckedCreateNestedManyWithoutEnvironmentInput
 }
 
 export type WorkspaceEnvironmentCreateOrConnectWithoutCatalogPlansInput = {
@@ -1635,6 +1670,7 @@ export type WorkspaceEnvironmentUpdateWithoutCatalogPlansInput = {
   platformBillingAccount?: Prisma.PlatformBillingAccountUpdateOneWithoutEnvironmentNestedInput
   platformBillingPlans?: Prisma.PlatformBillingPlanUpdateManyWithoutEnvironmentNestedInput
   platformBillingCustomers?: Prisma.PlatformBillingCustomerUpdateManyWithoutEnvironmentNestedInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUpdateManyWithoutEnvironmentNestedInput
 }
 
 export type WorkspaceEnvironmentUncheckedUpdateWithoutCatalogPlansInput = {
@@ -1671,6 +1707,7 @@ export type WorkspaceEnvironmentUncheckedUpdateWithoutCatalogPlansInput = {
   platformBillingAccount?: Prisma.PlatformBillingAccountUncheckedUpdateOneWithoutEnvironmentNestedInput
   platformBillingPlans?: Prisma.PlatformBillingPlanUncheckedUpdateManyWithoutEnvironmentNestedInput
   platformBillingCustomers?: Prisma.PlatformBillingCustomerUncheckedUpdateManyWithoutEnvironmentNestedInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUncheckedUpdateManyWithoutEnvironmentNestedInput
 }
 
 export type WorkspaceEnvironmentCreateWithoutCatalogAddOnsInput = {
@@ -1707,6 +1744,7 @@ export type WorkspaceEnvironmentCreateWithoutCatalogAddOnsInput = {
   platformBillingAccount?: Prisma.PlatformBillingAccountCreateNestedOneWithoutEnvironmentInput
   platformBillingPlans?: Prisma.PlatformBillingPlanCreateNestedManyWithoutEnvironmentInput
   platformBillingCustomers?: Prisma.PlatformBillingCustomerCreateNestedManyWithoutEnvironmentInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptCreateNestedManyWithoutEnvironmentInput
 }
 
 export type WorkspaceEnvironmentUncheckedCreateWithoutCatalogAddOnsInput = {
@@ -1743,6 +1781,7 @@ export type WorkspaceEnvironmentUncheckedCreateWithoutCatalogAddOnsInput = {
   platformBillingAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedOneWithoutEnvironmentInput
   platformBillingPlans?: Prisma.PlatformBillingPlanUncheckedCreateNestedManyWithoutEnvironmentInput
   platformBillingCustomers?: Prisma.PlatformBillingCustomerUncheckedCreateNestedManyWithoutEnvironmentInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUncheckedCreateNestedManyWithoutEnvironmentInput
 }
 
 export type WorkspaceEnvironmentCreateOrConnectWithoutCatalogAddOnsInput = {
@@ -1795,6 +1834,7 @@ export type WorkspaceEnvironmentUpdateWithoutCatalogAddOnsInput = {
   platformBillingAccount?: Prisma.PlatformBillingAccountUpdateOneWithoutEnvironmentNestedInput
   platformBillingPlans?: Prisma.PlatformBillingPlanUpdateManyWithoutEnvironmentNestedInput
   platformBillingCustomers?: Prisma.PlatformBillingCustomerUpdateManyWithoutEnvironmentNestedInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUpdateManyWithoutEnvironmentNestedInput
 }
 
 export type WorkspaceEnvironmentUncheckedUpdateWithoutCatalogAddOnsInput = {
@@ -1831,6 +1871,7 @@ export type WorkspaceEnvironmentUncheckedUpdateWithoutCatalogAddOnsInput = {
   platformBillingAccount?: Prisma.PlatformBillingAccountUncheckedUpdateOneWithoutEnvironmentNestedInput
   platformBillingPlans?: Prisma.PlatformBillingPlanUncheckedUpdateManyWithoutEnvironmentNestedInput
   platformBillingCustomers?: Prisma.PlatformBillingCustomerUncheckedUpdateManyWithoutEnvironmentNestedInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUncheckedUpdateManyWithoutEnvironmentNestedInput
 }
 
 export type WorkspaceEnvironmentCreateWithoutCatalogCreditTypesInput = {
@@ -1867,6 +1908,7 @@ export type WorkspaceEnvironmentCreateWithoutCatalogCreditTypesInput = {
   platformBillingAccount?: Prisma.PlatformBillingAccountCreateNestedOneWithoutEnvironmentInput
   platformBillingPlans?: Prisma.PlatformBillingPlanCreateNestedManyWithoutEnvironmentInput
   platformBillingCustomers?: Prisma.PlatformBillingCustomerCreateNestedManyWithoutEnvironmentInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptCreateNestedManyWithoutEnvironmentInput
 }
 
 export type WorkspaceEnvironmentUncheckedCreateWithoutCatalogCreditTypesInput = {
@@ -1903,6 +1945,7 @@ export type WorkspaceEnvironmentUncheckedCreateWithoutCatalogCreditTypesInput = 
   platformBillingAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedOneWithoutEnvironmentInput
   platformBillingPlans?: Prisma.PlatformBillingPlanUncheckedCreateNestedManyWithoutEnvironmentInput
   platformBillingCustomers?: Prisma.PlatformBillingCustomerUncheckedCreateNestedManyWithoutEnvironmentInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUncheckedCreateNestedManyWithoutEnvironmentInput
 }
 
 export type WorkspaceEnvironmentCreateOrConnectWithoutCatalogCreditTypesInput = {
@@ -1955,6 +1998,7 @@ export type WorkspaceEnvironmentUpdateWithoutCatalogCreditTypesInput = {
   platformBillingAccount?: Prisma.PlatformBillingAccountUpdateOneWithoutEnvironmentNestedInput
   platformBillingPlans?: Prisma.PlatformBillingPlanUpdateManyWithoutEnvironmentNestedInput
   platformBillingCustomers?: Prisma.PlatformBillingCustomerUpdateManyWithoutEnvironmentNestedInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUpdateManyWithoutEnvironmentNestedInput
 }
 
 export type WorkspaceEnvironmentUncheckedUpdateWithoutCatalogCreditTypesInput = {
@@ -1991,6 +2035,7 @@ export type WorkspaceEnvironmentUncheckedUpdateWithoutCatalogCreditTypesInput = 
   platformBillingAccount?: Prisma.PlatformBillingAccountUncheckedUpdateOneWithoutEnvironmentNestedInput
   platformBillingPlans?: Prisma.PlatformBillingPlanUncheckedUpdateManyWithoutEnvironmentNestedInput
   platformBillingCustomers?: Prisma.PlatformBillingCustomerUncheckedUpdateManyWithoutEnvironmentNestedInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUncheckedUpdateManyWithoutEnvironmentNestedInput
 }
 
 export type WorkspaceEnvironmentCreateWithoutCatalogVersionsInput = {
@@ -2027,6 +2072,7 @@ export type WorkspaceEnvironmentCreateWithoutCatalogVersionsInput = {
   platformBillingAccount?: Prisma.PlatformBillingAccountCreateNestedOneWithoutEnvironmentInput
   platformBillingPlans?: Prisma.PlatformBillingPlanCreateNestedManyWithoutEnvironmentInput
   platformBillingCustomers?: Prisma.PlatformBillingCustomerCreateNestedManyWithoutEnvironmentInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptCreateNestedManyWithoutEnvironmentInput
 }
 
 export type WorkspaceEnvironmentUncheckedCreateWithoutCatalogVersionsInput = {
@@ -2063,6 +2109,7 @@ export type WorkspaceEnvironmentUncheckedCreateWithoutCatalogVersionsInput = {
   platformBillingAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedOneWithoutEnvironmentInput
   platformBillingPlans?: Prisma.PlatformBillingPlanUncheckedCreateNestedManyWithoutEnvironmentInput
   platformBillingCustomers?: Prisma.PlatformBillingCustomerUncheckedCreateNestedManyWithoutEnvironmentInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUncheckedCreateNestedManyWithoutEnvironmentInput
 }
 
 export type WorkspaceEnvironmentCreateOrConnectWithoutCatalogVersionsInput = {
@@ -2115,6 +2162,7 @@ export type WorkspaceEnvironmentUpdateWithoutCatalogVersionsInput = {
   platformBillingAccount?: Prisma.PlatformBillingAccountUpdateOneWithoutEnvironmentNestedInput
   platformBillingPlans?: Prisma.PlatformBillingPlanUpdateManyWithoutEnvironmentNestedInput
   platformBillingCustomers?: Prisma.PlatformBillingCustomerUpdateManyWithoutEnvironmentNestedInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUpdateManyWithoutEnvironmentNestedInput
 }
 
 export type WorkspaceEnvironmentUncheckedUpdateWithoutCatalogVersionsInput = {
@@ -2151,6 +2199,7 @@ export type WorkspaceEnvironmentUncheckedUpdateWithoutCatalogVersionsInput = {
   platformBillingAccount?: Prisma.PlatformBillingAccountUncheckedUpdateOneWithoutEnvironmentNestedInput
   platformBillingPlans?: Prisma.PlatformBillingPlanUncheckedUpdateManyWithoutEnvironmentNestedInput
   platformBillingCustomers?: Prisma.PlatformBillingCustomerUncheckedUpdateManyWithoutEnvironmentNestedInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUncheckedUpdateManyWithoutEnvironmentNestedInput
 }
 
 export type WorkspaceEnvironmentCreateWithoutCatalogConfigsInput = {
@@ -2187,6 +2236,7 @@ export type WorkspaceEnvironmentCreateWithoutCatalogConfigsInput = {
   platformBillingAccount?: Prisma.PlatformBillingAccountCreateNestedOneWithoutEnvironmentInput
   platformBillingPlans?: Prisma.PlatformBillingPlanCreateNestedManyWithoutEnvironmentInput
   platformBillingCustomers?: Prisma.PlatformBillingCustomerCreateNestedManyWithoutEnvironmentInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptCreateNestedManyWithoutEnvironmentInput
 }
 
 export type WorkspaceEnvironmentUncheckedCreateWithoutCatalogConfigsInput = {
@@ -2223,6 +2273,7 @@ export type WorkspaceEnvironmentUncheckedCreateWithoutCatalogConfigsInput = {
   platformBillingAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedOneWithoutEnvironmentInput
   platformBillingPlans?: Prisma.PlatformBillingPlanUncheckedCreateNestedManyWithoutEnvironmentInput
   platformBillingCustomers?: Prisma.PlatformBillingCustomerUncheckedCreateNestedManyWithoutEnvironmentInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUncheckedCreateNestedManyWithoutEnvironmentInput
 }
 
 export type WorkspaceEnvironmentCreateOrConnectWithoutCatalogConfigsInput = {
@@ -2275,6 +2326,7 @@ export type WorkspaceEnvironmentUpdateWithoutCatalogConfigsInput = {
   platformBillingAccount?: Prisma.PlatformBillingAccountUpdateOneWithoutEnvironmentNestedInput
   platformBillingPlans?: Prisma.PlatformBillingPlanUpdateManyWithoutEnvironmentNestedInput
   platformBillingCustomers?: Prisma.PlatformBillingCustomerUpdateManyWithoutEnvironmentNestedInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUpdateManyWithoutEnvironmentNestedInput
 }
 
 export type WorkspaceEnvironmentUncheckedUpdateWithoutCatalogConfigsInput = {
@@ -2311,6 +2363,7 @@ export type WorkspaceEnvironmentUncheckedUpdateWithoutCatalogConfigsInput = {
   platformBillingAccount?: Prisma.PlatformBillingAccountUncheckedUpdateOneWithoutEnvironmentNestedInput
   platformBillingPlans?: Prisma.PlatformBillingPlanUncheckedUpdateManyWithoutEnvironmentNestedInput
   platformBillingCustomers?: Prisma.PlatformBillingCustomerUncheckedUpdateManyWithoutEnvironmentNestedInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUncheckedUpdateManyWithoutEnvironmentNestedInput
 }
 
 export type WorkspaceEnvironmentCreateWithoutTemplateInstallsInput = {
@@ -2347,6 +2400,7 @@ export type WorkspaceEnvironmentCreateWithoutTemplateInstallsInput = {
   platformBillingAccount?: Prisma.PlatformBillingAccountCreateNestedOneWithoutEnvironmentInput
   platformBillingPlans?: Prisma.PlatformBillingPlanCreateNestedManyWithoutEnvironmentInput
   platformBillingCustomers?: Prisma.PlatformBillingCustomerCreateNestedManyWithoutEnvironmentInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptCreateNestedManyWithoutEnvironmentInput
 }
 
 export type WorkspaceEnvironmentUncheckedCreateWithoutTemplateInstallsInput = {
@@ -2383,6 +2437,7 @@ export type WorkspaceEnvironmentUncheckedCreateWithoutTemplateInstallsInput = {
   platformBillingAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedOneWithoutEnvironmentInput
   platformBillingPlans?: Prisma.PlatformBillingPlanUncheckedCreateNestedManyWithoutEnvironmentInput
   platformBillingCustomers?: Prisma.PlatformBillingCustomerUncheckedCreateNestedManyWithoutEnvironmentInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUncheckedCreateNestedManyWithoutEnvironmentInput
 }
 
 export type WorkspaceEnvironmentCreateOrConnectWithoutTemplateInstallsInput = {
@@ -2435,6 +2490,7 @@ export type WorkspaceEnvironmentUpdateWithoutTemplateInstallsInput = {
   platformBillingAccount?: Prisma.PlatformBillingAccountUpdateOneWithoutEnvironmentNestedInput
   platformBillingPlans?: Prisma.PlatformBillingPlanUpdateManyWithoutEnvironmentNestedInput
   platformBillingCustomers?: Prisma.PlatformBillingCustomerUpdateManyWithoutEnvironmentNestedInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUpdateManyWithoutEnvironmentNestedInput
 }
 
 export type WorkspaceEnvironmentUncheckedUpdateWithoutTemplateInstallsInput = {
@@ -2471,6 +2527,7 @@ export type WorkspaceEnvironmentUncheckedUpdateWithoutTemplateInstallsInput = {
   platformBillingAccount?: Prisma.PlatformBillingAccountUncheckedUpdateOneWithoutEnvironmentNestedInput
   platformBillingPlans?: Prisma.PlatformBillingPlanUncheckedUpdateManyWithoutEnvironmentNestedInput
   platformBillingCustomers?: Prisma.PlatformBillingCustomerUncheckedUpdateManyWithoutEnvironmentNestedInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUncheckedUpdateManyWithoutEnvironmentNestedInput
 }
 
 export type WorkspaceEnvironmentCreateWithoutInvoiceTemplatesInput = {
@@ -2507,6 +2564,7 @@ export type WorkspaceEnvironmentCreateWithoutInvoiceTemplatesInput = {
   platformBillingAccount?: Prisma.PlatformBillingAccountCreateNestedOneWithoutEnvironmentInput
   platformBillingPlans?: Prisma.PlatformBillingPlanCreateNestedManyWithoutEnvironmentInput
   platformBillingCustomers?: Prisma.PlatformBillingCustomerCreateNestedManyWithoutEnvironmentInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptCreateNestedManyWithoutEnvironmentInput
 }
 
 export type WorkspaceEnvironmentUncheckedCreateWithoutInvoiceTemplatesInput = {
@@ -2543,6 +2601,7 @@ export type WorkspaceEnvironmentUncheckedCreateWithoutInvoiceTemplatesInput = {
   platformBillingAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedOneWithoutEnvironmentInput
   platformBillingPlans?: Prisma.PlatformBillingPlanUncheckedCreateNestedManyWithoutEnvironmentInput
   platformBillingCustomers?: Prisma.PlatformBillingCustomerUncheckedCreateNestedManyWithoutEnvironmentInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUncheckedCreateNestedManyWithoutEnvironmentInput
 }
 
 export type WorkspaceEnvironmentCreateOrConnectWithoutInvoiceTemplatesInput = {
@@ -2595,6 +2654,7 @@ export type WorkspaceEnvironmentUpdateWithoutInvoiceTemplatesInput = {
   platformBillingAccount?: Prisma.PlatformBillingAccountUpdateOneWithoutEnvironmentNestedInput
   platformBillingPlans?: Prisma.PlatformBillingPlanUpdateManyWithoutEnvironmentNestedInput
   platformBillingCustomers?: Prisma.PlatformBillingCustomerUpdateManyWithoutEnvironmentNestedInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUpdateManyWithoutEnvironmentNestedInput
 }
 
 export type WorkspaceEnvironmentUncheckedUpdateWithoutInvoiceTemplatesInput = {
@@ -2631,6 +2691,7 @@ export type WorkspaceEnvironmentUncheckedUpdateWithoutInvoiceTemplatesInput = {
   platformBillingAccount?: Prisma.PlatformBillingAccountUncheckedUpdateOneWithoutEnvironmentNestedInput
   platformBillingPlans?: Prisma.PlatformBillingPlanUncheckedUpdateManyWithoutEnvironmentNestedInput
   platformBillingCustomers?: Prisma.PlatformBillingCustomerUncheckedUpdateManyWithoutEnvironmentNestedInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUncheckedUpdateManyWithoutEnvironmentNestedInput
 }
 
 export type WorkspaceEnvironmentCreateWithoutInvoicesInput = {
@@ -2667,6 +2728,7 @@ export type WorkspaceEnvironmentCreateWithoutInvoicesInput = {
   platformBillingAccount?: Prisma.PlatformBillingAccountCreateNestedOneWithoutEnvironmentInput
   platformBillingPlans?: Prisma.PlatformBillingPlanCreateNestedManyWithoutEnvironmentInput
   platformBillingCustomers?: Prisma.PlatformBillingCustomerCreateNestedManyWithoutEnvironmentInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptCreateNestedManyWithoutEnvironmentInput
 }
 
 export type WorkspaceEnvironmentUncheckedCreateWithoutInvoicesInput = {
@@ -2703,6 +2765,7 @@ export type WorkspaceEnvironmentUncheckedCreateWithoutInvoicesInput = {
   platformBillingAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedOneWithoutEnvironmentInput
   platformBillingPlans?: Prisma.PlatformBillingPlanUncheckedCreateNestedManyWithoutEnvironmentInput
   platformBillingCustomers?: Prisma.PlatformBillingCustomerUncheckedCreateNestedManyWithoutEnvironmentInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUncheckedCreateNestedManyWithoutEnvironmentInput
 }
 
 export type WorkspaceEnvironmentCreateOrConnectWithoutInvoicesInput = {
@@ -2755,6 +2818,7 @@ export type WorkspaceEnvironmentUpdateWithoutInvoicesInput = {
   platformBillingAccount?: Prisma.PlatformBillingAccountUpdateOneWithoutEnvironmentNestedInput
   platformBillingPlans?: Prisma.PlatformBillingPlanUpdateManyWithoutEnvironmentNestedInput
   platformBillingCustomers?: Prisma.PlatformBillingCustomerUpdateManyWithoutEnvironmentNestedInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUpdateManyWithoutEnvironmentNestedInput
 }
 
 export type WorkspaceEnvironmentUncheckedUpdateWithoutInvoicesInput = {
@@ -2791,6 +2855,7 @@ export type WorkspaceEnvironmentUncheckedUpdateWithoutInvoicesInput = {
   platformBillingAccount?: Prisma.PlatformBillingAccountUncheckedUpdateOneWithoutEnvironmentNestedInput
   platformBillingPlans?: Prisma.PlatformBillingPlanUncheckedUpdateManyWithoutEnvironmentNestedInput
   platformBillingCustomers?: Prisma.PlatformBillingCustomerUncheckedUpdateManyWithoutEnvironmentNestedInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUncheckedUpdateManyWithoutEnvironmentNestedInput
 }
 
 export type WorkspaceEnvironmentCreateWithoutSubscriptionStatesInput = {
@@ -2827,6 +2892,7 @@ export type WorkspaceEnvironmentCreateWithoutSubscriptionStatesInput = {
   platformBillingAccount?: Prisma.PlatformBillingAccountCreateNestedOneWithoutEnvironmentInput
   platformBillingPlans?: Prisma.PlatformBillingPlanCreateNestedManyWithoutEnvironmentInput
   platformBillingCustomers?: Prisma.PlatformBillingCustomerCreateNestedManyWithoutEnvironmentInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptCreateNestedManyWithoutEnvironmentInput
 }
 
 export type WorkspaceEnvironmentUncheckedCreateWithoutSubscriptionStatesInput = {
@@ -2863,6 +2929,7 @@ export type WorkspaceEnvironmentUncheckedCreateWithoutSubscriptionStatesInput = 
   platformBillingAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedOneWithoutEnvironmentInput
   platformBillingPlans?: Prisma.PlatformBillingPlanUncheckedCreateNestedManyWithoutEnvironmentInput
   platformBillingCustomers?: Prisma.PlatformBillingCustomerUncheckedCreateNestedManyWithoutEnvironmentInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUncheckedCreateNestedManyWithoutEnvironmentInput
 }
 
 export type WorkspaceEnvironmentCreateOrConnectWithoutSubscriptionStatesInput = {
@@ -2915,6 +2982,7 @@ export type WorkspaceEnvironmentUpdateWithoutSubscriptionStatesInput = {
   platformBillingAccount?: Prisma.PlatformBillingAccountUpdateOneWithoutEnvironmentNestedInput
   platformBillingPlans?: Prisma.PlatformBillingPlanUpdateManyWithoutEnvironmentNestedInput
   platformBillingCustomers?: Prisma.PlatformBillingCustomerUpdateManyWithoutEnvironmentNestedInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUpdateManyWithoutEnvironmentNestedInput
 }
 
 export type WorkspaceEnvironmentUncheckedUpdateWithoutSubscriptionStatesInput = {
@@ -2951,6 +3019,7 @@ export type WorkspaceEnvironmentUncheckedUpdateWithoutSubscriptionStatesInput = 
   platformBillingAccount?: Prisma.PlatformBillingAccountUncheckedUpdateOneWithoutEnvironmentNestedInput
   platformBillingPlans?: Prisma.PlatformBillingPlanUncheckedUpdateManyWithoutEnvironmentNestedInput
   platformBillingCustomers?: Prisma.PlatformBillingCustomerUncheckedUpdateManyWithoutEnvironmentNestedInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUncheckedUpdateManyWithoutEnvironmentNestedInput
 }
 
 export type WorkspaceEnvironmentCreateWithoutSubscriptionChangeRequestsInput = {
@@ -2987,6 +3056,7 @@ export type WorkspaceEnvironmentCreateWithoutSubscriptionChangeRequestsInput = {
   platformBillingAccount?: Prisma.PlatformBillingAccountCreateNestedOneWithoutEnvironmentInput
   platformBillingPlans?: Prisma.PlatformBillingPlanCreateNestedManyWithoutEnvironmentInput
   platformBillingCustomers?: Prisma.PlatformBillingCustomerCreateNestedManyWithoutEnvironmentInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptCreateNestedManyWithoutEnvironmentInput
 }
 
 export type WorkspaceEnvironmentUncheckedCreateWithoutSubscriptionChangeRequestsInput = {
@@ -3023,6 +3093,7 @@ export type WorkspaceEnvironmentUncheckedCreateWithoutSubscriptionChangeRequests
   platformBillingAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedOneWithoutEnvironmentInput
   platformBillingPlans?: Prisma.PlatformBillingPlanUncheckedCreateNestedManyWithoutEnvironmentInput
   platformBillingCustomers?: Prisma.PlatformBillingCustomerUncheckedCreateNestedManyWithoutEnvironmentInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUncheckedCreateNestedManyWithoutEnvironmentInput
 }
 
 export type WorkspaceEnvironmentCreateOrConnectWithoutSubscriptionChangeRequestsInput = {
@@ -3075,6 +3146,7 @@ export type WorkspaceEnvironmentUpdateWithoutSubscriptionChangeRequestsInput = {
   platformBillingAccount?: Prisma.PlatformBillingAccountUpdateOneWithoutEnvironmentNestedInput
   platformBillingPlans?: Prisma.PlatformBillingPlanUpdateManyWithoutEnvironmentNestedInput
   platformBillingCustomers?: Prisma.PlatformBillingCustomerUpdateManyWithoutEnvironmentNestedInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUpdateManyWithoutEnvironmentNestedInput
 }
 
 export type WorkspaceEnvironmentUncheckedUpdateWithoutSubscriptionChangeRequestsInput = {
@@ -3111,6 +3183,7 @@ export type WorkspaceEnvironmentUncheckedUpdateWithoutSubscriptionChangeRequests
   platformBillingAccount?: Prisma.PlatformBillingAccountUncheckedUpdateOneWithoutEnvironmentNestedInput
   platformBillingPlans?: Prisma.PlatformBillingPlanUncheckedUpdateManyWithoutEnvironmentNestedInput
   platformBillingCustomers?: Prisma.PlatformBillingCustomerUncheckedUpdateManyWithoutEnvironmentNestedInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUncheckedUpdateManyWithoutEnvironmentNestedInput
 }
 
 export type WorkspaceEnvironmentCreateWithoutPaymentsInput = {
@@ -3147,6 +3220,7 @@ export type WorkspaceEnvironmentCreateWithoutPaymentsInput = {
   platformBillingAccount?: Prisma.PlatformBillingAccountCreateNestedOneWithoutEnvironmentInput
   platformBillingPlans?: Prisma.PlatformBillingPlanCreateNestedManyWithoutEnvironmentInput
   platformBillingCustomers?: Prisma.PlatformBillingCustomerCreateNestedManyWithoutEnvironmentInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptCreateNestedManyWithoutEnvironmentInput
 }
 
 export type WorkspaceEnvironmentUncheckedCreateWithoutPaymentsInput = {
@@ -3183,6 +3257,7 @@ export type WorkspaceEnvironmentUncheckedCreateWithoutPaymentsInput = {
   platformBillingAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedOneWithoutEnvironmentInput
   platformBillingPlans?: Prisma.PlatformBillingPlanUncheckedCreateNestedManyWithoutEnvironmentInput
   platformBillingCustomers?: Prisma.PlatformBillingCustomerUncheckedCreateNestedManyWithoutEnvironmentInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUncheckedCreateNestedManyWithoutEnvironmentInput
 }
 
 export type WorkspaceEnvironmentCreateOrConnectWithoutPaymentsInput = {
@@ -3235,6 +3310,7 @@ export type WorkspaceEnvironmentUpdateWithoutPaymentsInput = {
   platformBillingAccount?: Prisma.PlatformBillingAccountUpdateOneWithoutEnvironmentNestedInput
   platformBillingPlans?: Prisma.PlatformBillingPlanUpdateManyWithoutEnvironmentNestedInput
   platformBillingCustomers?: Prisma.PlatformBillingCustomerUpdateManyWithoutEnvironmentNestedInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUpdateManyWithoutEnvironmentNestedInput
 }
 
 export type WorkspaceEnvironmentUncheckedUpdateWithoutPaymentsInput = {
@@ -3259,6 +3335,171 @@ export type WorkspaceEnvironmentUncheckedUpdateWithoutPaymentsInput = {
   invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutEnvironmentNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedUpdateManyWithoutEnvironmentNestedInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedUpdateManyWithoutEnvironmentNestedInput
+  paymentLinks?: Prisma.PaymentLinkUncheckedUpdateManyWithoutEnvironmentNestedInput
+  checkoutSessions?: Prisma.CheckoutSessionUncheckedUpdateManyWithoutEnvironmentNestedInput
+  providerProfiles?: Prisma.ProviderProfileUncheckedUpdateManyWithoutEnvironmentNestedInput
+  arcenApiKeys?: Prisma.ArcenApiKeyUncheckedUpdateManyWithoutEnvironmentNestedInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedUpdateManyWithoutEnvironmentNestedInput
+  embedComponents?: Prisma.EmbedComponentUncheckedUpdateManyWithoutEnvironmentNestedInput
+  arcenCompanies?: Prisma.ArcenCompanyUncheckedUpdateManyWithoutEnvironmentNestedInput
+  arcenUsers?: Prisma.ArcenUserUncheckedUpdateManyWithoutEnvironmentNestedInput
+  arcenEvents?: Prisma.ArcenEventUncheckedUpdateManyWithoutEnvironmentNestedInput
+  platformBillingAccount?: Prisma.PlatformBillingAccountUncheckedUpdateOneWithoutEnvironmentNestedInput
+  platformBillingPlans?: Prisma.PlatformBillingPlanUncheckedUpdateManyWithoutEnvironmentNestedInput
+  platformBillingCustomers?: Prisma.PlatformBillingCustomerUncheckedUpdateManyWithoutEnvironmentNestedInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUncheckedUpdateManyWithoutEnvironmentNestedInput
+}
+
+export type WorkspaceEnvironmentCreateWithoutSolanaActivationAttemptsInput = {
+  id?: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  name: string
+  mode: $Enums.EnvironmentMode
+  chainId: number
+  chainFamily?: $Enums.ChainFamily
+  team: Prisma.TeamCreateNestedOneWithoutEnvironmentsInput
+  authSessions?: Prisma.AuthSessionCreateNestedManyWithoutActiveEnvironmentInput
+  catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutEnvironmentInput
+  catalogAddOns?: Prisma.CatalogAddOnCreateNestedManyWithoutEnvironmentInput
+  catalogCreditTypes?: Prisma.CatalogCreditTypeCreateNestedManyWithoutEnvironmentInput
+  catalogVersions?: Prisma.CatalogVersionCreateNestedManyWithoutEnvironmentInput
+  catalogConfigs?: Prisma.CatalogConfigCreateNestedManyWithoutEnvironmentInput
+  companyCreditGrants?: Prisma.CompanyCreditGrantCreateNestedManyWithoutEnvironmentInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryCreateNestedManyWithoutEnvironmentInput
+  templateInstalls?: Prisma.TemplateInstallCreateNestedManyWithoutEnvironmentInput
+  invoiceTemplates?: Prisma.InvoiceTemplateCreateNestedManyWithoutEnvironmentInput
+  invoices?: Prisma.InvoiceCreateNestedManyWithoutEnvironmentInput
+  subscriptionStates?: Prisma.SubscriptionStateCreateNestedManyWithoutEnvironmentInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestCreateNestedManyWithoutEnvironmentInput
+  payments?: Prisma.PaymentCreateNestedManyWithoutEnvironmentInput
+  paymentLinks?: Prisma.PaymentLinkCreateNestedManyWithoutEnvironmentInput
+  checkoutSessions?: Prisma.CheckoutSessionCreateNestedManyWithoutEnvironmentInput
+  providerProfiles?: Prisma.ProviderProfileCreateNestedManyWithoutEnvironmentInput
+  arcenApiKeys?: Prisma.ArcenApiKeyCreateNestedManyWithoutEnvironmentInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenCreateNestedManyWithoutEnvironmentInput
+  embedComponents?: Prisma.EmbedComponentCreateNestedManyWithoutEnvironmentInput
+  arcenCompanies?: Prisma.ArcenCompanyCreateNestedManyWithoutEnvironmentInput
+  arcenUsers?: Prisma.ArcenUserCreateNestedManyWithoutEnvironmentInput
+  arcenEvents?: Prisma.ArcenEventCreateNestedManyWithoutEnvironmentInput
+  platformBillingAccount?: Prisma.PlatformBillingAccountCreateNestedOneWithoutEnvironmentInput
+  platformBillingPlans?: Prisma.PlatformBillingPlanCreateNestedManyWithoutEnvironmentInput
+  platformBillingCustomers?: Prisma.PlatformBillingCustomerCreateNestedManyWithoutEnvironmentInput
+}
+
+export type WorkspaceEnvironmentUncheckedCreateWithoutSolanaActivationAttemptsInput = {
+  id?: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  teamId: string
+  name: string
+  mode: $Enums.EnvironmentMode
+  chainId: number
+  chainFamily?: $Enums.ChainFamily
+  authSessions?: Prisma.AuthSessionUncheckedCreateNestedManyWithoutActiveEnvironmentInput
+  catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutEnvironmentInput
+  catalogAddOns?: Prisma.CatalogAddOnUncheckedCreateNestedManyWithoutEnvironmentInput
+  catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedCreateNestedManyWithoutEnvironmentInput
+  catalogVersions?: Prisma.CatalogVersionUncheckedCreateNestedManyWithoutEnvironmentInput
+  catalogConfigs?: Prisma.CatalogConfigUncheckedCreateNestedManyWithoutEnvironmentInput
+  companyCreditGrants?: Prisma.CompanyCreditGrantUncheckedCreateNestedManyWithoutEnvironmentInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedCreateNestedManyWithoutEnvironmentInput
+  templateInstalls?: Prisma.TemplateInstallUncheckedCreateNestedManyWithoutEnvironmentInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedCreateNestedManyWithoutEnvironmentInput
+  invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutEnvironmentInput
+  subscriptionStates?: Prisma.SubscriptionStateUncheckedCreateNestedManyWithoutEnvironmentInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedCreateNestedManyWithoutEnvironmentInput
+  payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutEnvironmentInput
+  paymentLinks?: Prisma.PaymentLinkUncheckedCreateNestedManyWithoutEnvironmentInput
+  checkoutSessions?: Prisma.CheckoutSessionUncheckedCreateNestedManyWithoutEnvironmentInput
+  providerProfiles?: Prisma.ProviderProfileUncheckedCreateNestedManyWithoutEnvironmentInput
+  arcenApiKeys?: Prisma.ArcenApiKeyUncheckedCreateNestedManyWithoutEnvironmentInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedCreateNestedManyWithoutEnvironmentInput
+  embedComponents?: Prisma.EmbedComponentUncheckedCreateNestedManyWithoutEnvironmentInput
+  arcenCompanies?: Prisma.ArcenCompanyUncheckedCreateNestedManyWithoutEnvironmentInput
+  arcenUsers?: Prisma.ArcenUserUncheckedCreateNestedManyWithoutEnvironmentInput
+  arcenEvents?: Prisma.ArcenEventUncheckedCreateNestedManyWithoutEnvironmentInput
+  platformBillingAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedOneWithoutEnvironmentInput
+  platformBillingPlans?: Prisma.PlatformBillingPlanUncheckedCreateNestedManyWithoutEnvironmentInput
+  platformBillingCustomers?: Prisma.PlatformBillingCustomerUncheckedCreateNestedManyWithoutEnvironmentInput
+}
+
+export type WorkspaceEnvironmentCreateOrConnectWithoutSolanaActivationAttemptsInput = {
+  where: Prisma.WorkspaceEnvironmentWhereUniqueInput
+  create: Prisma.XOR<Prisma.WorkspaceEnvironmentCreateWithoutSolanaActivationAttemptsInput, Prisma.WorkspaceEnvironmentUncheckedCreateWithoutSolanaActivationAttemptsInput>
+}
+
+export type WorkspaceEnvironmentUpsertWithoutSolanaActivationAttemptsInput = {
+  update: Prisma.XOR<Prisma.WorkspaceEnvironmentUpdateWithoutSolanaActivationAttemptsInput, Prisma.WorkspaceEnvironmentUncheckedUpdateWithoutSolanaActivationAttemptsInput>
+  create: Prisma.XOR<Prisma.WorkspaceEnvironmentCreateWithoutSolanaActivationAttemptsInput, Prisma.WorkspaceEnvironmentUncheckedCreateWithoutSolanaActivationAttemptsInput>
+  where?: Prisma.WorkspaceEnvironmentWhereInput
+}
+
+export type WorkspaceEnvironmentUpdateToOneWithWhereWithoutSolanaActivationAttemptsInput = {
+  where?: Prisma.WorkspaceEnvironmentWhereInput
+  data: Prisma.XOR<Prisma.WorkspaceEnvironmentUpdateWithoutSolanaActivationAttemptsInput, Prisma.WorkspaceEnvironmentUncheckedUpdateWithoutSolanaActivationAttemptsInput>
+}
+
+export type WorkspaceEnvironmentUpdateWithoutSolanaActivationAttemptsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  mode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
+  chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  chainFamily?: Prisma.EnumChainFamilyFieldUpdateOperationsInput | $Enums.ChainFamily
+  team?: Prisma.TeamUpdateOneRequiredWithoutEnvironmentsNestedInput
+  authSessions?: Prisma.AuthSessionUpdateManyWithoutActiveEnvironmentNestedInput
+  catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutEnvironmentNestedInput
+  catalogAddOns?: Prisma.CatalogAddOnUpdateManyWithoutEnvironmentNestedInput
+  catalogCreditTypes?: Prisma.CatalogCreditTypeUpdateManyWithoutEnvironmentNestedInput
+  catalogVersions?: Prisma.CatalogVersionUpdateManyWithoutEnvironmentNestedInput
+  catalogConfigs?: Prisma.CatalogConfigUpdateManyWithoutEnvironmentNestedInput
+  companyCreditGrants?: Prisma.CompanyCreditGrantUpdateManyWithoutEnvironmentNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUpdateManyWithoutEnvironmentNestedInput
+  templateInstalls?: Prisma.TemplateInstallUpdateManyWithoutEnvironmentNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUpdateManyWithoutEnvironmentNestedInput
+  invoices?: Prisma.InvoiceUpdateManyWithoutEnvironmentNestedInput
+  subscriptionStates?: Prisma.SubscriptionStateUpdateManyWithoutEnvironmentNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUpdateManyWithoutEnvironmentNestedInput
+  payments?: Prisma.PaymentUpdateManyWithoutEnvironmentNestedInput
+  paymentLinks?: Prisma.PaymentLinkUpdateManyWithoutEnvironmentNestedInput
+  checkoutSessions?: Prisma.CheckoutSessionUpdateManyWithoutEnvironmentNestedInput
+  providerProfiles?: Prisma.ProviderProfileUpdateManyWithoutEnvironmentNestedInput
+  arcenApiKeys?: Prisma.ArcenApiKeyUpdateManyWithoutEnvironmentNestedInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUpdateManyWithoutEnvironmentNestedInput
+  embedComponents?: Prisma.EmbedComponentUpdateManyWithoutEnvironmentNestedInput
+  arcenCompanies?: Prisma.ArcenCompanyUpdateManyWithoutEnvironmentNestedInput
+  arcenUsers?: Prisma.ArcenUserUpdateManyWithoutEnvironmentNestedInput
+  arcenEvents?: Prisma.ArcenEventUpdateManyWithoutEnvironmentNestedInput
+  platformBillingAccount?: Prisma.PlatformBillingAccountUpdateOneWithoutEnvironmentNestedInput
+  platformBillingPlans?: Prisma.PlatformBillingPlanUpdateManyWithoutEnvironmentNestedInput
+  platformBillingCustomers?: Prisma.PlatformBillingCustomerUpdateManyWithoutEnvironmentNestedInput
+}
+
+export type WorkspaceEnvironmentUncheckedUpdateWithoutSolanaActivationAttemptsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  teamId?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  mode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
+  chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  chainFamily?: Prisma.EnumChainFamilyFieldUpdateOperationsInput | $Enums.ChainFamily
+  authSessions?: Prisma.AuthSessionUncheckedUpdateManyWithoutActiveEnvironmentNestedInput
+  catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutEnvironmentNestedInput
+  catalogAddOns?: Prisma.CatalogAddOnUncheckedUpdateManyWithoutEnvironmentNestedInput
+  catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedUpdateManyWithoutEnvironmentNestedInput
+  catalogVersions?: Prisma.CatalogVersionUncheckedUpdateManyWithoutEnvironmentNestedInput
+  catalogConfigs?: Prisma.CatalogConfigUncheckedUpdateManyWithoutEnvironmentNestedInput
+  companyCreditGrants?: Prisma.CompanyCreditGrantUncheckedUpdateManyWithoutEnvironmentNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedUpdateManyWithoutEnvironmentNestedInput
+  templateInstalls?: Prisma.TemplateInstallUncheckedUpdateManyWithoutEnvironmentNestedInput
+  invoiceTemplates?: Prisma.InvoiceTemplateUncheckedUpdateManyWithoutEnvironmentNestedInput
+  invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutEnvironmentNestedInput
+  subscriptionStates?: Prisma.SubscriptionStateUncheckedUpdateManyWithoutEnvironmentNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedUpdateManyWithoutEnvironmentNestedInput
+  payments?: Prisma.PaymentUncheckedUpdateManyWithoutEnvironmentNestedInput
   paymentLinks?: Prisma.PaymentLinkUncheckedUpdateManyWithoutEnvironmentNestedInput
   checkoutSessions?: Prisma.CheckoutSessionUncheckedUpdateManyWithoutEnvironmentNestedInput
   providerProfiles?: Prisma.ProviderProfileUncheckedUpdateManyWithoutEnvironmentNestedInput
@@ -3307,6 +3548,7 @@ export type WorkspaceEnvironmentCreateWithoutPlatformBillingPlansInput = {
   arcenEvents?: Prisma.ArcenEventCreateNestedManyWithoutEnvironmentInput
   platformBillingAccount?: Prisma.PlatformBillingAccountCreateNestedOneWithoutEnvironmentInput
   platformBillingCustomers?: Prisma.PlatformBillingCustomerCreateNestedManyWithoutEnvironmentInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptCreateNestedManyWithoutEnvironmentInput
 }
 
 export type WorkspaceEnvironmentUncheckedCreateWithoutPlatformBillingPlansInput = {
@@ -3343,6 +3585,7 @@ export type WorkspaceEnvironmentUncheckedCreateWithoutPlatformBillingPlansInput 
   arcenEvents?: Prisma.ArcenEventUncheckedCreateNestedManyWithoutEnvironmentInput
   platformBillingAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedOneWithoutEnvironmentInput
   platformBillingCustomers?: Prisma.PlatformBillingCustomerUncheckedCreateNestedManyWithoutEnvironmentInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUncheckedCreateNestedManyWithoutEnvironmentInput
 }
 
 export type WorkspaceEnvironmentCreateOrConnectWithoutPlatformBillingPlansInput = {
@@ -3395,6 +3638,7 @@ export type WorkspaceEnvironmentUpdateWithoutPlatformBillingPlansInput = {
   arcenEvents?: Prisma.ArcenEventUpdateManyWithoutEnvironmentNestedInput
   platformBillingAccount?: Prisma.PlatformBillingAccountUpdateOneWithoutEnvironmentNestedInput
   platformBillingCustomers?: Prisma.PlatformBillingCustomerUpdateManyWithoutEnvironmentNestedInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUpdateManyWithoutEnvironmentNestedInput
 }
 
 export type WorkspaceEnvironmentUncheckedUpdateWithoutPlatformBillingPlansInput = {
@@ -3431,6 +3675,7 @@ export type WorkspaceEnvironmentUncheckedUpdateWithoutPlatformBillingPlansInput 
   arcenEvents?: Prisma.ArcenEventUncheckedUpdateManyWithoutEnvironmentNestedInput
   platformBillingAccount?: Prisma.PlatformBillingAccountUncheckedUpdateOneWithoutEnvironmentNestedInput
   platformBillingCustomers?: Prisma.PlatformBillingCustomerUncheckedUpdateManyWithoutEnvironmentNestedInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUncheckedUpdateManyWithoutEnvironmentNestedInput
 }
 
 export type WorkspaceEnvironmentCreateWithoutPlatformBillingAccountInput = {
@@ -3467,6 +3712,7 @@ export type WorkspaceEnvironmentCreateWithoutPlatformBillingAccountInput = {
   arcenEvents?: Prisma.ArcenEventCreateNestedManyWithoutEnvironmentInput
   platformBillingPlans?: Prisma.PlatformBillingPlanCreateNestedManyWithoutEnvironmentInput
   platformBillingCustomers?: Prisma.PlatformBillingCustomerCreateNestedManyWithoutEnvironmentInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptCreateNestedManyWithoutEnvironmentInput
 }
 
 export type WorkspaceEnvironmentUncheckedCreateWithoutPlatformBillingAccountInput = {
@@ -3503,6 +3749,7 @@ export type WorkspaceEnvironmentUncheckedCreateWithoutPlatformBillingAccountInpu
   arcenEvents?: Prisma.ArcenEventUncheckedCreateNestedManyWithoutEnvironmentInput
   platformBillingPlans?: Prisma.PlatformBillingPlanUncheckedCreateNestedManyWithoutEnvironmentInput
   platformBillingCustomers?: Prisma.PlatformBillingCustomerUncheckedCreateNestedManyWithoutEnvironmentInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUncheckedCreateNestedManyWithoutEnvironmentInput
 }
 
 export type WorkspaceEnvironmentCreateOrConnectWithoutPlatformBillingAccountInput = {
@@ -3555,6 +3802,7 @@ export type WorkspaceEnvironmentUpdateWithoutPlatformBillingAccountInput = {
   arcenEvents?: Prisma.ArcenEventUpdateManyWithoutEnvironmentNestedInput
   platformBillingPlans?: Prisma.PlatformBillingPlanUpdateManyWithoutEnvironmentNestedInput
   platformBillingCustomers?: Prisma.PlatformBillingCustomerUpdateManyWithoutEnvironmentNestedInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUpdateManyWithoutEnvironmentNestedInput
 }
 
 export type WorkspaceEnvironmentUncheckedUpdateWithoutPlatformBillingAccountInput = {
@@ -3591,6 +3839,7 @@ export type WorkspaceEnvironmentUncheckedUpdateWithoutPlatformBillingAccountInpu
   arcenEvents?: Prisma.ArcenEventUncheckedUpdateManyWithoutEnvironmentNestedInput
   platformBillingPlans?: Prisma.PlatformBillingPlanUncheckedUpdateManyWithoutEnvironmentNestedInput
   platformBillingCustomers?: Prisma.PlatformBillingCustomerUncheckedUpdateManyWithoutEnvironmentNestedInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUncheckedUpdateManyWithoutEnvironmentNestedInput
 }
 
 export type WorkspaceEnvironmentCreateWithoutPlatformBillingCustomersInput = {
@@ -3627,6 +3876,7 @@ export type WorkspaceEnvironmentCreateWithoutPlatformBillingCustomersInput = {
   arcenEvents?: Prisma.ArcenEventCreateNestedManyWithoutEnvironmentInput
   platformBillingAccount?: Prisma.PlatformBillingAccountCreateNestedOneWithoutEnvironmentInput
   platformBillingPlans?: Prisma.PlatformBillingPlanCreateNestedManyWithoutEnvironmentInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptCreateNestedManyWithoutEnvironmentInput
 }
 
 export type WorkspaceEnvironmentUncheckedCreateWithoutPlatformBillingCustomersInput = {
@@ -3663,6 +3913,7 @@ export type WorkspaceEnvironmentUncheckedCreateWithoutPlatformBillingCustomersIn
   arcenEvents?: Prisma.ArcenEventUncheckedCreateNestedManyWithoutEnvironmentInput
   platformBillingAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedOneWithoutEnvironmentInput
   platformBillingPlans?: Prisma.PlatformBillingPlanUncheckedCreateNestedManyWithoutEnvironmentInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUncheckedCreateNestedManyWithoutEnvironmentInput
 }
 
 export type WorkspaceEnvironmentCreateOrConnectWithoutPlatformBillingCustomersInput = {
@@ -3715,6 +3966,7 @@ export type WorkspaceEnvironmentUpdateWithoutPlatformBillingCustomersInput = {
   arcenEvents?: Prisma.ArcenEventUpdateManyWithoutEnvironmentNestedInput
   platformBillingAccount?: Prisma.PlatformBillingAccountUpdateOneWithoutEnvironmentNestedInput
   platformBillingPlans?: Prisma.PlatformBillingPlanUpdateManyWithoutEnvironmentNestedInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUpdateManyWithoutEnvironmentNestedInput
 }
 
 export type WorkspaceEnvironmentUncheckedUpdateWithoutPlatformBillingCustomersInput = {
@@ -3751,6 +4003,7 @@ export type WorkspaceEnvironmentUncheckedUpdateWithoutPlatformBillingCustomersIn
   arcenEvents?: Prisma.ArcenEventUncheckedUpdateManyWithoutEnvironmentNestedInput
   platformBillingAccount?: Prisma.PlatformBillingAccountUncheckedUpdateOneWithoutEnvironmentNestedInput
   platformBillingPlans?: Prisma.PlatformBillingPlanUncheckedUpdateManyWithoutEnvironmentNestedInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUncheckedUpdateManyWithoutEnvironmentNestedInput
 }
 
 export type WorkspaceEnvironmentCreateWithoutArcenCompaniesInput = {
@@ -3787,6 +4040,7 @@ export type WorkspaceEnvironmentCreateWithoutArcenCompaniesInput = {
   platformBillingAccount?: Prisma.PlatformBillingAccountCreateNestedOneWithoutEnvironmentInput
   platformBillingPlans?: Prisma.PlatformBillingPlanCreateNestedManyWithoutEnvironmentInput
   platformBillingCustomers?: Prisma.PlatformBillingCustomerCreateNestedManyWithoutEnvironmentInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptCreateNestedManyWithoutEnvironmentInput
 }
 
 export type WorkspaceEnvironmentUncheckedCreateWithoutArcenCompaniesInput = {
@@ -3823,6 +4077,7 @@ export type WorkspaceEnvironmentUncheckedCreateWithoutArcenCompaniesInput = {
   platformBillingAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedOneWithoutEnvironmentInput
   platformBillingPlans?: Prisma.PlatformBillingPlanUncheckedCreateNestedManyWithoutEnvironmentInput
   platformBillingCustomers?: Prisma.PlatformBillingCustomerUncheckedCreateNestedManyWithoutEnvironmentInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUncheckedCreateNestedManyWithoutEnvironmentInput
 }
 
 export type WorkspaceEnvironmentCreateOrConnectWithoutArcenCompaniesInput = {
@@ -3875,6 +4130,7 @@ export type WorkspaceEnvironmentUpdateWithoutArcenCompaniesInput = {
   platformBillingAccount?: Prisma.PlatformBillingAccountUpdateOneWithoutEnvironmentNestedInput
   platformBillingPlans?: Prisma.PlatformBillingPlanUpdateManyWithoutEnvironmentNestedInput
   platformBillingCustomers?: Prisma.PlatformBillingCustomerUpdateManyWithoutEnvironmentNestedInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUpdateManyWithoutEnvironmentNestedInput
 }
 
 export type WorkspaceEnvironmentUncheckedUpdateWithoutArcenCompaniesInput = {
@@ -3911,6 +4167,7 @@ export type WorkspaceEnvironmentUncheckedUpdateWithoutArcenCompaniesInput = {
   platformBillingAccount?: Prisma.PlatformBillingAccountUncheckedUpdateOneWithoutEnvironmentNestedInput
   platformBillingPlans?: Prisma.PlatformBillingPlanUncheckedUpdateManyWithoutEnvironmentNestedInput
   platformBillingCustomers?: Prisma.PlatformBillingCustomerUncheckedUpdateManyWithoutEnvironmentNestedInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUncheckedUpdateManyWithoutEnvironmentNestedInput
 }
 
 export type WorkspaceEnvironmentCreateWithoutArcenUsersInput = {
@@ -3947,6 +4204,7 @@ export type WorkspaceEnvironmentCreateWithoutArcenUsersInput = {
   platformBillingAccount?: Prisma.PlatformBillingAccountCreateNestedOneWithoutEnvironmentInput
   platformBillingPlans?: Prisma.PlatformBillingPlanCreateNestedManyWithoutEnvironmentInput
   platformBillingCustomers?: Prisma.PlatformBillingCustomerCreateNestedManyWithoutEnvironmentInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptCreateNestedManyWithoutEnvironmentInput
 }
 
 export type WorkspaceEnvironmentUncheckedCreateWithoutArcenUsersInput = {
@@ -3983,6 +4241,7 @@ export type WorkspaceEnvironmentUncheckedCreateWithoutArcenUsersInput = {
   platformBillingAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedOneWithoutEnvironmentInput
   platformBillingPlans?: Prisma.PlatformBillingPlanUncheckedCreateNestedManyWithoutEnvironmentInput
   platformBillingCustomers?: Prisma.PlatformBillingCustomerUncheckedCreateNestedManyWithoutEnvironmentInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUncheckedCreateNestedManyWithoutEnvironmentInput
 }
 
 export type WorkspaceEnvironmentCreateOrConnectWithoutArcenUsersInput = {
@@ -4035,6 +4294,7 @@ export type WorkspaceEnvironmentUpdateWithoutArcenUsersInput = {
   platformBillingAccount?: Prisma.PlatformBillingAccountUpdateOneWithoutEnvironmentNestedInput
   platformBillingPlans?: Prisma.PlatformBillingPlanUpdateManyWithoutEnvironmentNestedInput
   platformBillingCustomers?: Prisma.PlatformBillingCustomerUpdateManyWithoutEnvironmentNestedInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUpdateManyWithoutEnvironmentNestedInput
 }
 
 export type WorkspaceEnvironmentUncheckedUpdateWithoutArcenUsersInput = {
@@ -4071,6 +4331,7 @@ export type WorkspaceEnvironmentUncheckedUpdateWithoutArcenUsersInput = {
   platformBillingAccount?: Prisma.PlatformBillingAccountUncheckedUpdateOneWithoutEnvironmentNestedInput
   platformBillingPlans?: Prisma.PlatformBillingPlanUncheckedUpdateManyWithoutEnvironmentNestedInput
   platformBillingCustomers?: Prisma.PlatformBillingCustomerUncheckedUpdateManyWithoutEnvironmentNestedInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUncheckedUpdateManyWithoutEnvironmentNestedInput
 }
 
 export type WorkspaceEnvironmentCreateWithoutArcenEventsInput = {
@@ -4107,6 +4368,7 @@ export type WorkspaceEnvironmentCreateWithoutArcenEventsInput = {
   platformBillingAccount?: Prisma.PlatformBillingAccountCreateNestedOneWithoutEnvironmentInput
   platformBillingPlans?: Prisma.PlatformBillingPlanCreateNestedManyWithoutEnvironmentInput
   platformBillingCustomers?: Prisma.PlatformBillingCustomerCreateNestedManyWithoutEnvironmentInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptCreateNestedManyWithoutEnvironmentInput
 }
 
 export type WorkspaceEnvironmentUncheckedCreateWithoutArcenEventsInput = {
@@ -4143,6 +4405,7 @@ export type WorkspaceEnvironmentUncheckedCreateWithoutArcenEventsInput = {
   platformBillingAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedOneWithoutEnvironmentInput
   platformBillingPlans?: Prisma.PlatformBillingPlanUncheckedCreateNestedManyWithoutEnvironmentInput
   platformBillingCustomers?: Prisma.PlatformBillingCustomerUncheckedCreateNestedManyWithoutEnvironmentInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUncheckedCreateNestedManyWithoutEnvironmentInput
 }
 
 export type WorkspaceEnvironmentCreateOrConnectWithoutArcenEventsInput = {
@@ -4195,6 +4458,7 @@ export type WorkspaceEnvironmentUpdateWithoutArcenEventsInput = {
   platformBillingAccount?: Prisma.PlatformBillingAccountUpdateOneWithoutEnvironmentNestedInput
   platformBillingPlans?: Prisma.PlatformBillingPlanUpdateManyWithoutEnvironmentNestedInput
   platformBillingCustomers?: Prisma.PlatformBillingCustomerUpdateManyWithoutEnvironmentNestedInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUpdateManyWithoutEnvironmentNestedInput
 }
 
 export type WorkspaceEnvironmentUncheckedUpdateWithoutArcenEventsInput = {
@@ -4231,6 +4495,7 @@ export type WorkspaceEnvironmentUncheckedUpdateWithoutArcenEventsInput = {
   platformBillingAccount?: Prisma.PlatformBillingAccountUncheckedUpdateOneWithoutEnvironmentNestedInput
   platformBillingPlans?: Prisma.PlatformBillingPlanUncheckedUpdateManyWithoutEnvironmentNestedInput
   platformBillingCustomers?: Prisma.PlatformBillingCustomerUncheckedUpdateManyWithoutEnvironmentNestedInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUncheckedUpdateManyWithoutEnvironmentNestedInput
 }
 
 export type WorkspaceEnvironmentCreateWithoutCompanyCreditGrantsInput = {
@@ -4267,6 +4532,7 @@ export type WorkspaceEnvironmentCreateWithoutCompanyCreditGrantsInput = {
   platformBillingAccount?: Prisma.PlatformBillingAccountCreateNestedOneWithoutEnvironmentInput
   platformBillingPlans?: Prisma.PlatformBillingPlanCreateNestedManyWithoutEnvironmentInput
   platformBillingCustomers?: Prisma.PlatformBillingCustomerCreateNestedManyWithoutEnvironmentInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptCreateNestedManyWithoutEnvironmentInput
 }
 
 export type WorkspaceEnvironmentUncheckedCreateWithoutCompanyCreditGrantsInput = {
@@ -4303,6 +4569,7 @@ export type WorkspaceEnvironmentUncheckedCreateWithoutCompanyCreditGrantsInput =
   platformBillingAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedOneWithoutEnvironmentInput
   platformBillingPlans?: Prisma.PlatformBillingPlanUncheckedCreateNestedManyWithoutEnvironmentInput
   platformBillingCustomers?: Prisma.PlatformBillingCustomerUncheckedCreateNestedManyWithoutEnvironmentInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUncheckedCreateNestedManyWithoutEnvironmentInput
 }
 
 export type WorkspaceEnvironmentCreateOrConnectWithoutCompanyCreditGrantsInput = {
@@ -4355,6 +4622,7 @@ export type WorkspaceEnvironmentUpdateWithoutCompanyCreditGrantsInput = {
   platformBillingAccount?: Prisma.PlatformBillingAccountUpdateOneWithoutEnvironmentNestedInput
   platformBillingPlans?: Prisma.PlatformBillingPlanUpdateManyWithoutEnvironmentNestedInput
   platformBillingCustomers?: Prisma.PlatformBillingCustomerUpdateManyWithoutEnvironmentNestedInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUpdateManyWithoutEnvironmentNestedInput
 }
 
 export type WorkspaceEnvironmentUncheckedUpdateWithoutCompanyCreditGrantsInput = {
@@ -4391,6 +4659,7 @@ export type WorkspaceEnvironmentUncheckedUpdateWithoutCompanyCreditGrantsInput =
   platformBillingAccount?: Prisma.PlatformBillingAccountUncheckedUpdateOneWithoutEnvironmentNestedInput
   platformBillingPlans?: Prisma.PlatformBillingPlanUncheckedUpdateManyWithoutEnvironmentNestedInput
   platformBillingCustomers?: Prisma.PlatformBillingCustomerUncheckedUpdateManyWithoutEnvironmentNestedInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUncheckedUpdateManyWithoutEnvironmentNestedInput
 }
 
 export type WorkspaceEnvironmentCreateWithoutCreditLedgerEntriesInput = {
@@ -4427,6 +4696,7 @@ export type WorkspaceEnvironmentCreateWithoutCreditLedgerEntriesInput = {
   platformBillingAccount?: Prisma.PlatformBillingAccountCreateNestedOneWithoutEnvironmentInput
   platformBillingPlans?: Prisma.PlatformBillingPlanCreateNestedManyWithoutEnvironmentInput
   platformBillingCustomers?: Prisma.PlatformBillingCustomerCreateNestedManyWithoutEnvironmentInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptCreateNestedManyWithoutEnvironmentInput
 }
 
 export type WorkspaceEnvironmentUncheckedCreateWithoutCreditLedgerEntriesInput = {
@@ -4463,6 +4733,7 @@ export type WorkspaceEnvironmentUncheckedCreateWithoutCreditLedgerEntriesInput =
   platformBillingAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedOneWithoutEnvironmentInput
   platformBillingPlans?: Prisma.PlatformBillingPlanUncheckedCreateNestedManyWithoutEnvironmentInput
   platformBillingCustomers?: Prisma.PlatformBillingCustomerUncheckedCreateNestedManyWithoutEnvironmentInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUncheckedCreateNestedManyWithoutEnvironmentInput
 }
 
 export type WorkspaceEnvironmentCreateOrConnectWithoutCreditLedgerEntriesInput = {
@@ -4515,6 +4786,7 @@ export type WorkspaceEnvironmentUpdateWithoutCreditLedgerEntriesInput = {
   platformBillingAccount?: Prisma.PlatformBillingAccountUpdateOneWithoutEnvironmentNestedInput
   platformBillingPlans?: Prisma.PlatformBillingPlanUpdateManyWithoutEnvironmentNestedInput
   platformBillingCustomers?: Prisma.PlatformBillingCustomerUpdateManyWithoutEnvironmentNestedInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUpdateManyWithoutEnvironmentNestedInput
 }
 
 export type WorkspaceEnvironmentUncheckedUpdateWithoutCreditLedgerEntriesInput = {
@@ -4551,6 +4823,7 @@ export type WorkspaceEnvironmentUncheckedUpdateWithoutCreditLedgerEntriesInput =
   platformBillingAccount?: Prisma.PlatformBillingAccountUncheckedUpdateOneWithoutEnvironmentNestedInput
   platformBillingPlans?: Prisma.PlatformBillingPlanUncheckedUpdateManyWithoutEnvironmentNestedInput
   platformBillingCustomers?: Prisma.PlatformBillingCustomerUncheckedUpdateManyWithoutEnvironmentNestedInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUncheckedUpdateManyWithoutEnvironmentNestedInput
 }
 
 export type WorkspaceEnvironmentCreateWithoutPaymentLinksInput = {
@@ -4587,6 +4860,7 @@ export type WorkspaceEnvironmentCreateWithoutPaymentLinksInput = {
   platformBillingAccount?: Prisma.PlatformBillingAccountCreateNestedOneWithoutEnvironmentInput
   platformBillingPlans?: Prisma.PlatformBillingPlanCreateNestedManyWithoutEnvironmentInput
   platformBillingCustomers?: Prisma.PlatformBillingCustomerCreateNestedManyWithoutEnvironmentInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptCreateNestedManyWithoutEnvironmentInput
 }
 
 export type WorkspaceEnvironmentUncheckedCreateWithoutPaymentLinksInput = {
@@ -4623,6 +4897,7 @@ export type WorkspaceEnvironmentUncheckedCreateWithoutPaymentLinksInput = {
   platformBillingAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedOneWithoutEnvironmentInput
   platformBillingPlans?: Prisma.PlatformBillingPlanUncheckedCreateNestedManyWithoutEnvironmentInput
   platformBillingCustomers?: Prisma.PlatformBillingCustomerUncheckedCreateNestedManyWithoutEnvironmentInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUncheckedCreateNestedManyWithoutEnvironmentInput
 }
 
 export type WorkspaceEnvironmentCreateOrConnectWithoutPaymentLinksInput = {
@@ -4675,6 +4950,7 @@ export type WorkspaceEnvironmentUpdateWithoutPaymentLinksInput = {
   platformBillingAccount?: Prisma.PlatformBillingAccountUpdateOneWithoutEnvironmentNestedInput
   platformBillingPlans?: Prisma.PlatformBillingPlanUpdateManyWithoutEnvironmentNestedInput
   platformBillingCustomers?: Prisma.PlatformBillingCustomerUpdateManyWithoutEnvironmentNestedInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUpdateManyWithoutEnvironmentNestedInput
 }
 
 export type WorkspaceEnvironmentUncheckedUpdateWithoutPaymentLinksInput = {
@@ -4711,6 +4987,7 @@ export type WorkspaceEnvironmentUncheckedUpdateWithoutPaymentLinksInput = {
   platformBillingAccount?: Prisma.PlatformBillingAccountUncheckedUpdateOneWithoutEnvironmentNestedInput
   platformBillingPlans?: Prisma.PlatformBillingPlanUncheckedUpdateManyWithoutEnvironmentNestedInput
   platformBillingCustomers?: Prisma.PlatformBillingCustomerUncheckedUpdateManyWithoutEnvironmentNestedInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUncheckedUpdateManyWithoutEnvironmentNestedInput
 }
 
 export type WorkspaceEnvironmentCreateWithoutCheckoutSessionsInput = {
@@ -4747,6 +5024,7 @@ export type WorkspaceEnvironmentCreateWithoutCheckoutSessionsInput = {
   platformBillingAccount?: Prisma.PlatformBillingAccountCreateNestedOneWithoutEnvironmentInput
   platformBillingPlans?: Prisma.PlatformBillingPlanCreateNestedManyWithoutEnvironmentInput
   platformBillingCustomers?: Prisma.PlatformBillingCustomerCreateNestedManyWithoutEnvironmentInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptCreateNestedManyWithoutEnvironmentInput
 }
 
 export type WorkspaceEnvironmentUncheckedCreateWithoutCheckoutSessionsInput = {
@@ -4783,6 +5061,7 @@ export type WorkspaceEnvironmentUncheckedCreateWithoutCheckoutSessionsInput = {
   platformBillingAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedOneWithoutEnvironmentInput
   platformBillingPlans?: Prisma.PlatformBillingPlanUncheckedCreateNestedManyWithoutEnvironmentInput
   platformBillingCustomers?: Prisma.PlatformBillingCustomerUncheckedCreateNestedManyWithoutEnvironmentInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUncheckedCreateNestedManyWithoutEnvironmentInput
 }
 
 export type WorkspaceEnvironmentCreateOrConnectWithoutCheckoutSessionsInput = {
@@ -4835,6 +5114,7 @@ export type WorkspaceEnvironmentUpdateWithoutCheckoutSessionsInput = {
   platformBillingAccount?: Prisma.PlatformBillingAccountUpdateOneWithoutEnvironmentNestedInput
   platformBillingPlans?: Prisma.PlatformBillingPlanUpdateManyWithoutEnvironmentNestedInput
   platformBillingCustomers?: Prisma.PlatformBillingCustomerUpdateManyWithoutEnvironmentNestedInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUpdateManyWithoutEnvironmentNestedInput
 }
 
 export type WorkspaceEnvironmentUncheckedUpdateWithoutCheckoutSessionsInput = {
@@ -4871,6 +5151,7 @@ export type WorkspaceEnvironmentUncheckedUpdateWithoutCheckoutSessionsInput = {
   platformBillingAccount?: Prisma.PlatformBillingAccountUncheckedUpdateOneWithoutEnvironmentNestedInput
   platformBillingPlans?: Prisma.PlatformBillingPlanUncheckedUpdateManyWithoutEnvironmentNestedInput
   platformBillingCustomers?: Prisma.PlatformBillingCustomerUncheckedUpdateManyWithoutEnvironmentNestedInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUncheckedUpdateManyWithoutEnvironmentNestedInput
 }
 
 export type WorkspaceEnvironmentCreateWithoutEmbedAccessTokensInput = {
@@ -4907,6 +5188,7 @@ export type WorkspaceEnvironmentCreateWithoutEmbedAccessTokensInput = {
   platformBillingAccount?: Prisma.PlatformBillingAccountCreateNestedOneWithoutEnvironmentInput
   platformBillingPlans?: Prisma.PlatformBillingPlanCreateNestedManyWithoutEnvironmentInput
   platformBillingCustomers?: Prisma.PlatformBillingCustomerCreateNestedManyWithoutEnvironmentInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptCreateNestedManyWithoutEnvironmentInput
 }
 
 export type WorkspaceEnvironmentUncheckedCreateWithoutEmbedAccessTokensInput = {
@@ -4943,6 +5225,7 @@ export type WorkspaceEnvironmentUncheckedCreateWithoutEmbedAccessTokensInput = {
   platformBillingAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedOneWithoutEnvironmentInput
   platformBillingPlans?: Prisma.PlatformBillingPlanUncheckedCreateNestedManyWithoutEnvironmentInput
   platformBillingCustomers?: Prisma.PlatformBillingCustomerUncheckedCreateNestedManyWithoutEnvironmentInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUncheckedCreateNestedManyWithoutEnvironmentInput
 }
 
 export type WorkspaceEnvironmentCreateOrConnectWithoutEmbedAccessTokensInput = {
@@ -4995,6 +5278,7 @@ export type WorkspaceEnvironmentUpdateWithoutEmbedAccessTokensInput = {
   platformBillingAccount?: Prisma.PlatformBillingAccountUpdateOneWithoutEnvironmentNestedInput
   platformBillingPlans?: Prisma.PlatformBillingPlanUpdateManyWithoutEnvironmentNestedInput
   platformBillingCustomers?: Prisma.PlatformBillingCustomerUpdateManyWithoutEnvironmentNestedInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUpdateManyWithoutEnvironmentNestedInput
 }
 
 export type WorkspaceEnvironmentUncheckedUpdateWithoutEmbedAccessTokensInput = {
@@ -5031,6 +5315,7 @@ export type WorkspaceEnvironmentUncheckedUpdateWithoutEmbedAccessTokensInput = {
   platformBillingAccount?: Prisma.PlatformBillingAccountUncheckedUpdateOneWithoutEnvironmentNestedInput
   platformBillingPlans?: Prisma.PlatformBillingPlanUncheckedUpdateManyWithoutEnvironmentNestedInput
   platformBillingCustomers?: Prisma.PlatformBillingCustomerUncheckedUpdateManyWithoutEnvironmentNestedInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUncheckedUpdateManyWithoutEnvironmentNestedInput
 }
 
 export type WorkspaceEnvironmentCreateWithoutArcenApiKeysInput = {
@@ -5067,6 +5352,7 @@ export type WorkspaceEnvironmentCreateWithoutArcenApiKeysInput = {
   platformBillingAccount?: Prisma.PlatformBillingAccountCreateNestedOneWithoutEnvironmentInput
   platformBillingPlans?: Prisma.PlatformBillingPlanCreateNestedManyWithoutEnvironmentInput
   platformBillingCustomers?: Prisma.PlatformBillingCustomerCreateNestedManyWithoutEnvironmentInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptCreateNestedManyWithoutEnvironmentInput
 }
 
 export type WorkspaceEnvironmentUncheckedCreateWithoutArcenApiKeysInput = {
@@ -5103,6 +5389,7 @@ export type WorkspaceEnvironmentUncheckedCreateWithoutArcenApiKeysInput = {
   platformBillingAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedOneWithoutEnvironmentInput
   platformBillingPlans?: Prisma.PlatformBillingPlanUncheckedCreateNestedManyWithoutEnvironmentInput
   platformBillingCustomers?: Prisma.PlatformBillingCustomerUncheckedCreateNestedManyWithoutEnvironmentInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUncheckedCreateNestedManyWithoutEnvironmentInput
 }
 
 export type WorkspaceEnvironmentCreateOrConnectWithoutArcenApiKeysInput = {
@@ -5155,6 +5442,7 @@ export type WorkspaceEnvironmentUpdateWithoutArcenApiKeysInput = {
   platformBillingAccount?: Prisma.PlatformBillingAccountUpdateOneWithoutEnvironmentNestedInput
   platformBillingPlans?: Prisma.PlatformBillingPlanUpdateManyWithoutEnvironmentNestedInput
   platformBillingCustomers?: Prisma.PlatformBillingCustomerUpdateManyWithoutEnvironmentNestedInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUpdateManyWithoutEnvironmentNestedInput
 }
 
 export type WorkspaceEnvironmentUncheckedUpdateWithoutArcenApiKeysInput = {
@@ -5191,6 +5479,7 @@ export type WorkspaceEnvironmentUncheckedUpdateWithoutArcenApiKeysInput = {
   platformBillingAccount?: Prisma.PlatformBillingAccountUncheckedUpdateOneWithoutEnvironmentNestedInput
   platformBillingPlans?: Prisma.PlatformBillingPlanUncheckedUpdateManyWithoutEnvironmentNestedInput
   platformBillingCustomers?: Prisma.PlatformBillingCustomerUncheckedUpdateManyWithoutEnvironmentNestedInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUncheckedUpdateManyWithoutEnvironmentNestedInput
 }
 
 export type WorkspaceEnvironmentCreateWithoutEmbedComponentsInput = {
@@ -5227,6 +5516,7 @@ export type WorkspaceEnvironmentCreateWithoutEmbedComponentsInput = {
   platformBillingAccount?: Prisma.PlatformBillingAccountCreateNestedOneWithoutEnvironmentInput
   platformBillingPlans?: Prisma.PlatformBillingPlanCreateNestedManyWithoutEnvironmentInput
   platformBillingCustomers?: Prisma.PlatformBillingCustomerCreateNestedManyWithoutEnvironmentInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptCreateNestedManyWithoutEnvironmentInput
 }
 
 export type WorkspaceEnvironmentUncheckedCreateWithoutEmbedComponentsInput = {
@@ -5263,6 +5553,7 @@ export type WorkspaceEnvironmentUncheckedCreateWithoutEmbedComponentsInput = {
   platformBillingAccount?: Prisma.PlatformBillingAccountUncheckedCreateNestedOneWithoutEnvironmentInput
   platformBillingPlans?: Prisma.PlatformBillingPlanUncheckedCreateNestedManyWithoutEnvironmentInput
   platformBillingCustomers?: Prisma.PlatformBillingCustomerUncheckedCreateNestedManyWithoutEnvironmentInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUncheckedCreateNestedManyWithoutEnvironmentInput
 }
 
 export type WorkspaceEnvironmentCreateOrConnectWithoutEmbedComponentsInput = {
@@ -5315,6 +5606,7 @@ export type WorkspaceEnvironmentUpdateWithoutEmbedComponentsInput = {
   platformBillingAccount?: Prisma.PlatformBillingAccountUpdateOneWithoutEnvironmentNestedInput
   platformBillingPlans?: Prisma.PlatformBillingPlanUpdateManyWithoutEnvironmentNestedInput
   platformBillingCustomers?: Prisma.PlatformBillingCustomerUpdateManyWithoutEnvironmentNestedInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUpdateManyWithoutEnvironmentNestedInput
 }
 
 export type WorkspaceEnvironmentUncheckedUpdateWithoutEmbedComponentsInput = {
@@ -5351,6 +5643,7 @@ export type WorkspaceEnvironmentUncheckedUpdateWithoutEmbedComponentsInput = {
   platformBillingAccount?: Prisma.PlatformBillingAccountUncheckedUpdateOneWithoutEnvironmentNestedInput
   platformBillingPlans?: Prisma.PlatformBillingPlanUncheckedUpdateManyWithoutEnvironmentNestedInput
   platformBillingCustomers?: Prisma.PlatformBillingCustomerUncheckedUpdateManyWithoutEnvironmentNestedInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUncheckedUpdateManyWithoutEnvironmentNestedInput
 }
 
 export type WorkspaceEnvironmentCreateManyTeamInput = {
@@ -5397,6 +5690,7 @@ export type WorkspaceEnvironmentUpdateWithoutTeamInput = {
   platformBillingAccount?: Prisma.PlatformBillingAccountUpdateOneWithoutEnvironmentNestedInput
   platformBillingPlans?: Prisma.PlatformBillingPlanUpdateManyWithoutEnvironmentNestedInput
   platformBillingCustomers?: Prisma.PlatformBillingCustomerUpdateManyWithoutEnvironmentNestedInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUpdateManyWithoutEnvironmentNestedInput
 }
 
 export type WorkspaceEnvironmentUncheckedUpdateWithoutTeamInput = {
@@ -5433,6 +5727,7 @@ export type WorkspaceEnvironmentUncheckedUpdateWithoutTeamInput = {
   platformBillingAccount?: Prisma.PlatformBillingAccountUncheckedUpdateOneWithoutEnvironmentNestedInput
   platformBillingPlans?: Prisma.PlatformBillingPlanUncheckedUpdateManyWithoutEnvironmentNestedInput
   platformBillingCustomers?: Prisma.PlatformBillingCustomerUncheckedUpdateManyWithoutEnvironmentNestedInput
+  solanaActivationAttempts?: Prisma.SolanaActivationAttemptUncheckedUpdateManyWithoutEnvironmentNestedInput
 }
 
 export type WorkspaceEnvironmentUncheckedUpdateManyWithoutTeamInput = {
@@ -5476,6 +5771,7 @@ export type WorkspaceEnvironmentCountOutputType = {
   arcenEvents: number
   platformBillingPlans: number
   platformBillingCustomers: number
+  solanaActivationAttempts: number
 }
 
 export type WorkspaceEnvironmentCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -5504,6 +5800,7 @@ export type WorkspaceEnvironmentCountOutputTypeSelect<ExtArgs extends runtime.Ty
   arcenEvents?: boolean | WorkspaceEnvironmentCountOutputTypeCountArcenEventsArgs
   platformBillingPlans?: boolean | WorkspaceEnvironmentCountOutputTypeCountPlatformBillingPlansArgs
   platformBillingCustomers?: boolean | WorkspaceEnvironmentCountOutputTypeCountPlatformBillingCustomersArgs
+  solanaActivationAttempts?: boolean | WorkspaceEnvironmentCountOutputTypeCountSolanaActivationAttemptsArgs
 }
 
 /**
@@ -5691,6 +5988,13 @@ export type WorkspaceEnvironmentCountOutputTypeCountPlatformBillingCustomersArgs
   where?: Prisma.PlatformBillingCustomerWhereInput
 }
 
+/**
+ * WorkspaceEnvironmentCountOutputType without action
+ */
+export type WorkspaceEnvironmentCountOutputTypeCountSolanaActivationAttemptsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.SolanaActivationAttemptWhereInput
+}
+
 
 export type WorkspaceEnvironmentSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
@@ -5728,6 +6032,7 @@ export type WorkspaceEnvironmentSelect<ExtArgs extends runtime.Types.Extensions.
   platformBillingAccount?: boolean | Prisma.WorkspaceEnvironment$platformBillingAccountArgs<ExtArgs>
   platformBillingPlans?: boolean | Prisma.WorkspaceEnvironment$platformBillingPlansArgs<ExtArgs>
   platformBillingCustomers?: boolean | Prisma.WorkspaceEnvironment$platformBillingCustomersArgs<ExtArgs>
+  solanaActivationAttempts?: boolean | Prisma.WorkspaceEnvironment$solanaActivationAttemptsArgs<ExtArgs>
   _count?: boolean | Prisma.WorkspaceEnvironmentCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["workspaceEnvironment"]>
 
@@ -5795,6 +6100,7 @@ export type WorkspaceEnvironmentInclude<ExtArgs extends runtime.Types.Extensions
   platformBillingAccount?: boolean | Prisma.WorkspaceEnvironment$platformBillingAccountArgs<ExtArgs>
   platformBillingPlans?: boolean | Prisma.WorkspaceEnvironment$platformBillingPlansArgs<ExtArgs>
   platformBillingCustomers?: boolean | Prisma.WorkspaceEnvironment$platformBillingCustomersArgs<ExtArgs>
+  solanaActivationAttempts?: boolean | Prisma.WorkspaceEnvironment$solanaActivationAttemptsArgs<ExtArgs>
   _count?: boolean | Prisma.WorkspaceEnvironmentCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type WorkspaceEnvironmentIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -5834,6 +6140,7 @@ export type $WorkspaceEnvironmentPayload<ExtArgs extends runtime.Types.Extension
     platformBillingAccount: Prisma.$PlatformBillingAccountPayload<ExtArgs> | null
     platformBillingPlans: Prisma.$PlatformBillingPlanPayload<ExtArgs>[]
     platformBillingCustomers: Prisma.$PlatformBillingCustomerPayload<ExtArgs>[]
+    solanaActivationAttempts: Prisma.$SolanaActivationAttemptPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
@@ -6265,6 +6572,7 @@ export interface Prisma__WorkspaceEnvironmentClient<T, Null = never, ExtArgs ext
   platformBillingAccount<T extends Prisma.WorkspaceEnvironment$platformBillingAccountArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.WorkspaceEnvironment$platformBillingAccountArgs<ExtArgs>>): Prisma.Prisma__PlatformBillingAccountClient<runtime.Types.Result.GetResult<Prisma.$PlatformBillingAccountPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   platformBillingPlans<T extends Prisma.WorkspaceEnvironment$platformBillingPlansArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.WorkspaceEnvironment$platformBillingPlansArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$PlatformBillingPlanPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   platformBillingCustomers<T extends Prisma.WorkspaceEnvironment$platformBillingCustomersArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.WorkspaceEnvironment$platformBillingCustomersArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$PlatformBillingCustomerPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  solanaActivationAttempts<T extends Prisma.WorkspaceEnvironment$solanaActivationAttemptsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.WorkspaceEnvironment$solanaActivationAttemptsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$SolanaActivationAttemptPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -7314,6 +7622,30 @@ export type WorkspaceEnvironment$platformBillingCustomersArgs<ExtArgs extends ru
   take?: number
   skip?: number
   distinct?: Prisma.PlatformBillingCustomerScalarFieldEnum | Prisma.PlatformBillingCustomerScalarFieldEnum[]
+}
+
+/**
+ * WorkspaceEnvironment.solanaActivationAttempts
+ */
+export type WorkspaceEnvironment$solanaActivationAttemptsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the SolanaActivationAttempt
+   */
+  select?: Prisma.SolanaActivationAttemptSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the SolanaActivationAttempt
+   */
+  omit?: Prisma.SolanaActivationAttemptOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.SolanaActivationAttemptInclude<ExtArgs> | null
+  where?: Prisma.SolanaActivationAttemptWhereInput
+  orderBy?: Prisma.SolanaActivationAttemptOrderByWithRelationInput | Prisma.SolanaActivationAttemptOrderByWithRelationInput[]
+  cursor?: Prisma.SolanaActivationAttemptWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.SolanaActivationAttemptScalarFieldEnum | Prisma.SolanaActivationAttemptScalarFieldEnum[]
 }
 
 /**

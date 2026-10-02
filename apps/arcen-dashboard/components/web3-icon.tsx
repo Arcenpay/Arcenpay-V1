@@ -22,6 +22,9 @@ const chainIdToNetworkName: Record<number, string> = {
   9000000: "stellar", // STELLAR_MAINNET_CHAIN_ID
   9000001: "stellar", // STELLAR_TESTNET_CHAIN_ID
   9000002: "stellar", // STELLAR_FUTURENET_CHAIN_ID
+  9100000: "solana", // SOLANA_MAINNET_CHAIN_ID
+  9100001: "solana", // SOLANA_DEVNET_CHAIN_ID
+  9100002: "solana", // SOLANA_TESTNET_CHAIN_ID
 };
 
 const chainLabelToNetworkName: Record<string, string> = {
@@ -33,6 +36,9 @@ const chainLabelToNetworkName: Record<string, string> = {
   Stellar: "stellar",
   "Stellar Testnet": "stellar",
   "Stellar Futurenet": "stellar",
+  Solana: "solana",
+  "Solana Devnet": "solana",
+  "Solana Testnet": "solana",
 };
 
 // ── Public component ──────────────────────────────────────────────────────

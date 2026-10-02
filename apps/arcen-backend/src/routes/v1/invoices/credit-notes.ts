@@ -11,6 +11,7 @@ import {
   postBillingCredit,
 } from "../../../lib/billing/billing-balances.js";
 import { recordBillingAdjustment } from "../../../lib/billing/billing-adjustments.js";
+import { normalizeWallet } from "../../../lib/billing/utils.js";
 
 const CREDITABLE_STATUSES = ["ISSUED", "PAID", "OVERDUE"];
 
@@ -121,7 +122,7 @@ export async function POST(c: Context) {
     const company = await db.arcenCompany.findFirst({
       where: {
         teamId: auth.teamId,
-        walletAddress: invoice.customerWallet.toLowerCase(),
+        walletAddress: normalizeWallet(invoice.customerWallet) ?? invoice.customerWallet,
       },
       select: {
         id: true,

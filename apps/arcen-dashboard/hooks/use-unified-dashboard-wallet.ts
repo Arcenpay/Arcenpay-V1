@@ -1,10 +1,11 @@
 "use client";
 
 import { useCallback, useMemo } from "react";
-import { isStellarChainId } from "@arcenpay/internal-core";
+import { isStellarChainId, isSolanaChainId } from "@arcenpay/internal-core";
 import { getChainLabel } from "@/lib/default-chain";
 import { useDashboardWallet } from "./use-dashboard-wallet";
 import { useStellarWallet } from "./use-stellar-wallet";
+import { useSolanaWallet } from "./use-solana-wallet";
 
 export interface UnifiedWalletState {
   // Identity
@@ -45,8 +46,10 @@ export function useUnifiedDashboardWallet(
   configuredChainId: number,
   evmStoredWallet: string | null,
   stellarStoredWallet: string | null,
+  solanaStoredWallet: string | null = null,
 ): UnifiedWalletState {
   const isStellar = isStellarChainId(configuredChainId);
+  const isSolana = isSolanaChainId(configuredChainId);
 
   // EVM wallet state (always active in background — wagmi is global)
   const evm = useDashboardWallet(evmStoredWallet);
@@ -55,7 +58,55 @@ export function useUnifiedDashboardWallet(
   // with the matching network passphrase (testnet vs mainnet).
   const stellar = useStellarWallet(configuredChainId);
 
+  // Solana wallet state — injected provider (Phantom/Solflare/…).
+  const solana = useSolanaWallet(configuredChainId);
+
   return useMemo(() => {
+    if (isSolana) {
+      const stored = solanaStoredWallet ?? null;
+      const connected = solana.address ?? null;
+      const hasConnected = Boolean(solana.isConnected && connected);
+      const hasLinked = Boolean(stored);
+      const isLinkedConnected =
+        Boolean(stored) && Boolean(connected) && stored === connected;
+      const isWrongConnected = hasLinked && hasConnected && !isLinkedConnected;
+
+      return {
+        storedWallet: stored,
+        connectedAddress: connected,
+        connectedWalletLabel: connected ? shortStellarAddress(connected) : null,
+        linkedWalletLabel: stored ? shortStellarAddress(stored) : null,
+        currentNetworkLabel: getChainLabel(configuredChainId),
+
+        hasConnectedWallet: hasConnected,
+        hasLinkedWallet: hasLinked,
+        isLinkedWalletConnected: isLinkedConnected,
+        isWrongWalletConnected: isWrongConnected,
+        isOnConfiguredNetwork: hasConnected, // Solana wallets manage their own cluster
+        isWrongNetwork: false,
+        isLoading: solana.isLoading,
+        isSwitchingChain: false,
+        isDisconnecting: false,
+
+        openConnectModal: async () => {
+          await solana.connect();
+        },
+        openAccountModal: async () => {
+          await solana.connect();
+        },
+        reconnectWallet: async () => {
+          await solana.disconnect();
+          await solana.connect();
+        },
+        disconnectWallet: async () => {
+          await solana.disconnect();
+        },
+        switchToRequiredNetwork: async () => {
+          // No-op: Solana wallets manage their cluster internally
+        },
+      };
+    }
+
     if (isStellar) {
       const stored = stellarStoredWallet ?? null;
       const connected = stellar.address ?? null;
@@ -129,10 +180,13 @@ export function useUnifiedDashboardWallet(
     };
   }, [
     isStellar,
+    isSolana,
     configuredChainId,
     evmStoredWallet,
     stellarStoredWallet,
+    solanaStoredWallet,
     stellar,
+    solana,
     evm,
   ]);
 }

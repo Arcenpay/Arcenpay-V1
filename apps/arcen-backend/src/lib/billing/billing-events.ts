@@ -12,7 +12,45 @@ import {
 } from "./billing-ledger.js";
 import { projectPlatformBillingEntitlement } from "./platform-billing-customer.js";
 import { grantPlanCreditsForCompany } from "./usage-credits.js";
-import { deriveBillingPeriodFromInterval } from "./utils.js";
+import { deriveBillingPeriodFromInterval, normalizeWallet } from "./utils.js";
+import { sendPaidInvoiceReceipt } from "./invoice-notifications.js";
+
+/**
+ * Resolves the recipient for an issued invoice. The facilitator's on-chain
+ * event payloads do not carry an email, so fall back to the company record and
+ * then the scoped subscriber-email registry — otherwise the invoice is created
+ * with no recipient and no receipt can ever be delivered.
+ */
+async function resolveInvoiceCustomerEmail(input: {
+  payloadEmail: string | null;
+  teamId: string;
+  environmentId: string | null;
+  companyId: string | null;
+  wallet: string | null;
+}): Promise<string | null> {
+  const direct = input.payloadEmail?.trim();
+  if (direct) return direct;
+
+  if (input.companyId) {
+    const company = await db.arcenCompany
+      .findUnique({ where: { id: input.companyId }, select: { email: true } })
+      .catch(() => null);
+    const email = company?.email?.trim();
+    if (email) return email;
+  }
+
+  if (input.wallet) {
+    const scoped = await findScopedSubscriberEmail({
+      teamId: input.teamId,
+      environmentId: input.environmentId,
+      walletAddress: input.wallet,
+    }).catch(() => null);
+    const email = scoped?.email?.trim();
+    if (email) return email;
+  }
+
+  return null;
+}
 
 export type BillingEventType =
   | "SUBSCRIPTION_MINTED"
@@ -133,11 +171,58 @@ export interface CreateChargeInvoiceInput {
   issuedAt?: Date;
   metadata?: Record<string, unknown>;
   sendInvoiceEmail?: boolean;
+  /**
+   * On-chain transaction this invoice is for. Used to make invoice creation
+   * idempotent per payment — see the guard below.
+   */
+  paymentTxHash?: string | null;
 }
 
 export async function createIssuedChargeInvoice(
   input: CreateChargeInvoiceInput,
 ) {
+  // Idempotency: one on-chain payment ⇒ exactly ONE invoice.
+  //
+  // A subscription is projected by TWO independent paths — the synchronous
+  // activation (`finalizeSubscriptionActivation`, which already dedups) and this
+  // event path (the facilitator). Without this guard the event path issued a
+  // SECOND invoice for a payment that was already invoiced, which also produced
+  // a second receipt email. The payment itself was never duplicated (txHash is
+  // unique), so this was a double-invoice bug, not a double-charge.
+  const paymentTxHash = input.paymentTxHash?.trim();
+  if (paymentTxHash) {
+    const existingInvoiceId =
+      (
+        await db.payment.findUnique({
+          where: { txHash: paymentTxHash },
+          select: { invoiceId: true },
+        })
+      )?.invoiceId ??
+      (
+        await db.invoice.findFirst({
+          where: {
+            teamId: input.teamId,
+            metadata: { path: ["txHash"], equals: paymentTxHash } as any,
+          },
+          select: { id: true },
+        })
+      )?.id ??
+      null;
+
+    if (existingInvoiceId) {
+      const existingInvoice = await db.invoice.findUnique({
+        where: { id: existingInvoiceId },
+      });
+      if (existingInvoice) {
+        const { downloadUrl } = await ensureInvoicePdfForTeam(
+          input.teamId,
+          existingInvoice.id,
+        );
+        return { invoice: existingInvoice, downloadUrl };
+      }
+    }
+  }
+
   const team = await db.team.findUnique({
     where: { id: input.teamId },
     select: { slug: true, invoicePrefix: true, environmentMode: true },
@@ -159,7 +244,7 @@ export async function createIssuedChargeInvoice(
       number,
       currency: "USDC",
       customerEmail: input.customerEmail ?? null,
-      customerWallet: input.customerWallet?.toLowerCase() ?? null,
+      customerWallet: normalizeWallet(input.customerWallet),
       subtotal: toSix(input.amount),
       taxTotal: toSix(0),
       total: toSix(input.amount),
@@ -340,7 +425,27 @@ async function processStoredBillingEvent(
         environmentId: payloadEnvironmentId,
         amount,
         description: String(payload.description || options.canonicalEventName),
-        customerEmail: typeof payload.email === "string" ? payload.email : null,
+        paymentTxHash:
+          typeof payload.txHash === "string" ? payload.txHash : null,
+        customerEmail: await resolveInvoiceCustomerEmail({
+          payloadEmail:
+            typeof payload.email === "string" ? payload.email : null,
+          teamId: event.teamId,
+          environmentId:
+            typeof payload.environmentId === "string"
+              ? payload.environmentId
+              : null,
+          companyId:
+            typeof payload.companyId === "string" && payload.companyId.trim()
+              ? payload.companyId.trim()
+              : null,
+          wallet:
+            typeof payload.customerWallet === "string"
+              ? payload.customerWallet
+              : typeof payload.subscriber === "string"
+                ? payload.subscriber
+                : null,
+        }),
         customerName:
           typeof payload.customerName === "string"
             ? payload.customerName
@@ -418,7 +523,12 @@ async function processStoredBillingEvent(
       catalogPlanId,
       onChainPlanId,
       currentPeriodStart: occurredAt,
-      currentPeriodEnd,
+      // Preserve the existing period end when this event carries no expiration.
+      // `resolveExpirationDate()` returns null for events without one (e.g. a
+      // Solana `BillingExecuted` on the activation leg), and passing that null
+      // through would CLEAR a period end set by the minted event — leaving an
+      // ACTIVE subscription with no next billing date and blocking cancellation.
+      currentPeriodEnd: currentPeriodEnd ?? undefined,
       cancelAtPeriodEnd: false,
       cancelledAt: null,
       pastDueAt: null,
@@ -449,6 +559,7 @@ async function processStoredBillingEvent(
             : "SUBSCRIPTION_RENEWAL",
         amount,
         currency: "USDC",
+        chainId: payloadChainId ?? undefined,
         payerWallet: customerWallet,
         txHash: typeof payload.txHash === "string" ? payload.txHash : null,
         occurredAt,
@@ -498,6 +609,23 @@ async function processStoredBillingEvent(
         },
       });
     }
+
+    // Deliver the paid-invoice receipt. Receipts were only sent from the
+    // synchronous activation path, so a subscription that finalized through the
+    // facilitator event listener (the Solana flow) never emailed the customer
+    // their invoice. Idempotent: deduped by txHash inside the helper.
+    if (invoiceId) {
+      await sendPaidInvoiceReceipt({
+        teamId: event.teamId,
+        invoiceId,
+        txHash: typeof payload.txHash === "string" ? payload.txHash : null,
+      }).catch((err) => {
+        console.warn(
+          "[billing-events] Failed to send paid invoice receipt:",
+          err,
+        );
+      });
+    }
   }
 
   if (event.eventType === "PAYMENT_FAILED") {
@@ -532,6 +660,7 @@ async function processStoredBillingEvent(
       kind: "SUBSCRIPTION_RENEWAL",
       amount: Number.isFinite(amount) ? amount : 0,
       currency: "USDC",
+      chainId: payloadChainId ?? undefined,
       txHash: typeof payload.txHash === "string" ? payload.txHash : null,
       occurredAt,
       errorMessage:
@@ -604,7 +733,7 @@ async function processStoredBillingEvent(
       planId: catalogPlanId,
       onChainPlanId,
       tokenId: onChainTokenId,
-      customerWallet: customerWallet?.toLowerCase() ?? null,
+      customerWallet: normalizeWallet(customerWallet),
       amount: Number.isFinite(amount) ? amount : null,
       currency:
         typeof payload.currency === "string" && payload.currency.trim()

@@ -99,10 +99,11 @@ async function readSessionsAndProofsFromSubgraph(
   proofs: ProofRow[];
   status: "ok" | "unavailable" | "not_configured";
 }> {
-  // Stellar has no TheGraph subgraph — sessions live on-chain (Soroban)
+  // Stellar and Solana have no TheGraph subgraph — sessions live on-chain
   // and are read by the facilitator. Short-circuit instead of returning
   // a misleading "unavailable".
-  if (getChainFamily(chainId) === "stellar") {
+  const family = getChainFamily(chainId);
+  if (family === "stellar" || family === "solana") {
     return { sessions: [], proofs: [], status: "not_configured" };
   }
 

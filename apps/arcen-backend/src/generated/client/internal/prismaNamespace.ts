@@ -420,6 +420,7 @@ export const ModelName = {
   BillingBalance: 'BillingBalance',
   Refund: 'Refund',
   BillingRecoveryTask: 'BillingRecoveryTask',
+  SolanaActivationAttempt: 'SolanaActivationAttempt',
   WebhookDelivery: 'WebhookDelivery',
   PlatformTierConfig: 'PlatformTierConfig',
   PlatformBillingPlan: 'PlatformBillingPlan',
@@ -463,7 +464,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "user" | "authSession" | "emailAuthCode" | "team" | "workspaceEnvironment" | "teamMember" | "teamInvitation" | "providerProfile" | "subscriberEmail" | "authNonce" | "catalogPlan" | "catalogAddOn" | "catalogCreditType" | "catalogVersion" | "catalogConfig" | "catalogCoupon" | "billingTemplate" | "billingTemplateVersion" | "templateInstall" | "taxProfile" | "invoiceTemplate" | "invoiceSequence" | "invoice" | "invoiceLine" | "invoiceDelivery" | "creditNote" | "auditEvent" | "billingEvent" | "subscriptionState" | "subscriptionChangeRequest" | "payment" | "paymentAttempt" | "billingAdjustment" | "billingBalance" | "refund" | "billingRecoveryTask" | "webhookDelivery" | "platformTierConfig" | "platformBillingPlan" | "platformBillingAccount" | "platformBillingCustomer" | "gasSpend" | "tierUpgradeHistory" | "supportTicket" | "arcenCompany" | "arcenUser" | "arcenEvent" | "companyAddOnGrant" | "companyCreditGrant" | "creditLedgerEntry" | "paymentLink" | "checkoutSession" | "catalogFeatureFlag" | "flagRule" | "flagRuleCondition" | "companyOverride" | "embedAccessToken" | "arcenApiKey" | "zkTlsProof" | "embedComponent" | "arcenAgentConfig" | "arcenDispatchRequest" | "platformActivationKey" | "platformActivationRedemption"
+    modelProps: "user" | "authSession" | "emailAuthCode" | "team" | "workspaceEnvironment" | "teamMember" | "teamInvitation" | "providerProfile" | "subscriberEmail" | "authNonce" | "catalogPlan" | "catalogAddOn" | "catalogCreditType" | "catalogVersion" | "catalogConfig" | "catalogCoupon" | "billingTemplate" | "billingTemplateVersion" | "templateInstall" | "taxProfile" | "invoiceTemplate" | "invoiceSequence" | "invoice" | "invoiceLine" | "invoiceDelivery" | "creditNote" | "auditEvent" | "billingEvent" | "subscriptionState" | "subscriptionChangeRequest" | "payment" | "paymentAttempt" | "billingAdjustment" | "billingBalance" | "refund" | "billingRecoveryTask" | "solanaActivationAttempt" | "webhookDelivery" | "platformTierConfig" | "platformBillingPlan" | "platformBillingAccount" | "platformBillingCustomer" | "gasSpend" | "tierUpgradeHistory" | "supportTicket" | "arcenCompany" | "arcenUser" | "arcenEvent" | "companyAddOnGrant" | "companyCreditGrant" | "creditLedgerEntry" | "paymentLink" | "checkoutSession" | "catalogFeatureFlag" | "flagRule" | "flagRuleCondition" | "companyOverride" | "embedAccessToken" | "arcenApiKey" | "zkTlsProof" | "embedComponent" | "arcenAgentConfig" | "arcenDispatchRequest" | "platformActivationKey" | "platformActivationRedemption"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -3131,6 +3132,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    SolanaActivationAttempt: {
+      payload: Prisma.$SolanaActivationAttemptPayload<ExtArgs>
+      fields: Prisma.SolanaActivationAttemptFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.SolanaActivationAttemptFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SolanaActivationAttemptPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.SolanaActivationAttemptFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SolanaActivationAttemptPayload>
+        }
+        findFirst: {
+          args: Prisma.SolanaActivationAttemptFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SolanaActivationAttemptPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.SolanaActivationAttemptFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SolanaActivationAttemptPayload>
+        }
+        findMany: {
+          args: Prisma.SolanaActivationAttemptFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SolanaActivationAttemptPayload>[]
+        }
+        create: {
+          args: Prisma.SolanaActivationAttemptCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SolanaActivationAttemptPayload>
+        }
+        createMany: {
+          args: Prisma.SolanaActivationAttemptCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.SolanaActivationAttemptCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SolanaActivationAttemptPayload>[]
+        }
+        delete: {
+          args: Prisma.SolanaActivationAttemptDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SolanaActivationAttemptPayload>
+        }
+        update: {
+          args: Prisma.SolanaActivationAttemptUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SolanaActivationAttemptPayload>
+        }
+        deleteMany: {
+          args: Prisma.SolanaActivationAttemptDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.SolanaActivationAttemptUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.SolanaActivationAttemptUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SolanaActivationAttemptPayload>[]
+        }
+        upsert: {
+          args: Prisma.SolanaActivationAttemptUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SolanaActivationAttemptPayload>
+        }
+        aggregate: {
+          args: Prisma.SolanaActivationAttemptAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateSolanaActivationAttempt>
+        }
+        groupBy: {
+          args: Prisma.SolanaActivationAttemptGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.SolanaActivationAttemptGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.SolanaActivationAttemptCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.SolanaActivationAttemptCountAggregateOutputType> | number
+        }
+      }
+    }
     WebhookDelivery: {
       payload: Prisma.$WebhookDeliveryPayload<ExtArgs>
       fields: Prisma.WebhookDeliveryFieldRefs
@@ -5250,6 +5325,7 @@ export const UserScalarFieldEnum = {
   emailVerified: 'emailVerified',
   walletAddress: 'walletAddress',
   stellarWalletAddress: 'stellarWalletAddress',
+  solanaWalletAddress: 'solanaWalletAddress',
   currentTeamId: 'currentTeamId'
 } as const
 
@@ -5958,6 +6034,36 @@ export const BillingRecoveryTaskScalarFieldEnum = {
 } as const
 
 export type BillingRecoveryTaskScalarFieldEnum = (typeof BillingRecoveryTaskScalarFieldEnum)[keyof typeof BillingRecoveryTaskScalarFieldEnum]
+
+
+export const SolanaActivationAttemptScalarFieldEnum = {
+  id: 'id',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt',
+  teamId: 'teamId',
+  environmentId: 'environmentId',
+  companyId: 'companyId',
+  chainId: 'chainId',
+  status: 'status',
+  idempotencyKey: 'idempotencyKey',
+  txSignature: 'txSignature',
+  walletAddress: 'walletAddress',
+  catalogPlanId: 'catalogPlanId',
+  onChainPlanId: 'onChainPlanId',
+  onChainTokenId: 'onChainTokenId',
+  expectedAmount: 'expectedAmount',
+  acceptedToken: 'acceptedToken',
+  merchantAddress: 'merchantAddress',
+  finalizedAt: 'finalizedAt',
+  provisionedAt: 'provisionedAt',
+  attempts: 'attempts',
+  lastAttemptAt: 'lastAttemptAt',
+  nextAttemptAt: 'nextAttemptAt',
+  lastError: 'lastError',
+  metadata: 'metadata'
+} as const
+
+export type SolanaActivationAttemptScalarFieldEnum = (typeof SolanaActivationAttemptScalarFieldEnum)[keyof typeof SolanaActivationAttemptScalarFieldEnum]
 
 
 export const WebhookDeliveryScalarFieldEnum = {
@@ -6980,6 +7086,20 @@ export type ListEnumBillingRecoveryTaskStatusFieldRefInput<$PrismaModel> = Field
 
 
 /**
+ * Reference to a field of type 'SolanaActivationStatus'
+ */
+export type EnumSolanaActivationStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'SolanaActivationStatus'>
+    
+
+
+/**
+ * Reference to a field of type 'SolanaActivationStatus[]'
+ */
+export type ListEnumSolanaActivationStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'SolanaActivationStatus[]'>
+    
+
+
+/**
  * Reference to a field of type 'SupportTicketStatus'
  */
 export type EnumSupportTicketStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'SupportTicketStatus'>
@@ -7305,6 +7425,7 @@ export type GlobalOmitConfig = {
   billingBalance?: Prisma.BillingBalanceOmit
   refund?: Prisma.RefundOmit
   billingRecoveryTask?: Prisma.BillingRecoveryTaskOmit
+  solanaActivationAttempt?: Prisma.SolanaActivationAttemptOmit
   webhookDelivery?: Prisma.WebhookDeliveryOmit
   platformTierConfig?: Prisma.PlatformTierConfigOmit
   platformBillingPlan?: Prisma.PlatformBillingPlanOmit

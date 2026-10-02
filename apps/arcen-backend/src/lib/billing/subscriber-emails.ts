@@ -1,17 +1,35 @@
 import { db } from "../../db.js";
+import { isValidAddress } from "@arcenpay/internal-core";
 
 type SubscriberEmailRecord = {
   email: string;
   planId?: string | null;
 };
 
+/**
+ * Normalizes a subscriber wallet for storage/lookup, accepting EVERY supported
+ * family — EVM (0x…40 hex), Stellar (G…/C…/64-hex) and Solana (base58).
+ *
+ * EVM addresses are case-insensitive and lowercased; Stellar and Solana
+ * addresses are case-sensitive and returned untouched. Returns null for
+ * anything that isn't a valid address on a supported family.
+ *
+ * Previously this accepted only EVM addresses, so Stellar/Solana subscribers
+ * could never register or look up an email.
+ */
 export function normalizeSubscriberWallet(
   walletAddress?: string | null,
 ): string | null {
-  const normalized = walletAddress?.trim().toLowerCase();
-  return normalized && /^0x[0-9a-f]{40}$/.test(normalized)
-    ? normalized
-    : null;
+  const trimmed = walletAddress?.trim();
+  if (!trimmed) return null;
+  const isKnownAddress =
+    isValidAddress(trimmed, "evm") ||
+    isValidAddress(trimmed, "stellar") ||
+    isValidAddress(trimmed, "solana");
+  if (!isKnownAddress) return null;
+  return trimmed.startsWith("0x") || trimmed.startsWith("0X")
+    ? trimmed.toLowerCase()
+    : trimmed;
 }
 
 export function buildSubscriberEmailScopeKey(input: {

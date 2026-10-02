@@ -32,6 +32,7 @@ export type UserMinAggregateOutputType = {
   emailVerified: boolean | null
   walletAddress: string | null
   stellarWalletAddress: string | null
+  solanaWalletAddress: string | null
   currentTeamId: string | null
 }
 
@@ -43,6 +44,7 @@ export type UserMaxAggregateOutputType = {
   emailVerified: boolean | null
   walletAddress: string | null
   stellarWalletAddress: string | null
+  solanaWalletAddress: string | null
   currentTeamId: string | null
 }
 
@@ -54,6 +56,7 @@ export type UserCountAggregateOutputType = {
   emailVerified: number
   walletAddress: number
   stellarWalletAddress: number
+  solanaWalletAddress: number
   currentTeamId: number
   _all: number
 }
@@ -67,6 +70,7 @@ export type UserMinAggregateInputType = {
   emailVerified?: true
   walletAddress?: true
   stellarWalletAddress?: true
+  solanaWalletAddress?: true
   currentTeamId?: true
 }
 
@@ -78,6 +82,7 @@ export type UserMaxAggregateInputType = {
   emailVerified?: true
   walletAddress?: true
   stellarWalletAddress?: true
+  solanaWalletAddress?: true
   currentTeamId?: true
 }
 
@@ -89,6 +94,7 @@ export type UserCountAggregateInputType = {
   emailVerified?: true
   walletAddress?: true
   stellarWalletAddress?: true
+  solanaWalletAddress?: true
   currentTeamId?: true
   _all?: true
 }
@@ -173,6 +179,7 @@ export type UserGroupByOutputType = {
   emailVerified: boolean
   walletAddress: string | null
   stellarWalletAddress: string | null
+  solanaWalletAddress: string | null
   currentTeamId: string | null
   _count: UserCountAggregateOutputType | null
   _min: UserMinAggregateOutputType | null
@@ -205,6 +212,7 @@ export type UserWhereInput = {
   emailVerified?: Prisma.BoolFilter<"User"> | boolean
   walletAddress?: Prisma.StringNullableFilter<"User"> | string | null
   stellarWalletAddress?: Prisma.StringNullableFilter<"User"> | string | null
+  solanaWalletAddress?: Prisma.StringNullableFilter<"User"> | string | null
   currentTeamId?: Prisma.StringNullableFilter<"User"> | string | null
   authSessions?: Prisma.AuthSessionListRelationFilter
   emailAuthCodes?: Prisma.EmailAuthCodeListRelationFilter
@@ -220,6 +228,7 @@ export type UserOrderByWithRelationInput = {
   emailVerified?: Prisma.SortOrder
   walletAddress?: Prisma.SortOrderInput | Prisma.SortOrder
   stellarWalletAddress?: Prisma.SortOrderInput | Prisma.SortOrder
+  solanaWalletAddress?: Prisma.SortOrderInput | Prisma.SortOrder
   currentTeamId?: Prisma.SortOrderInput | Prisma.SortOrder
   authSessions?: Prisma.AuthSessionOrderByRelationAggregateInput
   emailAuthCodes?: Prisma.EmailAuthCodeOrderByRelationAggregateInput
@@ -232,6 +241,7 @@ export type UserWhereUniqueInput = Prisma.AtLeast<{
   email?: string
   walletAddress?: string
   stellarWalletAddress?: string
+  solanaWalletAddress?: string
   AND?: Prisma.UserWhereInput | Prisma.UserWhereInput[]
   OR?: Prisma.UserWhereInput[]
   NOT?: Prisma.UserWhereInput | Prisma.UserWhereInput[]
@@ -243,7 +253,7 @@ export type UserWhereUniqueInput = Prisma.AtLeast<{
   emailAuthCodes?: Prisma.EmailAuthCodeListRelationFilter
   invitedTeams?: Prisma.TeamInvitationListRelationFilter
   teams?: Prisma.TeamMemberListRelationFilter
-}, "id" | "email" | "walletAddress" | "stellarWalletAddress">
+}, "id" | "email" | "walletAddress" | "stellarWalletAddress" | "solanaWalletAddress">
 
 export type UserOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
@@ -253,6 +263,7 @@ export type UserOrderByWithAggregationInput = {
   emailVerified?: Prisma.SortOrder
   walletAddress?: Prisma.SortOrderInput | Prisma.SortOrder
   stellarWalletAddress?: Prisma.SortOrderInput | Prisma.SortOrder
+  solanaWalletAddress?: Prisma.SortOrderInput | Prisma.SortOrder
   currentTeamId?: Prisma.SortOrderInput | Prisma.SortOrder
   _count?: Prisma.UserCountOrderByAggregateInput
   _max?: Prisma.UserMaxOrderByAggregateInput
@@ -270,6 +281,7 @@ export type UserScalarWhereWithAggregatesInput = {
   emailVerified?: Prisma.BoolWithAggregatesFilter<"User"> | boolean
   walletAddress?: Prisma.StringNullableWithAggregatesFilter<"User"> | string | null
   stellarWalletAddress?: Prisma.StringNullableWithAggregatesFilter<"User"> | string | null
+  solanaWalletAddress?: Prisma.StringNullableWithAggregatesFilter<"User"> | string | null
   currentTeamId?: Prisma.StringNullableWithAggregatesFilter<"User"> | string | null
 }
 
@@ -281,6 +293,7 @@ export type UserCreateInput = {
   emailVerified?: boolean
   walletAddress?: string | null
   stellarWalletAddress?: string | null
+  solanaWalletAddress?: string | null
   currentTeamId?: string | null
   authSessions?: Prisma.AuthSessionCreateNestedManyWithoutUserInput
   emailAuthCodes?: Prisma.EmailAuthCodeCreateNestedManyWithoutUserInput
@@ -296,6 +309,7 @@ export type UserUncheckedCreateInput = {
   emailVerified?: boolean
   walletAddress?: string | null
   stellarWalletAddress?: string | null
+  solanaWalletAddress?: string | null
   currentTeamId?: string | null
   authSessions?: Prisma.AuthSessionUncheckedCreateNestedManyWithoutUserInput
   emailAuthCodes?: Prisma.EmailAuthCodeUncheckedCreateNestedManyWithoutUserInput
@@ -311,6 +325,7 @@ export type UserUpdateInput = {
   emailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
   walletAddress?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stellarWalletAddress?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  solanaWalletAddress?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   currentTeamId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   authSessions?: Prisma.AuthSessionUpdateManyWithoutUserNestedInput
   emailAuthCodes?: Prisma.EmailAuthCodeUpdateManyWithoutUserNestedInput
@@ -326,6 +341,7 @@ export type UserUncheckedUpdateInput = {
   emailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
   walletAddress?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stellarWalletAddress?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  solanaWalletAddress?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   currentTeamId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   authSessions?: Prisma.AuthSessionUncheckedUpdateManyWithoutUserNestedInput
   emailAuthCodes?: Prisma.EmailAuthCodeUncheckedUpdateManyWithoutUserNestedInput
@@ -341,6 +357,7 @@ export type UserCreateManyInput = {
   emailVerified?: boolean
   walletAddress?: string | null
   stellarWalletAddress?: string | null
+  solanaWalletAddress?: string | null
   currentTeamId?: string | null
 }
 
@@ -352,6 +369,7 @@ export type UserUpdateManyMutationInput = {
   emailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
   walletAddress?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stellarWalletAddress?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  solanaWalletAddress?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   currentTeamId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
 }
 
@@ -363,6 +381,7 @@ export type UserUncheckedUpdateManyInput = {
   emailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
   walletAddress?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stellarWalletAddress?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  solanaWalletAddress?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   currentTeamId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
 }
 
@@ -374,6 +393,7 @@ export type UserCountOrderByAggregateInput = {
   emailVerified?: Prisma.SortOrder
   walletAddress?: Prisma.SortOrder
   stellarWalletAddress?: Prisma.SortOrder
+  solanaWalletAddress?: Prisma.SortOrder
   currentTeamId?: Prisma.SortOrder
 }
 
@@ -385,6 +405,7 @@ export type UserMaxOrderByAggregateInput = {
   emailVerified?: Prisma.SortOrder
   walletAddress?: Prisma.SortOrder
   stellarWalletAddress?: Prisma.SortOrder
+  solanaWalletAddress?: Prisma.SortOrder
   currentTeamId?: Prisma.SortOrder
 }
 
@@ -396,6 +417,7 @@ export type UserMinOrderByAggregateInput = {
   emailVerified?: Prisma.SortOrder
   walletAddress?: Prisma.SortOrder
   stellarWalletAddress?: Prisma.SortOrder
+  solanaWalletAddress?: Prisma.SortOrder
   currentTeamId?: Prisma.SortOrder
 }
 
@@ -493,6 +515,7 @@ export type UserCreateWithoutAuthSessionsInput = {
   emailVerified?: boolean
   walletAddress?: string | null
   stellarWalletAddress?: string | null
+  solanaWalletAddress?: string | null
   currentTeamId?: string | null
   emailAuthCodes?: Prisma.EmailAuthCodeCreateNestedManyWithoutUserInput
   invitedTeams?: Prisma.TeamInvitationCreateNestedManyWithoutInvitedByUserInput
@@ -507,6 +530,7 @@ export type UserUncheckedCreateWithoutAuthSessionsInput = {
   emailVerified?: boolean
   walletAddress?: string | null
   stellarWalletAddress?: string | null
+  solanaWalletAddress?: string | null
   currentTeamId?: string | null
   emailAuthCodes?: Prisma.EmailAuthCodeUncheckedCreateNestedManyWithoutUserInput
   invitedTeams?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutInvitedByUserInput
@@ -537,6 +561,7 @@ export type UserUpdateWithoutAuthSessionsInput = {
   emailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
   walletAddress?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stellarWalletAddress?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  solanaWalletAddress?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   currentTeamId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   emailAuthCodes?: Prisma.EmailAuthCodeUpdateManyWithoutUserNestedInput
   invitedTeams?: Prisma.TeamInvitationUpdateManyWithoutInvitedByUserNestedInput
@@ -551,6 +576,7 @@ export type UserUncheckedUpdateWithoutAuthSessionsInput = {
   emailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
   walletAddress?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stellarWalletAddress?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  solanaWalletAddress?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   currentTeamId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   emailAuthCodes?: Prisma.EmailAuthCodeUncheckedUpdateManyWithoutUserNestedInput
   invitedTeams?: Prisma.TeamInvitationUncheckedUpdateManyWithoutInvitedByUserNestedInput
@@ -565,6 +591,7 @@ export type UserCreateWithoutEmailAuthCodesInput = {
   emailVerified?: boolean
   walletAddress?: string | null
   stellarWalletAddress?: string | null
+  solanaWalletAddress?: string | null
   currentTeamId?: string | null
   authSessions?: Prisma.AuthSessionCreateNestedManyWithoutUserInput
   invitedTeams?: Prisma.TeamInvitationCreateNestedManyWithoutInvitedByUserInput
@@ -579,6 +606,7 @@ export type UserUncheckedCreateWithoutEmailAuthCodesInput = {
   emailVerified?: boolean
   walletAddress?: string | null
   stellarWalletAddress?: string | null
+  solanaWalletAddress?: string | null
   currentTeamId?: string | null
   authSessions?: Prisma.AuthSessionUncheckedCreateNestedManyWithoutUserInput
   invitedTeams?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutInvitedByUserInput
@@ -609,6 +637,7 @@ export type UserUpdateWithoutEmailAuthCodesInput = {
   emailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
   walletAddress?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stellarWalletAddress?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  solanaWalletAddress?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   currentTeamId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   authSessions?: Prisma.AuthSessionUpdateManyWithoutUserNestedInput
   invitedTeams?: Prisma.TeamInvitationUpdateManyWithoutInvitedByUserNestedInput
@@ -623,6 +652,7 @@ export type UserUncheckedUpdateWithoutEmailAuthCodesInput = {
   emailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
   walletAddress?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stellarWalletAddress?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  solanaWalletAddress?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   currentTeamId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   authSessions?: Prisma.AuthSessionUncheckedUpdateManyWithoutUserNestedInput
   invitedTeams?: Prisma.TeamInvitationUncheckedUpdateManyWithoutInvitedByUserNestedInput
@@ -637,6 +667,7 @@ export type UserCreateWithoutTeamsInput = {
   emailVerified?: boolean
   walletAddress?: string | null
   stellarWalletAddress?: string | null
+  solanaWalletAddress?: string | null
   currentTeamId?: string | null
   authSessions?: Prisma.AuthSessionCreateNestedManyWithoutUserInput
   emailAuthCodes?: Prisma.EmailAuthCodeCreateNestedManyWithoutUserInput
@@ -651,6 +682,7 @@ export type UserUncheckedCreateWithoutTeamsInput = {
   emailVerified?: boolean
   walletAddress?: string | null
   stellarWalletAddress?: string | null
+  solanaWalletAddress?: string | null
   currentTeamId?: string | null
   authSessions?: Prisma.AuthSessionUncheckedCreateNestedManyWithoutUserInput
   emailAuthCodes?: Prisma.EmailAuthCodeUncheckedCreateNestedManyWithoutUserInput
@@ -681,6 +713,7 @@ export type UserUpdateWithoutTeamsInput = {
   emailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
   walletAddress?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stellarWalletAddress?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  solanaWalletAddress?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   currentTeamId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   authSessions?: Prisma.AuthSessionUpdateManyWithoutUserNestedInput
   emailAuthCodes?: Prisma.EmailAuthCodeUpdateManyWithoutUserNestedInput
@@ -695,6 +728,7 @@ export type UserUncheckedUpdateWithoutTeamsInput = {
   emailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
   walletAddress?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stellarWalletAddress?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  solanaWalletAddress?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   currentTeamId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   authSessions?: Prisma.AuthSessionUncheckedUpdateManyWithoutUserNestedInput
   emailAuthCodes?: Prisma.EmailAuthCodeUncheckedUpdateManyWithoutUserNestedInput
@@ -709,6 +743,7 @@ export type UserCreateWithoutInvitedTeamsInput = {
   emailVerified?: boolean
   walletAddress?: string | null
   stellarWalletAddress?: string | null
+  solanaWalletAddress?: string | null
   currentTeamId?: string | null
   authSessions?: Prisma.AuthSessionCreateNestedManyWithoutUserInput
   emailAuthCodes?: Prisma.EmailAuthCodeCreateNestedManyWithoutUserInput
@@ -723,6 +758,7 @@ export type UserUncheckedCreateWithoutInvitedTeamsInput = {
   emailVerified?: boolean
   walletAddress?: string | null
   stellarWalletAddress?: string | null
+  solanaWalletAddress?: string | null
   currentTeamId?: string | null
   authSessions?: Prisma.AuthSessionUncheckedCreateNestedManyWithoutUserInput
   emailAuthCodes?: Prisma.EmailAuthCodeUncheckedCreateNestedManyWithoutUserInput
@@ -753,6 +789,7 @@ export type UserUpdateWithoutInvitedTeamsInput = {
   emailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
   walletAddress?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stellarWalletAddress?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  solanaWalletAddress?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   currentTeamId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   authSessions?: Prisma.AuthSessionUpdateManyWithoutUserNestedInput
   emailAuthCodes?: Prisma.EmailAuthCodeUpdateManyWithoutUserNestedInput
@@ -767,6 +804,7 @@ export type UserUncheckedUpdateWithoutInvitedTeamsInput = {
   emailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
   walletAddress?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stellarWalletAddress?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  solanaWalletAddress?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   currentTeamId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   authSessions?: Prisma.AuthSessionUncheckedUpdateManyWithoutUserNestedInput
   emailAuthCodes?: Prisma.EmailAuthCodeUncheckedUpdateManyWithoutUserNestedInput
@@ -839,6 +877,7 @@ export type UserSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = r
   emailVerified?: boolean
   walletAddress?: boolean
   stellarWalletAddress?: boolean
+  solanaWalletAddress?: boolean
   currentTeamId?: boolean
   authSessions?: boolean | Prisma.User$authSessionsArgs<ExtArgs>
   emailAuthCodes?: boolean | Prisma.User$emailAuthCodesArgs<ExtArgs>
@@ -855,6 +894,7 @@ export type UserSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensio
   emailVerified?: boolean
   walletAddress?: boolean
   stellarWalletAddress?: boolean
+  solanaWalletAddress?: boolean
   currentTeamId?: boolean
 }, ExtArgs["result"]["user"]>
 
@@ -866,6 +906,7 @@ export type UserSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensio
   emailVerified?: boolean
   walletAddress?: boolean
   stellarWalletAddress?: boolean
+  solanaWalletAddress?: boolean
   currentTeamId?: boolean
 }, ExtArgs["result"]["user"]>
 
@@ -877,10 +918,11 @@ export type UserSelectScalar = {
   emailVerified?: boolean
   walletAddress?: boolean
   stellarWalletAddress?: boolean
+  solanaWalletAddress?: boolean
   currentTeamId?: boolean
 }
 
-export type UserOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "createdAt" | "updatedAt" | "email" | "emailVerified" | "walletAddress" | "stellarWalletAddress" | "currentTeamId", ExtArgs["result"]["user"]>
+export type UserOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "createdAt" | "updatedAt" | "email" | "emailVerified" | "walletAddress" | "stellarWalletAddress" | "solanaWalletAddress" | "currentTeamId", ExtArgs["result"]["user"]>
 export type UserInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   authSessions?: boolean | Prisma.User$authSessionsArgs<ExtArgs>
   emailAuthCodes?: boolean | Prisma.User$emailAuthCodesArgs<ExtArgs>
@@ -907,6 +949,7 @@ export type $UserPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs =
     emailVerified: boolean
     walletAddress: string | null
     stellarWalletAddress: string | null
+    solanaWalletAddress: string | null
     currentTeamId: string | null
   }, ExtArgs["result"]["user"]>
   composites: {}
@@ -1342,6 +1385,7 @@ export interface UserFieldRefs {
   readonly emailVerified: Prisma.FieldRef<"User", 'Boolean'>
   readonly walletAddress: Prisma.FieldRef<"User", 'String'>
   readonly stellarWalletAddress: Prisma.FieldRef<"User", 'String'>
+  readonly solanaWalletAddress: Prisma.FieldRef<"User", 'String'>
   readonly currentTeamId: Prisma.FieldRef<"User", 'String'>
 }
     

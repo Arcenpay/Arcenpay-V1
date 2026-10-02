@@ -12,8 +12,9 @@ import {
 } from "wagmi";
 import { isAddress, parseUnits } from "viem";
 import { useAppKit } from "@reown/appkit/react";
-import { isStellarChainId, getStellarNetworkPassphrase } from "@arcenpay/internal-core";
+import { isStellarChainId, isSolanaChainId, getStellarNetworkPassphrase, getSolanaRpcUrl } from "@arcenpay/internal-core";
 import { useStellarWallet } from "@/hooks/use-stellar-wallet";
+import { useSolanaWallet } from "@/hooks/use-solana-wallet";
 import {
   CheckCircle2,
   ChevronDown,
@@ -86,7 +87,7 @@ type PublicCheckoutSession = {
   amount: string;
   acceptedToken: string;
   chainId: number;
-  chainFamily?: "EVM" | "STELLAR" | null;
+  chainFamily?: "EVM" | "STELLAR" | "SOLANA" | null;
   recipientWallet: string;
   txHash?: string | null;
   verificationError?: string | null;
@@ -443,6 +444,13 @@ function CheckoutContent() {
       : 9_000_001,
   );
 
+  // Solana wallet (injected provider: Phantom/Solflare/…).
+  const solana = useSolanaWallet(
+    isSolanaChainId(session?.chainId ?? 0)
+      ? (session?.chainId as number)
+      : 9_100_001,
+  );
+
   const countdown = useExpiryCountdown(session?.expiresAt);
   const normalizedCustomerEmail = normalizeCustomerEmail(customerEmail);
   const normalizedCustomerName = normalizeCustomerName(customerName);
@@ -505,6 +513,7 @@ function CheckoutContent() {
     accentColor.length === 7 ? `${accentColor}1a` : accentColor;
   const accentTextColor = getAccentTextColor(accentColor);
   const isStellar = Boolean(session && session.chainFamily === "STELLAR");
+  const isSolana = Boolean(session && session.chainFamily === "SOLANA");
   const isAgentic = Boolean(
     session?.paymentLink &&
       (session.paymentLink.isAgentic ||
@@ -513,11 +522,13 @@ function CheckoutContent() {
           (session.paymentLink.metadata as Record<string, unknown>).isAgentic)),
   );
   const isCorrectNetwork =
-    !session || isStellar || connectedChainId === session.chainId;
+    !session || isStellar || isSolana || connectedChainId === session.chainId;
   const isSelfPayment = Boolean(session) &&
     (isStellar
       ? stellarAddressMatches(stellar.address, session?.recipientWallet)
-      : stellarAddressMatches(address, session?.recipientWallet));
+      : isSolana
+        ? solana.address === session?.recipientWallet
+        : stellarAddressMatches(address, session?.recipientWallet));
   const canSubmitPayment =
     !isSending &&
     !missingCustomerName &&
@@ -532,11 +543,15 @@ function CheckoutContent() {
   });
 
   useEffect(() => {
-    const connected = isStellar ? stellar.address : address;
+    const connected = isStellar
+      ? stellar.address
+      : isSolana
+        ? solana.address
+        : address;
     if (connected && !customerWallet) {
       setCustomerWallet(connected);
     }
-  }, [address, stellar.address, isStellar, customerWallet]);
+  }, [address, stellar.address, solana.address, isStellar, isSolana, customerWallet]);
 
   const persistCustomerDetails = useCallback(async () => {
     if (!session) return null;
@@ -548,7 +563,9 @@ function CheckoutContent() {
         customerEmail: normalizedCustomerEmail,
         customerWallet: isStellar
           ? (stellar.address ?? customerWallet ?? undefined)
-          : (address ?? customerWallet ?? undefined),
+          : isSolana
+            ? (solana.address ?? customerWallet ?? undefined)
+            : (address ?? customerWallet ?? undefined),
         customerName: normalizedCustomerName || undefined,
       }),
     });
@@ -565,7 +582,9 @@ function CheckoutContent() {
   }, [
     address,
     stellar.address,
+    solana.address,
     isStellar,
+    isSolana,
     customerWallet,
     normalizedCustomerEmail,
     normalizedCustomerName,
@@ -583,7 +602,11 @@ function CheckoutContent() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             txHash,
-            senderWallet: isStellar ? stellar.address : address,
+            senderWallet: isStellar
+              ? stellar.address
+              : isSolana
+                ? solana.address
+                : address,
           }),
         });
         const payload = (await res.json()) as {
@@ -604,7 +627,7 @@ function CheckoutContent() {
         setVerifying(false);
       }
     },
-    [session, isStellar, stellar.address, address],
+    [session, isStellar, isSolana, stellar.address, solana.address, address],
   );
 
   // EVM: wait for the tx receipt then verify on the backend.
@@ -748,6 +771,84 @@ function CheckoutContent() {
     await verifyOnBackend(hash);
   }
 
+  /**
+   * Solana payment: sends an SPL `TransferChecked` of the checkout token from
+   * the payer's ATA to the recipient's ATA (creating the recipient ATA when
+   * missing), signed by the connected Solana wallet.
+   */
+  async function handleSolanaPay() {
+    if (!session || !solana.address) return;
+    const { Connection, PublicKey, Transaction, TransactionInstruction, SystemProgram } =
+      await import("@solana/web3.js");
+
+    const TOKEN_PROGRAM = new PublicKey("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA");
+    const ATA_PROGRAM = new PublicKey("ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL");
+    const deriveAta = (owner: InstanceType<typeof PublicKey>, mintKey: InstanceType<typeof PublicKey>) =>
+      PublicKey.findProgramAddressSync(
+        [owner.toBuffer(), TOKEN_PROGRAM.toBuffer(), mintKey.toBuffer()],
+        ATA_PROGRAM,
+      )[0];
+
+    const mint = new PublicKey(session.acceptedToken);
+    const payer = new PublicKey(solana.address);
+    const recipient = new PublicKey(session.recipientWallet);
+    const payerAta = deriveAta(payer, mint);
+    const recipientAta = deriveAta(recipient, mint);
+
+    const rpcUrl = getSolanaRpcUrl(session.chainId);
+    if (!rpcUrl) throw new Error("No Solana RPC URL configured for this checkout.");
+    const connection = new Connection(rpcUrl, "confirmed");
+
+    const instructions: InstanceType<typeof TransactionInstruction>[] = [];
+
+    // Create the recipient's associated token account if it doesn't exist.
+    if (!(await connection.getAccountInfo(recipientAta))) {
+      instructions.push(
+        new TransactionInstruction({
+          programId: ATA_PROGRAM,
+          keys: [
+            { pubkey: payer, isSigner: true, isWritable: true },
+            { pubkey: recipientAta, isSigner: false, isWritable: true },
+            { pubkey: recipient, isSigner: false, isWritable: false },
+            { pubkey: mint, isSigner: false, isWritable: false },
+            { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
+            { pubkey: TOKEN_PROGRAM, isSigner: false, isWritable: false },
+          ],
+          // AssociatedTokenAccountInstruction::CreateIdempotent
+          data: new Uint8Array([1]) as unknown as Buffer,
+        }),
+      );
+    }
+
+    // SPL `TransferChecked` (instruction index 12): amount u64 LE + decimals u8.
+    const amountAtomic = BigInt(Math.round(Number(session.amount) * 1_000_000));
+    const data = new Uint8Array(10);
+    data[0] = 12;
+    new DataView(data.buffer).setBigUint64(1, amountAtomic, true);
+    data[9] = 6;
+    instructions.push(
+      new TransactionInstruction({
+        programId: TOKEN_PROGRAM,
+        keys: [
+          { pubkey: payerAta, isSigner: false, isWritable: true },
+          { pubkey: mint, isSigner: false, isWritable: false },
+          { pubkey: recipientAta, isSigner: false, isWritable: true },
+          { pubkey: payer, isSigner: true, isWritable: false },
+        ],
+        data: data as unknown as Buffer,
+      }),
+    );
+
+    const tx = new Transaction().add(...instructions);
+    tx.feePayer = payer;
+    const { blockhash } = await connection.getLatestBlockhash("confirmed");
+    tx.recentBlockhash = blockhash;
+
+    const hash = await solana.sendTransaction(tx, rpcUrl);
+    setSentTxHash(hash);
+    await verifyOnBackend(hash);
+  }
+
   async function handlePay() {
     if (!session) return;
     if (isStellar) {
@@ -777,6 +878,44 @@ function CheckoutContent() {
       } catch (err) {
         const errMsg = err instanceof Error ? err.message : "Transaction failed";
         if (!errMsg.includes("User rejected") && !errMsg.includes("User denied") && !errMsg.includes("cancelled")) {
+          setError(errMsg);
+        }
+        setSentTxHash(null);
+      }
+      return;
+    }
+
+    if (isSolana) {
+      if (!solana.address) {
+        setError("Connect your Solana wallet before paying.");
+        return;
+      }
+      setError(null);
+      setVerificationFailed(false);
+      try {
+        if (missingCustomerEmail || invalidCustomerEmail) {
+          setError("Enter a valid billing email before paying.");
+          return;
+        }
+        if (missingCustomerName) {
+          setError("Enter the billing name before paying.");
+          return;
+        }
+        if (isSelfPayment) {
+          setError(
+            "The connected wallet matches the recipient wallet. Use a different payer wallet or change the payment link recipient.",
+          );
+          return;
+        }
+        await persistCustomerDetails();
+        await handleSolanaPay();
+      } catch (err) {
+        const errMsg = err instanceof Error ? err.message : "Transaction failed";
+        if (
+          !errMsg.includes("User rejected") &&
+          !errMsg.includes("User denied") &&
+          !errMsg.includes("cancelled")
+        ) {
           setError(errMsg);
         }
         setSentTxHash(null);
@@ -869,7 +1008,11 @@ function CheckoutContent() {
     }
   }
 
-  const walletConnected = isStellar ? stellar.isConnected : isConnected;
+  const walletConnected = isStellar
+    ? stellar.isConnected
+    : isSolana
+      ? solana.isConnected
+      : isConnected;
   const showPay =
     walletConnected &&
     session?.status === "PENDING" &&
@@ -877,7 +1020,10 @@ function CheckoutContent() {
     !verificationFailed;
   const showProcessing =
     sentTxHash &&
-    (isConfirming || isSending || verifying || (isStellar && !verificationFailed)) &&
+    (isConfirming ||
+      isSending ||
+      verifying ||
+      ((isStellar || isSolana) && !verificationFailed)) &&
     session?.status === "PENDING";
   const showError =
     sendError ||
@@ -885,6 +1031,7 @@ function CheckoutContent() {
     (error && session?.status === "PENDING" && !sentTxHash && !verifying);
   const showReceiptError =
     !isStellar &&
+    !isSolana &&
     receipt &&
     receipt.status === "reverted" &&
     session?.status === "PENDING";
@@ -1250,6 +1397,16 @@ function CheckoutContent() {
                       }
                       return;
                     }
+                    if (isSolana) {
+                      if (!solana.isConnected) {
+                        void solana.connect();
+                        return;
+                      }
+                      if (showPay) {
+                        void handlePay();
+                      }
+                      return;
+                    }
                     if (!isConnected) {
                       open();
                       return;
@@ -1258,7 +1415,7 @@ function CheckoutContent() {
                       void handlePay();
                     }
                   }}
-                  disabled={showProcessing || isSending || stellar.isLoading}
+                  disabled={showProcessing || isSending || stellar.isLoading || solana.isLoading}
                   className="inline-flex h-12 w-full items-center justify-center gap-3 rounded-lg px-5 text-base font-semibold text-white transition disabled:cursor-not-allowed disabled:opacity-60"
                   style={{
                     backgroundColor: accentColor,
@@ -1272,9 +1429,13 @@ function CheckoutContent() {
                       ? stellar.isConnected
                         ? "Pay with wallet"
                         : "Connect Stellar wallet to pay"
-                      : isConnected
-                        ? "Pay with wallet"
-                        : "Connect wallet to pay"}
+                      : isSolana
+                        ? solana.isConnected
+                          ? "Pay with wallet"
+                          : "Connect Solana wallet to pay"
+                        : isConnected
+                          ? "Pay with wallet"
+                          : "Connect wallet to pay"}
                 </button>
 
                 <div className="my-7 flex items-center gap-4 text-sm text-[#b2b6bf]">
@@ -1325,7 +1486,11 @@ function CheckoutContent() {
                           </div>
                           <div>
                             <p className="text-sm font-medium text-[#1f232b]">
-                              {isStellar ? "Stellar wallet transfer" : "Wallet transfer"}
+                              {isStellar
+                                ? "Stellar wallet transfer"
+                                : isSolana
+                                  ? "Solana wallet transfer"
+                                  : "Wallet transfer"}
                             </p>
                             <p className="text-xs text-[#7a7f89]">
                               Send {session.currency} to {recipientDisplayName}
@@ -1421,6 +1586,28 @@ function CheckoutContent() {
                         </div>
                       </div>
                     ) : null
+                  ) : isSolana ? (
+                    solana.isConnected ? (
+                      <div className="rounded-xl border border-[#dfe3ea] bg-[#fafbfc] px-4 py-3">
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium text-[#1f232b]">
+                              Connected Solana wallet
+                            </p>
+                            <p className="mt-1 break-all font-mono text-xs text-[#70737d]">
+                              {solana.address}
+                            </p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => void solana.connect()}
+                            className="shrink-0 text-xs font-medium text-[#111827] hover:text-black"
+                          >
+                            Change
+                          </button>
+                        </div>
+                      </div>
+                    ) : null
                   ) : isConnected ? (
                     <div className="rounded-xl border border-[#dfe3ea] bg-[#fafbfc] px-4 py-3">
                       <div className="flex items-center justify-between gap-3">
@@ -1443,7 +1630,7 @@ function CheckoutContent() {
                     </div>
                   ) : null}
 
-                  {!isStellar && !isCorrectNetwork ? (
+                  {!isStellar && !isSolana && !isCorrectNetwork ? (
                     <div className="rounded-xl border border-warning/20 bg-warning/5 px-4 py-3 text-sm text-warning">
                       <div className="flex items-start gap-3">
                         <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />

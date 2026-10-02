@@ -21,7 +21,8 @@ import {
 } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 import { sepolia, baseSepolia, base } from 'viem/chains';
-import { arcTestnet, botMainnet, botTestnet, X402_VERSION, X402_SCHEME, SessionVaultABI, getContractAddresses, getTokenAddress, resolveTokenAddress, isStellarChainId, getChainDescriptor, getStellarNetworkPassphrase, getStellarSorobanRpcUrl, normalizeX402AmountToDecimal } from './internal/core';
+import { arcTestnet, botMainnet, botTestnet, X402_VERSION, X402_SCHEME, SessionVaultABI, getContractAddresses, getTokenAddress, resolveTokenAddress, isStellarChainId, isSolanaChain, getSolanaRpcUrl, getChainDescriptor, getStellarNetworkPassphrase, getStellarSorobanRpcUrl, normalizeX402AmountToDecimal } from './internal/core';
+import { encodeBase58, parseSolanaSecretKey } from './internal/core/solana';
 import type {
   X402Response,
   X402PaymentHeader,
@@ -150,6 +151,9 @@ const PAYMENT_DOMAIN_VERSION = '1';
  * distinct from arbitrary wallet signing and bound to the x402 scheme.
  */
 export const STELLAR_X402_SIGNING_PREFIX = 'ArcenPay x402 Payment\n';
+
+/** Solana x402 signing prefix — must match @arcenpay/node's middleware. */
+export const SOLANA_X402_SIGNING_PREFIX = 'ArcenPay x402 Payment\n';
 
 const PAYMENT_TYPES = {
   Payment: [
@@ -351,11 +355,16 @@ export class ArcenAgent {
   readonly isStellar: boolean;
   /** Stellar account address (G…) when on a Stellar chain. */
   readonly stellarAddress: string | null = null;
+  readonly isSolana: boolean;
+  /** Solana address (base58) when on a Solana chain. */
+  readonly solanaAddress: string | null = null;
   readonly apiUrl: string;
   private stellarKeypair: any = null;
   private stellarRpcUrl: string = '';
   private stellarHorizonUrl: string = '';
   private stellarPassphrase: string = '';
+  private solanaKeypair: any = null;
+  private solanaConnection: any = null;
   private mandate: ArcenPayAgentMandate | null = null;
   private policyEvaluator: ArcenPolicyEvaluator;
   private pendingCommitments = new Map<string, ProviderCommitment>();
@@ -372,6 +381,34 @@ export class ArcenAgent {
     ).replace(/\/+$/, '');
 
     this.isStellar = isStellarChainId(config.chainId);
+    this.isSolana = isSolanaChain(config.chainId);
+
+    if (this.isSolana) {
+      // Solana: keypair from base58/JSON secret; no viem clients.
+      const { Connection, Keypair } = require('@solana/web3.js');
+      this.solanaKeypair = Keypair.fromSecretKey(
+        parseSolanaSecretKey(config.privateKey),
+      );
+      this.solanaAddress = this.solanaKeypair.publicKey.toBase58();
+      const rpcUrl = config.rpcUrl || getSolanaRpcUrl(config.chainId);
+      if (!rpcUrl) {
+        throw new Error('[ArcenPayAgent] rpcUrl is required for Solana chains.');
+      }
+      this.solanaConnection = new Connection(rpcUrl, 'confirmed');
+      this.chain = resolveEvmChain(config.chainId, config.rpcUrl);
+      this.account = privateKeyToAccount(
+        '0x0000000000000000000000000000000000000000000000000000000000000001' as `0x${string}`,
+      );
+      this.contracts = getContractAddresses(config.chainId);
+      this.store = config.store ?? new MemoryStore();
+      this.policyEvaluator = new ArcenPolicyEvaluator(config.policies);
+      if (config.mandate) this.mandate = config.mandate;
+      if (config.sessionId) this.sessionId = config.sessionId;
+      this.publicClient = null;
+      this.walletClient = null;
+      return;
+    }
+
     const resolvedContracts = getContractAddresses(config.chainId);
     let sessionVault = config.sessionVaultAddress ?? resolvedContracts.sessionVault;
     if (!this.isStellar && sessionVault) {
@@ -548,6 +585,142 @@ export class ArcenAgent {
   }
 
   /**
+   * Reads the agent's direct USDC (SPL) balance on Solana.
+   */
+  async getSolanaUsdcBalance(): Promise<bigint> {
+    if (!this.isSolana || !this.solanaAddress || !this.solanaConnection) return 0n;
+    try {
+      const { PublicKey } = await import("@solana/web3.js");
+      const { findAssociatedTokenAddress } = await import('./internal/core/solana');
+      const mintAddress = getTokenAddress(this.config.chainId, 'USDC');
+      if (!mintAddress) return 0n;
+      const ata = findAssociatedTokenAddress(
+        this.solanaAddress,
+        new PublicKey(mintAddress),
+      );
+      const info = await this.solanaConnection.getTokenAccountBalance(ata);
+      return BigInt(info.value.amount);
+    } catch {
+      return 0n;
+    }
+  }
+
+  /**
+   * Sends an SPL `TransferChecked` from the agent to `recipient` (base58).
+   * Hand-encoded so the SDK doesn't depend on @solana/spl-token.
+   */
+  async sendSolanaSplTransfer(
+    recipient: string,
+    amountAtomic: bigint,
+    decimals = 6,
+  ): Promise<string> {
+    if (!this.solanaKeypair || !this.solanaConnection) {
+      throw new Error('[ArcenPayAgent] Solana agent is not initialized');
+    }
+    const { PublicKey, Transaction, TransactionInstruction } = await import(
+      '@solana/web3.js'
+    );
+    const { findAssociatedTokenAddress, TOKEN_PROGRAM_ID } = await import(
+      './internal/core/solana'
+    );
+    const mintAddress = getTokenAddress(this.config.chainId, 'USDC');
+    if (!mintAddress) {
+      throw new Error(
+        `[ArcenPayAgent] No USDC mint configured for chain ${this.config.chainId}`,
+      );
+    }
+    const mint = new PublicKey(mintAddress);
+    const source = findAssociatedTokenAddress(this.solanaAddress!, mint);
+    const destination = findAssociatedTokenAddress(recipient, mint);
+
+    // SPL Token `TransferChecked` = instruction index 12, then u64 amount, u8 decimals.
+    const data = Buffer.alloc(10);
+    data.writeUInt8(12, 0);
+    data.writeBigUInt64LE(amountAtomic, 1);
+    data.writeUInt8(decimals, 9);
+
+    const instruction = new TransactionInstruction({
+      programId: TOKEN_PROGRAM_ID,
+      keys: [
+        { pubkey: source, isSigner: false, isWritable: true },
+        { pubkey: mint, isSigner: false, isWritable: false },
+        { pubkey: destination, isSigner: false, isWritable: true },
+        { pubkey: this.solanaKeypair.publicKey, isSigner: true, isWritable: false },
+      ],
+      data,
+    });
+
+    const tx = new Transaction().add(instruction);
+    tx.feePayer = this.solanaKeypair.publicKey;
+    const { blockhash } = await this.solanaConnection.getLatestBlockhash('confirmed');
+    tx.recentBlockhash = blockhash;
+    tx.sign(this.solanaKeypair);
+    const signature = await this.solanaConnection.sendRawTransaction(tx.serialize());
+    await this.solanaConnection.confirmTransaction(signature, 'confirmed');
+    return signature;
+  }
+
+  /**
+   * Sends the ArcenPay Anchor program's `fund_session` (create-or-top-up),
+   * signed by the agent. Returns the transaction signature.
+   */
+  private async solanaFundSession(
+    sessionId: bigint,
+    amountAtomic: bigint,
+  ): Promise<string> {
+    const {
+      encodeFundSession,
+      findConfigPda,
+      findVaultAuthorityPda,
+      findSessionPda,
+      findAssociatedTokenAddress,
+      TOKEN_PROGRAM_ID,
+      SYSTEM_PROGRAM_ID,
+    } = await import('./internal/core/solana');
+    const { PublicKey, Transaction, TransactionInstruction } = await import(
+      '@solana/web3.js'
+    );
+    const mintAddress = getTokenAddress(this.config.chainId, 'USDC');
+    if (!mintAddress) {
+      throw new Error(
+        `[ArcenPayAgent] No USDC mint configured for chain ${this.config.chainId}`,
+      );
+    }
+    const programId = new PublicKey(this.contracts.sessionVault);
+    const mint = new PublicKey(mintAddress);
+    const [config] = findConfigPda(programId);
+    const [vaultAuthority] = findVaultAuthorityPda(programId);
+    const [session] = findSessionPda(programId, this.solanaKeypair.publicKey, sessionId);
+    const agentToken = findAssociatedTokenAddress(this.solanaAddress!, mint);
+    const vaultToken = findAssociatedTokenAddress(vaultAuthority, mint);
+
+    const instruction = new TransactionInstruction({
+      programId,
+      keys: [
+        { pubkey: config, isSigner: false, isWritable: false },
+        { pubkey: vaultAuthority, isSigner: false, isWritable: false },
+        { pubkey: this.solanaKeypair.publicKey, isSigner: true, isWritable: true },
+        { pubkey: session, isSigner: false, isWritable: true },
+        { pubkey: mint, isSigner: false, isWritable: false },
+        { pubkey: agentToken, isSigner: false, isWritable: true },
+        { pubkey: vaultToken, isSigner: false, isWritable: true },
+        { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
+        { pubkey: SYSTEM_PROGRAM_ID, isSigner: false, isWritable: false },
+      ],
+      data: encodeFundSession(sessionId, amountAtomic),
+    });
+
+    const tx = new Transaction().add(instruction);
+    tx.feePayer = this.solanaKeypair.publicKey;
+    const { blockhash } = await this.solanaConnection.getLatestBlockhash('confirmed');
+    tx.recentBlockhash = blockhash;
+    tx.sign(this.solanaKeypair);
+    const signature = await this.solanaConnection.sendRawTransaction(tx.serialize());
+    await this.solanaConnection.confirmTransaction(signature, 'confirmed');
+    return signature;
+  }
+
+  /**
    * Ensures the agent's Stellar account is funded (testnet Friendbot)
    * and has a trustline established for USDC.
    */
@@ -661,6 +834,7 @@ export class ArcenAgent {
   // ─── Properties ──────────────────────────────────────────
 
   get address(): string {
+    if (this.isSolana) return this.solanaAddress!;
     return this.isStellar ? this.stellarAddress! : this.account.address;
   }
 
@@ -725,6 +899,18 @@ export class ArcenAgent {
       await this.persist();
       console.log(
         `[ArcenPayAgent] Session funded: ${amount} USDC → ${this.sessionId}`,
+      );
+      return this.sessionId;
+    }
+
+    if (this.isSolana) {
+      // Solana sessions are keyed by a u64 id; use a time-based id.
+      const sessionId = BigInt(Date.now());
+      const signature = await this.solanaFundSession(sessionId, amountAtomic);
+      this.sessionId = sessionId.toString();
+      await this.persist();
+      console.log(
+        `[ArcenPayAgent] Solana session funded: ${amount} USDC → ${this.sessionId} (tx ${signature})`,
       );
       return this.sessionId;
     }
@@ -938,6 +1124,10 @@ export class ArcenAgent {
       );
     }
 
+    if (this.isSolana) {
+      return this.getSolanaUsdcBalance();
+    }
+
     for (let attempt = 0; attempt < BALANCE_RETRY_MAX; attempt++) {
       try {
         // 1. Try SessionVault.getAgentBalance(this.account.address)
@@ -1074,6 +1264,22 @@ export class ArcenAgent {
       });
       console.log(
         `[ArcenPayAgent] Session ${sessionId.slice(0, 10)}… topped up with ${amount} USDC (Stellar)`,
+      );
+      return;
+    }
+
+    if (this.isSolana) {
+      // `fund_session` is create-or-top-up, so re-invoking with the same
+      // numeric session id tops the session up.
+      if (!/^\d+$/.test(sessionId.trim())) {
+        throw new Error('[ArcenPayAgent] Solana session ids are numeric');
+      }
+      const signature = await this.solanaFundSession(
+        BigInt(sessionId.trim()),
+        amountAtomic,
+      );
+      console.log(
+        `[ArcenPayAgent] Session ${sessionId} topped up with ${amount} USDC (Solana, tx ${signature})`,
       );
       return;
     }
@@ -1494,6 +1700,16 @@ export class ArcenAgent {
 
   // ─── Payment Construction (EIP-712 / Stellar) ─────────────
 
+  /** Signs an x402 payment message with the agent's Solana ed25519 keypair. */
+  private signSolanaPayment(message: Record<string, unknown>): string {
+    if (!this.solanaKeypair) {
+      throw new Error('[ArcenPayAgent] Solana keypair not initialized');
+    }
+    const text = SOLANA_X402_SIGNING_PREFIX + JSON.stringify(message);
+    const signature = this.solanaKeypair.sign(Buffer.from(text, 'utf8'));
+    return encodeBase58(signature);
+  }
+
   private async constructPayment(option: X402Response['accepts'][0]): Promise<string> {
     const timestamp = BigInt(Date.now());
 
@@ -1513,6 +1729,38 @@ export class ArcenAgent {
         chainId: this.config.chainId,
       };
       const { signature } = await this.signStellarPayment(message);
+      const payload: X402PaymentHeader = {
+        version: X402_VERSION,
+        scheme: option.scheme,
+        network: option.network,
+        payload: JSON.stringify({
+          from,
+          amount: amountDecimal,
+          payTo: option.payTo,
+          resource: option.resource,
+          sessionId: this.sessionId,
+          nonce: this.nonce.toString(),
+          timestamp: timestamp.toString(),
+          chainId: this.config.chainId,
+        }),
+        signature,
+      };
+      return Buffer.from(JSON.stringify(payload)).toString('base64');
+    }
+
+    if (this.isSolana) {
+      const from = this.solanaAddress!;
+      const amountDecimal = normalizeX402AmountToDecimal(option.maxAmountRequired);
+      const message = {
+        from,
+        amount: amountDecimal,
+        resource: option.resource,
+        sessionId: this.sessionId ?? '',
+        nonce: this.nonce.toString(),
+        timestamp: timestamp.toString(),
+        chainId: this.config.chainId,
+      };
+      const signature = this.signSolanaPayment(message);
       const payload: X402PaymentHeader = {
         version: X402_VERSION,
         scheme: option.scheme,
@@ -1698,7 +1946,11 @@ export class ArcenAgent {
       );
     }
 
-    const payerWallet = this.isStellar ? this.stellarAddress! : this.account.address;
+    const payerWallet = this.isSolana
+      ? this.solanaAddress!
+      : this.isStellar
+        ? this.stellarAddress!
+        : this.account.address;
 
     // 5. Create checkout session
     let sessionUrl = spec.sessionUrl;
@@ -1740,6 +1992,8 @@ export class ArcenAgent {
         spec.currency,
         spec.acceptedToken,
       );
+    } else if (this.isSolana) {
+      txHash = await this.sendSolanaSplTransfer(recipientWallet, requiredAmountAtomic);
     } else {
       const rawTokenAddress =
         getTokenAddress(this.config.chainId, spec.acceptedToken || spec.currency) ??
@@ -1839,9 +2093,15 @@ export class ArcenAgent {
     }
 
     const resolvedChainId = params.chainId ?? this.config.chainId;
+    // The default recipient must match the active chain family — without the
+    // Solana branch a Solana agent would default to the (dummy) EVM account.
     const recipientWallet =
       params.recipientWallet ??
-      (this.isStellar ? this.stellarAddress! : this.account.address);
+      (this.isSolana
+        ? this.solanaAddress!
+        : this.isStellar
+          ? this.stellarAddress!
+          : this.account.address);
 
     const title = params.title ?? params.name ?? "Agent Payment Link";
     const currency = params.currency ?? "USDC";
@@ -1920,7 +2180,11 @@ export class ArcenAgent {
       acceptedToken: String(created.acceptedToken ?? acceptedToken),
       chainId: Number(created.chainId ?? resolvedChainId),
       chainFamily:
-        created.chainFamily === "stellar" || this.isStellar ? "stellar" : "evm",
+        this.isSolana || created.chainFamily === "solana"
+          ? "solana"
+          : created.chainFamily === "stellar" || this.isStellar
+            ? "stellar"
+            : "evm",
       recipientWallet: String(created.recipientWallet ?? recipientWallet),
       status: (created.status as AgenticPaymentLinkSpec["status"]) ?? "ACTIVE",
       isAgentic: true,

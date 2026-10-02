@@ -22,6 +22,7 @@ import {
   BOT_MAINNET_CHAIN_ID,
   BASE_SEPOLIA_CHAIN_ID,
   STELLAR_TESTNET_CHAIN_ID,
+  SOLANA_DEVNET_CHAIN_ID,
   getChainLabel,
   getChainIdsForEnvironment,
   type EnvironmentMode,
@@ -31,6 +32,7 @@ import type { ChainFamily } from "@arcenpay/internal-core";
 import { useDashboardSession } from "@/hooks/use-dashboard-session";
 import { useDashboardWallet } from "@/hooks/use-dashboard-wallet";
 import { useStellarWallet } from "@/hooks/use-stellar-wallet";
+import { useSolanaWallet } from "@/hooks/use-solana-wallet";
 import { buildSIWEMessage } from "@/lib/auth";
 
 interface ChainOption {
@@ -41,6 +43,7 @@ interface ChainOption {
 const CHAIN_FAMILIES: Array<{ value: ChainFamily; label: string }> = [
   { value: "evm", label: "EVM (BOT Chain, Base, Arc, Ethereum)" },
   { value: "stellar", label: "Stellar (Soroban)" },
+  { value: "solana", label: "Solana (Anchor)" },
 ];
 
 function buildChainOptions(mode: EnvironmentMode, family: ChainFamily): ChainOption[] {
@@ -57,6 +60,7 @@ function firstChainForFamily(mode: EnvironmentMode, family: ChainFamily): number
   const opts = buildChainOptions(mode, family);
   if (opts.length > 0) return opts[0].chainId;
   if (family === "stellar") return STELLAR_TESTNET_CHAIN_ID;
+  if (family === "solana") return SOLANA_DEVNET_CHAIN_ID;
   return BASE_SEPOLIA_CHAIN_ID;
 }
 
@@ -64,6 +68,7 @@ export default function NewEnvironmentPage() {
   const router = useRouter();
   const { data, isLoading, refresh } = useDashboardSession();
   const stellarWallet = useStellarWallet();
+  const solanaWallet = useSolanaWallet();
   const wagmiChainId = useChainId();
   const { signMessageAsync } = useSignMessage();
   const {
@@ -94,8 +99,13 @@ export default function NewEnvironmentPage() {
 
   const hasStellarWallet = !!data?.user?.stellarWalletAddress;
   const hasEvmWallet = !!data?.user?.walletAddress;
+  const hasSolanaWallet = !!data?.user?.solanaWalletAddress;
   const needsWallet =
-    chainFamily === "stellar" ? !hasStellarWallet : !hasEvmWallet;
+    chainFamily === "stellar"
+      ? !hasStellarWallet
+      : chainFamily === "solana"
+        ? !hasSolanaWallet
+        : !hasEvmWallet;
 
   useEffect(() => {
     setChainId(firstChainForFamily(mode, chainFamily));
@@ -206,6 +216,47 @@ export default function NewEnvironmentPage() {
     }
   }
 
+  async function handleLinkSolanaWallet() {
+    if (!solanaWallet.address) {
+      setError("Connect your Solana wallet first.");
+      return;
+    }
+    setIsLinkingWallet(true);
+    setError(null);
+    try {
+      const nonceRes = await apiFetch("/api/auth/nonce");
+      if (!nonceRes.ok) throw new Error("Could not start wallet verification.");
+      const { nonce, issuedAt } = await nonceRes.json();
+
+      // Must match the backend's expected message exactly (link-wallet.ts).
+      const message = `ArcenPay Solana Sign-In\n\nAddress: ${solanaWallet.address}\nNonce: ${nonce}\nIssued At: ${issuedAt}\nDomain: ${window.location.host}`;
+      const { signedMessage } = await solanaWallet.signMessage(message);
+
+      const linkRes = await apiFetch("/api/auth/link-wallet", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message,
+          signature: signedMessage,
+          address: solanaWallet.address,
+          chainId: SOLANA_DEVNET_CHAIN_ID,
+          nonce,
+        }),
+      });
+      const linkPayload = await linkRes.json().catch(() => ({}));
+      if (!linkRes.ok) {
+        throw new Error(linkPayload.error || "Could not link wallet.");
+      }
+
+      await refresh();
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Could not link wallet.";
+      setError(msg.toLowerCase().includes("rejected") ? "Signature cancelled." : msg);
+    } finally {
+      setIsLinkingWallet(false);
+    }
+  }
+
   async function handleCreate() {
     if (needsWallet) {
       setError("A compatible wallet must be linked for this chain before creating the environment.");
@@ -279,6 +330,23 @@ export default function NewEnvironmentPage() {
             <span className="inline-flex items-center gap-2 rounded-full bg-muted border border-border px-3 py-1.5 text-xs text-muted-foreground">
               <NetworkIcon name="stellar" variant="branded" size={14} className="rounded-full opacity-40" />
               Stellar wallet not linked
+            </span>
+          )
+        ) : chainFamily === "solana" ? (
+          hasSolanaWallet ? (
+            <span className="inline-flex items-center gap-2 rounded-full bg-brand/5 border border-brand/20 px-3 py-1.5 text-xs">
+              <NetworkIcon name="solana" variant="branded" size={14} className="rounded-full bg-white dark:bg-white p-px" />
+              <span className="text-muted-foreground font-mono">
+                {data?.user?.solanaWalletAddress
+                  ? `${data.user.solanaWalletAddress.slice(0, 6)}...${data.user.solanaWalletAddress.slice(-4)}`
+                  : ""}
+              </span>
+              <span className="w-1.5 h-1.5 rounded-full bg-brand" />
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-2 rounded-full bg-muted border border-border px-3 py-1.5 text-xs text-muted-foreground">
+              <NetworkIcon name="solana" variant="branded" size={14} className="rounded-full opacity-40" />
+              Solana wallet not linked
             </span>
           )
         ) : (
@@ -394,6 +462,12 @@ export default function NewEnvironmentPage() {
                       Stellar (Soroban){mode === "PRODUCTION" ? " — Mainnet coming soon" : ""}
                     </span>
                   </SelectItem>
+                  <SelectItem value="solana" disabled={mode === "PRODUCTION"}>
+                    <span className="flex items-center gap-2">
+                      <NetworkIcon name="solana" variant="branded" size={18} className="rounded-full bg-white dark:bg-white p-px" />
+                      Solana (Anchor){mode === "PRODUCTION" ? " — Mainnet coming soon" : ""}
+                    </span>
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -431,12 +505,18 @@ export default function NewEnvironmentPage() {
               <div className="rounded-xl border-2 border-amber-500/30 bg-amber-50 dark:bg-amber-950/20 p-5 space-y-4">
                 <div>
                   <h3 className="text-sm font-semibold text-foreground">
-                    {chainFamily === "stellar" ? "Stellar wallet required" : "EVM wallet required"}
+                    {chainFamily === "stellar"
+                      ? "Stellar wallet required"
+                      : chainFamily === "solana"
+                        ? "Solana wallet required"
+                        : "EVM wallet required"}
                   </h3>
                   <p className="text-xs text-muted-foreground mt-1">
                     {chainFamily === "stellar"
                       ? "Stellar environments need a Stellar wallet linked to your account. Your EVM wallet cannot be used on Stellar networks."
-                      : "EVM environments need an EVM wallet linked to your account. You don't have a linked EVM wallet yet."}
+                      : chainFamily === "solana"
+                        ? "Solana environments need a Solana wallet (Phantom/Solflare) linked to your account. Your EVM wallet cannot be used on Solana networks."
+                        : "EVM environments need an EVM wallet linked to your account. You don't have a linked EVM wallet yet."}
                   </p>
                 </div>
 
@@ -477,6 +557,46 @@ export default function NewEnvironmentPage() {
                         <><Loader2 className="h-4 w-4 animate-spin" />Initializing wallet kit...</>
                       ) : (
                         <><NetworkIcon name="stellar" variant="branded" size={18} className="rounded-full bg-white dark:bg-white p-px" />Connect Stellar wallet</>
+                      )}
+                    </button>
+                  )
+                ) : chainFamily === "solana" ? (
+                  /* ---- Solana wallet connect ---- */
+                  solanaWallet.address ? (
+                    <div className="space-y-3">
+                      <div className="p-3 rounded-lg bg-brand/5 border border-brand/20">
+                        <div className="flex items-center gap-3">
+                          <CheckCircle2 className="w-4 h-4 text-brand shrink-0" />
+                          <div>
+                            <p className="text-sm font-medium text-foreground">Solana wallet connected</p>
+                            <code className="text-xs font-mono text-muted-foreground break-all">{solanaWallet.address}</code>
+                          </div>
+                        </div>
+                      </div>
+                      <Button
+                        type="button"
+                        className="w-full h-11 bg-brand hover:bg-brand-dark text-primary-foreground"
+                        onClick={() => void handleLinkSolanaWallet()}
+                        disabled={isLinkingWallet}
+                      >
+                        {isLinkingWallet ? (
+                          <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Linking wallet...</>
+                        ) : (
+                          <><Shield className="mr-2 h-4 w-4" />Sign &amp; Link Solana Wallet</>
+                        )}
+                      </Button>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      className="h-11 w-full bg-brand hover:bg-brand-dark text-primary-foreground rounded-lg flex items-center justify-center gap-2 font-medium disabled:opacity-60"
+                      onClick={() => void solanaWallet.connect()}
+                      disabled={solanaWallet.isLoading}
+                    >
+                      {solanaWallet.isLoading ? (
+                        <><Loader2 className="h-4 w-4 animate-spin" />Connecting...</>
+                      ) : (
+                        <><NetworkIcon name="solana" variant="branded" size={18} className="rounded-full bg-white dark:bg-white p-px" />Connect Solana wallet</>
                       )}
                     </button>
                   )

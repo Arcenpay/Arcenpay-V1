@@ -21,6 +21,7 @@ export const adminUsersRouter = new Hono()
         { email: { contains: search, mode: "insensitive" } },
         { walletAddress: { contains: search, mode: "insensitive" } },
         { stellarWalletAddress: { contains: search, mode: "insensitive" } },
+        { solanaWalletAddress: { contains: search, mode: "insensitive" } },
         {
           teams: {
             some: {
@@ -49,6 +50,7 @@ export const adminUsersRouter = new Hono()
           emailVerified: true,
           walletAddress: true,
           stellarWalletAddress: true,
+          solanaWalletAddress: true,
           createdAt: true,
           updatedAt: true,
           currentTeamId: true,
@@ -108,6 +110,7 @@ export const adminUsersRouter = new Hono()
         emailVerified: u.emailVerified,
         walletAddress: u.walletAddress,
         stellarWalletAddress: u.stellarWalletAddress,
+        solanaWalletAddress: u.solanaWalletAddress,
         createdAt: u.createdAt,
         lastSeenAt,
         isAdmin,

@@ -1,9 +1,17 @@
 import type { Context } from "hono";
+import { isValidAnyFamilyAddress } from "@arcenpay/internal-core";
 import { resolveSession } from "../../../middleware/auth.js";
 import { FACILITATOR_URL, FACILITATOR_SECRET } from "../../../config.js";
 
-function isAddress(value: string): boolean {
-  return /^0x[0-9a-fA-F]{40}$/.test(value);
+/**
+ * Family-agnostic wallet equality: EVM hex is case-insensitive, but Solana
+ * base58 / Stellar base32 are case-sensitive and must be compared verbatim.
+ */
+function walletsEqual(a: string, b: string): boolean {
+  if (a.startsWith("0x") && b.startsWith("0x")) {
+    return a.toLowerCase() === b.toLowerCase();
+  }
+  return a === b;
 }
 
 async function forwardRequest(
@@ -22,14 +30,13 @@ async function forwardRequest(
   const provider = c.req.param("provider");
   const segmentsParam = c.req.param("segments");
 
-  const normalizedProvider = String(provider || "")
-    .trim()
-    .toLowerCase();
-  if (!isAddress(normalizedProvider)) {
+  // Preserve case: lowercasing a Solana base58 address corrupts it.
+  const normalizedProvider = String(provider || "").trim();
+  if (!isValidAnyFamilyAddress(normalizedProvider)) {
     return c.json({ error: "Invalid provider address" }, 400 as any);
   }
 
-  if (session.walletAddress.toLowerCase() !== normalizedProvider) {
+  if (!walletsEqual(session.walletAddress, normalizedProvider)) {
     return c.json({ error: "Forbidden" }, 403 as any);
   }
 

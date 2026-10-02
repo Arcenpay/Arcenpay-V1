@@ -52,8 +52,12 @@ import { getChainLabel, resolveEnvironmentChainId } from "@/lib/default-chain";
 import { useEnvironment } from "@/contexts/environment-context";
 import { SkeletonList, SkeletonTable } from "@/components/ui/skeleton";
 import { useStellarWallet } from "@/hooks/use-stellar-wallet";
+import { useSolanaWallet } from "@/hooks/use-solana-wallet";
+import { encodeBase58 } from "@/lib/solana";
 import {
   isStellarChainId,
+  isSolanaChainId,
+  getSolanaRpcUrl,
   getStellarNetworkPassphrase,
   getChainDescriptor,
 } from "@arcenpay/internal-core";
@@ -513,8 +517,11 @@ function QuickstartTab() {
   const configuredChainId =
     activeEnvironment?.chainId ?? resolveEnvironmentChainId(envMode);
   const isStellar = isStellarChainId(configuredChainId);
+  const isSolana = isSolanaChainId(configuredChainId);
 
-  const installCode = `npm install @arcenpay/agent${isStellar ? " @stellar/stellar-sdk" : " viem"}`;
+  const installCode = `npm install @arcenpay/agent${
+    isStellar ? " @stellar/stellar-sdk" : isSolana ? " @solana/web3.js" : " viem"
+  }`;
 
   const nodeCode = isStellar
     ? `import { ArcenPayAgent } from "@arcenpay/agent";
@@ -534,7 +541,24 @@ console.log("Session:", sessionId);
 // Call a pay-per-use API — payment handled automatically
 const res = await agent.fetch("https://api.yourprovider.com/v1/data");
 const data = await res.json();`
-    : `import { ArcenPayAgent } from "@arcenpay/agent";
+    : isSolana
+      ? `import { ArcenPayAgent } from "@arcenpay/agent";
+
+const agent = new ArcenPayAgent({
+  privateKey: process.env.AGENT_SECRET_KEY, // base58 or JSON-array Solana secret
+  chainId: ${configuredChainId},            // Solana (synthetic chain id)
+  rpcUrl: process.env.SOLANA_RPC_URL,
+  maxAutoApprove: "0.10",                   // Max $0.10 USDC per call
+});
+
+// Fund a session with $10 USDC
+const sessionId = await agent.fundSession("10.00");
+console.log("Session:", sessionId);
+
+// Call a pay-per-use API — payment handled automatically
+const res = await agent.fetch("https://api.yourprovider.com/v1/data");
+const data = await res.json();`
+      : `import { ArcenPayAgent } from "@arcenpay/agent";
 
 const agent = new ArcenPayAgent({
   privateKey: process.env.AGENT_PRIVATE_KEY,
@@ -594,7 +618,11 @@ app.get("/api/premium/analyze", (req, res) => {
 SOROBAN_RPC_URL=https://soroban-testnet.stellar.org
 HORIZON_URL=https://horizon-testnet.stellar.org
 ARCENPAY_FACILITATOR_URL=https://facilitator.arcenpay.xyz`
-    : `AGENT_PRIVATE_KEY=0x...
+    : isSolana
+      ? `AGENT_SECRET_KEY=<base58 or JSON-array secret>
+SOLANA_RPC_URL=https://api.devnet.solana.com
+ARCENPAY_FACILITATOR_URL=https://facilitator.arcenpay.xyz`
+      : `AGENT_PRIVATE_KEY=0x...
 RPC_URL=https://mainnet.base.org
 ARCENPAY_FACILITATOR_URL=https://facilitator.arcenpay.xyz`;
 
@@ -610,9 +638,9 @@ ARCENPAY_FACILITATOR_URL=https://facilitator.arcenpay.xyz`;
       {/* How it works */}
       <div className="grid grid-cols-3 gap-3">
         {[
-          { icon: Bot, title: "Agent has wallet", desc: isStellar ? "Your AI agent holds USDC in a Soroban session vault" : "Your AI agent holds USDC in a smart account" },
+          { icon: Bot, title: "Agent has wallet", desc: isStellar ? "Your AI agent holds USDC in a Soroban session vault" : isSolana ? "Your AI agent holds USDC in an SPL session vault" : "Your AI agent holds USDC in a smart account" },
           { icon: Zap, title: "Hits x402 API", desc: "API returns HTTP 402 with payment options" },
-          { icon: Check, title: "Auto-pays & retries", desc: isStellar ? "Agent signs a Stellar message, retries with payment header" : "Agent signs EIP-712, retries with payment header" },
+          { icon: Check, title: "Auto-pays & retries", desc: isStellar ? "Agent signs a Stellar message, retries with payment header" : isSolana ? "Agent signs an ed25519 message, retries with payment header" : "Agent signs EIP-712, retries with payment header" },
         ].map(({ icon: Icon, title, desc }) => (
           <div key={title} className="p-4 rounded-lg border border-border bg-secondary/20">
             <div className="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center mb-3">
@@ -708,7 +736,10 @@ function PermissionsTab() {
   const configuredChainId =
     activeEnvironment?.chainId ?? resolveEnvironmentChainId(envMode);
   const isStellar = isStellarChainId(configuredChainId);
+  const isSolana = isSolanaChainId(configuredChainId);
+  const isNonEvm = isStellar || isSolana;
   const stellar = useStellarWallet(configuredChainId);
+  const solana = useSolanaWallet(configuredChainId);
 
   const [permissions, setPermissions] = useState<PermissionConfig>({
     autoTopUp: { mode: "off", dailyLimit: "5.00", perTxnLimit: "1.00", threshold: "0.50" },
@@ -769,15 +800,19 @@ function PermissionsTab() {
     ? rawAgentWallet
     : (safeAddress(rawAgentWallet) ?? rawAgentWallet);
 
-  // EVM funding must happen on the same chain the environment targets.
+  // EVM funding must happen on the same chain the environment targets. This is
+  // meaningless for non-EVM families (Stellar/Solana have no wagmi chain), so
+  // they are excluded — otherwise a Solana env compares the EVM wallet's chain
+  // against the Solana chain id and offers an impossible "switch".
   const chainMismatch =
     !isStellar &&
+    !isSolana &&
     typeof evmChainId === "number" &&
     typeof configuredChainId === "number" &&
     evmChainId !== configuredChainId;
 
   const evmVaultAddress = (() => {
-    if (isStellar || typeof evmChainId !== "number") return "";
+    if (isStellar || isSolana || typeof evmChainId !== "number") return "";
     try {
       const raw = getContractAddresses(evmChainId).sessionVault || "";
       return safeAddress(raw) ?? raw;
@@ -846,7 +881,9 @@ function PermissionsTab() {
     try {
       const userParam = isStellar
         ? (stellar.address ? `&userAddress=${encodeURIComponent(stellar.address)}` : "")
-        : (userWallet ? `&userAddress=${encodeURIComponent(userWallet)}` : "");
+        : isSolana
+          ? (solana.address ? `&userAddress=${encodeURIComponent(solana.address)}` : "")
+          : (userWallet ? `&userAddress=${encodeURIComponent(userWallet)}` : "");
 
       // 1. Fetch from backend /api/v1/agent/balance
       const agentParam = effectiveAgentWallet
@@ -874,7 +911,7 @@ function PermissionsTab() {
       }
 
       // 2. Direct on-chain fallback for EVM
-      if (!isStellar && publicClient) {
+      if (!isStellar && !isSolana && publicClient) {
         const safeAgent = safeAddress(effectiveAgentWallet);
         const safeUser = safeAddress(userWallet);
         const rawUsdc = getUsdcAddress(configuredChainId);
@@ -1038,7 +1075,7 @@ function PermissionsTab() {
     } finally {
       setRefreshingBalance(false);
     }
-  }, [agentWallet, configuredChainId, isStellar, publicClient, userWallet, stellar.address]);
+  }, [agentWallet, configuredChainId, isStellar, isSolana, publicClient, userWallet, stellar.address, solana.address]);
 
   // ── Manual receipt polling (bypasses wagmi's broken polling on slow RPCs) ──
   // wagmi's useWaitForTransactionReceipt uses a short internal timeout per poll
@@ -1141,7 +1178,11 @@ function PermissionsTab() {
   const prevUserWalletRef = useRef<string | undefined>(undefined);
   const prevStellarAddressRef = useRef<string | undefined>(undefined);
   useEffect(() => {
-    const currentUser = isStellar ? stellar.address : userWallet;
+    const currentUser = isStellar
+      ? stellar.address
+      : isSolana
+        ? solana.address
+        : userWallet;
     const prevUser = isStellar ? prevStellarAddressRef.current : prevUserWalletRef.current;
     if (currentUser && currentUser !== prevUser) {
       if (isStellar) {
@@ -1510,9 +1551,106 @@ function PermissionsTab() {
     }
   };
 
+  const handleSolanaTransfer = async () => {
+    if (!solana.address) {
+      toast.error("Connect your Solana wallet first");
+      return;
+    }
+    setApproving(true);
+    try {
+      const { Connection, PublicKey, Transaction, TransactionInstruction, SystemProgram } =
+        await import("@solana/web3.js");
+      const rpcUrl = getSolanaRpcUrl(configuredChainId);
+      if (!rpcUrl) throw new Error("No Solana RPC URL configured for this environment.");
+      const connection = new Connection(rpcUrl, "confirmed");
+
+      const TOKEN_PROGRAM = new PublicKey("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA");
+      const ATA_PROGRAM = new PublicKey("ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL");
+      const deriveAta = (
+        owner: InstanceType<typeof PublicKey>,
+        mintKey: InstanceType<typeof PublicKey>,
+      ) =>
+        PublicKey.findProgramAddressSync(
+          [owner.toBuffer(), TOKEN_PROGRAM.toBuffer(), mintKey.toBuffer()],
+          ATA_PROGRAM,
+        )[0];
+
+      const mint = new PublicKey(getUsdcAddress(configuredChainId));
+      const payer = new PublicKey(solana.address);
+      const destination = new PublicKey(agentWallet);
+      const payerAta = deriveAta(payer, mint);
+      const destAta = deriveAta(destination, mint);
+
+      const instructions: InstanceType<typeof TransactionInstruction>[] = [];
+      if (!(await connection.getAccountInfo(destAta))) {
+        instructions.push(
+          new TransactionInstruction({
+            programId: ATA_PROGRAM,
+            keys: [
+              { pubkey: payer, isSigner: true, isWritable: true },
+              { pubkey: destAta, isSigner: false, isWritable: true },
+              { pubkey: destination, isSigner: false, isWritable: false },
+              { pubkey: mint, isSigner: false, isWritable: false },
+              { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
+              { pubkey: TOKEN_PROGRAM, isSigner: false, isWritable: false },
+            ],
+            data: new Uint8Array([1]) as unknown as Buffer,
+          }),
+        );
+      }
+
+      const amountAtomic = BigInt(
+        Math.round(parseFloat(approveAmount || "1") * 1_000_000),
+      );
+      const data = new Uint8Array(10);
+      data[0] = 12; // SPL TransferChecked
+      new DataView(data.buffer).setBigUint64(1, amountAtomic, true);
+      data[9] = 6;
+      instructions.push(
+        new TransactionInstruction({
+          programId: TOKEN_PROGRAM,
+          keys: [
+            { pubkey: payerAta, isSigner: false, isWritable: true },
+            { pubkey: mint, isSigner: false, isWritable: false },
+            { pubkey: destAta, isSigner: false, isWritable: true },
+            { pubkey: payer, isSigner: true, isWritable: false },
+          ],
+          data: data as unknown as Buffer,
+        }),
+      );
+
+      const tx = new Transaction().add(...instructions);
+      tx.feePayer = payer;
+      tx.recentBlockhash = (await connection.getLatestBlockhash("confirmed")).blockhash;
+      const hash = await solana.sendTransaction(tx, rpcUrl);
+
+      await recordApproval({
+        amount: approveAmount || "1",
+        txHash: hash,
+        chainId: configuredChainId,
+        mode: "transfer",
+      });
+      setLastFundedSuccess({
+        amount: approveAmount || "1",
+        mode: "transfer",
+        txHash: hash,
+      });
+      void refreshAgentBalance();
+      toast.success(`Agent wallet funded with ${approveAmount || "1"} USDC!`);
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Solana transfer failed");
+    } finally {
+      setApproving(false);
+    }
+  };
+
   const handlePreApprove = async () => {
     if (isStellar) {
       await handleStellarTransfer();
+      return;
+    }
+    if (isSolana) {
+      await handleSolanaTransfer();
       return;
     }
     if (fundingMode === "direct") {
@@ -1537,6 +1675,16 @@ function PermissionsTab() {
       setGeneratedAddress(kp.publicKey());
       return;
     }
+    if (isSolana) {
+      // Solana: ed25519 keypair. Public key is the base58 address; the base58
+      // secret key is what ArcenAgent uses as `privateKey`
+      // (parseSolanaSecretKey accepts base58 or a JSON byte array).
+      const { Keypair: SolanaKeypair } = await import("@solana/web3.js");
+      const kp = SolanaKeypair.generate();
+      setGeneratedKey(encodeBase58(kp.secretKey));
+      setGeneratedAddress(kp.publicKey.toBase58());
+      return;
+    }
     const pk = generatePrivateKey();
     const addr = privateKeyToAddress(pk);
     setGeneratedKey(pk);
@@ -1548,7 +1696,7 @@ function PermissionsTab() {
     setSavingWallet(true);
     setSaveError(null);
     try {
-      const cleanAddress = isStellar ? generatedAddress : (safeAddress(generatedAddress) ?? generatedAddress);
+      const cleanAddress = isNonEvm ? generatedAddress : (safeAddress(generatedAddress) ?? generatedAddress);
       const res = await apiFetch("/api/v1/agent/permissions", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -1688,7 +1836,10 @@ function PermissionsTab() {
                 addrStr = (v as any).address;
               }
               if (addrStr) {
-                map[k] = isStellarChainId(Number(k)) ? addrStr : (safeAddress(addrStr) ?? addrStr);
+                map[k] =
+                  isStellarChainId(Number(k)) || isSolanaChainId(Number(k))
+                    ? addrStr
+                    : (safeAddress(addrStr) ?? addrStr);
               }
             }
             setAgentWallets(map);
@@ -1697,7 +1848,7 @@ function PermissionsTab() {
 
           if (!resolvedWallet && d.data.agentWalletAddress) {
             const rawAddr = d.data.agentWalletAddress;
-            resolvedWallet = isStellar ? rawAddr : (safeAddress(rawAddr) ?? rawAddr);
+            resolvedWallet = isNonEvm ? rawAddr : (safeAddress(rawAddr) ?? rawAddr);
           }
 
           if (resolvedWallet) {
@@ -2161,7 +2312,9 @@ function PermissionsTab() {
               <code className="font-mono text-foreground font-medium">
                 {isStellar
                   ? (stellar.address ? `${stellar.address.slice(0, 6)}…${stellar.address.slice(-4)}` : "Not connected")
-                  : (userWallet ? `${userWallet.slice(0, 6)}…${userWallet.slice(-4)}` : "Not connected")}
+                  : isSolana
+                    ? (solana.address ? `${solana.address.slice(0, 6)}…${solana.address.slice(-4)}` : "Not connected")
+                    : (userWallet ? `${userWallet.slice(0, 6)}…${userWallet.slice(-4)}` : "Not connected")}
               </code>
             </div>
             <div className="flex items-center gap-1.5">
@@ -2206,7 +2359,7 @@ function PermissionsTab() {
           )}
 
           {/* Mode Selector for EVM */}
-          {!isStellar && (
+          {!isNonEvm && (
             <div className="grid grid-cols-2 p-1 rounded-lg bg-secondary/50 border border-border/70 text-xs">
               <button
                 type="button"
@@ -2243,7 +2396,7 @@ function PermissionsTab() {
           )}
 
           {/* Mode Guidance Callout */}
-          {!isStellar && (
+          {!isNonEvm && (
             fundingMode === "direct" ? (
               <div className="p-3 rounded-lg bg-blue-500/5 border border-blue-500/20 text-xs flex items-start gap-2.5">
                 <ArrowRightLeft className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
@@ -2872,10 +3025,16 @@ export function AgentSection() {
   const agentSectionChainId =
     activeEnvironment?.chainId ?? resolveEnvironmentChainId(envMode);
   const isStellar = isStellarChainId(agentSectionChainId);
+  const isSolana = isSolanaChainId(agentSectionChainId);
   const stellar = useStellarWallet(agentSectionChainId);
+  const solana = useSolanaWallet(agentSectionChainId);
   // Family-aware connection for the header badge: wagmi's isConnected is
-  // meaningless on a Stellar environment.
-  const walletConnected = isStellar ? stellar.isConnected : isConnected;
+  // meaningless on a Stellar/Solana environment.
+  const walletConnected = isStellar
+    ? stellar.isConnected
+    : isSolana
+      ? solana.isConnected
+      : isConnected;
 
   const tabs: { id: AgentTab; label: string; icon: LucideIcon }[] = [
     { id: "quickstart", label: "Quickstart", icon: Zap },

@@ -6,11 +6,12 @@ import { upsertScopedSubscriberEmail } from "../../../lib/billing/subscriber-ema
 import { resolveSession } from "../../../middleware/auth.js";
 import { normalizeApiKeyAuth, hashApiKey } from "../../../lib/auth/api-key-auth.js";
 import { normalizeWallet } from "../../../lib/billing/utils.js";
+import { WALLET_ADDRESS_REGEX } from "../../../lib/platform/chain-family.js";
 
 const EmailSchema = z.object({
   walletAddress: z
     .string()
-    .regex(/^0x[0-9a-fA-F]{40}$/, "Invalid wallet address"),
+    .regex(WALLET_ADDRESS_REGEX, "Invalid wallet address"),
   email: z.string().email("Invalid email address"),
   planId: z.string().optional(),
 });
@@ -38,6 +39,7 @@ async function canManageWalletEmail(
     const sessionWallets = [
       normalizeWallet(session.walletAddress),
       normalizeWallet(session.stellarWalletAddress),
+      normalizeWallet(session.solanaWalletAddress),
     ].filter(Boolean);
     if (sessionWallets.includes(normalizeWallet(walletAddress))) return true;
 
@@ -47,7 +49,7 @@ async function canManageWalletEmail(
       const company = await db.arcenCompany.findFirst({
         where: {
           teamId: session.currentTeamId,
-          walletAddress: { equals: walletAddress, mode: "insensitive" },
+          walletAddress: { equals: walletAddress },
         },
         select: { id: true },
       });
@@ -72,7 +74,7 @@ async function canManageWalletEmail(
   const company = await db.arcenCompany.findFirst({
     where: {
       teamId: apiKey.teamId,
-      walletAddress: { equals: walletAddress, mode: "insensitive" },
+      walletAddress: { equals: walletAddress },
     },
     select: { id: true },
   });

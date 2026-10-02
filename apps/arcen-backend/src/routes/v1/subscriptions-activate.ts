@@ -27,11 +27,13 @@ import {
   parseEventLogs,
 } from "viem";
 import { z } from "zod";
+import { createHash } from "node:crypto";
 import {
   ERC7579AutopayModuleABI,
   getChain,
   getChainFamily,
   getContractAddresses,
+  getSolanaRpcUrl,
   getStellarSorobanRpcUrl,
   getStellarNetworkPassphrase,
   PlanFactoryABI,
@@ -39,6 +41,20 @@ import {
   YEARLY_INTERVAL,
 } from "@arcenpay/internal-core";
 import { contract as stellarContract } from "@stellar/stellar-sdk";
+import { Connection, PublicKey } from "@solana/web3.js";
+import {
+  encodeSubscribe,
+  findConfigPda,
+  findPlanPda,
+  findSubscriptionPda,
+  findSubscriptionByWalletPda,
+  findSubscriptionDelegatePda,
+  findAssociatedTokenAddress,
+  decodePlanRecord,
+  decodeConfigRecord,
+  TOKEN_PROGRAM_ID,
+  SYSTEM_PROGRAM_ID,
+} from "../../lib/payments/solana-instruction.js";
 import { Prisma } from "../../generated/client/client.js";
 import { db } from "../../db.js";
 import { createResilientPublicClient, getRpcUrl } from "../../config.js";
@@ -64,6 +80,7 @@ import {
   processBillingRecoveryTask,
 } from "../../lib/billing/billing-recovery.js";
 import { upsertSubscriptionLedgerState } from "../../lib/billing/billing-ledger.js";
+import { normalizeWallet } from "../../lib/billing/utils.js";
 import { resolveSacContractId } from "../../lib/payments/stellar-payment-verification.js";
 import { corsHeaders } from "../../middleware/cors.js";
 
@@ -75,6 +92,14 @@ const walletAddressSchema = z
   .string()
   .min(1)
   .max(128);
+
+/**
+ * Tx-hash validation must accept every chain family: EVM (`0x`+64 hex, or bare
+ * 64 hex), Stellar (64 hex) and Solana (base58 signature). A hex-only pattern
+ * silently rejected Solana activations with a 400 before the Solana branch ran.
+ */
+const TX_HASH_REGEX =
+  /^(0x[0-9a-fA-F]{64}|[0-9a-fA-F]{64}|[1-9A-HJ-NP-Za-km-z]{43,90})$/;
 
 const companySchema = z
   .object({
@@ -95,11 +120,11 @@ const bodySchema = z.object({
   subscriberEmail: z.string().email().optional(),
   activationTxHash: z
     .string()
-    .regex(/^(0x[0-9a-fA-F]{64}|[0-9a-fA-F]{64})$/)
+    .regex(TX_HASH_REGEX)
     .optional(),
   txHash: z
     .string()
-    .regex(/^(0x[0-9a-fA-F]{64}|[0-9a-fA-F]{64})$/)
+    .regex(TX_HASH_REGEX)
     .optional(),
   company: companySchema,
 });
@@ -581,8 +606,7 @@ async function upsertCompanyForActivation(
       if (keys.name?.trim()) updates.name = keys.name.trim();
       if (keys.email?.trim()) updates.email = keys.email.trim().toLowerCase();
       if (keys.wallet?.trim()) {
-        const w = keys.wallet.trim();
-        updates.walletAddress = w.startsWith("G") && w.length === 56 ? w : w.toLowerCase();
+        updates.walletAddress = normalizeWallet(keys.wallet) ?? keys.wallet.trim();
       }
       if (Object.keys(updates).length > 0) {
         try {
@@ -609,9 +633,7 @@ async function upsertCompanyForActivation(
     if (keys.name?.trim()) updates.name = keys.name.trim();
     if (keys.email?.trim()) updates.email = keys.email.trim();
     if (keys.wallet?.trim()) {
-      const w = keys.wallet.trim();
-      const normalizedWallet = w.startsWith("G") && w.length === 56 ? w : w.toLowerCase();
-      updates.walletAddress = normalizedWallet;
+      updates.walletAddress = normalizeWallet(keys.wallet) ?? keys.wallet.trim();
     }
     if (Object.keys(updates).length > 0) {
       try {
@@ -625,8 +647,7 @@ async function upsertCompanyForActivation(
           "code" in err &&
           (err as { code: string }).code === "P2002";
         if (isUniqueConstraintError && keys.wallet?.trim()) {
-          const w = keys.wallet.trim();
-          const normalizedWallet = w.startsWith("G") && w.length === 56 ? w : w.toLowerCase();
+          const normalizedWallet = normalizeWallet(keys.wallet) ?? keys.wallet.trim();
           const existingByWallet = await db.arcenCompany.findFirst({
             where: {
               teamId,
@@ -660,9 +681,7 @@ async function upsertCompanyForActivation(
       name: keys.name ?? keys.email ?? keys.id ?? "Unknown",
       email: keys.email ?? null,
       walletAddress: keys.wallet
-        ? (keys.wallet.trim().startsWith("G") && keys.wallet.trim().length === 56
-          ? keys.wallet.trim()
-          : keys.wallet.trim().toLowerCase())
+        ? normalizeWallet(keys.wallet) ?? keys.wallet.trim()
         : null,
       externalId: keys.id ?? null,
       traits: (keys.traits ?? {}) as unknown as Prisma.InputJsonValue,
@@ -704,6 +723,116 @@ async function readActiveWalletSubscriptionTokenId(params: {
   })) as `0x${string}`;
 
   return owner.toLowerCase() === params.wallet.toLowerCase() ? tokenId : 0n;
+}
+
+/**
+ * Deterministic u64 token id for a Solana subscription, derived from the
+ * subscriber wallet + on-chain plan id. Deterministic so repeated activation
+ * attempts resolve the same subscription PDA (idempotency).
+ */
+function deriveSolanaTokenId(wallet: string, planId: string): bigint {
+  const digest = createHash("sha256")
+    .update(`arcenpay:solana:subscription:${wallet}:${planId}`)
+    .digest();
+  const id = digest.readBigUInt64BE(0);
+  return id === 0n ? 1n : id;
+}
+
+/**
+ * Verifies a submitted Solana `subscribe` transaction: confirmed + successful,
+ * invoked the ArcenPay program, called Subscribe, and emitted
+ * `SubscriptionMinted`.
+ */
+async function verifySolanaActivation(input: {
+  connection: Connection;
+  programId: string;
+  txHash: string;
+}): Promise<{ ok: true } | { ok: false; status: number; error: string }> {
+  try {
+    // The wallet confirms the transaction before calling us, but OUR RPC node
+    // may not have it yet (propagation lag between different nodes). Wait for it
+    // briefly rather than failing a customer who has already been charged — the
+    // old single-shot read surfaced a scary "not confirmed" error while the
+    // payment had in fact gone through, and the plan was then applied seconds
+    // later by the event pipeline, out of sync with what the user was told.
+    const maxWaitMs = Number(process.env.SOLANA_TX_WAIT_MS || 15_000);
+    const pollMs = 1_500;
+    const deadline = Date.now() + maxWaitMs;
+    const fetchTx = async () =>
+      input.connection
+        .getParsedTransaction(input.txHash, {
+          maxSupportedTransactionVersion: 0,
+          commitment: "confirmed",
+        })
+        .catch(() => null);
+    let tx = await fetchTx();
+    while (!tx && Date.now() < deadline) {
+      await new Promise((resolve) => setTimeout(resolve, pollMs));
+      tx = await fetchTx();
+    }
+    if (!tx) {
+      return {
+        ok: false,
+        status: 425,
+        error: "Solana transaction is still propagating to our RPC node.",
+      };
+    }
+    if (tx.meta?.err) {
+      return { ok: false, status: 409, error: "Solana transaction failed on-chain." };
+    }
+
+    const accountKeys = tx.transaction.message.accountKeys ?? [];
+    const invoked = accountKeys.some((k: any) => {
+      const pk =
+        typeof k?.pubkey?.toBase58 === "function"
+          ? k.pubkey.toBase58()
+          : String(k?.pubkey ?? k);
+      return pk === input.programId;
+    });
+    if (!invoked) {
+      return {
+        ok: false,
+        status: 409,
+        error: "Transaction did not invoke the ArcenPay Solana program.",
+      };
+    }
+
+    const logs = tx.meta?.logMessages ?? [];
+    if (!logs.some((l) => l.includes("Instruction: Subscribe"))) {
+      return { ok: false, status: 409, error: "Transaction did not call subscribe." };
+    }
+
+    const mintDiscriminator = createHash("sha256")
+      .update("event:SubscriptionMinted")
+      .digest()
+      .subarray(0, 8)
+      .toString("hex");
+    const prefix = "Program data: ";
+    const minted = logs.some((line) => {
+      if (!line.startsWith(prefix)) return false;
+      try {
+        const payload = Buffer.from(line.slice(prefix.length), "base64");
+        return payload.subarray(0, 8).toString("hex") === mintDiscriminator;
+      } catch {
+        return false;
+      }
+    });
+    if (!minted) {
+      return {
+        ok: false,
+        status: 409,
+        error: "Transaction did not emit SubscriptionMinted.",
+      };
+    }
+
+    return { ok: true };
+  } catch (err) {
+    return {
+      ok: false,
+      status: 502,
+      error: `Solana verification error: ${(err as Error).message}`,
+    };
+  }
 }
 
 export async function OPTIONS(c: Context) {
@@ -790,13 +919,18 @@ export async function POST(c: Context) {
     );
   }
 
-  const onChainPlanId = BigInt(parsed.data.planId);
+  // `parsed.data.planId` is the CATALOG plan id (a cuid like "cmupa8pck…").
+  // The on-chain plan id is a separate numeric field on the plan record.
+  // Converting the cuid here threw `Cannot convert … to a BigInt` and broke
+  // every Solana activation before its branch could run.
+  const numericPlanIdArg = /^\d+$/.test(String(parsed.data.planId).trim())
+    ? BigInt(String(parsed.data.planId).trim())
+    : null;
+  const onChainPlanId = numericPlanIdArg ?? 0n;
   const rawPaymentAccount = parsed.data.paymentAccount.trim();
-  const isStellarPayment =
-    rawPaymentAccount.startsWith("G") && rawPaymentAccount.length === 56;
-  const paymentAccount = isStellarPayment
-    ? rawPaymentAccount
-    : (rawPaymentAccount.toLowerCase() as `0x${string}`);
+  // EVM lowercases; Stellar (G…/C…) and Solana (base58) are case-sensitive.
+  const paymentAccount = (normalizeWallet(rawPaymentAccount) ??
+    rawPaymentAccount) as `0x${string}`;
   const activationCompanyInput = {
     ...parsed.data.company,
     ...(sessionDefaults && {
@@ -821,7 +955,11 @@ export async function POST(c: Context) {
         teamId,
         active: true,
         status: "PUBLISHED",
-        onChainPlanId: onChainPlanId.toString(),
+        // The client sends the CATALOG plan id (a cuid). Accept a numeric
+        // on-chain id as well, for callers that pass that instead.
+        ...(numericPlanIdArg
+          ? { onChainPlanId: numericPlanIdArg.toString() }
+          : { id: String(parsed.data.planId).trim() }),
       },
       select: {
         id: true,
@@ -831,6 +969,7 @@ export async function POST(c: Context) {
         acceptedToken: true,
         chainId: true,
         environmentId: true,
+        onChainPlanId: true,
       },
     });
 
@@ -860,7 +999,298 @@ export async function POST(c: Context) {
     // Use the chain the plan was registered on. Fall back to DEFAULT_CHAIN_ID for
     // legacy plans that pre-date the chainId column (they'll have the default 84532).
     const chainId = catalogPlan.chainId ?? DEFAULT_CHAIN_ID;
-    const isStellar = getChainFamily(chainId) === "stellar";
+    const chainFamily = getChainFamily(chainId);
+    const isStellar = chainFamily === "stellar";
+
+    // ── Solana activation path ───────────────────────────────────────────────
+    // Mirrors the Stellar 3-step flow: return a prepared `subscribe` instruction
+    // (program id + account metas + base64 data) for the wallet to sign, then
+    // verify the submitted transaction and finalize billing.
+    if (chainFamily === "solana") {
+      const contracts = getContractAddresses(chainId);
+      if (!contracts.subscriptionRegistry || !contracts.planFactory) {
+        return c.json(
+          {
+            error:
+              `Solana billing is not enabled for chain ${chainId}: the ArcenPay Anchor program is not ` +
+              `configured. Deploy the program and set ARCENPAY_CONTRACT_${chainId}_* before activating.`,
+          },
+          503,
+          corsHeaders(origin),
+        );
+      }
+
+      const rpcUrl = getSolanaRpcUrl(chainId);
+      if (!rpcUrl) {
+        return c.json(
+          { error: `No Solana RPC URL configured for chain ${chainId}.` },
+          503,
+          corsHeaders(origin),
+        );
+      }
+
+      const programIdStr = contracts.subscriptionRegistry;
+      const connection = new Connection(rpcUrl, "confirmed");
+      const priceMicros = Math.round(Number(catalogPlan.price ?? "0") * 1_000_000);
+      const solanaBillingPeriod: "monthly" | "annual" =
+        (catalogPlan as any).billingInterval >= YEARLY_INTERVAL ? "annual" : "monthly";
+
+      // The on-chain plan id lives on the catalog record — the request normally
+      // carries the catalog cuid, not the numeric on-chain id.
+      const solanaOnChainPlanId =
+        numericPlanIdArg ??
+        (catalogPlan.onChainPlanId ? BigInt(catalogPlan.onChainPlanId) : null);
+      if (!solanaOnChainPlanId) {
+        return c.json(
+          {
+            error:
+              "This plan is not registered on-chain yet. Register it on-chain before subscribing.",
+          },
+          409,
+          corsHeaders(origin),
+        );
+      }
+
+      const [planPda] = findPlanPda(programIdStr, solanaOnChainPlanId);
+      const [configPda] = findConfigPda(programIdStr);
+
+      let plan: ReturnType<typeof decodePlanRecord> = null;
+      let configRec: ReturnType<typeof decodeConfigRecord> = null;
+      try {
+        const [planInfo, configInfo] = await Promise.all([
+          connection.getAccountInfo(planPda),
+          connection.getAccountInfo(configPda),
+        ]);
+        plan = planInfo ? decodePlanRecord(planInfo.data as Buffer) : null;
+        configRec = configInfo ? decodeConfigRecord(configInfo.data as Buffer) : null;
+      } catch (err) {
+        return c.json(
+          { error: `Failed to read Solana plan/config: ${(err as Error).message}` },
+          502,
+          corsHeaders(origin),
+        );
+      }
+
+      if (!plan) {
+        return c.json(
+          { error: "On-chain Solana plan not found for the supplied planId." },
+          404,
+          corsHeaders(origin),
+        );
+      }
+      if (!plan.active) {
+        return c.json({ error: "The on-chain Solana plan is inactive." }, 409, corsHeaders(origin));
+      }
+      if (!configRec) {
+        return c.json(
+          { error: "ArcenPay Solana program is not initialized on-chain." },
+          503,
+          corsHeaders(origin),
+        );
+      }
+
+      const tokenId = deriveSolanaTokenId(paymentAccount, solanaOnChainPlanId.toString());
+      const [subscriptionPda] = findSubscriptionPda(programIdStr, tokenId);
+      const [byWalletPda] = findSubscriptionByWalletPda(programIdStr, paymentAccount);
+      const mint = plan.acceptedToken;
+      // Shared (owner, mint) autopay authority — `subscribe` approves this PDA
+      // as the SPL token delegate, so it must be in the account list between
+      // `subscription_by_wallet` and `token_mint` (program declaration order).
+      const [delegatePda] = findSubscriptionDelegatePda(
+        programIdStr,
+        paymentAccount,
+        mint,
+      );
+      const subscriberAta = findAssociatedTokenAddress(paymentAccount, mint);
+      const providerAta = findAssociatedTokenAddress(plan.provider, mint);
+      const treasuryAta = findAssociatedTokenAddress(configRec.treasury, mint);
+
+      let submittedSolanaTx = (
+        parsed.data.activationTxHash ?? parsed.data.txHash
+      )?.trim();
+
+      // Idempotency (D3): `subscribe` hard-`init`s the subscription PDA, so if a
+      // previous attempt already minted it but finalization failed, asking the
+      // wallet to sign again is impossible (simulation: "already in use") — and
+      // would be a second charge. Recover the minting signature and finalize
+      // from it instead, so a retry repairs rather than dead-ends.
+      if (!submittedSolanaTx) {
+        const existingSubscription = await connection
+          .getAccountInfo(subscriptionPda, "confirmed")
+          .catch(() => null);
+        if (existingSubscription) {
+          const signatures = await connection
+            .getSignaturesForAddress(subscriptionPda, { limit: 10 })
+            .catch(() => []);
+          const minted = [...signatures].reverse().find((s) => !s.err);
+          if (minted) submittedSolanaTx = minted.signature;
+        }
+      }
+
+      if (!submittedSolanaTx) {
+        return c.json(
+          {
+            data: {
+              activationRequired: true,
+              paymentAccount,
+              chargeAmountAtomic: String(priceMicros),
+              chargeAmountDisplay: `${catalogPlan.price ?? "0"} USDC`,
+              preparedTransaction: {
+                family: "solana",
+                rpcUrl,
+                programId: programIdStr,
+                instruction: {
+                  keys: [
+                    { pubkey: configPda.toBase58(), isSigner: false, isWritable: false },
+                    { pubkey: planPda.toBase58(), isSigner: false, isWritable: false },
+                    { pubkey: paymentAccount, isSigner: true, isWritable: true },
+                    { pubkey: subscriptionPda.toBase58(), isSigner: false, isWritable: true },
+                    { pubkey: byWalletPda.toBase58(), isSigner: false, isWritable: true },
+                    { pubkey: delegatePda.toBase58(), isSigner: false, isWritable: false },
+                    { pubkey: mint, isSigner: false, isWritable: false },
+                    { pubkey: subscriberAta.toBase58(), isSigner: false, isWritable: true },
+                    { pubkey: providerAta.toBase58(), isSigner: false, isWritable: true },
+                    { pubkey: treasuryAta.toBase58(), isSigner: false, isWritable: true },
+                    { pubkey: TOKEN_PROGRAM_ID.toBase58(), isSigner: false, isWritable: false },
+                    { pubkey: SYSTEM_PROGRAM_ID.toBase58(), isSigner: false, isWritable: false },
+                  ],
+                  data: encodeSubscribe(tokenId, priceMicros).toString("base64"),
+                },
+              },
+              verification: {
+                chainId,
+                acceptedToken: mint,
+                merchantAddress: plan.provider,
+                onChainPlanId: solanaOnChainPlanId.toString(),
+                onChainTokenId: tokenId.toString(),
+              },
+            },
+          },
+          202,
+          corsHeaders(origin),
+        );
+      }
+
+      const verify = await verifySolanaActivation({
+        connection,
+        programId: programIdStr,
+        txHash: submittedSolanaTx,
+      });
+      if (!verify.ok) {
+        return c.json(
+          { error: verify.error },
+          verify.status as any,
+          corsHeaders(origin),
+        );
+      }
+
+      const subscriberEmail = await resolveBillingRecipientEmail({
+        teamId,
+        environmentId: catalogPlan.environmentId ?? null,
+        explicitEmail:
+          parsed.data.subscriberEmail ?? sessionDefaults?.userEmail ?? null,
+        accessTokenUserId: embedTokenContext?.userId ?? null,
+        accessTokenCompanyId: embedTokenContext?.companyId ?? null,
+        companyId: company.id,
+        walletAddress: paymentAccount,
+      });
+
+      const solanaFinalizationPayload = {
+        companyId: company.id,
+        customerUserId: embedTokenContext?.userId ?? sessionDefaults?.userId ?? null,
+        environmentId: catalogPlan.environmentId ?? null,
+        walletAddress: paymentAccount,
+        catalogPlanId: catalogPlan.id,
+        catalogPlanName: catalogPlan.name,
+        billingPeriod: solanaBillingPeriod,
+        customerName:
+          typeof activationCompanyInput.name === "string" &&
+          activationCompanyInput.name.trim()
+            ? activationCompanyInput.name.trim()
+            : null,
+        onChainPlanId: onChainPlanId.toString(),
+        onChainTokenId: tokenId.toString(),
+        expiration: String(
+          Math.floor(Date.now() / 1000) +
+            Number(catalogPlan.billingInterval ?? 2592000),
+        ),
+        txHash: submittedSolanaTx,
+        amount: Number(priceMicros) / 1e6,
+        currency: "USDC",
+        merchantAddress: plan.provider,
+        acceptedToken: mint,
+        subscriberEmail,
+        occurredAt: new Date().toISOString(),
+        previousPlanId: previousCompany?.activePlanId ?? null,
+        chainId,
+      };
+
+      let recoveryTaskId: string | null = null;
+      let recoveryPending = false;
+      let invoiceId: string | null = null;
+      let paymentId: string | null = null;
+
+      try {
+        const finalization = await finalizeSubscriptionActivation({
+          teamId,
+          payload: solanaFinalizationPayload,
+          source: "subscription.activate",
+        });
+        invoiceId = finalization.invoiceId;
+        paymentId = finalization.paymentId;
+      } catch (finalizationError) {
+        console.error(
+          "[subscriptions/activate] Solana finalization failed; queuing recovery task.",
+          finalizationError,
+        );
+        const recoveryTask = await enqueueSubscriptionActivationRecovery({
+          teamId,
+          ...solanaFinalizationPayload,
+          occurredAt: new Date(solanaFinalizationPayload.occurredAt),
+        });
+        recoveryTaskId = recoveryTask.id;
+        const recoveryResult = await processBillingRecoveryTask({
+          taskId: recoveryTask.id,
+        });
+        recoveryPending = !recoveryResult.ok;
+      }
+
+      // The on-chain subscription is confirmed at this point. If the billing
+      // projection could not be committed, that is a failure — not a "pending"
+      // success. Returning 202 here made the client show "finalizing…" forever
+      // while the company stayed on Free. Surface it as an error so it is
+      // visible and retryable.
+      if (recoveryPending) {
+        return c.json(
+          {
+            error:
+              "The on-chain subscription was confirmed, but the billing state could not be finalized. No second charge will be made; this is safe to retry.",
+            txHash: submittedSolanaTx,
+            recoveryTaskId,
+          },
+          409,
+          corsHeaders(origin),
+        );
+      }
+
+      return c.json(
+        {
+          data: {
+            txHash: submittedSolanaTx,
+            companyId: company.id,
+            planId: catalogPlan.id,
+            paymentAccount,
+            onChainTokenId: tokenId.toString(),
+            invoiceId,
+            paymentId,
+            recoveryTaskId,
+            recoveryPending,
+          },
+        },
+        200,
+        corsHeaders(origin),
+      );
+    }
 
     // ── Stellar activation path ──────────────────────────────────────────────
     if (isStellar) {

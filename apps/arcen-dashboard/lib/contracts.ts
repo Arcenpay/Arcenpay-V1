@@ -21,6 +21,7 @@ import {
   STELLAR_MAINNET_CHAIN_ID,
   STELLAR_TESTNET_CHAIN_ID,
   STELLAR_FUTURENET_CHAIN_ID,
+  SOLANA_DEVNET_CHAIN_ID,
 } from "@arcenpay/internal-core";
 import {
   BASE_SEPOLIA_CHAIN_ID,
@@ -57,6 +58,9 @@ function resolveUsdcOverride(chainId: number): string | null {
     9000000: process.env.NEXT_PUBLIC_USDC_ADDRESS_9000000,
     9000001: process.env.NEXT_PUBLIC_USDC_ADDRESS_9000001,
     9000002: process.env.NEXT_PUBLIC_USDC_ADDRESS_9000002,
+    9100000: process.env.NEXT_PUBLIC_USDC_ADDRESS_9100000,
+    9100001: process.env.NEXT_PUBLIC_USDC_ADDRESS_9100001,
+    9100002: process.env.NEXT_PUBLIC_USDC_ADDRESS_9100002,
   };
 
   const candidate = chainOverrides[chainId] || globalOverride;
@@ -114,6 +118,11 @@ const TESTNET_CHAIN_LIST: Array<{
   {
     chainId: STELLAR_FUTURENET_CHAIN_ID,
     label: getChainLabel(STELLAR_FUTURENET_CHAIN_ID),
+    tag: "testnet",
+  },
+  {
+    chainId: SOLANA_DEVNET_CHAIN_ID,
+    label: getChainLabel(SOLANA_DEVNET_CHAIN_ID),
     tag: "testnet",
   },
 ];

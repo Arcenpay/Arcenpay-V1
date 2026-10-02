@@ -191,6 +191,16 @@ enum BillingRecoveryTaskStatus {
   FAILED
 }
 
+enum SolanaActivationStatus {
+  INTENT_CREATED
+  SUBMITTED
+  FINALIZED
+  PROVISIONING
+  ACTIVE
+  FAILED
+  REQUIRES_ATTENTION
+}
+
 enum SubscriptionChangeType {
   UPGRADE
   DOWNGRADE
@@ -277,6 +287,7 @@ enum ActivationKeyStatus {
 enum ChainFamily {
   EVM
   STELLAR
+  SOLANA
 }
 
 // ─── Core identity ────────────────────────────────────────────────────────────
@@ -290,6 +301,7 @@ model User {
   emailVerified Boolean @default(false)
   walletAddress String? @unique
   stellarWalletAddress String? @unique
+  solanaWalletAddress String? @unique
 
   currentTeamId String?
 
@@ -301,6 +313,7 @@ model User {
   @@index([email])
   @@index([walletAddress])
   @@index([stellarWalletAddress])
+  @@index([solanaWalletAddress])
 }
 
 // ─── Dashboard auth ───────────────────────────────────────────────────────────
@@ -391,6 +404,7 @@ model Team {
   subscriptionStates         SubscriptionState[]
   subscriptionChangeRequests SubscriptionChangeRequest[]
   billingRecoveryTasks       BillingRecoveryTask[]
+  solanaActivationAttempts   SolanaActivationAttempt[]
   taxProfile                 TaxProfile?
   invoiceSequences           InvoiceSequence[]
 
@@ -459,6 +473,7 @@ model WorkspaceEnvironment {
   platformBillingAccount     PlatformBillingAccount?
   platformBillingPlans       PlatformBillingPlan[]
   platformBillingCustomers   PlatformBillingCustomer[]
+  solanaActivationAttempts   SolanaActivationAttempt[]
 
   @@unique([teamId, name])
   @@index([teamId, mode])
@@ -1296,6 +1311,44 @@ model BillingRecoveryTask {
   @@index([walletAddress, createdAt])
 }
 
+/// Durable bridge between a wallet-submitted signature and the facilitator's
+/// finalized event. A transaction is never presented as an active plan until
+/// this record reaches ACTIVE.
+model SolanaActivationAttempt {
+  id              String                 @id @default(cuid())
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @updatedAt
+  teamId          String
+  environmentId   String?
+  companyId       String
+  chainId         Int
+  status          SolanaActivationStatus @default(INTENT_CREATED)
+  idempotencyKey  String                 @unique
+  txSignature     String?                @unique
+  walletAddress   String
+  catalogPlanId   String
+  onChainPlanId   String
+  onChainTokenId  String
+  expectedAmount  Decimal                @db.Decimal(20, 6)
+  acceptedToken   String
+  merchantAddress String
+  finalizedAt     DateTime?
+  provisionedAt   DateTime?
+  attempts        Int                    @default(0)
+  lastAttemptAt   DateTime?
+  nextAttemptAt   DateTime?
+  lastError       String?
+  metadata        Json?
+
+  team        Team                  @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  environment WorkspaceEnvironment? @relation(fields: [environmentId], references: [id], onDelete: SetNull)
+  company     ArcenCompany          @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([teamId, status, nextAttemptAt])
+  @@index([companyId, createdAt])
+  @@index([chainId, txSignature])
+}
+
 model WebhookDelivery {
   id            String   @id @default(cuid())
   createdAt     DateTime @default(now())
@@ -1500,6 +1553,7 @@ model ArcenCompany {
   refunds                    Refund[]
   billingAdjustments         BillingAdjustment[]
   billingRecoveryTasks       BillingRecoveryTask[]
+  solanaActivationAttempts   SolanaActivationAttempt[]
   subscriptionChangeRequests SubscriptionChangeRequest[]
   addOnGrants                CompanyAddOnGrant[]
   creditGrants               CompanyCreditGrant[]
@@ -2045,4 +2099,3 @@ model PlatformActivationRedemption {
   @@index([teamId])
   @@index([createdAt])
 }
-

@@ -11,6 +11,7 @@ import { reconnect, connect } from "@wagmi/core";
 import { ApolloProvider } from "@apollo/client";
 import { Toaster } from "sonner";
 import { apolloClient } from "@/lib/graphql";
+import { SolanaWalletProvider } from "@/components/providers/solana-wallet-provider";
 
 const queryClient = new QueryClient();
 
@@ -160,7 +161,7 @@ export function Web3Provider({
           <ThemeSync />
           <MobileWalletSync />
           <WcProviderListener />
-          {children}
+          <SolanaWalletProvider>{children}</SolanaWalletProvider>
           <Toaster richColors position="bottom-right" />
         </ApolloProvider>
       </QueryClientProvider>

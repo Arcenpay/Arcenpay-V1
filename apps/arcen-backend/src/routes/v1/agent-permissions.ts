@@ -13,9 +13,10 @@ import {
   getTokenAddress,
   getContractAddresses,
   getStellarNetworkPassphrase,
+  getSolanaRpcUrl,
   SessionVaultABI,
 } from "@arcenpay/internal-core";
-import { resolveChainFamilyForPrisma } from "../../lib/platform/chain-family.js";
+import { resolveChainFamilyForPrisma, type ChainFamilyPrisma } from "../../lib/platform/chain-family.js";
 import { toPrismaJson } from "../../utils/prisma-json.js";
 import { createPublicClient, http, getAddress, isAddress } from "viem";
 import { asRecord, readString } from "../../lib/billing/utils.js";
@@ -50,7 +51,7 @@ function readWalletsMap(value: unknown): Record<string, { address: string; creat
 
 function readChainContext(
   body: Record<string, unknown>,
-): { chainId?: number; chainFamily?: "EVM" | "STELLAR" } {
+): { chainId?: number; chainFamily?: ChainFamilyPrisma } {
   const chainId =
     typeof body.chainId === "number" ? body.chainId : null;
   if (chainId === null || !Number.isInteger(chainId) || chainId <= 0) {
@@ -520,24 +521,63 @@ export async function getAgentBalance(c: Context) {
       } catch (e) {
         console.warn("[getAgentBalance Stellar]", e);
       }
-    }
-
-    // Recorded preApprovals reconciliation fallback
-    if (parseFloat(vaultBalanceUsdc) <= 0) {
-      const preVault = preApprovals
-        .filter((p: any) => p.mode === "approve_and_fund" && Number(p.amount) > 0)
-        .reduce((sum: number, p: any) => sum + Number(p.amount), 0);
-      if (preVault > 0) {
-        vaultBalanceUsdc = preVault.toFixed(2);
+    } else if (fam === "solana") {
+      try {
+        const { Connection, PublicKey } = await import("@solana/web3.js");
+        const rpcUrl = getSolanaRpcUrl(activeChainId);
+        const usdcMint = getTokenAddress(activeChainId, "USDC");
+        if (rpcUrl && usdcMint) {
+          const connection = new Connection(rpcUrl, "confirmed");
+          const readBalance = async (owner: string): Promise<string> => {
+            if (!owner) return "0.00";
+            try {
+              const accounts = await connection.getParsedTokenAccountsByOwner(
+                new PublicKey(owner),
+                { mint: new PublicKey(usdcMint) },
+              );
+              const total = accounts.value.reduce((sum, { account }) => {
+                const amount = (account.data as any)?.parsed?.info?.tokenAmount?.uiAmount;
+                return sum + (typeof amount === "number" ? amount : 0);
+              }, 0);
+              return total.toFixed(2);
+            } catch {
+              return "0.00";
+            }
+          };
+          if (queryUserAddress) {
+            userWalletBalanceUsdc = await readBalance(queryUserAddress);
+          }
+          if (agentWallet) {
+            walletBalanceUsdc = await readBalance(agentWallet);
+          }
+        }
+      } catch (e) {
+        console.warn("[getAgentBalance Solana]", e);
       }
     }
 
-    if (parseFloat(walletBalanceUsdc) <= 0) {
-      const preTransfer = preApprovals
-        .filter((p: any) => p.mode === "transfer" && Number(p.amount) > 0)
-        .reduce((sum: number, p: any) => sum + Number(p.amount), 0);
-      if (preTransfer > 0) {
-        walletBalanceUsdc = preTransfer.toFixed(2);
+    // Recorded preApprovals reconciliation fallback. This models the EVM
+    // SessionVault / approve-and-fund flow only — Stellar and Solana have no
+    // vault, and applying it there fabricates a balance from stale EVM-style
+    // pre-approval rows (e.g. a phantom vault balance) whenever the real
+    // on-chain balance is zero.
+    if (fam === "evm") {
+      if (parseFloat(vaultBalanceUsdc) <= 0) {
+        const preVault = preApprovals
+          .filter((p: any) => p.mode === "approve_and_fund" && Number(p.amount) > 0)
+          .reduce((sum: number, p: any) => sum + Number(p.amount), 0);
+        if (preVault > 0) {
+          vaultBalanceUsdc = preVault.toFixed(2);
+        }
+      }
+
+      if (parseFloat(walletBalanceUsdc) <= 0) {
+        const preTransfer = preApprovals
+          .filter((p: any) => p.mode === "transfer" && Number(p.amount) > 0)
+          .reduce((sum: number, p: any) => sum + Number(p.amount), 0);
+        if (preTransfer > 0) {
+          walletBalanceUsdc = preTransfer.toFixed(2);
+        }
       }
     }
 

@@ -19,6 +19,9 @@ import {
   BOT_MAINNET_CHAIN_ID,
   BASE_SEPOLIA_CHAIN_ID,
   STELLAR_TESTNET_CHAIN_ID,
+  STELLAR_MAINNET_CHAIN_ID,
+  SOLANA_DEVNET_CHAIN_ID,
+  SOLANA_MAINNET_CHAIN_ID,
   getChainLabel,
   getChainIdsForEnvironment,
   type EnvironmentMode,
@@ -52,8 +55,15 @@ function defaultChainIdForFamily(
   mode: EnvironmentMode,
   family: ChainFamily,
 ): number {
-  if (mode === "PRODUCTION") return BOT_MAINNET_CHAIN_ID;
+  // Production defaults must match the family — otherwise a Solana production
+  // environment would default to the EVM mainnet once it is enabled.
+  if (mode === "PRODUCTION") {
+    if (family === "solana") return SOLANA_MAINNET_CHAIN_ID;
+    if (family === "stellar") return STELLAR_MAINNET_CHAIN_ID;
+    return BOT_MAINNET_CHAIN_ID;
+  }
   if (family === "stellar") return STELLAR_TESTNET_CHAIN_ID;
+  if (family === "solana") return SOLANA_DEVNET_CHAIN_ID;
   return BASE_SEPOLIA_CHAIN_ID;
 }
 
@@ -82,10 +92,15 @@ export default function EnvironmentOnboardingPage() {
       getOnboardingChainFamily(),
       data.user.walletAddress,
       data.user.stellarWalletAddress,
+      data.user.solanaWalletAddress,
     );
     setSelectedFamily(resolved);
     setOnboardingChainFamily(resolved);
-  }, [data?.user?.walletAddress, data?.user?.stellarWalletAddress]);
+  }, [
+    data?.user?.walletAddress,
+    data?.user?.stellarWalletAddress,
+    data?.user?.solanaWalletAddress,
+  ]);
 
   const chainOptions = useMemo(
     () => buildChainOptions(mode, selectedFamily),

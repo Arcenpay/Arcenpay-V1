@@ -198,6 +198,13 @@ export type Refund = Prisma.RefundModel
  */
 export type BillingRecoveryTask = Prisma.BillingRecoveryTaskModel
 /**
+ * Model SolanaActivationAttempt
+ * Durable bridge between a wallet-submitted signature and the facilitator's
+ * finalized event. A transaction is never presented as an active plan until
+ * this record reaches ACTIVE.
+ */
+export type SolanaActivationAttempt = Prisma.SolanaActivationAttemptModel
+/**
  * Model WebhookDelivery
  * 
  */

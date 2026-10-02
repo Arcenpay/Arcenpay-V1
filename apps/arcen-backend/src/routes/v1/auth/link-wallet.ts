@@ -27,6 +27,10 @@ function isStellarChainId(chainId: number) {
   return getChainFamily(chainId) === "stellar";
 }
 
+function isSolanaChainId(chainId: number) {
+  return getChainFamily(chainId) === "solana";
+}
+
 function requestOrigin(c: Context): { host: string; protocol: string } {
   const origin = c.req.header("origin");
   if (origin) {
@@ -90,10 +94,12 @@ export async function linkWallet(c: Context) {
 
     const { message, signature, address, chainId, nonce } = parsed.data;
     const isStellar = isStellarChainId(chainId);
-    const normalizedAddress = isStellar ? address : address.toLowerCase();
+    const isSolana = isSolanaChainId(chainId);
+    // Stellar (G…/C…) and Solana (base58) addresses are case-sensitive.
+    const normalizedAddress = isStellar || isSolana ? address : address.toLowerCase();
 
-    // Support EVM chains and Stellar chain ID (synthetic: 9_000_000+)
-    if (!isSupportedWalletAuthChainId(chainId) && !isStellarChainId(chainId)) {
+    // Support EVM chains, Stellar and Solana synthetic chain IDs (9_000_000+/9_100_000+)
+    if (!isSupportedWalletAuthChainId(chainId) && !isStellarChainId(chainId) && !isSolanaChainId(chainId)) {
       const labels = [...TESTNET_CHAIN_IDS, ...MAINNET_CHAIN_IDS].map(getChainLabel).join(" or ");
       return c.json(
         {
@@ -173,6 +179,67 @@ export async function linkWallet(c: Context) {
         data: isStellar
           ? { stellarWalletAddress: normalizedAddress }
           : { walletAddress: normalizedAddress },
+      });
+
+      return c.json({ ok: true, address: normalizedAddress });
+    }
+
+    // ── Solana path ───────────────────────────────────────────────────────
+    if (isSolana) {
+      // Solana wallets (`signMessage`) produce a base58 ed25519 signature over
+      // the raw UTF-8 message below. We rebuild the expected message and verify
+      // it with tweetnacl (see solana-signature.ts).
+      const { host } = requestOrigin(c);
+      const expectedMessage = `ArcenPay Solana Sign-In\n\nAddress: ${normalizedAddress}\nNonce: ${nonce}\nIssued At: ${nonceRecord.issuedAt}\nDomain: ${host}`;
+
+      if (message !== expectedMessage) {
+        return c.json(
+          { ok: false, error: "Message mismatch", code: "UNAUTHORIZED" },
+          401 as any,
+        );
+      }
+
+      const { verifySolanaSignature, isValidSolanaAddress } = await import(
+        "../../../lib/payments/solana-signature.js"
+      );
+      if (!isValidSolanaAddress(normalizedAddress)) {
+        return c.json(
+          { ok: false, error: "Invalid Solana address", code: "BAD_REQUEST" },
+          400 as any,
+        );
+      }
+      const signatureValid = verifySolanaSignature({
+        message: expectedMessage,
+        signatureBase58: signature,
+        address: normalizedAddress,
+      });
+      if (!signatureValid) {
+        return c.json(
+          { ok: false, error: "Invalid signature", code: "UNAUTHORIZED" },
+          401 as any,
+        );
+      }
+
+      const walletOwner = await db.user.findUnique({
+        where: { solanaWalletAddress: normalizedAddress },
+        select: { id: true, email: true },
+      });
+
+      if (walletOwner && walletOwner.id !== session.userId) {
+        return c.json(
+          {
+            ok: false,
+            error: "This wallet is already linked to another account",
+            code: "CONFLICT",
+            maskedOwnerEmail: maskEmail(walletOwner.email ?? ""),
+          },
+          409 as any,
+        );
+      }
+
+      await db.user.update({
+        where: { id: session.userId },
+        data: { solanaWalletAddress: normalizedAddress },
       });
 
       return c.json({ ok: true, address: normalizedAddress });

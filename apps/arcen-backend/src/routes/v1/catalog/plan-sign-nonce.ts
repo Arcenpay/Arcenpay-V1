@@ -6,10 +6,15 @@ import {
   getContractAddresses,
   PlanFactoryABI,
   isEvmChain,
+  isStellarChainId,
+  isSolanaChainId,
   isValidAddressForChain,
   getStellarNetworkPassphrase,
   getStellarSorobanRpcUrl,
+  getSolanaRpcUrl,
 } from "@arcenpay/internal-core";
+import { encodeCreatePlan, encodeUpdatePlan, findPlanPda, findConfigPda, SYSTEM_PROGRAM_ID } from "@arcenpay/internal-core/solana";
+import { createHash } from "node:crypto";
 import { contract as stellarContract } from "@stellar/stellar-sdk";
 import { createResilientPublicClient } from "../../../config.js";
 import { resolvePlanNetwork } from "../../../lib/catalog/plan-network.js";
@@ -23,6 +28,19 @@ const NONCES_ABI = [
     type: "function",
   },
 ] as const;
+
+/**
+ * Deterministic on-chain plan id for a Solana catalog plan. The Solana program
+ * takes an explicit u64 `plan_id` (used as the PDA seed), so derive it from the
+ * plan's stable DB id. The sign bit is cleared so the value is always a safe
+ * positive integer.
+ */
+function deriveSolanaPlanId(planDbId: string): bigint {
+  const digest = createHash("sha256").update(planDbId).digest();
+  let value = 0n;
+  for (let i = 0; i < 8; i += 1) value = (value << 8n) | BigInt(digest[i]);
+  return value & 0x7fffffffffffffffn;
+}
 
 export async function getPlanSignNonce(c: Context) {
   const auth = await requirePermission(c, "catalog:read");
@@ -56,7 +74,9 @@ export async function getPlanSignNonce(c: Context) {
   const chainId = resolvedNetwork.chainId;
   const providerAddress = isEvmChain(chainId)
     ? auth.team.walletAddress
-    : auth.team.stellarWalletAddress;
+    : isSolanaChainId(chainId)
+      ? auth.team.solanaWalletAddress
+      : auth.team.stellarWalletAddress;
 
   if (!providerAddress || !isValidAddressForChain(providerAddress, chainId)) {
     return c.json(
@@ -83,6 +103,99 @@ export async function getPlanSignNonce(c: Context) {
     planFactoryAddress === "0x0000000000000000000000000000000000000000"
   ) {
     return c.json({ error: "PlanFactory not deployed on this chain" }, 503 as any);
+  }
+
+  // ── Solana path ───────────────────────────────────────────────────────────
+  if (isSolanaChainId(chainId)) {
+    const programId = planFactoryAddress;
+    const rpcUrl = getSolanaRpcUrl(chainId);
+    if (!rpcUrl) {
+      return c.json(
+        { error: "Solana RPC URL is not configured for this chain." },
+        503 as any,
+      );
+    }
+
+    const priceMicros = BigInt(
+      Math.round(parseFloat(plan.price.toString()) * 1_000_000),
+    );
+    if (priceMicros <= 0n) {
+      return c.json(
+        {
+          error:
+            "Free plans cannot be registered on-chain. The Solana program requires price > 0.",
+        },
+        400 as any,
+      );
+    }
+
+    const onChainPlanId = plan.onChainPlanId
+      ? BigInt(plan.onChainPlanId)
+      : deriveSolanaPlanId(plan.id);
+    const signatureMode: "create" | "update" = plan.onChainPlanId
+      ? "update"
+      : "create";
+
+    const [configPda] = findConfigPda(programId);
+    const [planPda] = findPlanPda(programId, onChainPlanId);
+
+    // Idempotency: a previous attempt may have created the plan account on-chain
+    // without the catalog recording `onChainPlanId` (e.g. the confirmation call
+    // failed). Since the id is derived deterministically from the plan, re-issuing
+    // `create` would hit "account already in use" on every retry — forever. Detect
+    // the existing PDA, persist the id, and switch to an update instead.
+    let effectiveSignatureMode: "create" | "update" = signatureMode;
+    if (signatureMode === "create" && rpcUrl) {
+      try {
+        const { Connection } = await import("@solana/web3.js");
+        const connection = new Connection(rpcUrl, "confirmed");
+        const existing = await connection.getAccountInfo(planPda, "confirmed");
+        if (existing) {
+          await db.catalogPlan.update({
+            where: { id: plan.id },
+            data: { onChainPlanId: onChainPlanId.toString() },
+          });
+          effectiveSignatureMode = "update";
+        }
+      } catch {
+        // RPC unavailable — fall through and attempt `create` as before.
+      }
+    }
+
+    const keys =
+      effectiveSignatureMode === "create"
+        ? [
+            { pubkey: configPda.toBase58(), isSigner: false, isWritable: false },
+            { pubkey: providerAddress, isSigner: true, isWritable: true },
+            { pubkey: planPda.toBase58(), isSigner: false, isWritable: true },
+            { pubkey: SYSTEM_PROGRAM_ID.toBase58(), isSigner: false, isWritable: false },
+          ]
+        : [
+            { pubkey: planPda.toBase58(), isSigner: false, isWritable: true },
+            { pubkey: providerAddress, isSigner: true, isWritable: false },
+          ];
+
+    const data =
+      effectiveSignatureMode === "create"
+        ? encodeCreatePlan(
+            onChainPlanId,
+            priceMicros,
+            plan.billingInterval,
+            plan.acceptedToken,
+          )
+        : encodeUpdatePlan(priceMicros, plan.billingInterval, true);
+
+    return c.json({
+      chainId,
+      programId,
+      providerAddress,
+      userAddress: providerAddress,
+      signingRequired: true,
+      signatureMode: effectiveSignatureMode,
+      rpcUrl,
+      planId: onChainPlanId.toString(),
+      instruction: { keys, data: data.toString("base64") },
+    });
   }
 
   if (!isEvmChain(chainId)) {

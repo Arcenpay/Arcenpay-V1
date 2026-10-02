@@ -4,6 +4,7 @@ import { authEmailStartProtect, arcjetNodeRequest } from "../../../lib/auth/arcj
 import {
   EMAIL_AUTH_PURPOSE_LOGIN,
   EMAIL_AUTH_RESEND_COOLDOWN_MS,
+  WALLET_ADDRESS_REGEX,
   findWalletConflict,
   findEmailWalletConflict,
   getLatestActiveEmailCode,
@@ -11,11 +12,6 @@ import {
   issueEmailAuthCode,
   normalizeEmail,
 } from "../../../lib/auth/auth-flow.js";
-
-// Accepts both EVM (0x + 40 hex) and Stellar (G + 55 base32, C + 55, or 64-hex)
-// wallet addresses. Lowercasing is applied later only for EVM addresses.
-const WALLET_ADDRESS_REGEX =
-  /^(0x[a-fA-F0-9]{40}|G[A-Z2-7]{55}|C[A-Z0-9]{55}|[A-Fa-f0-9]{64})$/;
 
 const Schema = z.object({
   email: z.string().email(),
@@ -59,6 +55,14 @@ export async function startEmail(c: Context) {
     return c.json({ ok: false, error: "Too many verification attempts. Please wait and try again.", code: "RATE_LIMITED" }, 429 as any);
   }
 
+  // Set when this email already has a DIFFERENT wallet linked. The user is
+  // legitimately adding another chain family's wallet to their existing
+  // account, so we surface it (for the onboarding confirmation) rather than
+  // hard-blocking. Proving the email code + signing with the new wallet is what
+  // authorizes the link; the hard block is reserved for a wallet that already
+  // belongs to a *different* account (checked above).
+  let existingAccountWallet: string | null = null;
+
   if (parsed.data.walletAddress) {
     const conflict = await findWalletConflict(parsed.data.walletAddress, email);
     if (conflict.conflict) {
@@ -72,12 +76,7 @@ export async function startEmail(c: Context) {
 
     const emailConflict = await findEmailWalletConflict(email, parsed.data.walletAddress);
     if (emailConflict.conflict) {
-      return c.json({
-          ok: false,
-          error: "This email is already linked to a different wallet. Please sign in with the wallet registered for this email.",
-          code: "CONFLICT",
-          ownerWallet: emailConflict.ownerWallet,
-        }, 409 as any);
+      existingAccountWallet = emailConflict.ownerWallet;
     }
   }
 
@@ -135,6 +134,12 @@ export async function startEmail(c: Context) {
     ok: true,
     expiresAt: issued.expiresAt.toISOString(),
     retryAt: issued.retryAt.toISOString(),
+    // Present when the email already has an account with a different wallet —
+    // the client uses this to confirm "you already have a workspace; link this
+    // new wallet to it?" instead of treating the user as brand new.
+    ...(existingAccountWallet
+      ? { existingAccountWallet, existingAccount: true }
+      : {}),
     ...(process.env.NODE_ENV !== "production" ? { debugCode: issued.code } : {}),
   });
 }

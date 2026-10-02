@@ -16,6 +16,7 @@
 
 import type { ContractAddresses } from './types';
 import {
+  CHAIN_FAMILY_METADATA,
   getChainFamily,
   isUnsetAddressForChain,
   unsetAddressForFamily,
@@ -25,6 +26,9 @@ import {
   STELLAR_MAINNET_CHAIN_ID,
   STELLAR_TESTNET_CHAIN_ID,
   STELLAR_FUTURENET_CHAIN_ID,
+  SOLANA_MAINNET_CHAIN_ID,
+  SOLANA_DEVNET_CHAIN_ID,
+  SOLANA_TESTNET_CHAIN_ID,
 } from './chain-family';
 
 // --- Contract Addresses per Chain ---
@@ -127,6 +131,41 @@ const ADDRESSES: Record<number, ContractAddresses> = {
     zkUsageVerifier: STELLAR_UNSET,
     mirrorRegistry: STELLAR_UNSET,
   },
+
+  // ── Solana ──
+  // Addresses hold base58 program ids. Deploy via env overrides
+  // (ARCENPAY_CONTRACT_<chainId>_<key>) or `setContractAddresses` after the
+  // Anchor program is deployed. Empty string is the family "unset" sentinel.
+  [SOLANA_MAINNET_CHAIN_ID]: {
+    subscriptionRegistry: "",
+    autopayModule: "",
+    planFactory: "",
+    feeCollector: "",
+    sessionVault: "",
+    zkUsageVerifier: "",
+    mirrorRegistry: "",
+  },
+  // ── Solana Devnet — synthetic chainId 9_100_001 ──
+  // Deployed 2026-09-30. The ArcenPay Anchor program serves all roles, so
+  // every slot holds the same program id.
+  [SOLANA_DEVNET_CHAIN_ID]: {
+    subscriptionRegistry: "D4ECHyomENvFHrdXWHcRncTwwQ1EQbyY4ga3CkcaYCP3",
+    autopayModule: "D4ECHyomENvFHrdXWHcRncTwwQ1EQbyY4ga3CkcaYCP3",
+    planFactory: "D4ECHyomENvFHrdXWHcRncTwwQ1EQbyY4ga3CkcaYCP3",
+    feeCollector: "D4ECHyomENvFHrdXWHcRncTwwQ1EQbyY4ga3CkcaYCP3",
+    sessionVault: "D4ECHyomENvFHrdXWHcRncTwwQ1EQbyY4ga3CkcaYCP3",
+    zkUsageVerifier: "D4ECHyomENvFHrdXWHcRncTwwQ1EQbyY4ga3CkcaYCP3",
+    mirrorRegistry: "D4ECHyomENvFHrdXWHcRncTwwQ1EQbyY4ga3CkcaYCP3",
+  },
+  [SOLANA_TESTNET_CHAIN_ID]: {
+    subscriptionRegistry: "",
+    autopayModule: "",
+    planFactory: "",
+    feeCollector: "",
+    sessionVault: "",
+    zkUsageVerifier: "",
+    mirrorRegistry: "",
+  },
 };
 
 const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
@@ -185,10 +224,12 @@ function isAcceptableAddressForFamily(
   family: ChainFamily | null,
 ): boolean {
   if (!value) return false;
-  if (family === 'evm') return value.startsWith('0x');
-  // Stellar and unknown families: accept any non-empty string; the empty
-  // string is the unset sentinel and is rejected by the truthiness check.
-  return value.length > 0;
+  // Unknown family: there is no pattern to validate against, so accept any
+  // non-empty override (the empty string is the unset sentinel).
+  if (!family) return true;
+  // Validate against the family's own address pattern — EVM 20-byte hex,
+  // Stellar G…/C…, Solana base58 — instead of accepting any non-empty string.
+  return new RegExp(CHAIN_FAMILY_METADATA[family].addressPattern).test(value);
 }
 
 /**

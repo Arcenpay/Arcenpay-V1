@@ -34,9 +34,10 @@ export function getFacilitatorRpcTransport(
   rpcUrl?: string,
   chainId: number = DEFAULT_CHAIN_ID,
 ): Transport {
-  // Stellar/Horizon URLs aren't viem transports. Return a no-op transport so
-  // createResilientFacilitatorClient can still hand back a stub client.
-  if (getChainFamily(chainId) === "stellar") return http("", { timeout: 1000 });
+  // Non-EVM endpoints (Horizon/Soroban, Solana JSON-RPC) aren't viem transports.
+  // Return a no-op transport so createResilientFacilitatorClient can still hand
+  // back a stub client.
+  if (getChainFamily(chainId) !== "evm") return http("", { timeout: 1000 });
 
   const httpOptions = {
     retryCount: 3,
@@ -80,7 +81,10 @@ export function createResilientFacilitatorClient(
   rpcUrl?: string,
   chainId: number = DEFAULT_CHAIN_ID,
 ): PublicClient {
-  if (getChainFamily(chainId) === "stellar") return createNoopClient();
+  // Non-EVM families (Stellar, Solana) have no viem Chain definition. Install a
+  // noop client that throws if any EVM-only code path touches it. Constructing
+  // a real viem client here would throw getChain() at boot.
+  if (getChainFamily(chainId) !== "evm") return createNoopClient();
   const chain = getChain(chainId);
   return createPublicClient({
     chain,

@@ -23,6 +23,8 @@ import {
   useDashboardWallet,
 } from "@/hooks/use-dashboard-wallet";
 import { useStellarWallet } from "@/hooks/use-stellar-wallet";
+import { useSolanaWallet } from "@/hooks/use-solana-wallet";
+import { SOLANA_DEVNET_CHAIN_ID } from "@/lib/default-chain";
 import { getOnboardingChainFamily, setOnboardingChainFamily } from "@/lib/onboarding-chain-family";
 import { getChainFamily } from "@arcenpay/internal-core";
 import { toast } from "sonner";
@@ -381,6 +383,25 @@ function StellarWalletConnect({ onLinked }: { onLinked: (address: string) => voi
           <Button className="w-full h-11 bg-brand hover:bg-brand-dark text-primary-foreground" onClick={handleLink} disabled={isSigning}>
             {isSigning ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Signing...</> : <><Star className="w-4 h-4 mr-2" />Sign &amp; Link Stellar Wallet</>}
           </Button>
+          <div className="flex items-center gap-4 text-xs">
+            <button
+              type="button"
+              className="text-muted-foreground underline underline-offset-2 hover:text-foreground"
+              onClick={() => void wallet.disconnect()}
+            >
+              Disconnect
+            </button>
+            <button
+              type="button"
+              className="text-muted-foreground underline underline-offset-2 hover:text-foreground"
+              onClick={async () => {
+                await wallet.disconnect();
+                await wallet.connect();
+              }}
+            >
+              Use a different wallet
+            </button>
+          </div>
         </div>
       ) : (
         <>
@@ -407,7 +428,116 @@ function StellarWalletConnect({ onLinked }: { onLinked: (address: string) => voi
   );
 }
 
-// ── Main page — dispatches to EVM or Stellar ───────────────────────────────
+// ── Solana wallet section ───────────────────────────────────────────────────
+
+function SolanaWalletConnect({ onLinked }: { onLinked: (address: string) => void }) {
+  const wallet = useSolanaWallet(SOLANA_DEVNET_CHAIN_ID);
+  const [isSigning, setIsSigning] = useState(false);
+
+  const handleLink = async () => {
+    if (!wallet.address) { toast.error("Connect a Solana wallet first"); return; }
+    setIsSigning(true);
+    try {
+      const nonceRes = await apiFetch("/api/auth/nonce");
+      if (!nonceRes.ok) throw new Error("Failed to get nonce");
+      const { nonce, issuedAt } = await nonceRes.json();
+      // Must match the backend's expected message exactly (link-wallet.ts).
+      const message = `ArcenPay Solana Sign-In\n\nAddress: ${wallet.address}\nNonce: ${nonce}\nIssued At: ${issuedAt}\nDomain: ${window.location.host}`;
+      const { signedMessage } = await wallet.signMessage(message);
+
+      const res = await apiFetch("/api/auth/link-wallet", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message,
+          signature: signedMessage,
+          address: wallet.address,
+          chainId: SOLANA_DEVNET_CHAIN_ID,
+          nonce,
+        }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || "Failed to link wallet");
+      }
+      setOnboardingChainFamily("solana");
+      toast.success("Solana wallet linked");
+      onLinked(wallet.address);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Something went wrong";
+      toast.error(msg.includes("rejected") || msg.includes("denied") ? "Signature cancelled" : msg);
+    } finally { setIsSigning(false); }
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="space-y-4">
+        <h2 className="text-lg font-medium text-foreground">Connect your Solana wallet</h2>
+        <p className="text-sm text-muted-foreground leading-relaxed">
+          Connect Phantom or Solflare to manage on-chain subscriptions on Solana.
+        </p>
+      </div>
+
+      {wallet.isConnected && wallet.address ? (
+        <div className="space-y-4">
+          <div className="p-4 rounded-xl bg-brand/5 border border-brand/20">
+            <div className="flex items-center gap-3">
+              <CheckCircle2 className="w-5 h-5 text-brand shrink-0" />
+              <div>
+                <p className="text-sm font-medium text-foreground">Connected</p>
+                <code className="text-xs font-mono text-muted-foreground break-all">{wallet.address}</code>
+              </div>
+            </div>
+          </div>
+          <Button className="w-full h-11 bg-brand hover:bg-brand-dark text-primary-foreground" onClick={handleLink} disabled={isSigning}>
+            {isSigning ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Signing...</> : <>Sign &amp; Link Solana Wallet</>}
+          </Button>
+          <div className="flex items-center gap-4 text-xs">
+            <button
+              type="button"
+              className="text-muted-foreground underline underline-offset-2 hover:text-foreground"
+              onClick={() => void wallet.disconnect()}
+            >
+              Disconnect
+            </button>
+            <button
+              type="button"
+              className="text-muted-foreground underline underline-offset-2 hover:text-foreground"
+              onClick={async () => {
+                await wallet.disconnect();
+                await wallet.connect();
+              }}
+            >
+              Use a different wallet
+            </button>
+          </div>
+        </div>
+      ) : (
+        <>
+          <button
+            type="button"
+            className="h-12 w-full bg-brand hover:bg-brand-dark text-primary-foreground rounded-lg flex items-center justify-center gap-2 font-medium"
+            onClick={() => void wallet.connect()}
+            disabled={wallet.isLoading}
+          >
+            {wallet.isLoading ? (
+              <><Loader2 className="h-4 w-4 animate-spin" />Connecting...</>
+            ) : (
+              <><Wallet className="h-4 w-4" />Connect Solana wallet</>
+            )}
+          </button>
+          {wallet.error && (
+            <div className="p-3 rounded-lg bg-red-50 text-red-700 text-xs">{wallet.error}</div>
+          )}
+        </>
+      )}
+
+      <p className="text-xs text-muted-foreground">Solana message signing — free, no transaction fee.</p>
+    </div>
+  );
+}
+
+// ── Main page — dispatches to EVM, Stellar or Solana ───────────────────────
 
 export default function ConnectWalletPage() {
   const router = useRouter();
@@ -421,7 +551,11 @@ export default function ConnectWalletPage() {
       .then((data) => {
         const wallet = data?.storedWallet ?? null;
         setStoredWallet(wallet);
-        if (data?.chainFamily === "evm" || data?.chainFamily === "stellar") {
+        if (
+          data?.chainFamily === "evm" ||
+          data?.chainFamily === "stellar" ||
+          data?.chainFamily === "solana"
+        ) {
           setFamily(data.chainFamily);
           setOnboardingChainFamily(data.chainFamily);
         } else if (wallet?.startsWith("0x")) {
@@ -430,6 +564,10 @@ export default function ConnectWalletPage() {
         } else if (wallet?.startsWith("G")) {
           setFamily("stellar");
           setOnboardingChainFamily("stellar");
+        } else if (wallet) {
+          // base58, non-`G…` → Solana address.
+          setFamily("solana");
+          setOnboardingChainFamily("solana");
         }
       })
       .catch(() => setStoredWallet(null));
@@ -463,25 +601,48 @@ export default function ConnectWalletPage() {
     void routeAfterWalletLink();
   };
 
+  const handleSolanaLinked = (_addr: string) => {
+    void routeAfterWalletLink();
+  };
+
+  const stepTitle =
+    family === "evm"
+      ? "Connect EVM Wallet"
+      : family === "solana"
+        ? "Connect Solana Wallet"
+        : "Connect Stellar Wallet";
+
   return (
     <OnboardingShell
       step={2}
-      stepTitle={family === "evm" ? "Connect EVM Wallet" : "Connect Stellar Wallet"}
+      stepTitle={stepTitle}
       stepDescription="Link your wallet to continue."
     >
       <div className="max-w-lg">
         <div className="mb-6 sm:mb-10">
           <h1 className="text-2xl sm:text-[28px] font-semibold text-foreground tracking-tight">
-            {family === "evm" ? "Link Your EVM Wallet" : "Link Your Stellar Wallet"}
+            {family === "evm"
+              ? "Link Your EVM Wallet"
+              : family === "solana"
+                ? "Link Your Solana Wallet"
+                : "Link Your Stellar Wallet"}
           </h1>
           <p className="text-sm sm:text-base text-muted-foreground mt-2 sm:mt-3 leading-relaxed">
             {family === "evm"
               ? `Link an owner address for on-chain settlements. Supported: ${SUPPORTED_WALLET_CHAIN_LABEL}.`
-              : "Connect your Freighter wallet to manage Stellar subscriptions."}
+              : family === "solana"
+                ? "Connect Phantom or Solflare to manage Solana subscriptions."
+                : "Connect your Freighter wallet to manage Stellar subscriptions."}
           </p>
         </div>
 
-        {family === "evm" ? <EvmWalletConnect /> : <StellarWalletConnect onLinked={handleStellarLinked} />}
+        {family === "evm" ? (
+          <EvmWalletConnect />
+        ) : family === "solana" ? (
+          <SolanaWalletConnect onLinked={handleSolanaLinked} />
+        ) : (
+          <StellarWalletConnect onLinked={handleStellarLinked} />
+        )}
 
         <div className="pt-8 border-t border-border mt-10 flex items-center justify-between text-xs text-muted-foreground">
           <span className="flex items-center gap-1.5">
