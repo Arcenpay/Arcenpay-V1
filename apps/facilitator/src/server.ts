@@ -1110,14 +1110,17 @@ jobQueue.startWorker<BillingEventJobPayload | SubscriptionSyncJobPayload>(
         `[Facilitator] Dispatching billing event ${payload.eventType} (${payload.idempotencyKey}) — teamId=${teamId ?? "null"}, onChainPlanId=${payload.onChainPlanId ?? "null"}`,
       );
       const requestPayload = await buildBillingEventRequest(payload);
-      const ok = await postToDashboard(
+      const post = await postToDashboard(
         "/api/v1/billing/events",
         requestPayload,
       );
-      if (!ok) {
+      if (!post.ok) {
         console.error(
-          `[Facilitator] Billing event FAILED: ${payload.eventType} (${payload.idempotencyKey}) — teamId=${requestPayload.teamId}`,
+          `[Facilitator] Billing event FAILED: ${payload.eventType} (${payload.idempotencyKey}) — teamId=${requestPayload.teamId} (HTTP ${post.status ?? "network"})`,
         );
+        // A permanent 4xx will never succeed; re-queueing it 4x only floods the
+        // logs and the database. Drop it (the backend already rejected it).
+        if (post.permanent) return;
         throw new Error(
           `Dashboard POST /api/billing/events returned non-2xx for event ${payload.idempotencyKey}`,
         );
@@ -1132,12 +1135,18 @@ jobQueue.startWorker<BillingEventJobPayload | SubscriptionSyncJobPayload>(
       const requestPayload = await buildSubscriptionSyncRequest(
         job.payload as SubscriptionSyncJobPayload,
       );
-      const ok = await postToDashboard(
+      const post = await postToDashboard(
         "/api/v1/internal/companies/sync-subscription",
         requestPayload,
         { method: "PATCH" },
       );
-      if (!ok) {
+      if (!post.ok) {
+        console.error(
+          `[Facilitator] Subscription sync FAILED: ${(job.payload as SubscriptionSyncJobPayload).event} (HTTP ${post.status ?? "network"})`,
+        );
+        // The backend rejected the payload itself (e.g. no CatalogPlan matches
+        // this on-chain plan id any more). Retrying cannot fix that.
+        if (post.permanent) return;
         throw new Error(
           "Dashboard POST /api/internal/companies/sync-subscription returned non-2xx",
         );
@@ -1158,11 +1167,18 @@ jobQueue.startWorker<{ pathname: string; payload: unknown }>(
   async (job) => {
     if (!DASHBOARD_URL) return;
     const { pathname, payload } = job.payload;
-    const ok = await postToDashboard(pathname, payload);
-    if (!ok)
+    const post = await postToDashboard(pathname, payload);
+    if (!post.ok) {
+      if (post.permanent) {
+        console.error(
+          `[Facilitator] Webhook delivery rejected permanently: ${pathname} (HTTP ${post.status})`,
+        );
+        return;
+      }
       throw new Error(
         `Dashboard webhook delivery to ${pathname} returned non-2xx`,
       );
+    }
   },
 );
 
@@ -1404,11 +1420,27 @@ const billingBridgeStats: {
   lastError: null,
 };
 
+interface DashboardPostResult {
+  ok: boolean;
+  status: number | null;
+  /**
+   * True when the request can never succeed (a 4xx). The backend is telling us
+   * the payload itself is wrong — e.g. an event whose plan no longer exists —
+   * so retrying with backoff only floods the logs and the queue.
+   * 408/429 are excluded: those are transient by definition.
+   */
+  permanent: boolean;
+}
+
+function isPermanentFailure(status: number): boolean {
+  return status >= 400 && status < 500 && status !== 408 && status !== 429;
+}
+
 async function postToDashboard(
   pathname: string,
   payload: unknown,
   options?: { method?: "POST" | "PATCH" },
-): Promise<boolean> {
+): Promise<DashboardPostResult> {
   // Post to the BACKEND directly, not the public dashboard origin.
   //
   // DASHBOARD_URL is a public origin, so routing every billing event, sync and
@@ -1424,7 +1456,8 @@ async function postToDashboard(
     console.warn(
       `[Facilitator] Cannot post ${pathname} — neither INTERNAL_API_BASE_URL nor DASHBOARD_URL is configured.`,
     );
-    return false;
+    // Misconfiguration: retrying will not fix it.
+    return { ok: false, status: null, permanent: true };
   }
   try {
     const headers: Record<string, string> = {
@@ -1441,12 +1474,16 @@ async function postToDashboard(
     if (!response.ok) {
       billingBridgeStats.failed += 1;
       billingBridgeStats.lastError = `HTTP ${response.status}`;
-      return false;
+      return {
+        ok: false,
+        status: response.status,
+        permanent: isPermanentFailure(response.status),
+      };
     }
     billingBridgeStats.sent += 1;
     billingBridgeStats.lastSentAt = new Date().toISOString();
     billingBridgeStats.lastError = null;
-    return true;
+    return { ok: true, status: response.status, permanent: false };
   } catch (err) {
     billingBridgeStats.failed += 1;
     billingBridgeStats.lastError =
@@ -1455,7 +1492,8 @@ async function postToDashboard(
       `[Facilitator] Failed posting to dashboard ${pathname}:`,
       err,
     );
-    return false;
+    // Network/transport error — transient, worth retrying.
+    return { ok: false, status: null, permanent: false };
   }
 }
 
