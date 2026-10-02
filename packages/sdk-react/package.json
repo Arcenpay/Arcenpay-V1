@@ -59,7 +59,8 @@
     "dev": "npx tsup src/index.ts src/smart-account.ts src/bundler.ts --clean --format cjs,esm --dts --external react --external permissionless --watch",
     "test": "vitest run",
     "typecheck": "tsc --noEmit --skipLibCheck",
-    "clean": "rm -rf dist"
+    "clean": "rm -rf dist",
+    "prepublishOnly": "npm run build"
   },
   "peerDependencies": {
     "react": "^18.0.0 || ^19.0.0",

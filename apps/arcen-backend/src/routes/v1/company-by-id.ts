@@ -34,9 +34,18 @@ export async function GET(c: Context) {
 
   const id = c.req.param("id");
   const { teamId } = ctx;
-  const environmentFilter = ctx.activeEnvironmentId
-    ? await getCompanyEnvironmentWhere(ctx.activeEnvironmentId)
-    : null;
+  // Fail CLOSED. Previously a null environment dropped the filter entirely
+  // (`: null` merged into the where-clause as nothing), which let this read
+  // companies from EVERY environment of the team. A request with no resolved
+  // environment must be refused, never widened.
+  const environmentId = ctx.activeEnvironmentId;
+  if (!environmentId) {
+    return c.json(
+      { ok: false, error: "No environment selected.", code: "ENVIRONMENT_REQUIRED" },
+      400 as any,
+    );
+  }
+  const environmentFilter = await getCompanyEnvironmentWhere(environmentId);
 
   const company = await db.arcenCompany.findFirst({
     where: { id, teamId, ...(environmentFilter ?? {}) },
@@ -155,9 +164,18 @@ export async function PATCH(c: Context) {
 
   const id = c.req.param("id");
   const { teamId } = ctx;
-  const environmentFilter = ctx.activeEnvironmentId
-    ? await getCompanyEnvironmentWhere(ctx.activeEnvironmentId)
-    : null;
+  // Fail CLOSED. Previously a null environment dropped the filter entirely
+  // (`: null` merged into the where-clause as nothing), which let this read
+  // companies from EVERY environment of the team. A request with no resolved
+  // environment must be refused, never widened.
+  const environmentId = ctx.activeEnvironmentId;
+  if (!environmentId) {
+    return c.json(
+      { ok: false, error: "No environment selected.", code: "ENVIRONMENT_REQUIRED" },
+      400 as any,
+    );
+  }
+  const environmentFilter = await getCompanyEnvironmentWhere(environmentId);
 
   let body: {
     name?: string;
@@ -223,9 +241,18 @@ export async function DELETE(c: Context) {
 
   const id = c.req.param("id");
   const { teamId } = ctx;
-  const environmentFilter = ctx.activeEnvironmentId
-    ? await getCompanyEnvironmentWhere(ctx.activeEnvironmentId)
-    : null;
+  // Fail CLOSED. Previously a null environment dropped the filter entirely
+  // (`: null` merged into the where-clause as nothing), which let this read
+  // companies from EVERY environment of the team. A request with no resolved
+  // environment must be refused, never widened.
+  const environmentId = ctx.activeEnvironmentId;
+  if (!environmentId) {
+    return c.json(
+      { ok: false, error: "No environment selected.", code: "ENVIRONMENT_REQUIRED" },
+      400 as any,
+    );
+  }
+  const environmentFilter = await getCompanyEnvironmentWhere(environmentId);
 
   const company = await db.arcenCompany.findFirst({
     where: { id, teamId, ...(environmentFilter ?? {}) },

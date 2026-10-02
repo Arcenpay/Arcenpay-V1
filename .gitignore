@@ -77,3 +77,7 @@ test-ledger/
 
 # Scratch files from ops/agent sessions
 .tmp-*
+
+# --- production demo (uses published npm SDKs; never commit its .env) ---
+prod-demo/
+
