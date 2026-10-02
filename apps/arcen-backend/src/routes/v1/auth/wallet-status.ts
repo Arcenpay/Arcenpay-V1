@@ -8,22 +8,36 @@ export async function walletStatus(c: Context) {
     return c.json({ ok: false, error: "Unauthorized", code: "UNAUTHORIZED" }, 401 as any);
   }
 
+  const requestedFamily = c.req.query("family")?.toLowerCase();
+
   const user = await db.user.findUnique({
     where: { id: session.userId },
     select: { walletAddress: true, stellarWalletAddress: true, solanaWalletAddress: true },
   });
 
-  const chainFamily = user?.walletAddress
-    ? "evm"
-    : user?.stellarWalletAddress
-      ? "stellar"
-      : user?.solanaWalletAddress
-        ? "solana"
-        : null;
+  const walletForFamily =
+    requestedFamily === "solana"
+      ? user?.solanaWalletAddress
+      : requestedFamily === "stellar"
+        ? user?.stellarWalletAddress
+        : requestedFamily === "evm"
+          ? user?.walletAddress
+          : null;
+
+  const chainFamily = requestedFamily && walletForFamily
+    ? requestedFamily
+    : user?.walletAddress
+      ? "evm"
+      : user?.stellarWalletAddress
+        ? "stellar"
+        : user?.solanaWalletAddress
+          ? "solana"
+          : null;
 
   return c.json({
     storedWallet:
-      user?.walletAddress ?? user?.stellarWalletAddress ?? user?.solanaWalletAddress ?? null,
+      walletForFamily ??
+      (requestedFamily ? null : user?.walletAddress ?? user?.stellarWalletAddress ?? user?.solanaWalletAddress ?? null),
     walletAddress: user?.walletAddress ?? null,
     stellarWalletAddress: user?.stellarWalletAddress ?? null,
     solanaWalletAddress: user?.solanaWalletAddress ?? null,

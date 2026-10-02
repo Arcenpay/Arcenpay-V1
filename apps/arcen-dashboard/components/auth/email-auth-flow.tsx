@@ -305,6 +305,15 @@ export function EmailAuthFlow({
                 body: JSON.stringify({ name, mode: "DEVELOPMENT", chainId }),
               });
               if (createRes.ok) {
+                const envPayload = await createRes.json().catch(() => ({}));
+                const newEnvId = envPayload?.environment?.id;
+                if (newEnvId) {
+                  await apiFetch("/api/environments/select", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ environmentId: newEnvId }),
+                  }).catch(() => {});
+                }
                 window.location.href = "/";
                 return;
               }

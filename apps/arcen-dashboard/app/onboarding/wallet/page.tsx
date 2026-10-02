@@ -82,6 +82,15 @@ const routeAfterWalletLink = async () => {
               body: JSON.stringify({ name, mode: "DEVELOPMENT", chainId }),
             });
             if (createRes.ok) {
+              const envPayload = await createRes.json().catch(() => ({}));
+              const newEnvId = envPayload?.environment?.id;
+              if (newEnvId) {
+                await apiFetch("/api/environments/select", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ environmentId: newEnvId }),
+                }).catch(() => {});
+              }
               window.location.href = "/";
               return;
             }
@@ -592,11 +601,19 @@ export default function ConnectWalletPage() {
 
   // Check if wallet is already linked (skip chain-family choice for existing users)
   useEffect(() => {
-    apiFetch("/api/auth/wallet-status")
+    const chosenFamily = getOnboardingChainFamily();
+    const url = chosenFamily ? `/api/auth/wallet-status?family=${chosenFamily}` : "/api/auth/wallet-status";
+    apiFetch(url)
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         const wallet = data?.storedWallet ?? null;
         setStoredWallet(wallet);
+        // If the user already selected a chain family in onboarding, preserve it!
+        const explicitlyChosen = getOnboardingChainFamily();
+        if (explicitlyChosen) {
+          setFamily(explicitlyChosen);
+          return;
+        }
         if (
           data?.chainFamily === "evm" ||
           data?.chainFamily === "stellar" ||

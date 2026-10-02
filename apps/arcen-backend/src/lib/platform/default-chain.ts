@@ -24,9 +24,10 @@ export const TESTNET_CHAIN_IDS = [
   STELLAR_FUTURENET_CHAIN_ID,
   SOLANA_DEVNET_CHAIN_ID,
 ] as const;
-// Production environments support BOT Chain Mainnet and Solana Mainnet Beta.
+// Production environments support BOT Chain Mainnet, Stellar Mainnet, and Solana Mainnet Beta.
 export const MAINNET_CHAIN_IDS = [
   BOT_MAINNET_CHAIN_ID,
+  STELLAR_MAINNET_CHAIN_ID,
   SOLANA_MAINNET_CHAIN_ID,
 ] as const;
 

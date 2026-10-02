@@ -270,7 +270,7 @@ export const CHAIN_REGISTRY: Record<number, ChainDescriptor> = {
   // endpoint required for contract getEvents / simulate / send.
   [STELLAR_MAINNET_CHAIN_ID]: {
     chainId: STELLAR_MAINNET_CHAIN_ID,
-    name: "Stellar",
+    name: "Stellar Mainnet",
     family: "stellar",
     testnet: false,
     networkPassphrase: "Public Global Stellar Network ; September 2015",
@@ -311,7 +311,7 @@ export const CHAIN_REGISTRY: Record<number, ChainDescriptor> = {
   // USDC is the Circle SPL mint registered in chains.ts TOKENS.
   [SOLANA_MAINNET_CHAIN_ID]: {
     chainId: SOLANA_MAINNET_CHAIN_ID,
-    name: "Solana",
+    name: "Solana Mainnet",
     family: "solana",
     testnet: false,
     networkPassphrase: null,

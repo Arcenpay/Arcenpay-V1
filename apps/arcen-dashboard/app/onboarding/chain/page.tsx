@@ -162,7 +162,7 @@ export default function ChainFamilyPage() {
                   Phantom or Solflare.
                 </p>
                 <div className="flex flex-wrap gap-1.5 mt-3">
-                  {["Solana Devnet", "Solana Mainnet (soon)"].map((c) => (
+                  {["Solana Devnet", "Solana Mainnet"].map((c) => (
                     <span
                       key={c}
                       className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground font-medium"

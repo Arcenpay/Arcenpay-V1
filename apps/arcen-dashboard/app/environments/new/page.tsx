@@ -415,9 +415,6 @@ export default function NewEnvironmentPage() {
                 onValueChange={(value) => {
                   const newMode = value as EnvironmentMode;
                   setMode(newMode);
-                  if (newMode === "PRODUCTION") {
-                    setChainFamily("evm");
-                  }
                 }}
               >
                 <SelectTrigger id="environment-type" className="bg-background border-input text-foreground h-11 focus:ring-brand">
@@ -462,16 +459,16 @@ export default function NewEnvironmentPage() {
                       EVM (BOT Chain, Base, Arc, Ethereum)
                     </span>
                   </SelectItem>
-                  <SelectItem value="stellar" disabled={mode === "PRODUCTION"}>
+                  <SelectItem value="stellar">
                     <span className="flex items-center gap-2">
                       <NetworkIcon name="stellar" variant="branded" size={18} className="rounded-full bg-white dark:bg-white p-px" />
-                      Stellar (Soroban){mode === "PRODUCTION" ? " — Mainnet coming soon" : ""}
+                      Stellar (Soroban)
                     </span>
                   </SelectItem>
-                  <SelectItem value="solana" disabled={mode === "PRODUCTION"}>
+                  <SelectItem value="solana">
                     <span className="flex items-center gap-2">
                       <NetworkIcon name="solana" variant="branded" size={18} className="rounded-full bg-white dark:bg-white p-px" />
-                      Solana (Anchor){mode === "PRODUCTION" ? " — Mainnet coming soon" : ""}
+                      Solana (Anchor)
                     </span>
                   </SelectItem>
                 </SelectContent>
