@@ -1,6 +1,7 @@
 import React from "react";
 import type { Metadata } from "next";
 import { headers } from "next/headers";
+import { GoogleAnalytics } from "@/components/analytics/google-analytics";
 import { DashboardStructuredData } from "@/components/seo/dashboard-structured-data";
 import { Web3Provider } from "@/components/providers/web3-provider";
 import { ThemeProvider } from "@/components/theme-provider";
@@ -59,6 +60,7 @@ export default async function RootLayout({
       </head>
       <body className="font-sans antialiased" suppressHydrationWarning>
         <DashboardStructuredData />
+        <GoogleAnalytics />
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
