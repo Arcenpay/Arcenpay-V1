@@ -6,6 +6,11 @@ import { SIWE_JWT_SECRET, PLATFORM_ADMIN_SECRET, isPlatformAdminEmail } from "..
 import { isApiKeyToken } from "../lib/auth/api-key-auth.js";
 import { verifyFacilitatorToken } from "../lib/auth/facilitator-auth.js";
 import { secureCompare, readCookieValue } from "../lib/auth/secure-compare.js";
+import {
+  getCachedSession,
+  setCachedSession,
+  invalidateSessionCache,
+} from "../lib/auth/session-cache.js";
 
 const AUTH_COOKIE_NAME = "arcen_session";
 const ADMIN_SECRET_COOKIE_NAME = "arcen_admin_secret";
@@ -46,23 +51,36 @@ export async function resolveSession(c: Context): Promise<AuthSession | null> {
   const now = new Date();
   const tokenHash = hashAuthValue(token);
 
-  const record = await withPrismaReconnect((client) =>
-    client.authSession.findUnique({
-      where: { tokenHash },
-      include: {
-        user: {
-          select: {
-            id: true,
-            email: true,
-            currentTeamId: true,
-            walletAddress: true,
-            stellarWalletAddress: true,
-            solanaWalletAddress: true,
+  const loadSession = () =>
+    withPrismaReconnect((client) =>
+      client.authSession.findUnique({
+        where: { tokenHash },
+        include: {
+          user: {
+            select: {
+              id: true,
+              email: true,
+              currentTeamId: true,
+              walletAddress: true,
+              stellarWalletAddress: true,
+              solanaWalletAddress: true,
+            },
           },
         },
-      },
-    }),
-  );
+      }),
+    );
+  type SessionRecord = NonNullable<Awaited<ReturnType<typeof loadSession>>>;
+
+  // This lookup runs on EVERY authenticated request, so read through the cache.
+  // `getCachedSession` revives the date fields and returns null if anything is
+  // off — it can only ever produce a miss, never an incorrect pass.
+  let record: SessionRecord | null =
+    await getCachedSession<SessionRecord>(tokenHash);
+
+  if (!record) {
+    record = await loadSession();
+    if (record) await setCachedSession(tokenHash, record);
+  }
 
   if (!record || record.revokedAt || record.expiresAt <= now) {
     return null;
@@ -77,6 +95,9 @@ export async function resolveSession(c: Context): Promise<AuthSession | null> {
         data: { lastSeenAt: now, expiresAt },
       }),
     );
+    // The cached copy still holds the previous expiresAt; drop it so the
+    // sliding window is not silently shortened for this session.
+    await invalidateSessionCache(tokenHash);
 
     return {
       sessionId: record.id,
