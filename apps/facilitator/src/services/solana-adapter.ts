@@ -219,16 +219,45 @@ export class SolanaChainAdapter implements ChainAdapter {
 
   private async pollProgram(programId: string): Promise<void> {
     if (!this.connection) return;
-    const until = this.lastSignature.get(programId) ?? undefined;
+    const cursor = this.lastSignature.get(programId) ?? undefined;
 
     const signatures = await this.connection.getSignaturesForAddress(
       new PublicKey(programId),
-      { until, limit: 50 },
+      { until: cursor, limit: 50 },
       "confirmed",
     );
     if (signatures.length === 0) return;
 
-    // getSignaturesForAddress returns newest-first; process oldest-first.
+    // Cold start — no cursor yet.
+    //
+    // `getSignaturesForAddress` returns the NEWEST signatures when `until` is
+    // omitted, so an unguarded cold start re-reads the last ~50 transactions on
+    // every restart and re-emits every event in them: events already handled,
+    // and events that predate this deployment. That is the replay that floods
+    // the billing queue with jobs for plans the catalog no longer has.
+    //
+    // Adopt the current chain head as the cursor and skip that backlog. Set
+    // SOLANA_COLD_START_REPLAY=true to process it instead (useful after the
+    // facilitator has been down and you want the gap covered).
+    if (!cursor) {
+      this.lastSignature.set(programId, signatures[0].signature);
+      if (process.env.SOLANA_COLD_START_REPLAY === "true") {
+        for (const entry of [...signatures].reverse()) {
+          if (!entry.signature || this.seenSignatures.has(entry.signature)) continue;
+          this.seenSignatures.add(entry.signature);
+          await this.processTransaction(entry.signature, programId);
+        }
+      } else {
+        console.log(
+          `[SolanaChainAdapter] ${programId}: cold start — cursor set to ` +
+            `${signatures[0].signature}, skipping ${signatures.length} historical ` +
+            `transactions (set SOLANA_COLD_START_REPLAY=true to process them)`,
+        );
+      }
+      return;
+    }
+
+    // Warm poll — only genuinely new signatures, oldest-first.
     for (const entry of [...signatures].reverse()) {
       if (!entry.signature || this.seenSignatures.has(entry.signature)) continue;
       this.seenSignatures.add(entry.signature);

@@ -86,8 +86,18 @@ async function getPlanPeriodWindow(
   return getPeriodWindow("monthly");
 }
 
-// Simple in-process usage cache (30s TTL)
-const usageCache = new Map<string, { count: number; expiresAt: number }>();
+import { getRedis } from "../redis.js";
+
+// Usage cache (30s TTL).
+//
+// Redis-backed so every replica sees the same count and a restart does not throw
+// the cache away. Previously this was an in-process Map, which meant two backend
+// replicas could report DIFFERENT usage numbers for the same company — a
+// correctness bug, not just a speed-up. Falls back to in-process memory when
+// Redis is not configured.
+const USAGE_CACHE_PREFIX = "arcenpay:usage:";
+const USAGE_TTL_SECONDS = 30;
+const usageMemory = new Map<string, { count: number; expiresAt: number }>();
 
 export async function aggregateUsage(
   teamId: string,
@@ -96,8 +106,20 @@ export async function aggregateUsage(
   period: string = "monthly",
 ): Promise<number> {
   const cacheKey = `usage:${teamId}:${companyId}:${metricKey}:${period}`;
-  const cached = usageCache.get(cacheKey);
-  if (cached && Date.now() < cached.expiresAt) return cached.count;
+
+  const redis = getRedis();
+  if (redis) {
+    try {
+      const raw = await redis.get(USAGE_CACHE_PREFIX + cacheKey);
+      if (raw !== null) return Number(raw);
+    } catch (err) {
+      // Cache miss, not a failed request.
+      console.error("[event-aggregator] Redis read failed:", err);
+    }
+  } else {
+    const cached = usageMemory.get(cacheKey);
+    if (cached && Date.now() < cached.expiresAt) return cached.count;
+  }
 
   const normalizedPeriod = (() => {
     switch (period) {
@@ -126,7 +148,20 @@ export async function aggregateUsage(
     },
   });
 
-  usageCache.set(cacheKey, { count, expiresAt: Date.now() + 30_000 });
+  if (redis) {
+    try {
+      await redis.set(
+        USAGE_CACHE_PREFIX + cacheKey,
+        String(count),
+        "EX",
+        USAGE_TTL_SECONDS,
+      );
+    } catch (err) {
+      console.error("[event-aggregator] Redis write failed:", err);
+    }
+  } else {
+    usageMemory.set(cacheKey, { count, expiresAt: Date.now() + 30_000 });
+  }
   return count;
 }
 
@@ -134,7 +169,31 @@ export function invalidateUsageCache(teamId: string, companyId: string, metricKe
   const prefix = metricKey
     ? `usage:${teamId}:${companyId}:${metricKey}`
     : `usage:${teamId}:${companyId}`;
-  for (const key of usageCache.keys()) {
-    if (key.startsWith(prefix)) usageCache.delete(key);
+
+  for (const key of usageMemory.keys()) {
+    if (key.startsWith(prefix)) usageMemory.delete(key);
   }
+
+  // Signature stays `void` for existing callers; the Redis eviction is
+  // best-effort and must never fail a request.
+  const redis = getRedis();
+  if (!redis) return;
+  void (async () => {
+    try {
+      let cursor = "0";
+      do {
+        const [next, keys] = await redis.scan(
+          cursor,
+          "MATCH",
+          `${USAGE_CACHE_PREFIX}${prefix}*`,
+          "COUNT",
+          200,
+        );
+        cursor = next;
+        if (keys.length > 0) await redis.del(...keys);
+      } while (cursor !== "0");
+    } catch (err) {
+      console.error("[event-aggregator] Redis invalidation failed:", err);
+    }
+  })();
 }

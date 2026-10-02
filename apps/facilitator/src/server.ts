@@ -1109,7 +1109,23 @@ jobQueue.startWorker<BillingEventJobPayload | SubscriptionSyncJobPayload>(
       console.log(
         `[Facilitator] Dispatching billing event ${payload.eventType} (${payload.idempotencyKey}) — teamId=${teamId ?? "null"}, onChainPlanId=${payload.onChainPlanId ?? "null"}`,
       );
-      const requestPayload = await buildBillingEventRequest(payload);
+      // Resolving the team happens BEFORE the HTTP call, so an unresolvable
+      // plan never reaches postToDashboard()'s permanent/transient logic. The
+      // on-chain plan simply is not in our catalog (e.g. an event replayed from
+      // older devnet testing), so no amount of retrying will resolve a team.
+      let requestPayload;
+      try {
+        requestPayload = await buildBillingEventRequest(payload);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        if (message.includes("Unable to resolve teamId")) {
+          console.error(
+            `[Facilitator] Dropping unresolvable billing event ${payload.idempotencyKey} (onChainPlanId=${payload.onChainPlanId ?? "null"}): ${message}`,
+          );
+          return;
+        }
+        throw err;
+      }
       const post = await postToDashboard(
         "/api/v1/billing/events",
         requestPayload,
@@ -1132,9 +1148,21 @@ jobQueue.startWorker<BillingEventJobPayload | SubscriptionSyncJobPayload>(
     }
 
     if (job.type === "subscription_sync") {
-      const requestPayload = await buildSubscriptionSyncRequest(
-        job.payload as SubscriptionSyncJobPayload,
-      );
+      let requestPayload;
+      try {
+        requestPayload = await buildSubscriptionSyncRequest(
+          job.payload as SubscriptionSyncJobPayload,
+        );
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        if (message.includes("Unable to resolve teamId")) {
+          console.error(
+            `[Facilitator] Dropping unresolvable subscription sync: ${message}`,
+          );
+          return;
+        }
+        throw err;
+      }
       const post = await postToDashboard(
         "/api/v1/internal/companies/sync-subscription",
         requestPayload,

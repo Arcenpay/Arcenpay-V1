@@ -3641,6 +3641,28 @@ function PlansTable({
         tx.recentBlockhash = (
           await connection.getLatestBlockhash("confirmed")
         ).blockhash;
+
+        // A Solana account with zero lamports DOES NOT EXIST on-chain, so an
+        // unfunded wallet makes simulateTransaction fail with an opaque
+        // "AccountNotFound" that looks like a program bug. It is not: the wallet
+        // just needs SOL for the fee and the rent of the new plan account.
+        // Check first and say so plainly.
+        const walletBalance = await connection.getBalance(
+          new PublicKey(solana.address!),
+          "confirmed",
+        );
+        if (walletBalance === 0) {
+          const isDevnetRpc =
+            rpc.includes("devnet") || rpc.includes("localhost");
+          throw new Error(
+            `Your Solana wallet ${solana.address} has 0 SOL. It needs SOL to pay the transaction fee and the rent for the new plan account — ` +
+              `that is why the simulation reports AccountNotFound.` +
+              (isDevnetRpc
+                ? ` Fund it from the devnet faucet (https://faucet.solana.com) and retry.`
+                : ` Fund it, then retry.`),
+          );
+        }
+
         // Pre-flight: the program requires the connected wallet to sign as the
         // `provider` AND pay rent for the new plan account. If that simulation
         // fails, wallets only surface an opaque "User rejected" — so surface the
@@ -3654,10 +3676,29 @@ function PlansTable({
             solana.address &&
             instructionProvider &&
             solana.address !== instructionProvider;
+          // "AccountNotFound" alone names nothing, and the RPC often returns no
+          // program logs. Look up every account the instruction references and
+          // report exactly which one is missing on-chain — that is the only way
+          // to tell a missing provider PDA from a missing plan/config account.
+          let missing: string[] = [];
+          try {
+            const keys = instruction.keys.map((k) => new PublicKey(k.pubkey));
+            const infos = await connection.getMultipleAccountsInfo(keys);
+            missing = keys
+              .filter((_, i) => infos[i] === null)
+              .map((k) => k.toBase58());
+          } catch {
+            // Best effort — fall through to the plain error below.
+          }
+
           throw new Error(
             providerMismatch
               ? `Connected wallet ${solana.address} is not this environment's provider wallet ${instructionProvider}. Reconnect the linked Solana wallet to register plans on-chain.`
-              : `Solana simulation failed: ${JSON.stringify(simulation.value.err)}${logs ? ` — ${logs}` : ""}`,
+              : `Solana simulation failed: ${JSON.stringify(simulation.value.err)}` +
+                (missing.length
+                  ? ` — account does not exist on-chain: ${missing.join(", ")}`
+                  : "") +
+                (logs ? ` — ${logs}` : ""),
           );
         }
 
