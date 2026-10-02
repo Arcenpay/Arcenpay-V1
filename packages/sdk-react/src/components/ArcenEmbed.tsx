@@ -7421,6 +7421,111 @@ function PaymentContent({
     if (!rpcUrl) {
       throw new Error("No Solana RPC URL configured for this plan.");
     }
+
+    /**
+     * Recovers a prior successful `subscribe` for the subscription PDA encoded
+     * in the instruction (seeds `["subscription", token_id_le_u64]`). Used to
+     * finalize a subscription that was minted on-chain but never recorded
+     * off-chain (the retry otherwise fails with "already in use" forever).
+     */
+    async function recoverExistingSubscriptionTx(
+      connection: import("@solana/web3.js").Connection,
+      instructionData: Uint8Array,
+    ): Promise<string | null> {
+      try {
+        const { PublicKey } = await import("@solana/web3.js");
+        // Layout: [0..8) Anchor discriminator | [8..16) token_id (u64 LE) |
+        // [16..24) amount. The discriminator is sha256("global:subscribe")[0..8],
+        // so the token id starts at byte 8 — reading offset 0 would derive the
+        // wrong PDA and silently return null.
+        if (instructionData.byteLength < 16) return null;
+        const view = new DataView(
+          instructionData.buffer,
+          instructionData.byteOffset,
+          instructionData.byteLength,
+        );
+        const tokenId = view.getBigUint64(8, true);
+        const seed = new Uint8Array(8);
+        new DataView(seed.buffer).setBigUint64(0, tokenId, true);
+        const [subscriptionPda] = PublicKey.findProgramAddressSync(
+          [new TextEncoder().encode("subscription"), seed],
+          new PublicKey(params.programId),
+        );
+        const signatures = await connection.getSignaturesForAddress(
+          subscriptionPda,
+          { limit: 10 },
+        );
+        // The earliest successful signature is the one that minted it.
+        const minted = [...signatures].reverse().find((s) => !s.err);
+        return minted?.signature ?? null;
+      } catch {
+        return null;
+      }
+    }
+
+    // Pre-flight simulation. Without this, wallets only surface an opaque
+    // "transaction failed to simulate" and block submission, so the real
+    // program error (which account/constraint failed) is never visible.
+    try {
+      const { Connection, PublicKey, Transaction, TransactionInstruction } =
+        await import("@solana/web3.js");
+      const connection = new Connection(rpcUrl, "confirmed");
+      const instructionData = Uint8Array.from(
+        atob(params.instruction.data),
+        (c) => c.charCodeAt(0),
+      );
+      const tx = new Transaction().add(
+        new TransactionInstruction({
+          programId: new PublicKey(params.programId),
+          keys: params.instruction.keys.map((k) => ({
+            pubkey: new PublicKey(k.pubkey),
+            isSigner: k.isSigner,
+            isWritable: k.isWritable,
+          })),
+          // web3.js types `data` as Buffer; a Uint8Array is equivalent at
+          // runtime and avoids depending on Node's Buffer in the browser.
+          data: instructionData as unknown as Buffer,
+        }),
+      );
+      tx.feePayer = new PublicKey(solanaWallet.address);
+      tx.recentBlockhash = (
+        await connection.getLatestBlockhash("confirmed")
+      ).blockhash;
+      const simulation = await connection.simulateTransaction(tx);
+      if (simulation.value.err) {
+        const logs = (simulation.value.logs ?? []).join(" | ");
+
+        // Idempotency: the program `init`s the subscription PDA, so once a first
+        // attempt has created it on-chain a retry fails with "already in use" —
+        // even when the off-chain finalization never completed (which leaves the
+        // user paid but still on their old plan). Recover the original
+        // transaction and hand it to the backend so it can verify and finalize,
+        // instead of failing the user a second time.
+        if (logs.includes("already in use")) {
+          const recovered = await recoverExistingSubscriptionTx(
+            connection,
+            instructionData,
+          );
+          if (recovered) return { txHash: recovered };
+        }
+
+        throw new Error(
+          `Solana simulation failed: ${JSON.stringify(simulation.value.err)}${
+            logs ? ` — ${logs}` : ""
+          }`,
+        );
+      }
+    } catch (simErr) {
+      // Only surface genuine simulation failures; ignore RPC/environment errors
+      // so a flaky endpoint doesn't block a valid submission.
+      if (
+        simErr instanceof Error &&
+        simErr.message.startsWith("Solana simulation failed")
+      ) {
+        throw simErr;
+      }
+    }
+
     const signature = await solanaWallet.sendTransaction(
       params.programId,
       params.instruction,
@@ -8154,10 +8259,27 @@ function PaymentContent({
               });
               solanaTxHash = activationTx.txHash;
 
-              const next = await requestHostedActivation({
+              // Retry while the backend's RPC catches up with our own: the
+              // wallet already confirmed the tx, so a 425 here is propagation
+              // lag, NOT a failure. (Previously this threw on the first 425 and
+              // told a charged customer the payment had failed.)
+              let next = await requestHostedActivation({
                 ...body,
                 activationTxHash: solanaTxHash,
               });
+              for (
+                let attempt = 0;
+                !next.res.ok &&
+                [202, 409, 425, 500, 502, 503].includes(next.res.status) &&
+                attempt < 11;
+                attempt += 1
+              ) {
+                await sleep(3_000);
+                next = await requestHostedActivation({
+                  ...body,
+                  activationTxHash: solanaTxHash,
+                });
+              }
 
               if (!next.res.ok) {
                 throw new Error(next.json.error ?? `HTTP ${next.res.status}`);
@@ -8212,12 +8334,14 @@ function PaymentContent({
           setTxStatus("error");
           setTxError("Transaction cancelled");
         } else if (activationTx?.txHash) {
-          // Transaction was broadcast but confirmation polling failed — show pending
-          await onActivationComplete({
-            txHash: activationTx.txHash as `0x${string}`,
-            pending: true,
-            successMsg: "Subscription activation submitted. We're finalizing your billing state now.",
-          });
+          // The transaction was broadcast, but the follow-up confirmation step
+          // threw. Previously this reported a friendly "finalizing…" state,
+          // which hid genuine backend errors behind an implied success. Surface
+          // the actual reason so the failure is diagnosable.
+          setTxStatus("error");
+          setTxError(
+            `${msg} (transaction ${activationTx.txHash} was submitted)`,
+          );
         } else {
           // No transaction was broadcast — show the real error
           setTxStatus("error");
@@ -9799,6 +9923,43 @@ function UnsubscribeContent({
       setTxError(
         "Immediate on-chain cancellation is not yet supported on Stellar from this embed. You can schedule cancellation at the end of your billing period.",
       );
+      return;
+    }
+
+    if (isSolanaChain) {
+      // Solana has no ERC-7579 module: autopay is stopped by the owner signing
+      // the program's `pause_autopay`. The backend prepares that instruction
+      // (see `data.solanaCancellation`); we sign and submit it here, then hand
+      // the signature to the backend so it can verify + schedule the
+      // cancellation. Without this, the SPL delegate could still be charged.
+      setTxStatus("approving");
+      try {
+        if (!solanaWallet.address) {
+          await solanaWallet.connect();
+        }
+        const prepared = data.solanaCancellation;
+        if (!prepared) {
+          // Nothing on-chain to stop (e.g. the subscription is already
+          // inactive) — scheduling the cancellation is enough.
+          setTxStatus("confirmed");
+          onConfirm({ intent: "scheduled" });
+          return;
+        }
+        const signature = await solanaWallet.sendTransaction(
+          prepared.programId,
+          prepared.instruction,
+          prepared.rpcUrl,
+        );
+        setTxStatus("confirmed");
+        onConfirm({ intent: "scheduled", txHash: signature });
+      } catch (error) {
+        setTxStatus("error");
+        setTxError(
+          error instanceof Error
+            ? error.message
+            : "Failed to pause autopay on Solana.",
+        );
+      }
       return;
     }
 

@@ -13,6 +13,44 @@ import {
 import { projectPlatformBillingEntitlement } from "./platform-billing-customer.js";
 import { grantPlanCreditsForCompany } from "./usage-credits.js";
 import { deriveBillingPeriodFromInterval, normalizeWallet } from "./utils.js";
+import { sendPaidInvoiceReceipt } from "./invoice-notifications.js";
+
+/**
+ * Resolves the recipient for an issued invoice. The facilitator's on-chain
+ * event payloads do not carry an email, so fall back to the company record and
+ * then the scoped subscriber-email registry — otherwise the invoice is created
+ * with no recipient and no receipt can ever be delivered.
+ */
+async function resolveInvoiceCustomerEmail(input: {
+  payloadEmail: string | null;
+  teamId: string;
+  environmentId: string | null;
+  companyId: string | null;
+  wallet: string | null;
+}): Promise<string | null> {
+  const direct = input.payloadEmail?.trim();
+  if (direct) return direct;
+
+  if (input.companyId) {
+    const company = await db.arcenCompany
+      .findUnique({ where: { id: input.companyId }, select: { email: true } })
+      .catch(() => null);
+    const email = company?.email?.trim();
+    if (email) return email;
+  }
+
+  if (input.wallet) {
+    const scoped = await findScopedSubscriberEmail({
+      teamId: input.teamId,
+      environmentId: input.environmentId,
+      walletAddress: input.wallet,
+    }).catch(() => null);
+    const email = scoped?.email?.trim();
+    if (email) return email;
+  }
+
+  return null;
+}
 
 export type BillingEventType =
   | "SUBSCRIPTION_MINTED"
@@ -340,7 +378,25 @@ async function processStoredBillingEvent(
         environmentId: payloadEnvironmentId,
         amount,
         description: String(payload.description || options.canonicalEventName),
-        customerEmail: typeof payload.email === "string" ? payload.email : null,
+        customerEmail: await resolveInvoiceCustomerEmail({
+          payloadEmail:
+            typeof payload.email === "string" ? payload.email : null,
+          teamId: event.teamId,
+          environmentId:
+            typeof payload.environmentId === "string"
+              ? payload.environmentId
+              : null,
+          companyId:
+            typeof payload.companyId === "string" && payload.companyId.trim()
+              ? payload.companyId.trim()
+              : null,
+          wallet:
+            typeof payload.customerWallet === "string"
+              ? payload.customerWallet
+              : typeof payload.subscriber === "string"
+                ? payload.subscriber
+                : null,
+        }),
         customerName:
           typeof payload.customerName === "string"
             ? payload.customerName
@@ -418,7 +474,12 @@ async function processStoredBillingEvent(
       catalogPlanId,
       onChainPlanId,
       currentPeriodStart: occurredAt,
-      currentPeriodEnd,
+      // Preserve the existing period end when this event carries no expiration.
+      // `resolveExpirationDate()` returns null for events without one (e.g. a
+      // Solana `BillingExecuted` on the activation leg), and passing that null
+      // through would CLEAR a period end set by the minted event — leaving an
+      // ACTIVE subscription with no next billing date and blocking cancellation.
+      currentPeriodEnd: currentPeriodEnd ?? undefined,
       cancelAtPeriodEnd: false,
       cancelledAt: null,
       pastDueAt: null,
@@ -497,6 +558,23 @@ async function processStoredBillingEvent(
           billingEventId: event.id,
           txHash: typeof payload.txHash === "string" ? payload.txHash : null,
         },
+      });
+    }
+
+    // Deliver the paid-invoice receipt. Receipts were only sent from the
+    // synchronous activation path, so a subscription that finalized through the
+    // facilitator event listener (the Solana flow) never emailed the customer
+    // their invoice. Idempotent: deduped by txHash inside the helper.
+    if (invoiceId) {
+      await sendPaidInvoiceReceipt({
+        teamId: event.teamId,
+        invoiceId,
+        txHash: typeof payload.txHash === "string" ? payload.txHash : null,
+      }).catch((err) => {
+        console.warn(
+          "[billing-events] Failed to send paid invoice receipt:",
+          err,
+        );
       });
     }
   }

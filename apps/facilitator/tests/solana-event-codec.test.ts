@@ -166,6 +166,13 @@ test("returns null for a truncated payload", () => {
 
 test("decodes a Subscription account (full layout)", () => {
   const owner = Keypair.generate().publicKey.toBase58();
+  const acceptedToken = Keypair.generate().publicKey.toBase58();
+  const provider = Keypair.generate().publicKey.toBase58();
+  const subscriberToken = Keypair.generate().publicKey.toBase58();
+  const providerToken = Keypair.generate().publicKey.toBase58();
+  const treasuryToken = Keypair.generate().publicKey.toBase58();
+  const remainingRenewals = Buffer.alloc(2);
+  remainingRenewals.writeUInt16LE(12);
   const data = Buffer.concat([
     Buffer.alloc(8), // account discriminator (skipped)
     pubkey(owner),
@@ -177,7 +184,17 @@ test("decodes a Subscription account (full layout)", () => {
     i64(1_700_000_000), // minted_at
     i64(1_710_000_000), // last_renewed_at
     u64(1_000_000), // total_paid
-    u8(254), // bump
+    u64(10_000_000), // renewal_price (snapshot)
+    i64(2_592_000), // renewal_interval (snapshot)
+    pubkey(acceptedToken), // accepted_token (snapshot)
+    pubkey(provider), // provider (snapshot)
+    pubkey(subscriberToken), // subscriber_token
+    pubkey(providerToken), // provider_token
+    pubkey(treasuryToken), // treasury_token
+    i64(1_780_000_000), // authorization_expires_at
+    remainingRenewals, // remaining_renewals (u16)
+    u8(1), // autopay_enabled
+    u8(254), // delegate bump
   ]);
   const record = decodeSubscriptionRecord(data);
   assert.ok(record);

@@ -21,7 +21,8 @@
 // ============================================================
 
 use anchor_lang::prelude::*;
-use anchor_spl::token::{self, Token, TransferChecked};
+use anchor_lang::solana_program::program_option::COption;
+use anchor_spl::token::{self, Approve, Token, TransferChecked};
 use anchor_spl::token_interface::{Mint, TokenAccount};
 
 // Placeholder program id — 32-byte base58 so it compiles.
@@ -35,6 +36,9 @@ pub const SUBSCRIPTION_FEE_BPS: u64 = 50;
 pub const BPS_DENOMINATOR: u64 = 10_000;
 /// Minimum billing interval in seconds (30 days). Mirrors MIN_BILLING_INTERVAL.
 pub const MIN_BILLING_INTERVAL: i64 = 2_592_000;
+/// A subscriber never grants an unbounded token delegate. Authorizations span
+/// at most one year and are renewed explicitly by the owner.
+pub const AUTOPAY_AUTHORIZATION_HORIZON: i64 = 31_622_400;
 
 #[program]
 pub mod arcenpay_solana {
@@ -180,6 +184,49 @@ pub mod arcenpay_solana {
         sub.minted_at = now;
         sub.last_renewed_at = now;
         sub.total_paid = amount;
+        // The delegate is a per-(owner, mint) PDA. It can only sign inside this
+        // program and `execute` below pins every economically relevant field to
+        // this snapshot, so a provider plan edit cannot increase an existing
+        // customer's debit.
+        let renewal_count = authorization_renewal_count(plan.billing_interval);
+        let subscription_allowance = plan
+            .price
+            .checked_mul(renewal_count as u64)
+            .ok_or(ArcenPayError::MathOverflow)?;
+        // A token account has exactly ONE delegate slot, and this PDA is shared
+        // by every ArcenPay subscription charging the same token account — so
+        // approve must TOP UP an ArcenPay-owned allowance rather than replace
+        // it. Otherwise a second subscription would wipe the first one's
+        // remaining budget and silently break its renewals. A delegate owned by
+        // someone else is taken over at exactly this subscription's allowance
+        // (never inflated with their budget).
+        let allowance = delegated_allowance_for(
+            &ctx.accounts.subscriber_token,
+            &ctx.accounts.delegate.key(),
+            subscription_allowance,
+        )?;
+        let approve_accounts = Approve {
+            to: ctx.accounts.subscriber_token.to_account_info(),
+            delegate: ctx.accounts.delegate.to_account_info(),
+            authority: ctx.accounts.subscriber.to_account_info(),
+        };
+        token::approve(
+            CpiContext::new(ctx.accounts.token_program.to_account_info(), approve_accounts),
+            allowance,
+        )?;
+        sub.renewal_price = plan.price;
+        sub.renewal_interval = plan.billing_interval;
+        sub.accepted_token = plan.accepted_token;
+        sub.provider = plan.provider;
+        sub.subscriber_token = ctx.accounts.subscriber_token.key();
+        sub.provider_token = ctx.accounts.provider_token.key();
+        sub.treasury_token = ctx.accounts.treasury_token.key();
+        sub.authorization_expires_at = now
+            .checked_add(AUTOPAY_AUTHORIZATION_HORIZON)
+            .ok_or(ArcenPayError::MathOverflow)?;
+        sub.remaining_renewals = renewal_count;
+        sub.autopay_enabled = true;
+        sub.delegate_bump = ctx.bumps.delegate;
         sub.bump = ctx.bumps.subscription;
 
         let by_wallet = &mut ctx.accounts.subscription_by_wallet;
@@ -207,66 +254,84 @@ pub mod arcenpay_solana {
         Ok(())
     }
 
-    /// Renew a subscription: caller pays for the next interval.
+    /// Renew a subscription using its bounded, owner-approved PDA delegate.
+    /// The relayer only pays network fees; it cannot select a destination,
+    /// amount, or source account outside the subscription snapshot.
     /// Emits Renewed + BillingExecuted(reason 1).
-    pub fn execute(ctx: Context<Execute>, amount: u64) -> Result<()> {
-        let plan = &ctx.accounts.plan;
+    pub fn execute(ctx: Context<Execute>) -> Result<()> {
         let sub = &mut ctx.accounts.subscription;
         require!(sub.active, ArcenPayError::SubscriptionInactive);
+        require!(sub.autopay_enabled, ArcenPayError::AutopayDisabled);
+        require!(sub.remaining_renewals > 0, ArcenPayError::AuthorizationDepleted);
         require!(
-            ctx.accounts.token_mint.key() == plan.accepted_token,
+            ctx.accounts.token_mint.key() == sub.accepted_token,
             ArcenPayError::TokenMismatch
         );
 
         let now = Clock::get()?.unix_timestamp;
-        // Enforce the min interval between charges (velocity limit).
+        require!(now <= sub.authorization_expires_at, ArcenPayError::AuthorizationExpired);
         require!(
-            now >= sub.last_renewed_at + MIN_BILLING_INTERVAL,
+            now >= sub.expiration,
             ArcenPayError::RenewalTooEarly
         );
-        require!(amount >= plan.price, ArcenPayError::InsufficientAmount);
+        require!(ctx.accounts.plan.plan_id == sub.plan_id, ArcenPayError::PlanMismatch);
 
-        let (merchant_amount, protocol_fee) = split_fee(amount, ctx.accounts.config.fee_bps)?;
-        transfer_checked(
+        let (merchant_amount, protocol_fee) = split_fee(sub.renewal_price, ctx.accounts.config.fee_bps)?;
+        // The delegate authority is derived from (owner, accepted mint) — one
+        // shared ArcenPay delegate per token account — so the seed here must
+        // match `Subscribe`/`ReauthorizeAutopay` exactly.
+        let delegate_bump = sub.delegate_bump;
+        let owner_bytes = sub.owner.to_bytes();
+        let mint_bytes = sub.accepted_token.to_bytes();
+        let signer_seed: &[&[u8]] = &[
+            b"subscription_delegate",
+            owner_bytes.as_ref(),
+            mint_bytes.as_ref(),
+            &[delegate_bump],
+        ];
+        transfer_checked_signed(
             &ctx.accounts.token_program,
             &ctx.accounts.payer_token,
             &ctx.accounts.token_mint,
             &ctx.accounts.provider_token,
-            &ctx.accounts.payer,
+            &ctx.accounts.delegate.to_account_info(),
+            &[signer_seed],
             merchant_amount,
             ctx.accounts.token_mint.decimals,
         )?;
         if protocol_fee > 0 {
-            transfer_checked(
+            transfer_checked_signed(
                 &ctx.accounts.token_program,
                 &ctx.accounts.payer_token,
                 &ctx.accounts.token_mint,
                 &ctx.accounts.treasury_token,
-                &ctx.accounts.payer,
+                &ctx.accounts.delegate.to_account_info(),
+                &[signer_seed],
                 protocol_fee,
                 ctx.accounts.token_mint.decimals,
             )?;
         }
 
         let expiration = now
-            .checked_add(plan.billing_interval)
+            .checked_add(sub.renewal_interval)
             .ok_or(ArcenPayError::MathOverflow)?;
         sub.expiration = expiration;
         sub.last_renewed_at = now;
-        sub.total_paid = sub.total_paid.saturating_add(amount);
+        sub.total_paid = sub.total_paid.saturating_add(sub.renewal_price);
+        sub.remaining_renewals = sub.remaining_renewals.saturating_sub(1);
 
         emit!(SubscriptionRenewed {
             token_id: sub.token_id,
             new_expiration: expiration,
-            amount_paid: amount,
+            amount_paid: sub.renewal_price,
         });
         emit!(BillingExecuted {
             account: sub.owner,
-            merchant: plan.provider,
+            merchant: sub.provider,
             token_id: sub.token_id,
-            plan_id: plan.plan_id,
+            plan_id: sub.plan_id,
             reason: 1,
-            gross_amount: amount,
+            gross_amount: sub.renewal_price,
             merchant_amount,
             protocol_fee,
             timestamp: now,
@@ -278,9 +343,52 @@ pub mod arcenpay_solana {
     pub fn cancel(ctx: Context<Cancel>) -> Result<()> {
         let sub = &mut ctx.accounts.subscription;
         sub.active = false;
+        sub.autopay_enabled = false;
         emit!(SubscriptionCancelled {
             token_id: sub.token_id,
         });
+        Ok(())
+    }
+
+    /// Owner can pause future automatic collection without cancelling access.
+    pub fn pause_autopay(ctx: Context<AutopayControl>) -> Result<()> {
+        ctx.accounts.subscription.autopay_enabled = false;
+        Ok(())
+    }
+
+    /// Owner reauthorizes the same immutable subscription snapshot, restoring a
+    /// one-year horizon of renewals.
+    ///
+    /// The delegate is shared per (owner, mint), so this TOPS UP the pooled
+    /// ArcenPay allowance rather than resetting it (which would wipe a sibling
+    /// subscription's budget). The authoritative per-subscription limit stays
+    /// `remaining_renewals`; the SPL allowance is a coarse backstop.
+    pub fn reauthorize_autopay(ctx: Context<ReauthorizeAutopay>) -> Result<()> {
+        let sub = &mut ctx.accounts.subscription;
+        let now = Clock::get()?.unix_timestamp;
+        let renewal_count = authorization_renewal_count(sub.renewal_interval);
+        let subscription_allowance = sub.renewal_price
+            .checked_mul(renewal_count as u64)
+            .ok_or(ArcenPayError::MathOverflow)?;
+        let allowance = delegated_allowance_for(
+            &ctx.accounts.subscriber_token,
+            &ctx.accounts.delegate.key(),
+            subscription_allowance,
+        )?;
+        let approve_accounts = Approve {
+            to: ctx.accounts.subscriber_token.to_account_info(),
+            delegate: ctx.accounts.delegate.to_account_info(),
+            authority: ctx.accounts.owner.to_account_info(),
+        };
+        token::approve(
+            CpiContext::new(ctx.accounts.token_program.to_account_info(), approve_accounts),
+            allowance,
+        )?;
+        sub.authorization_expires_at = now
+            .checked_add(AUTOPAY_AUTHORIZATION_HORIZON)
+            .ok_or(ArcenPayError::MathOverflow)?;
+        sub.remaining_renewals = renewal_count;
+        sub.autopay_enabled = true;
         Ok(())
     }
 
@@ -547,6 +655,43 @@ pub mod arcenpay_solana {
         data[cursor] = old_bump;
         Ok(())
     }
+
+    /// Admin-only recovery: close a subscription and its wallet index PDA,
+    /// returning their rent to the admin.
+    ///
+    /// The subscription PDAs are deterministic, so a program layout upgrade (or
+    /// a failed finalize) can leave an account that blocks the wallet from ever
+    /// subscribing again. Reading the accounts raw — instead of
+    /// `Account<Subscription>` — lets a subscription written by an *older*
+    /// program layout still be reclaimed, for the same reason `migrate_config`
+    /// reads raw bytes. Ops/devnet only.
+    pub fn close_subscription(
+        ctx: Context<CloseSubscription>,
+        _token_id: u64,
+        _owner: Pubkey,
+    ) -> Result<()> {
+        let dest = ctx.accounts.admin.to_account_info();
+        for account in [
+            ctx.accounts.subscription.to_account_info(),
+            ctx.accounts.subscription_by_wallet.to_account_info(),
+        ] {
+            // Only ever reclaim accounts this program actually owns; a
+            // non-existent (or foreign) account is left untouched.
+            if account.lamports() == 0 || *account.owner != crate::ID {
+                continue;
+            }
+            let lamports = account.lamports();
+            let dest_total = dest
+                .lamports()
+                .checked_add(lamports)
+                .ok_or(ArcenPayError::MathOverflow)?;
+            **dest.try_borrow_mut_lamports()? = dest_total;
+            **account.try_borrow_mut_lamports()? = 0;
+            account.assign(&anchor_lang::solana_program::system_program::ID);
+            account.realloc(0, false)?;
+        }
+        Ok(())
+    }
 }
 
 // ─── Account contexts ───────────────────────────────────────────────────────
@@ -621,6 +766,19 @@ pub struct Subscribe<'info> {
         bump,
     )]
     pub subscription_by_wallet: Account<'info, SubscriptionByWallet>,
+    /// CHECK: per-(owner, mint) autopay authority PDA, used only as the SPL
+    /// token delegate. Shared by every ArcenPay subscription charging the same
+    /// token account, so a second subscription cannot replace — and silently
+    /// break — the first subscription's delegate.
+    #[account(
+        seeds = [
+            b"subscription_delegate",
+            subscriber.key().as_ref(),
+            plan.accepted_token.as_ref(),
+        ],
+        bump,
+    )]
+    pub delegate: UncheckedAccount<'info>,
     // Boxed to keep the `try_accounts` stack frame within the SBF 4096-byte
     // limit (unboxed, the Subscribe context exceeded it).
     pub token_mint: Box<InterfaceAccount<'info, Mint>>,
@@ -646,14 +804,26 @@ pub struct Execute<'info> {
         bump = subscription.bump,
     )]
     pub subscription: Account<'info, Subscription>,
-    #[account(mut)]
-    pub payer: Signer<'info>,
+    /// Any funded relayer can submit a due renewal. It has no spending power;
+    /// the PDA below is the only SPL authority used by this instruction.
+    pub relayer: Signer<'info>,
+    /// CHECK: validated as the (owner, mint) delegate PDA recorded on the
+    /// subscription. Shared across that wallet's ArcenPay subscriptions.
+    #[account(
+        seeds = [
+            b"subscription_delegate",
+            subscription.owner.as_ref(),
+            subscription.accepted_token.as_ref(),
+        ],
+        bump = subscription.delegate_bump,
+    )]
+    pub delegate: UncheckedAccount<'info>,
     pub token_mint: InterfaceAccount<'info, Mint>,
-    #[account(mut, token::mint = token_mint, token::authority = payer)]
+    #[account(mut, address = subscription.subscriber_token @ ArcenPayError::TokenAccountMismatch, token::mint = token_mint)]
     pub payer_token: InterfaceAccount<'info, TokenAccount>,
-    #[account(mut, token::mint = token_mint, token::authority = plan.provider)]
+    #[account(mut, address = subscription.provider_token @ ArcenPayError::TokenAccountMismatch, token::mint = token_mint)]
     pub provider_token: InterfaceAccount<'info, TokenAccount>,
-    #[account(mut, token::mint = token_mint)]
+    #[account(mut, address = subscription.treasury_token @ ArcenPayError::TokenAccountMismatch, token::mint = token_mint)]
     pub treasury_token: InterfaceAccount<'info, TokenAccount>,
     pub token_program: Program<'info, Token>,
 }
@@ -668,6 +838,45 @@ pub struct Cancel<'info> {
     )]
     pub subscription: Account<'info, Subscription>,
     pub owner: Signer<'info>,
+}
+
+#[derive(Accounts)]
+pub struct AutopayControl<'info> {
+    #[account(
+        mut,
+        seeds = [b"subscription", subscription.token_id.to_le_bytes().as_ref()],
+        bump = subscription.bump,
+        has_one = owner @ ArcenPayError::Unauthorized,
+    )]
+    pub subscription: Account<'info, Subscription>,
+    pub owner: Signer<'info>,
+}
+
+#[derive(Accounts)]
+pub struct ReauthorizeAutopay<'info> {
+    #[account(
+        mut,
+        seeds = [b"subscription", subscription.token_id.to_le_bytes().as_ref()],
+        bump = subscription.bump,
+        has_one = owner @ ArcenPayError::Unauthorized,
+    )]
+    pub subscription: Account<'info, Subscription>,
+    pub owner: Signer<'info>,
+    /// CHECK: the (owner, mint) delegate PDA — same address the subscription
+    /// recorded and `execute` signs with.
+    #[account(
+        seeds = [
+            b"subscription_delegate",
+            owner.key().as_ref(),
+            subscription.accepted_token.as_ref(),
+        ],
+        bump = subscription.delegate_bump,
+    )]
+    pub delegate: UncheckedAccount<'info>,
+    #[account(mut, address = subscription.subscriber_token @ ArcenPayError::TokenAccountMismatch, token::mint = token_mint, token::authority = owner)]
+    pub subscriber_token: InterfaceAccount<'info, TokenAccount>,
+    pub token_mint: InterfaceAccount<'info, Mint>,
+    pub token_program: Program<'info, Token>,
 }
 
 #[derive(Accounts)]
@@ -806,6 +1015,34 @@ pub struct SetProofVerification<'info> {
 }
 
 #[derive(Accounts)]
+#[instruction(token_id: u64, owner: Pubkey)]
+pub struct CloseSubscription<'info> {
+    #[account(
+        seeds = [b"config"],
+        bump = config.bump,
+        has_one = admin @ ArcenPayError::Unauthorized,
+    )]
+    pub config: Account<'info, Config>,
+    #[account(mut)]
+    pub admin: Signer<'info>,
+    /// CHECK: closed unconditionally by the handler (raw account, so an account
+    /// written by a pre-upgrade layout can still be reclaimed).
+    #[account(
+        mut,
+        seeds = [b"subscription", token_id.to_le_bytes().as_ref()],
+        bump,
+    )]
+    pub subscription: UncheckedAccount<'info>,
+    /// CHECK: closed unconditionally by the handler.
+    #[account(
+        mut,
+        seeds = [b"subscription_wallet", owner.as_ref()],
+        bump,
+    )]
+    pub subscription_by_wallet: UncheckedAccount<'info>,
+}
+
+#[derive(Accounts)]
 pub struct MigrateConfig<'info> {
     /// CHECK: raw Config account — reallocated and re-initialized in the
     /// handler (the new struct no longer fits the old buffer). The admin is
@@ -870,11 +1107,25 @@ pub struct Subscription {
     pub minted_at: i64,
     pub last_renewed_at: i64,
     pub total_paid: u64,
+    /// Immutable per-subscription renewal snapshot. Plan changes may affect
+    /// future subscriptions only until the owner explicitly reauthorizes.
+    pub renewal_price: u64,
+    pub renewal_interval: i64,
+    pub accepted_token: Pubkey,
+    pub provider: Pubkey,
+    pub subscriber_token: Pubkey,
+    pub provider_token: Pubkey,
+    pub treasury_token: Pubkey,
+    pub authorization_expires_at: i64,
+    pub remaining_renewals: u16,
+    pub autopay_enabled: bool,
+    pub delegate_bump: u8,
     pub bump: u8,
 }
 
 impl Subscription {
-    pub const LEN: usize = 32 + 8 + 8 + 1 + 8 + 1 + 8 + 8 + 8 + 1;
+    pub const LEN: usize = 32 + 8 + 8 + 1 + 8 + 1 + 8 + 8 + 8
+        + 8 + 8 + 32 + 32 + 32 + 32 + 32 + 8 + 2 + 1 + 1 + 1;
 }
 
 #[account]
@@ -1068,6 +1319,16 @@ pub enum ArcenPayError {
     VerifierMismatch,
     #[msg("The Groth16 proof is invalid.")]
     InvalidProof,
+    #[msg("Automatic collection is paused for this subscription.")]
+    AutopayDisabled,
+    #[msg("The bounded automatic-payment authorization has expired.")]
+    AuthorizationExpired,
+    #[msg("The bounded automatic-payment authorization is exhausted.")]
+    AuthorizationDepleted,
+    #[msg("The supplied plan does not match this subscription.")]
+    PlanMismatch,
+    #[msg("The supplied token account does not match this subscription.")]
+    TokenAccountMismatch,
 }
 
 // ─── helpers ────────────────────────────────────────────────────────────────
@@ -1111,6 +1372,40 @@ fn split_fee(amount: u64, fee_bps: u64) -> Result<(u64, u64)> {
         .checked_sub(fee)
         .ok_or(ArcenPayError::MathOverflow)?;
     Ok((merchant, fee))
+}
+
+fn authorization_renewal_count(interval: i64) -> u16 {
+    // At least one renewal is available (annual subscriptions); monthly
+    // subscriptions receive twelve. The value is intentionally bounded so a
+    // delegate approval never becomes an unlimited mandate.
+    let cycles = (AUTOPAY_AUTHORIZATION_HORIZON / interval).max(1);
+    cycles.min(u16::MAX as i64) as u16
+}
+
+/// The SPL delegate allowance to approve: the existing allowance when this
+/// program already holds the delegate, plus `additional`; otherwise just
+/// `additional` (a foreign delegate is replaced, never inflated).
+///
+/// An SPL token account has exactly one delegate slot. Deriving the delegate
+/// PDA per (owner, mint) makes it shared by every ArcenPay subscription on that
+/// token account — so `approve` must be additive, or the second subscription
+/// would overwrite the first subscription's remaining renewal budget.
+fn delegated_allowance_for(
+    token: &InterfaceAccount<TokenAccount>,
+    delegate: &Pubkey,
+    additional: u64,
+) -> Result<u64> {
+    let already_ours = match token.delegate {
+        COption::Some(existing) => existing == *delegate,
+        COption::None => false,
+    };
+    let base = if already_ours {
+        token.delegated_amount
+    } else {
+        0
+    };
+    base.checked_add(additional)
+        .ok_or_else(|| ArcenPayError::MathOverflow.into())
 }
 
 /// CPI helper for a checked SPL transfer authorised by `authority`.
@@ -1205,12 +1500,26 @@ mod tests {
 
     #[test]
     fn account_space_constants_match_field_layout() {
-        // These must stay in sync with the manual LEN constants used in
-        // `space = 8 + X::LEN`.
-        assert_eq!(Config::LEN, 32 + 32 + 8 + 8 + 1 + 32 + 1);
-        assert_eq!(Plan::LEN, 8 + 32 + 8 + 8 + 32 + 1 + 1);
-        assert_eq!(Subscription::LEN, 32 + 8 + 8 + 1 + 8 + 1 + 8 + 8 + 8 + 1);
-        assert_eq!(SubscriptionByWallet::LEN, 32 + 8 + 1);
+        // The manual `LEN` constants (used in `space = 8 + X::LEN`) must match
+        // the derived `InitSpace` for the same struct — an under-sized constant
+        // fails at runtime with `AccountDidNotSerialize`, so compare against the
+        // derived value rather than a hand-maintained literal.
+        assert_eq!(Config::LEN, Config::INIT_SPACE);
+        assert_eq!(Plan::LEN, Plan::INIT_SPACE);
+        assert_eq!(Subscription::LEN, Subscription::INIT_SPACE);
+        assert_eq!(SubscriptionByWallet::LEN, SubscriptionByWallet::INIT_SPACE);
+        assert_eq!(Settler::LEN, Settler::INIT_SPACE);
+        assert_eq!(Session::LEN, Session::INIT_SPACE);
+        assert_eq!(NullifierRecord::LEN, NullifierRecord::INIT_SPACE);
+    }
+
+    #[test]
+    fn authorization_renewal_count_is_bounded() {
+        // Monthly (30d) grants 12 renewals; annual (365d) grants 1. The value is
+        // capped so a delegate approval can never become an unlimited mandate.
+        assert_eq!(authorization_renewal_count(MIN_BILLING_INTERVAL), 12);
+        assert_eq!(authorization_renewal_count(31_536_000), 1);
+        assert_eq!(authorization_renewal_count(1), u16::MAX);
     }
 
     #[test]

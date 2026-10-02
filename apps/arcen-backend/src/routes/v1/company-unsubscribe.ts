@@ -26,9 +26,10 @@ import {
 import { findScopedSubscriberEmail } from "../../lib/billing/subscriber-emails.js";
 import { readAutopayAccountState } from "../../lib/payments/autopay-state.js";
 import {
-  normalizeTxHash,
+  normalizeTxHashForFamily,
   verifyAutopayCancellationControl,
 } from "../../lib/payments/onchain-payment-verification.js";
+import { getChainFamily } from "@arcenpay/internal-core";
 import { SELF_SERVE_CANCELLATION_ENABLED } from "../../lib/platform/launch-flags.js";
 import { DEFAULT_CHAIN_ID } from "../../lib/platform/default-chain.js";
 import { corsHeaders } from "../../middleware/cors.js";
@@ -125,6 +126,7 @@ export async function POST(c: Context) {
             id: true,
             environmentId: true,
             walletAddress: true,
+            currentPeriodStart: true,
             currentPeriodEnd: true,
             onChainPlanId: true,
             onChainTokenId: true,
@@ -162,10 +164,30 @@ export async function POST(c: Context) {
   if (company.activePlanId && company.activePlanId !== freePlan.id) {
     const currentPlan = await db.catalogPlan.findFirst({
       where: { id: company.activePlanId, teamId },
-      select: { id: true, name: true, onChainPlanId: true },
+      select: {
+        id: true,
+        name: true,
+        onChainPlanId: true,
+        billingInterval: true,
+      },
     });
 
-    const effectiveAt = company.subscriptionState?.currentPeriodEnd ?? null;
+    // Prefer the stored period end. If it is missing (a projection that dropped
+    // it, or a Solana row that predates the fix), derive it from the period
+    // start + the plan interval so an active subscription is never blocked from
+    // scheduling a cancellation. Without this the endpoint returns 409 and
+    // self-service cancellation is impossible.
+    const intervalSeconds = Number(currentPlan?.billingInterval ?? 0);
+    const effectiveAt =
+      company.subscriptionState?.currentPeriodEnd ??
+      (company.subscriptionState?.currentPeriodStart &&
+      Number.isFinite(intervalSeconds) &&
+      intervalSeconds > 0
+        ? new Date(
+            company.subscriptionState.currentPeriodStart.getTime() +
+              intervalSeconds * 1000,
+          )
+        : null);
     if (!effectiveAt || effectiveAt <= new Date()) {
       return c.json(
         {
@@ -177,13 +199,19 @@ export async function POST(c: Context) {
       );
     }
 
-    const normalizedAutopayTxHash = normalizeTxHash(
+    // Use the chain recorded in SubscriptionState; fall back to DEFAULT_CHAIN_ID
+    // for legacy rows. Normalization is family-aware so a Solana base58
+    // signature is not rejected by the EVM hex pattern.
+    const subChainId =
+      company.subscriptionState?.chainId ?? DEFAULT_CHAIN_ID;
+    const normalizedAutopayTxHash = normalizeTxHashForFamily(
       body.autopayControlTxHash ?? body.txHash,
+      subChainId,
     );
     let autopayControl:
       | {
           control: "PAUSED" | "REVOKED";
-          txHash?: `0x${string}`;
+          txHash?: string;
         }
       | null = null;
     let pendingVerification = false;
@@ -200,9 +228,12 @@ export async function POST(c: Context) {
         );
       }
 
+      const chainFamily = getChainFamily(subChainId);
+      // `verifyAutopayCancellationControl` dispatches by family: EVM verifies an
+      // AutopayModule pause/revoke tx; Solana verifies a `pause_autopay` /
+      // `cancel` program instruction. With no tx hash we fall back to reading
+      // the chain's live autopay state (below).
       if (normalizedAutopayTxHash) {
-        // Use the chain recorded in SubscriptionState; fall back to DEFAULT_CHAIN_ID for legacy rows.
-        const subChainId = company.subscriptionState?.chainId ?? DEFAULT_CHAIN_ID;
         const verification = await verifyAutopayCancellationControl({
           paymentAccount: companyPaymentAccount,
           txHash: normalizedAutopayTxHash,
@@ -241,7 +272,6 @@ export async function POST(c: Context) {
           };
         }
       } else {
-        const subChainId = company.subscriptionState?.chainId ?? DEFAULT_CHAIN_ID;
         const state = await readAutopayAccountState(
           companyPaymentAccount,
           subChainId,
@@ -250,7 +280,9 @@ export async function POST(c: Context) {
           return c.json(
             {
               error:
-                "Scheduled paid subscription cancellation requires a confirmed AutopayModule.pauseAccount or onUninstall transaction hash, unless autopay is already paused or revoked.",
+                chainFamily === "solana"
+                  ? "Cancellation on Solana requires autopay to be stopped on-chain first — sign pause_autopay (or cancel) from the wallet — unless the subscription is already inactive."
+                  : "Scheduled paid subscription cancellation requires a confirmed AutopayModule.pauseAccount or onUninstall transaction hash, unless autopay is already paused or revoked.",
             },
             400,
             corsHeaders(origin),

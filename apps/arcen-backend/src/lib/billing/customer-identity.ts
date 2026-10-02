@@ -82,7 +82,7 @@ export async function syncCustomerUserIdentity(input: {
   }
   if (
     walletAddress &&
-    user.walletAddress?.trim().toLowerCase() !== walletAddress
+    normalizeWallet(user.walletAddress) !== walletAddress
   ) {
     updates.walletAddress = walletAddress;
   }

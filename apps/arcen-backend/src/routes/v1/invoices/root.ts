@@ -1,5 +1,9 @@
 import type { Context } from "hono";
 import { z } from "zod";
+import {
+  isValidAnyFamilyTxHash,
+  normalizeAnyFamilyTxHash,
+} from "@arcenpay/internal-core";
 import { db } from "../../../db.js";
 import { requireInvoiceAuth, isInvoiceAuthError } from "../../../lib/auth/invoice-auth.js";
 import { allocateInvoiceNumber, toSix } from "../../../lib/billing/invoices.js";
@@ -27,14 +31,16 @@ function readInvoiceTxHash(invoice: {
   metadata: unknown;
   payments?: Array<{ txHash: string | null }>;
 }): string | null {
+  // Family-agnostic: an EVM hex hash OR a Solana base58 signature. Solana
+  // signatures must not be lowercased (that corrupts them).
   const paymentTxHash = invoice.payments?.[0]?.txHash;
-  if (paymentTxHash && /^0x[0-9a-fA-F]{64}$/.test(paymentTxHash)) {
-    return paymentTxHash.toLowerCase();
+  if (paymentTxHash && isValidAnyFamilyTxHash(paymentTxHash)) {
+    return normalizeAnyFamilyTxHash(paymentTxHash);
   }
   const metadataTxHash = asRecord(invoice.metadata).txHash;
   return typeof metadataTxHash === "string" &&
-    /^0x[0-9a-fA-F]{64}$/.test(metadataTxHash)
-    ? metadataTxHash.toLowerCase()
+    isValidAnyFamilyTxHash(metadataTxHash)
+    ? normalizeAnyFamilyTxHash(metadataTxHash)
     : null;
 }
 

@@ -16,6 +16,7 @@
 
 import type { ContractAddresses } from './types';
 import {
+  CHAIN_FAMILY_METADATA,
   getChainFamily,
   isUnsetAddressForChain,
   unsetAddressForFamily,
@@ -223,10 +224,12 @@ function isAcceptableAddressForFamily(
   family: ChainFamily | null,
 ): boolean {
   if (!value) return false;
-  if (family === 'evm') return value.startsWith('0x');
-  // Stellar and unknown families: accept any non-empty string; the empty
-  // string is the unset sentinel and is rejected by the truthiness check.
-  return value.length > 0;
+  // Unknown family: there is no pattern to validate against, so accept any
+  // non-empty override (the empty string is the unset sentinel).
+  if (!family) return true;
+  // Validate against the family's own address pattern — EVM 20-byte hex,
+  // Stellar G…/C…, Solana base58 — instead of accepting any non-empty string.
+  return new RegExp(CHAIN_FAMILY_METADATA[family].addressPattern).test(value);
 }
 
 /**

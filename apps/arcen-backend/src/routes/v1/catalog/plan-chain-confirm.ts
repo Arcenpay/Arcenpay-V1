@@ -1,11 +1,13 @@
 import type { Context } from "hono";
 import { z } from "zod";
+import { isValidAnyFamilyTxHash } from "@arcenpay/internal-core";
 import { db } from "../../../db.js";
 import { requirePermission, isErrorResponse } from "../../../lib/auth/api-auth.js";
 import { writeAuditEvent } from "../../../lib/platform/audit.js";
 
 const confirmSchema = z.object({
-  txHash: z.string().regex(/^0x[0-9a-fA-F]{64}$/, "Invalid tx hash"),
+  // Family-agnostic: EVM hex or a Solana base58 signature.
+  txHash: z.string().refine(isValidAnyFamilyTxHash, "Invalid tx hash"),
   onChainPlanId: z.string().optional(),
   success: z.boolean(),
   errorMessage: z.string().optional(),

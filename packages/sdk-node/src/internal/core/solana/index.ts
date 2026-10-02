@@ -70,15 +70,35 @@ export function encodeBase58(bytes: Uint8Array): string {
 /**
  * Parses a Solana secret key from either a base58 string or a JSON byte array
  * (`[1,2,…]`, the format `solana-keygen` writes).
+ *
+ * Fails closed on anything that is not a 64-byte Solana keypair secret — most
+ * importantly a `0x…` EVM key, which is a common and silent misconfiguration
+ * when the same `SETTLEMENT_PRIVATE_KEY` variable is shared across chain
+ * families.
  */
 export function parseSolanaSecretKey(input: string): Uint8Array {
   const trimmed = input.trim();
-  if (trimmed.startsWith("[")) {
-    const parsed = JSON.parse(trimmed) as unknown;
-    if (!Array.isArray(parsed)) throw new Error("parseSolanaSecretKey: not an array");
-    return Uint8Array.from(parsed as number[]);
+  if (!trimmed) throw new Error("parseSolanaSecretKey: empty input");
+  if (/^0x[0-9a-fA-F]+$/.test(trimmed)) {
+    throw new Error(
+      "parseSolanaSecretKey: received a 0x-prefixed EVM key. A Solana signer " +
+        "needs a 64-byte keypair secret (base58 or JSON byte array), e.g. the " +
+        "output of `solana-keygen new`.",
+    );
   }
-  return decodeBase58(trimmed);
+  const bytes = trimmed.startsWith("[")
+    ? (() => {
+        const parsed = JSON.parse(trimmed) as unknown;
+        if (!Array.isArray(parsed)) throw new Error("parseSolanaSecretKey: not an array");
+        return Uint8Array.from(parsed as number[]);
+      })()
+    : decodeBase58(trimmed);
+  if (bytes.length !== 64) {
+    throw new Error(
+      `parseSolanaSecretKey: expected a 64-byte Solana secret key, got ${bytes.length} bytes.`,
+    );
+  }
+  return bytes;
 }
 
 // ─── Borsh helpers ──────────────────────────────────────────────────────────
@@ -100,6 +120,11 @@ export class BorshReader {
   u8(): number {
     const v = this.buf.readUInt8(this.offset);
     this.offset += 1;
+    return v;
+  }
+  u16(): number {
+    const v = this.buf.readUInt16LE(this.offset);
+    this.offset += 2;
     return v;
   }
   u64(): bigint {
@@ -124,6 +149,15 @@ export class BorshReader {
 /** Anchor instruction discriminator for a snake_case instruction name. */
 export function instructionDiscriminator(name: string): Buffer {
   return createHash("sha256").update(`global:${name}`).digest().subarray(0, 8);
+}
+
+/**
+ * Anchor account discriminator for a PascalCase account name. Used to filter
+ * `getProgramAccounts` (e.g. discovering every `Subscription` for the renewal
+ * worker) without an off-chain index.
+ */
+export function accountDiscriminator(name: string): Buffer {
+  return createHash("sha256").update(`account:${name}`).digest().subarray(0, 8);
 }
 
 function u64(value: bigint | number): Buffer {
@@ -188,8 +222,9 @@ export function encodeSubscribe(
   return encode("subscribe", u64(tokenId), u64(amount));
 }
 
-export function encodeExecute(amount: bigint | number): Buffer {
-  return encode("execute", u64(amount));
+/** A relayer submits execute; charge amount is the immutable subscription snapshot. */
+export function encodeExecute(): Buffer {
+  return encode("execute");
 }
 
 export function encodeCancel(): Buffer {
@@ -198,6 +233,14 @@ export function encodeCancel(): Buffer {
 
 export function encodeChangePlan(newPlanId: bigint | number): Buffer {
   return encode("change_plan", u64(newPlanId));
+}
+
+export function encodePauseAutopay(): Buffer {
+  return encode("pause_autopay");
+}
+
+export function encodeReauthorizeAutopay(): Buffer {
+  return encode("reauthorize_autopay");
 }
 
 export function encodeAuthorizeSettler(settler: string | PublicKey): Buffer {
@@ -251,6 +294,18 @@ export function encodeMigrateConfig(): Buffer {
   return encode("migrate_config");
 }
 
+/**
+ * Admin-only recovery: close a subscription + its wallet index PDA, reclaiming
+ * their rent. Recovers a deterministic PDA left stale by a program layout
+ * upgrade (or a failed finalize) so the wallet can subscribe again.
+ */
+export function encodeCloseSubscription(
+  tokenId: bigint | number,
+  owner: string | PublicKey,
+): Buffer {
+  return encode("close_subscription", u64(tokenId), pubkeyBytes(owner));
+}
+
 export function encodeWithdrawSession(amount: bigint | number): Buffer {
   return encode("withdraw_session", u64(amount));
 }
@@ -294,6 +349,25 @@ export function findSubscriptionByWalletPda(
 ): [PublicKey, number] {
   return PublicKey.findProgramAddressSync(
     [Buffer.from("subscription_wallet"), keyBytes(owner)],
+    programKey(programId),
+  );
+}
+
+/**
+ * SPL token-delegate authority for one `(owner, mint)` token account.
+ *
+ * The delegate is deliberately shared by every ArcenPay subscription charging
+ * the same token account: an SPL token account has a single delegate slot, so
+ * a per-subscription delegate would overwrite the previous subscription's
+ * autopay authority the moment a second one is created.
+ */
+export function findSubscriptionDelegatePda(
+  programId: string | PublicKey,
+  owner: string | PublicKey,
+  mint: string | PublicKey,
+): [PublicKey, number] {
+  return PublicKey.findProgramAddressSync(
+    [Buffer.from("subscription_delegate"), keyBytes(owner), keyBytes(mint)],
     programKey(programId),
   );
 }
@@ -392,7 +466,7 @@ export function decodeConfigRecord(data: Buffer): {
   }
 }
 
-/** Subscription: owner(32) | token_id(u64) | plan_id(u64) | plan_tier(u8) | expiration(i64) | active(bool) | minted_at(i64) | last_renewed_at(i64) | total_paid(u64) | bump(u8) */
+/** Subscription V2: base fields followed by immutable autopay snapshot. */
 export function decodeSubscriptionRecord(data: Buffer): {
   owner: string;
   tokenId: bigint;
@@ -403,6 +477,16 @@ export function decodeSubscriptionRecord(data: Buffer): {
   mintedAt: bigint;
   lastRenewedAt: bigint;
   totalPaid: bigint;
+  renewalPrice: bigint;
+  renewalInterval: bigint;
+  acceptedToken: string;
+  provider: string;
+  subscriberToken: string;
+  providerToken: string;
+  treasuryToken: string;
+  authorizationExpiresAt: bigint;
+  remainingRenewals: number;
+  autopayEnabled: boolean;
 } | null {
   try {
     const r = new BorshReader(data.subarray(8));
@@ -415,7 +499,18 @@ export function decodeSubscriptionRecord(data: Buffer): {
     const mintedAt = r.i64();
     const lastRenewedAt = r.i64();
     const totalPaid = r.u64();
-    return { owner, tokenId, planId, planTier, expiration, active, mintedAt, lastRenewedAt, totalPaid };
+    const renewalPrice = r.u64();
+    const renewalInterval = r.i64();
+    const acceptedToken = r.pubkey();
+    const provider = r.pubkey();
+    const subscriberToken = r.pubkey();
+    const providerToken = r.pubkey();
+    const treasuryToken = r.pubkey();
+    const authorizationExpiresAt = r.i64();
+    const remainingRenewals = r.u16();
+    const autopayEnabled = r.u8() !== 0;
+    r.u8(); // delegate bump
+    return { owner, tokenId, planId, planTier, expiration, active, mintedAt, lastRenewedAt, totalPaid, renewalPrice, renewalInterval, acceptedToken, provider, subscriberToken, providerToken, treasuryToken, authorizationExpiresAt, remainingRenewals, autopayEnabled };
   } catch {
     return null;
   }
@@ -429,6 +524,36 @@ export function decodeSubscriptionByWallet(data: Buffer): {
   try {
     const r = new BorshReader(data.subarray(8));
     return { owner: r.pubkey(), tokenId: r.u64() };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * SPL Token account delegation header (fixed 165-byte layout):
+ * mint(32) | owner(32) | amount(u64) | delegate(COption<Pubkey>) |
+ * state(u8) | is_native(COption<u64>) | delegated_amount(u64) |
+ * close_authority(COption<Pubkey>).
+ *
+ * Used by the renewal worker to confirm ArcenPay still holds the delegate and
+ * that the remaining allowance covers a renewal — the preflight that turns a
+ * foreign/overwritten delegate into a clear "reauthorization required" instead
+ * of an opaque on-chain failure.
+ */
+export function decodeTokenAccountDelegation(data: Buffer): {
+  amount: bigint;
+  delegate: string | null;
+  delegatedAmount: bigint;
+} | null {
+  try {
+    if (data.length < 129) return null;
+    const amount = data.readBigUInt64LE(64);
+    const hasDelegate = data.readUInt32LE(72) === 1;
+    const delegate = hasDelegate
+      ? new PublicKey(data.subarray(76, 108)).toBase58()
+      : null;
+    const delegatedAmount = data.readBigUInt64LE(121);
+    return { amount, delegate, delegatedAmount };
   } catch {
     return null;
   }

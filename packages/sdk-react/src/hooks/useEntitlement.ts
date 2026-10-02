@@ -110,22 +110,31 @@ export function useEntitlement(
   );
   const [tablelandLoading, setTablelandLoading] = useState(false);
   const [tablelandError, setTablelandError] = useState<Error | null>(null);
+  // EVM hex is case-insensitive; Solana base58 is case-sensitive and must be
+  // preserved. Only lowercase the EVM shape.
+  const normalizedWallet =
+    walletAddress && walletAddress.startsWith("0x")
+      ? walletAddress.toLowerCase()
+      : walletAddress;
+  // Accept both EVM (20-byte hex) and Solana (base58) wallet shapes — a Solana
+  // wallet must not be flagged invalid.
   const walletInvalid =
-    Boolean(walletAddress) && !/^0x[a-fA-F0-9]{40}$/.test(walletAddress || "");
+    Boolean(walletAddress) &&
+    !/^(0x[a-fA-F0-9]{40}|[1-9A-HJ-NP-Za-km-z]{32,44})$/.test(walletAddress || "");
 
   const tablelandFeatureFlagsUrl = useMemo(() => {
-    if (!walletAddress) return null;
+    if (!normalizedWallet) return null;
 
     const explicit = config.tablelandConfig?.featureFlagsEndpoint;
     if (explicit) {
       return explicit.includes("{wallet}")
-        ? explicit.replace("{wallet}", walletAddress.toLowerCase())
+        ? explicit.replace("{wallet}", normalizedWallet)
         : explicit;
     }
 
     const providerUrl = config.tablelandConfig?.providerUrl;
     if (!providerUrl) return null;
-    return `${providerUrl.replace(/\/$/, "")}/api/entitlements/${walletAddress.toLowerCase()}/flags`;
+    return `${providerUrl.replace(/\/$/, "")}/api/entitlements/${normalizedWallet}/flags`;
   }, [
     config.tablelandConfig?.featureFlagsEndpoint,
     config.tablelandConfig?.providerUrl,

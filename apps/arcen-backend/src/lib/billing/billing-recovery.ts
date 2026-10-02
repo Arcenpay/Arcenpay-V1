@@ -724,9 +724,19 @@ export async function finalizeSubscriptionActivation(
   const currentPeriodEnd = parseDate(input.payload.expiration);
   const source = input.source?.trim() || "billing-recovery";
   // Chain context for family-aware wallet normalization. When the recovery
-  // payload doesn't carry a chainId (legacy EVM activations) default to the
-  // ledger's canonical EVM chain so lowercasing behavior is unchanged.
-  const walletChainId = input.payload.chainId ?? 84532;
+  // payload carries a chainId, use it. When it does not (legacy EVM
+  // activations) we must NOT blindly assume EVM: an EVM wallet is lowercased,
+  // but a Solana base58 wallet must be preserved verbatim. Infer the family
+  // from the address shape in that case.
+  const walletChainId = input.payload.chainId ?? null;
+  const normalizeRecoveryWallet = (value: string): string | null => {
+    if (walletChainId != null) {
+      return normalizeWalletForChain(value, walletChainId);
+    }
+    const trimmed = value.trim();
+    if (!trimmed) return null;
+    return trimmed.startsWith("0x") ? trimmed.toLowerCase() : trimmed;
+  };
 
   if (input.payload.subscriberEmail) {
     await upsertScopedSubscriberEmail({
@@ -789,11 +799,11 @@ export async function finalizeSubscriptionActivation(
     traits: toPrismaJson(nextTraits),
     ...(input.payload.walletAddress &&
     company?.walletAddress &&
-    normalizeWalletForChain(input.payload.walletAddress, walletChainId) !==
-      normalizeWalletForChain(company.walletAddress, walletChainId)
+    normalizeRecoveryWallet(input.payload.walletAddress) !==
+      normalizeRecoveryWallet(company.walletAddress)
       ? {
           walletAddress:
-            normalizeWalletForChain(input.payload.walletAddress, walletChainId) ??
+            normalizeRecoveryWallet(input.payload.walletAddress) ??
             input.payload.walletAddress,
         }
       : {}),

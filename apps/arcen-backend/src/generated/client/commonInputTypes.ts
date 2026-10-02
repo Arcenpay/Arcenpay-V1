@@ -800,6 +800,23 @@ export type EnumBillingRecoveryTaskStatusWithAggregatesFilter<$PrismaModel = nev
   _max?: Prisma.NestedEnumBillingRecoveryTaskStatusFilter<$PrismaModel>
 }
 
+export type EnumSolanaActivationStatusFilter<$PrismaModel = never> = {
+  equals?: $Enums.SolanaActivationStatus | Prisma.EnumSolanaActivationStatusFieldRefInput<$PrismaModel>
+  in?: $Enums.SolanaActivationStatus[] | Prisma.ListEnumSolanaActivationStatusFieldRefInput<$PrismaModel>
+  notIn?: $Enums.SolanaActivationStatus[] | Prisma.ListEnumSolanaActivationStatusFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumSolanaActivationStatusFilter<$PrismaModel> | $Enums.SolanaActivationStatus
+}
+
+export type EnumSolanaActivationStatusWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.SolanaActivationStatus | Prisma.EnumSolanaActivationStatusFieldRefInput<$PrismaModel>
+  in?: $Enums.SolanaActivationStatus[] | Prisma.ListEnumSolanaActivationStatusFieldRefInput<$PrismaModel>
+  notIn?: $Enums.SolanaActivationStatus[] | Prisma.ListEnumSolanaActivationStatusFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumSolanaActivationStatusWithAggregatesFilter<$PrismaModel> | $Enums.SolanaActivationStatus
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumSolanaActivationStatusFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumSolanaActivationStatusFilter<$PrismaModel>
+}
+
 export type EnumSupportTicketStatusFilter<$PrismaModel = never> = {
   equals?: $Enums.SupportTicketStatus | Prisma.EnumSupportTicketStatusFieldRefInput<$PrismaModel>
   in?: $Enums.SupportTicketStatus[] | Prisma.ListEnumSupportTicketStatusFieldRefInput<$PrismaModel>
@@ -1791,6 +1808,23 @@ export type NestedEnumBillingRecoveryTaskStatusWithAggregatesFilter<$PrismaModel
   _count?: Prisma.NestedIntFilter<$PrismaModel>
   _min?: Prisma.NestedEnumBillingRecoveryTaskStatusFilter<$PrismaModel>
   _max?: Prisma.NestedEnumBillingRecoveryTaskStatusFilter<$PrismaModel>
+}
+
+export type NestedEnumSolanaActivationStatusFilter<$PrismaModel = never> = {
+  equals?: $Enums.SolanaActivationStatus | Prisma.EnumSolanaActivationStatusFieldRefInput<$PrismaModel>
+  in?: $Enums.SolanaActivationStatus[] | Prisma.ListEnumSolanaActivationStatusFieldRefInput<$PrismaModel>
+  notIn?: $Enums.SolanaActivationStatus[] | Prisma.ListEnumSolanaActivationStatusFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumSolanaActivationStatusFilter<$PrismaModel> | $Enums.SolanaActivationStatus
+}
+
+export type NestedEnumSolanaActivationStatusWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.SolanaActivationStatus | Prisma.EnumSolanaActivationStatusFieldRefInput<$PrismaModel>
+  in?: $Enums.SolanaActivationStatus[] | Prisma.ListEnumSolanaActivationStatusFieldRefInput<$PrismaModel>
+  notIn?: $Enums.SolanaActivationStatus[] | Prisma.ListEnumSolanaActivationStatusFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumSolanaActivationStatusWithAggregatesFilter<$PrismaModel> | $Enums.SolanaActivationStatus
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumSolanaActivationStatusFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumSolanaActivationStatusFilter<$PrismaModel>
 }
 
 export type NestedEnumSupportTicketStatusFilter<$PrismaModel = never> = {

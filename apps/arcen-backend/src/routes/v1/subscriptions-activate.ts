@@ -48,6 +48,7 @@ import {
   findPlanPda,
   findSubscriptionPda,
   findSubscriptionByWalletPda,
+  findSubscriptionDelegatePda,
   findAssociatedTokenAddress,
   decodePlanRecord,
   decodeConfigRecord,
@@ -748,12 +749,33 @@ async function verifySolanaActivation(input: {
   txHash: string;
 }): Promise<{ ok: true } | { ok: false; status: number; error: string }> {
   try {
-    const tx = await input.connection.getParsedTransaction(input.txHash, {
-      maxSupportedTransactionVersion: 0,
-      commitment: "confirmed",
-    });
+    // The wallet confirms the transaction before calling us, but OUR RPC node
+    // may not have it yet (propagation lag between different nodes). Wait for it
+    // briefly rather than failing a customer who has already been charged — the
+    // old single-shot read surfaced a scary "not confirmed" error while the
+    // payment had in fact gone through, and the plan was then applied seconds
+    // later by the event pipeline, out of sync with what the user was told.
+    const maxWaitMs = Number(process.env.SOLANA_TX_WAIT_MS || 15_000);
+    const pollMs = 1_500;
+    const deadline = Date.now() + maxWaitMs;
+    const fetchTx = async () =>
+      input.connection
+        .getParsedTransaction(input.txHash, {
+          maxSupportedTransactionVersion: 0,
+          commitment: "confirmed",
+        })
+        .catch(() => null);
+    let tx = await fetchTx();
+    while (!tx && Date.now() < deadline) {
+      await new Promise((resolve) => setTimeout(resolve, pollMs));
+      tx = await fetchTx();
+    }
     if (!tx) {
-      return { ok: false, status: 425, error: "Solana transaction is not confirmed yet." };
+      return {
+        ok: false,
+        status: 425,
+        error: "Solana transaction is still propagating to our RPC node.",
+      };
     }
     if (tx.meta?.err) {
       return { ok: false, status: 409, error: "Solana transaction failed on-chain." };
@@ -897,7 +919,14 @@ export async function POST(c: Context) {
     );
   }
 
-  const onChainPlanId = BigInt(parsed.data.planId);
+  // `parsed.data.planId` is the CATALOG plan id (a cuid like "cmupa8pck…").
+  // The on-chain plan id is a separate numeric field on the plan record.
+  // Converting the cuid here threw `Cannot convert … to a BigInt` and broke
+  // every Solana activation before its branch could run.
+  const numericPlanIdArg = /^\d+$/.test(String(parsed.data.planId).trim())
+    ? BigInt(String(parsed.data.planId).trim())
+    : null;
+  const onChainPlanId = numericPlanIdArg ?? 0n;
   const rawPaymentAccount = parsed.data.paymentAccount.trim();
   // EVM lowercases; Stellar (G…/C…) and Solana (base58) are case-sensitive.
   const paymentAccount = (normalizeWallet(rawPaymentAccount) ??
@@ -926,7 +955,11 @@ export async function POST(c: Context) {
         teamId,
         active: true,
         status: "PUBLISHED",
-        onChainPlanId: onChainPlanId.toString(),
+        // The client sends the CATALOG plan id (a cuid). Accept a numeric
+        // on-chain id as well, for callers that pass that instead.
+        ...(numericPlanIdArg
+          ? { onChainPlanId: numericPlanIdArg.toString() }
+          : { id: String(parsed.data.planId).trim() }),
       },
       select: {
         id: true,
@@ -936,6 +969,7 @@ export async function POST(c: Context) {
         acceptedToken: true,
         chainId: true,
         environmentId: true,
+        onChainPlanId: true,
       },
     });
 
@@ -1001,7 +1035,23 @@ export async function POST(c: Context) {
       const solanaBillingPeriod: "monthly" | "annual" =
         (catalogPlan as any).billingInterval >= YEARLY_INTERVAL ? "annual" : "monthly";
 
-      const [planPda] = findPlanPda(programIdStr, onChainPlanId);
+      // The on-chain plan id lives on the catalog record — the request normally
+      // carries the catalog cuid, not the numeric on-chain id.
+      const solanaOnChainPlanId =
+        numericPlanIdArg ??
+        (catalogPlan.onChainPlanId ? BigInt(catalogPlan.onChainPlanId) : null);
+      if (!solanaOnChainPlanId) {
+        return c.json(
+          {
+            error:
+              "This plan is not registered on-chain yet. Register it on-chain before subscribing.",
+          },
+          409,
+          corsHeaders(origin),
+        );
+      }
+
+      const [planPda] = findPlanPda(programIdStr, solanaOnChainPlanId);
       const [configPda] = findConfigPda(programIdStr);
 
       let plan: ReturnType<typeof decodePlanRecord> = null;
@@ -1039,17 +1089,43 @@ export async function POST(c: Context) {
         );
       }
 
-      const tokenId = deriveSolanaTokenId(paymentAccount, onChainPlanId.toString());
+      const tokenId = deriveSolanaTokenId(paymentAccount, solanaOnChainPlanId.toString());
       const [subscriptionPda] = findSubscriptionPda(programIdStr, tokenId);
       const [byWalletPda] = findSubscriptionByWalletPda(programIdStr, paymentAccount);
       const mint = plan.acceptedToken;
+      // Shared (owner, mint) autopay authority — `subscribe` approves this PDA
+      // as the SPL token delegate, so it must be in the account list between
+      // `subscription_by_wallet` and `token_mint` (program declaration order).
+      const [delegatePda] = findSubscriptionDelegatePda(
+        programIdStr,
+        paymentAccount,
+        mint,
+      );
       const subscriberAta = findAssociatedTokenAddress(paymentAccount, mint);
       const providerAta = findAssociatedTokenAddress(plan.provider, mint);
       const treasuryAta = findAssociatedTokenAddress(configRec.treasury, mint);
 
-      const submittedSolanaTx = (
+      let submittedSolanaTx = (
         parsed.data.activationTxHash ?? parsed.data.txHash
       )?.trim();
+
+      // Idempotency (D3): `subscribe` hard-`init`s the subscription PDA, so if a
+      // previous attempt already minted it but finalization failed, asking the
+      // wallet to sign again is impossible (simulation: "already in use") — and
+      // would be a second charge. Recover the minting signature and finalize
+      // from it instead, so a retry repairs rather than dead-ends.
+      if (!submittedSolanaTx) {
+        const existingSubscription = await connection
+          .getAccountInfo(subscriptionPda, "confirmed")
+          .catch(() => null);
+        if (existingSubscription) {
+          const signatures = await connection
+            .getSignaturesForAddress(subscriptionPda, { limit: 10 })
+            .catch(() => []);
+          const minted = [...signatures].reverse().find((s) => !s.err);
+          if (minted) submittedSolanaTx = minted.signature;
+        }
+      }
 
       if (!submittedSolanaTx) {
         return c.json(
@@ -1070,6 +1146,7 @@ export async function POST(c: Context) {
                     { pubkey: paymentAccount, isSigner: true, isWritable: true },
                     { pubkey: subscriptionPda.toBase58(), isSigner: false, isWritable: true },
                     { pubkey: byWalletPda.toBase58(), isSigner: false, isWritable: true },
+                    { pubkey: delegatePda.toBase58(), isSigner: false, isWritable: false },
                     { pubkey: mint, isSigner: false, isWritable: false },
                     { pubkey: subscriberAta.toBase58(), isSigner: false, isWritable: true },
                     { pubkey: providerAta.toBase58(), isSigner: false, isWritable: true },
@@ -1084,7 +1161,7 @@ export async function POST(c: Context) {
                 chainId,
                 acceptedToken: mint,
                 merchantAddress: plan.provider,
-                onChainPlanId: onChainPlanId.toString(),
+                onChainPlanId: solanaOnChainPlanId.toString(),
                 onChainTokenId: tokenId.toString(),
               },
             },
@@ -1178,6 +1255,24 @@ export async function POST(c: Context) {
         recoveryPending = !recoveryResult.ok;
       }
 
+      // The on-chain subscription is confirmed at this point. If the billing
+      // projection could not be committed, that is a failure — not a "pending"
+      // success. Returning 202 here made the client show "finalizing…" forever
+      // while the company stayed on Free. Surface it as an error so it is
+      // visible and retryable.
+      if (recoveryPending) {
+        return c.json(
+          {
+            error:
+              "The on-chain subscription was confirmed, but the billing state could not be finalized. No second charge will be made; this is safe to retry.",
+            txHash: submittedSolanaTx,
+            recoveryTaskId,
+          },
+          409,
+          corsHeaders(origin),
+        );
+      }
+
       return c.json(
         {
           data: {
@@ -1192,7 +1287,7 @@ export async function POST(c: Context) {
             recoveryPending,
           },
         },
-        recoveryPending ? 202 : 200,
+        200,
         corsHeaders(origin),
       );
     }

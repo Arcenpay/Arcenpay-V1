@@ -15,7 +15,10 @@ import {
 } from "viem";
 import { deliverWebhook } from "../../lib/webhooks/deliver-webhook.js";
 import { resolveEntitlementResults } from "../../lib/entitlements/entitlements.js";
-import { YEARLY_INTERVAL } from "@arcenpay/internal-core";
+import {
+  YEARLY_INTERVAL,
+  isValidAnyFamilyTxHash,
+} from "@arcenpay/internal-core";
 import {
   extractEmbedAccessToken,
   resolveEmbedAccessToken,
@@ -205,7 +208,7 @@ function readConsumedPaymentTxHashes(
   if (!Array.isArray(txHashes)) return [];
   return txHashes.filter(
     (value): value is string =>
-      typeof value === "string" && /^0x[0-9a-fA-F]{64}$/.test(value),
+      typeof value === "string" && isValidAnyFamilyTxHash(value),
   );
 }
 
@@ -1334,13 +1337,27 @@ export async function handleCompanyPlanRequest(
       }
 
       const connection = new Connection(solanaRpcUrl, "confirmed");
-      const tx = await connection.getParsedTransaction(accessChangeTxHash, {
-        maxSupportedTransactionVersion: 0,
-        commitment: "confirmed",
-      });
+      // Wait for the transaction to propagate to our RPC node rather than
+      // failing a wallet-confirmed action on the first miss (same rationale as
+      // the activation path).
+      const maxWaitMs = Number(process.env.SOLANA_TX_WAIT_MS || 15_000);
+      const pollMs = 1_500;
+      const deadline = Date.now() + maxWaitMs;
+      const fetchTx = async () =>
+        connection
+          .getParsedTransaction(accessChangeTxHash, {
+            maxSupportedTransactionVersion: 0,
+            commitment: "confirmed",
+          })
+          .catch(() => null);
+      let tx = await fetchTx();
+      while (!tx && Date.now() < deadline) {
+        await new Promise((resolve) => setTimeout(resolve, pollMs));
+        tx = await fetchTx();
+      }
       if (!tx) {
         return c.json(
-          { error: "Solana transaction is not confirmed yet." },
+          { error: "Solana transaction is still propagating to our RPC node." },
           425,
           corsHeaders(origin),
         );

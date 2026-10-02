@@ -10,11 +10,21 @@
 import type { Context } from "hono";
 import { createPublicClient, http, parseEventLogs } from "viem";
 import {
+  getChainFamily,
   getContractAddresses,
+  getSolanaRpcUrl,
+  isValidAnyFamilyTxHash,
+  normalizeAnyFamilyTxHash,
   PlanFactoryABI,
   SubscriptionRegistryABI,
   YEARLY_INTERVAL,
 } from "@arcenpay/internal-core";
+import { Connection } from "@solana/web3.js";
+import {
+  decodeSubscriptionRecord,
+  encodePauseAutopay,
+  findSubscriptionPda,
+} from "../../lib/payments/solana-instruction.js";
 import type { ComponentInvoiceSummary } from "@arcenpay/internal-core";
 import { db } from "../../db.js";
 import { resolveEntitlementResults } from "../../lib/entitlements/entitlements.js";
@@ -385,8 +395,9 @@ function readInvoiceCustomerName(metadata: unknown): string | null {
 
 function readInvoiceTxHash(metadata: unknown): string | null {
   const txHash = asRecord(metadata).txHash;
-  return typeof txHash === "string" && /^0x[0-9a-fA-F]{64}$/.test(txHash)
-    ? txHash.toLowerCase()
+  // Family-agnostic; Solana base58 signatures must not be lowercased.
+  return typeof txHash === "string" && isValidAnyFamilyTxHash(txHash)
+    ? normalizeAnyFamilyTxHash(txHash)
     : null;
 }
 
@@ -537,6 +548,14 @@ export async function GET(c: Context) {
   let entitlements: Record<string, unknown>[] = [];
   let nextBillingAt: string | null = null;
   let paymentMethod: Record<string, unknown> | null = null;
+  let solanaCancellation: {
+    programId: string;
+    rpcUrl: string;
+    instruction: {
+      keys: Array<{ pubkey: string; isSigner: boolean; isWritable: boolean }>;
+      data: string;
+    };
+  } | null = null;
   let recentInvoices: Record<string, unknown>[] = [];
   let subscriptionTransition: Record<string, unknown> | null = null;
   let latestChangeRequest: Record<string, unknown> | null = null;
@@ -570,6 +589,7 @@ export async function GET(c: Context) {
               catalogPlanId: true,
               walletAddress: true,
               onChainTokenId: true,
+              currentPeriodStart: true,
               currentPeriodEnd: true,
               metadata: true,
               chainId: true,
@@ -1100,9 +1120,15 @@ export async function GET(c: Context) {
           company.subscriptionState.currentPeriodEnd.toISOString();
       }
 
+      // The live refresh below speaks EVM JSON-RPC (SubscriptionRegistry ABI).
+      // It must not run on Solana: `getContractAddresses(9100001)` returns the
+      // Anchor program id, which is not an EVM address, so every call would
+      // throw — and the `catch` below would then discard a perfectly good
+      // period end. Solana's next billing date comes from the stored
+      // `currentPeriodEnd` (and the fallback below).
       if (
-        billingPaymentAccount ||
-        company.subscriptionState?.onChainTokenId
+        getChainFamily(configuredChainId) === "evm" &&
+        (billingPaymentAccount || company.subscriptionState?.onChainTokenId)
       ) {
         try {
           const client = createPublicClient({
@@ -1220,6 +1246,25 @@ export async function GET(c: Context) {
         }
       }
 
+      // An ACTIVE paid subscription must always surface a next billing date. If
+      // neither the stored period end nor an on-chain refresh produced one (the
+      // latter cannot run on Solana), derive it from the period start + the plan
+      // interval rather than showing "will appear after the subscription is
+      // active" to a customer who is already active.
+      const intervalSeconds = Number(activePlan?.billingInterval);
+      if (
+        !nextBillingAt &&
+        company.subscriptionState?.status === "ACTIVE" &&
+        company.subscriptionState.currentPeriodStart &&
+        Number.isFinite(intervalSeconds) &&
+        intervalSeconds > 0
+      ) {
+        nextBillingAt = new Date(
+          company.subscriptionState.currentPeriodStart.getTime() +
+            intervalSeconds * 1000,
+        ).toISOString();
+      }
+
       paymentMethod = {
         walletAddress: billingPaymentAccount,
         token:
@@ -1228,6 +1273,54 @@ export async function GET(c: Context) {
             : "USDC",
         chainId: configuredChainId,
       };
+
+      // Solana has no ERC-7579 module: autopay is stopped by the owner signing
+      // the program's `pause_autopay`. Prepare that instruction here (the codec
+      // is Node-only, so the browser cannot build it) for the embed to submit
+      // before it schedules a cancellation.
+      if (getChainFamily(configuredChainId) === "solana") {
+        const programId =
+          getContractAddresses(configuredChainId).subscriptionRegistry;
+        const rpcUrl = getSolanaRpcUrl(configuredChainId) ?? null;
+        const onChainTokenId = company.subscriptionState?.onChainTokenId;
+        const owner =
+          billingPaymentAccount ??
+          company.subscriptionState?.walletAddress ??
+          null;
+        if (programId && rpcUrl && onChainTokenId && owner) {
+          const [subscription] = findSubscriptionPda(
+            programId,
+            BigInt(onChainTokenId),
+          );
+          // Only offer the pause step when there is actually an autopay
+          // authority to disable. An inactive/closed subscription has none, so
+          // prompting the wallet to sign would only produce a failing tx.
+          const info = await new Connection(rpcUrl, "confirmed")
+            .getAccountInfo(subscription, "confirmed")
+            .catch(() => null);
+          const record = info
+            ? decodeSubscriptionRecord(info.data as Buffer)
+            : null;
+          if (record?.active && record.autopayEnabled) {
+            solanaCancellation = {
+              programId,
+              rpcUrl,
+              instruction: {
+                // AutopayControl context: [subscription (mut), owner (signer)].
+                keys: [
+                  {
+                    pubkey: subscription.toBase58(),
+                    isSigner: false,
+                    isWritable: true,
+                  },
+                  { pubkey: owner, isSigner: true, isWritable: false },
+                ],
+                data: encodePauseAutopay().toString("base64"),
+              },
+            };
+          }
+        }
+      }
     }
   }
 
@@ -1573,6 +1666,7 @@ export async function GET(c: Context) {
         nextBillingAt,
         billingPeriod: activeBillingPeriod,
         paymentMethod,
+        solanaCancellation,
         recentInvoices,
         subscriptionTransition,
       },

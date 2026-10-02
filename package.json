@@ -2,7 +2,7 @@
   "name": "arcenpay",
   "version": "1.0.0",
   "private": true,
-  "description": "Web3 Entitlement Layer — ArcenPay + ZKVUB Protocol",
+  "description": "Web3 Entitlement Layer \u2014 ArcenPay + ZKVUB Protocol",
   "workspaces": [
     "packages/*",
     "apps/*",
@@ -49,7 +49,8 @@
     "setup:billing": "cd apps/arcen-backend && npm run setup:platform-billing",
     "send:launch": "npx tsx scripts/send-launch-emails.ts",
     "send:launch:dry": "npx tsx scripts/send-launch-emails.ts --dry-run",
-    "send:launch:preview": "npx tsx scripts/send-launch-emails.ts --preview /tmp/launch-preview.html"
+    "send:launch:preview": "npx tsx scripts/send-launch-emails.ts --preview /tmp/launch-preview.html",
+    "dev:facilitators": "bash scripts/dev-facilitators.sh"
   },
   "dependencies": {
     "@arcjet/next": "^1.4.0",

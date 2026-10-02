@@ -23,6 +23,7 @@ import {
   findPlanPda,
   findSubscriptionPda,
   findSubscriptionByWalletPda,
+  findSubscriptionDelegatePda,
 } from "../../../apps/facilitator/src/services/solana-instruction-codec.js";
 import {
   decodeAnchorEventPayload,
@@ -141,6 +142,7 @@ async function main() {
   const AMOUNT = 10_000_000n;
   const [subscription] = findSubscriptionPda(programId, TOKEN_ID);
   const [byWallet] = findSubscriptionByWalletPda(programId, subscriber.publicKey);
+  const [delegate] = findSubscriptionDelegatePda(programId, subscriber.publicKey, mint);
   const subAta = ata(subscriber.publicKey, mint);
   const provAta = ata(provider.publicKey, mint);
   const treasAta = ata(treasury.publicKey, mint);
@@ -163,6 +165,7 @@ async function main() {
           { pubkey: subscriber.publicKey, isSigner: true, isWritable: true },
           { pubkey: subscription, isSigner: false, isWritable: true },
           { pubkey: byWallet, isSigner: false, isWritable: true },
+          { pubkey: delegate, isSigner: false, isWritable: false },
           { pubkey: mint, isSigner: false, isWritable: false },
           { pubkey: subAta, isSigner: false, isWritable: true },
           { pubkey: provAta, isSigner: false, isWritable: true },
@@ -231,6 +234,7 @@ async function main() {
             { pubkey: subscriber.publicKey, isSigner: true, isWritable: true },
             { pubkey: subscription, isSigner: false, isWritable: true },
             { pubkey: byWallet, isSigner: false, isWritable: true },
+            { pubkey: delegate, isSigner: false, isWritable: false },
             { pubkey: mint, isSigner: false, isWritable: false },
             { pubkey: subAta, isSigner: false, isWritable: true },
             { pubkey: provAta, isSigner: false, isWritable: true },
@@ -306,14 +310,17 @@ async function main() {
             { pubkey: config, isSigner: false, isWritable: false },
             { pubkey: plan2, isSigner: false, isWritable: false },
             { pubkey: subscription, isSigner: false, isWritable: true },
+            // Any funded signer may relay; the delegate PDA is the spender.
             { pubkey: subscriber.publicKey, isSigner: true, isWritable: true },
+            { pubkey: delegate, isSigner: false, isWritable: false },
             { pubkey: mint, isSigner: false, isWritable: false },
             { pubkey: subAta, isSigner: false, isWritable: true },
             { pubkey: provAta, isSigner: false, isWritable: true },
             { pubkey: treasAta, isSigner: false, isWritable: true },
             { pubkey: TOKEN_PROGRAM, isSigner: false, isWritable: false },
           ],
-          data: encodeExecute(5_000_000),
+          // Relayer-submitted execute: the amount is the on-chain snapshot.
+          data: encodeExecute(),
         }),
       ],
       [subscriber],
@@ -322,7 +329,7 @@ async function main() {
   } catch {
     renewRejected = true;
   }
-  assert(renewRejected, "early renewal rejected by MIN_BILLING_INTERVAL guard");
+  assert(renewRejected, "early renewal rejected by the expiration guard");
   console.log("✓ execute rejected before the billing interval");
 
   // 10. cancel

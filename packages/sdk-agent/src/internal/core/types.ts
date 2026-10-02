@@ -484,6 +484,21 @@ export interface ComponentRenderData {
   recentInvoices?: ComponentInvoiceSummary[];
   subscriptionTransition?: ComponentSubscriptionTransition | null;
   /**
+   * Solana-only: an owner-signed `pause_autopay` instruction the wallet can
+   * submit to stop autopay before scheduling a cancellation. Solana has no
+   * ERC-7579 module — the program's SPL delegate is the autopay authority — so
+   * cancellation needs this explicit on-chain step. Prepared server-side
+   * because the instruction codec is Node-only.
+   */
+  solanaCancellation?: {
+    programId: string;
+    rpcUrl: string;
+    instruction: {
+      keys: Array<{ pubkey: string; isSigner: boolean; isWritable: boolean }>;
+      data: string;
+    };
+  } | null;
+  /**
    * Server-enforced branding policy for the embed.
    * `hideBrandingAllowed === true` when the provider's platform tier
    * (PLUS/PRO) permits removing the "Secured by ArcenPay" footer. The SDK

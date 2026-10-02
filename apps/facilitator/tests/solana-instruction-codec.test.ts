@@ -4,6 +4,10 @@ import { createHash } from "node:crypto";
 import { PublicKey, Keypair } from "@solana/web3.js";
 import {
   instructionDiscriminator,
+  accountDiscriminator,
+  parseSolanaSecretKey,
+  decodeTokenAccountDelegation,
+  findSubscriptionDelegatePda,
   encodeInitializeConfig,
   encodeCreatePlan,
   encodeUpdatePlan,
@@ -39,11 +43,10 @@ test("instructionDiscriminator matches sha256('global:<name>')[0..8]", () => {
   }
 });
 
-test("execute encodes discriminator + u64 amount (16 bytes)", () => {
-  const data = encodeExecute(5_000_000n);
-  assert.equal(data.length, 16);
-  assert.deepEqual(data.subarray(0, 8), expectedDiscriminator("execute"));
-  assert.equal(data.readBigUInt64LE(8), 5_000_000n);
+test("execute encodes discriminator only — amount comes from the snapshot", () => {
+  const data = encodeExecute();
+  assert.equal(data.length, 8);
+  assert.deepEqual(data, expectedDiscriminator("execute"));
 });
 
 test("subscribe encodes discriminator + token_id + amount (24 bytes)", () => {
@@ -122,6 +125,65 @@ test("PDAs are deterministic and seed-scoped", () => {
     new PublicKey(PROGRAM_ID),
   );
   assert.equal(byWallet.toBase58(), manualByWallet.toBase58());
+});
+
+test("subscription delegate PDA is shared per (owner, mint), not per token id", () => {
+  const owner = Keypair.generate().publicKey;
+  const mint = Keypair.generate().publicKey;
+  const [delegate] = findSubscriptionDelegatePda(PROGRAM_ID, owner, mint);
+  const [manual] = PublicKey.findProgramAddressSync(
+    [Buffer.from("subscription_delegate"), owner.toBuffer(), mint.toBuffer()],
+    new PublicKey(PROGRAM_ID),
+  );
+  assert.equal(delegate.toBase58(), manual.toBase58());
+
+  // Same token account ⇒ same delegate (so a second subscription can't clobber
+  // the first one), different mint ⇒ a different delegate.
+  const [sameAgain] = findSubscriptionDelegatePda(PROGRAM_ID, owner, mint);
+  assert.equal(delegate.toBase58(), sameAgain.toBase58());
+  const [other] = findSubscriptionDelegatePda(
+    PROGRAM_ID,
+    owner,
+    Keypair.generate().publicKey,
+  );
+  assert.notEqual(delegate.toBase58(), other.toBase58());
+});
+
+test("accountDiscriminator locks the on-chain Subscription discriminator", () => {
+  const d = accountDiscriminator("Subscription");
+  assert.equal(d.length, 8);
+  // Verified against a live devnet Subscription account.
+  assert.equal(d.toString("hex"), "40071a8766846221");
+});
+
+test("parseSolanaSecretKey rejects EVM keys and wrong-length secrets", () => {
+  const kp = Keypair.generate();
+  assert.deepEqual(
+    parseSolanaSecretKey(JSON.stringify(Array.from(kp.secretKey))),
+    kp.secretKey,
+  );
+  assert.throws(() => parseSolanaSecretKey("0x" + "ab".repeat(32)), /EVM key/);
+  assert.throws(() => parseSolanaSecretKey("1111"), /64-byte/);
+});
+
+test("decodeTokenAccountDelegation reads the delegate and delegated amount", () => {
+  const data = Buffer.alloc(165);
+  Keypair.generate().publicKey.toBuffer().copy(data, 0);
+  Keypair.generate().publicKey.toBuffer().copy(data, 32); // owner
+  data.writeBigUInt64LE(1_000_000n, 64); // amount
+  const delegate = Keypair.generate().publicKey;
+  data.writeUInt32LE(1, 72); // delegate COption = Some
+  delegate.toBuffer().copy(data, 76);
+  data.writeUInt8(1, 108); // state
+  data.writeUInt32LE(0, 109); // is_native = None
+  data.writeBigUInt64LE(250_000n, 121); // delegated_amount
+  data.writeUInt32LE(0, 129); // close_authority = None
+
+  const decoded = decodeTokenAccountDelegation(data);
+  assert.ok(decoded);
+  assert.equal(decoded!.delegate, delegate.toBase58());
+  assert.equal(decoded!.delegatedAmount, 250_000n);
+  assert.equal(decoded!.amount, 1_000_000n);
 });
 
 test("session-vault instructions encode with the right layout", () => {

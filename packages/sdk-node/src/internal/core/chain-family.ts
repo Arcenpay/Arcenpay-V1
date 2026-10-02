@@ -533,6 +533,36 @@ export function isValidTxHashForChain(value: unknown, chainId: number): boolean 
   return isValidTxHash(value, family);
 }
 
+const ALL_CHAIN_FAMILIES: readonly ChainFamily[] = ["evm", "stellar", "solana"];
+
+/**
+ * True if `value` is a valid address shape on ANY supported chain family
+ * (EVM 20-byte hex, Stellar G…/C…, Solana base58).
+ *
+ * Use where the chain is not known at the call site — e.g. a provider address
+ * arriving on a path param, or an SDK hook that must not reject a Solana wallet.
+ */
+export function isValidAnyFamilyAddress(value: unknown): boolean {
+  return ALL_CHAIN_FAMILIES.some((family) => isValidAddress(value, family));
+}
+
+/**
+ * True if `value` is a valid transaction-hash shape on ANY supported family
+ * (EVM 32-byte hex, Stellar 64-hex, Solana base58 signature).
+ */
+export function isValidAnyFamilyTxHash(value: unknown): boolean {
+  return ALL_CHAIN_FAMILIES.some((family) => isValidTxHash(value, family));
+}
+
+/**
+ * Family-agnostic hash normalization: only the EVM `0x…` shape is
+ * case-insensitive. Solana base58 signatures and Stellar 64-hex must be
+ * preserved verbatim (lowercasing a base58 signature corrupts it).
+ */
+export function normalizeAnyFamilyTxHash(value: string): string {
+  return value.startsWith("0x") ? value.toLowerCase() : value;
+}
+
 /**
  * Normalizes a wallet address for a chain family without corrupting it.
  *

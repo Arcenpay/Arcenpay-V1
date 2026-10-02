@@ -3,8 +3,16 @@ import test from "node:test";
 import { Keypair } from "@solana/web3.js";
 import {
   isRenewalDue,
-  parseSubscriberKeys,
+  SolanaRenewalDriver,
+  SUBSCRIPTION_DISCRIMINATOR_BASE58,
 } from "../src/services/solana-renewal-driver.js";
+import {
+  decodeBase58,
+  encodeBase58,
+} from "../src/services/solana-instruction-codec.js";
+
+// Solana devnet — the only chain where the ArcenPay program id is configured.
+const CHAIN_ID = 9_100_001;
 
 test("isRenewalDue compares expiration against now", () => {
   const now = 1_700_000_000;
@@ -14,33 +22,39 @@ test("isRenewalDue compares expiration against now", () => {
   assert.equal(isRenewalDue(0n, now), true);
 });
 
-test("parseSubscriberKeys parses base58 <pubkey>:<secret> entries", () => {
-  const kp = Keypair.generate();
-  // base58-encode the secret key (64 bytes) via a minimal encoder.
-  const ALPHABET = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
-  let num = 0n;
-  for (const b of kp.secretKey) num = num * 256n + BigInt(b);
-  let secret = "";
-  while (num > 0n) {
-    secret = ALPHABET[Number(num % 58n)] + secret;
-    num /= 58n;
-  }
-  for (let i = 0; i < kp.secretKey.length && kp.secretKey[i] === 0; i += 1) {
-    secret = "1" + secret;
-  }
-
-  const map = parseSubscriberKeys(`${kp.publicKey.toBase58()}:${secret}`);
-  assert.equal(map.size, 1);
-  assert.ok(map.has(kp.publicKey.toBase58()));
+test("discovery filter is the Subscription account discriminator", () => {
+  assert.equal(
+    Buffer.from(decodeBase58(SUBSCRIPTION_DISCRIMINATOR_BASE58)).toString("hex"),
+    "40071a8766846221",
+  );
 });
 
-test("parseSubscriberKeys accepts JSON-array secrets and skips bad entries", () => {
-  const kp = Keypair.generate();
-  const jsonSecret = JSON.stringify(Array.from(kp.secretKey));
-  const map = parseSubscriberKeys(
-    `; garbage; ${kp.publicKey.toBase58()}:${jsonSecret}; ::`,
+test("driver refuses to start without a relayer key", () => {
+  assert.throws(
+    () => new SolanaRenewalDriver({ chainId: CHAIN_ID, relayerKey: "" }),
+    /relayer key/,
   );
-  assert.equal(map.size, 1);
-  assert.equal(parseSubscriberKeys(undefined).size, 0);
-  assert.equal(parseSubscriberKeys("").size, 0);
+});
+
+test("driver rejects an EVM-format key with an actionable message", () => {
+  assert.throws(
+    () =>
+      new SolanaRenewalDriver({
+        chainId: CHAIN_ID,
+        relayerKey: "0x" + "ab".repeat(32),
+      }),
+    /EVM key/,
+  );
+});
+
+test("driver derives the relayer address from a base58 keypair secret", () => {
+  const kp = Keypair.generate();
+  const driver = new SolanaRenewalDriver({
+    chainId: CHAIN_ID,
+    relayerKey: encodeBase58(kp.secretKey),
+  });
+  assert.equal(driver.getRelayerAddress(), kp.publicKey.toBase58());
+  assert.equal(driver.getStats().relayer, kp.publicKey.toBase58());
+  assert.equal(driver.getStats().parked, 0);
+  assert.equal(driver.getStats().running, false);
 });

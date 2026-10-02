@@ -292,14 +292,15 @@ export class SettlementWriterService {
     if (this.isSolana) {
       // A settler is authorized iff its `["settler", settler]` registry PDA
       // exists (created by the program's `authorize_settler`).
+      //
+      // Deliberately NOT wrapped in try/catch: a transient RPC failure (e.g. a
+      // 429 from a public endpoint) must surface as "could not verify"
+      // (the caller marks authorization unknown) rather than being misreported
+      // as "this signer is not authorized".
       if (!this.solanaConnection) return false;
-      try {
-        const [record] = findSettlerPda(this.solanaProgramId, address);
-        const info = await this.solanaConnection.getAccountInfo(record);
-        return info !== null;
-      } catch {
-        return false;
-      }
+      const [record] = findSettlerPda(this.solanaProgramId, address);
+      const info = await this.solanaConnection.getAccountInfo(record);
+      return info !== null;
     }
     if (this.isStellar) {
       // Stellar vault exposes `is_settler` — no authorizedSettlers mapping.

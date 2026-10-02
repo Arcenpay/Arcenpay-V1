@@ -12,6 +12,7 @@
   "dependencies": {
     "@arcenpay/react": "^1.0.0",
     "@stellar/freighter-api": "^6.0.1",
+    "buffer": "^6.0.3",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "viem": "^2.21.0",

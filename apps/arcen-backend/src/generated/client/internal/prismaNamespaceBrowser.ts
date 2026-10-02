@@ -87,6 +87,7 @@ export const ModelName = {
   BillingBalance: 'BillingBalance',
   Refund: 'Refund',
   BillingRecoveryTask: 'BillingRecoveryTask',
+  SolanaActivationAttempt: 'SolanaActivationAttempt',
   WebhookDelivery: 'WebhookDelivery',
   PlatformTierConfig: 'PlatformTierConfig',
   PlatformBillingPlan: 'PlatformBillingPlan',
@@ -850,6 +851,36 @@ export const BillingRecoveryTaskScalarFieldEnum = {
 } as const
 
 export type BillingRecoveryTaskScalarFieldEnum = (typeof BillingRecoveryTaskScalarFieldEnum)[keyof typeof BillingRecoveryTaskScalarFieldEnum]
+
+
+export const SolanaActivationAttemptScalarFieldEnum = {
+  id: 'id',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt',
+  teamId: 'teamId',
+  environmentId: 'environmentId',
+  companyId: 'companyId',
+  chainId: 'chainId',
+  status: 'status',
+  idempotencyKey: 'idempotencyKey',
+  txSignature: 'txSignature',
+  walletAddress: 'walletAddress',
+  catalogPlanId: 'catalogPlanId',
+  onChainPlanId: 'onChainPlanId',
+  onChainTokenId: 'onChainTokenId',
+  expectedAmount: 'expectedAmount',
+  acceptedToken: 'acceptedToken',
+  merchantAddress: 'merchantAddress',
+  finalizedAt: 'finalizedAt',
+  provisionedAt: 'provisionedAt',
+  attempts: 'attempts',
+  lastAttemptAt: 'lastAttemptAt',
+  nextAttemptAt: 'nextAttemptAt',
+  lastError: 'lastError',
+  metadata: 'metadata'
+} as const
+
+export type SolanaActivationAttemptScalarFieldEnum = (typeof SolanaActivationAttemptScalarFieldEnum)[keyof typeof SolanaActivationAttemptScalarFieldEnum]
 
 
 export const WebhookDeliveryScalarFieldEnum = {

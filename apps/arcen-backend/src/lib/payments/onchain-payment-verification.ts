@@ -5,14 +5,22 @@ import {
   http,
   isAddress,
 } from "viem";
+import { Connection, PublicKey } from "@solana/web3.js";
 import {
   ERC7579AutopayModuleABI,
   getChain,
   getChainFamily,
   getContractAddresses,
+  getSolanaRpcUrl,
   PlanFactoryABI,
   SubscriptionRegistryABI,
 } from "@arcenpay/internal-core";
+import {
+  decodeBase58,
+  findSubscriptionByWalletPda,
+  findSubscriptionPda,
+  instructionDiscriminator,
+} from "./solana-instruction.js";
 import { createResilientPublicClient, getRpcUrl } from "../../config.js";
 import { DEFAULT_CHAIN_ID } from "../platform/default-chain.js";
 import {
@@ -925,14 +933,15 @@ export type VerifySubscriptionCancellationResult =
 
 export interface VerifyAutopayCancellationControlInput {
   paymentAccount: string;
-  txHash: `0x${string}`;
+  /** EVM 0x-hash or a Solana base58 signature. */
+  txHash: string;
   chainId?: number;
 }
 
 export type VerifyAutopayCancellationControlResult =
   | {
       ok: true;
-      txHash: `0x${string}`;
+      txHash: string;
       paymentAccount: string;
       control: "PAUSED" | "REVOKED";
       controlledAt: string;
@@ -943,9 +952,144 @@ export type VerifyAutopayCancellationControlResult =
       error: string;
     };
 
+/**
+ * Solana autopay cancellation control: verifies the submitted transaction
+ * invoked the ArcenPay program with `pause_autopay` or `cancel` against this
+ * account's subscription. Solana has no ERC-7579 module — the program's SPL
+ * delegate is the autopay authority, and only the owner can stop it.
+ */
+async function verifySolanaAutopayCancellationControl(
+  params: VerifyAutopayCancellationControlInput,
+): Promise<VerifyAutopayCancellationControlResult> {
+  const chainId = params.chainId;
+  if (!chainId) {
+    return {
+      ok: false,
+      status: 400,
+      error: "Missing chain for Solana cancellation verification.",
+    };
+  }
+  const programId = getContractAddresses(chainId).subscriptionRegistry;
+  const rpcUrl = getSolanaRpcUrl(chainId);
+  if (!programId || !rpcUrl) {
+    return {
+      ok: false,
+      status: 503,
+      error: "The ArcenPay program is not configured for this chain.",
+    };
+  }
+
+  let connection: Connection;
+  try {
+    connection = new Connection(rpcUrl, "confirmed");
+  } catch {
+    return {
+      ok: false,
+      status: 503,
+      error: "Unable to reach the Solana RPC for this chain.",
+    };
+  }
+
+  const tx = await connection
+    .getParsedTransaction(params.txHash, {
+      maxSupportedTransactionVersion: 0,
+      commitment: "confirmed",
+    })
+    .catch(() => null);
+  if (!tx) {
+    return {
+      ok: false,
+      status: 425,
+      error:
+        "Cancellation-control transaction is not yet confirmed. Retry shortly.",
+    };
+  }
+  if (tx.meta?.err) {
+    return {
+      ok: false,
+      status: 409,
+      error: "Autopay cancellation-control transaction failed on-chain.",
+    };
+  }
+
+  const [byWallet] = findSubscriptionByWalletPda(
+    programId,
+    params.paymentAccount,
+  );
+  const link = await connection
+    .getAccountInfo(byWallet, "confirmed")
+    .catch(() => null);
+  if (!link) {
+    return {
+      ok: false,
+      status: 409,
+      error: "No on-chain subscription exists for this payment account.",
+    };
+  }
+  const tokenId = link.data.readBigUInt64LE(40);
+  const [subscription] = findSubscriptionPda(programId, tokenId);
+
+  const pauseDiscriminator = instructionDiscriminator("pause_autopay");
+  const cancelDiscriminator = instructionDiscriminator("cancel");
+  const matches = (data: Uint8Array, disc: Buffer) =>
+    data.length >= 8 && disc.every((byte, i) => data[i] === byte);
+
+  let control: "PAUSED" | "REVOKED" | null = null;
+  for (const ix of tx.transaction.message.instructions) {
+    const candidate = ix as {
+      programId?: PublicKey;
+      accounts?: PublicKey[];
+      data?: string;
+    };
+    if (candidate.programId?.toBase58() !== programId) continue;
+    if (typeof candidate.data !== "string") continue;
+    if (
+      !candidate.accounts?.some(
+        (a) => a.toBase58() === subscription.toBase58(),
+      )
+    ) {
+      continue;
+    }
+    let bytes: Uint8Array;
+    try {
+      bytes = decodeBase58(candidate.data);
+    } catch {
+      continue;
+    }
+    if (matches(bytes, pauseDiscriminator)) {
+      control = "PAUSED";
+      break;
+    }
+    if (matches(bytes, cancelDiscriminator)) {
+      control = "REVOKED";
+      break;
+    }
+  }
+
+  if (!control) {
+    return {
+      ok: false,
+      status: 409,
+      error:
+        "Transaction is not an ArcenPay pause_autopay or cancel for this subscription.",
+    };
+  }
+
+  return {
+    ok: true,
+    txHash: params.txHash,
+    paymentAccount: params.paymentAccount,
+    control,
+    controlledAt: new Date().toISOString(),
+  };
+}
+
 export async function verifyAutopayCancellationControl(
   params: VerifyAutopayCancellationControlInput,
 ): Promise<VerifyAutopayCancellationControlResult> {
+  if (params.chainId && getChainFamily(params.chainId) === "solana") {
+    return verifySolanaAutopayCancellationControl(params);
+  }
   if (!isAddress(params.paymentAccount)) {
     return {
       ok: false,
@@ -953,6 +1097,16 @@ export async function verifyAutopayCancellationControl(
       error: "Payment account is not configured correctly.",
     };
   }
+
+  // Past the Solana dispatch above, this is an EVM (0x) hash.
+  if (!/^0x[0-9a-fA-F]{64}$/.test(params.txHash)) {
+    return {
+      ok: false,
+      status: 400,
+      error: "Invalid autopay cancellation-control transaction hash.",
+    };
+  }
+  const evmTxHash = params.txHash as `0x${string}`;
 
   const { publicClient, contracts } = createChainPublicClient(params.chainId);
   const autopayAddress = contracts.autopayModule as `0x${string}`;
@@ -967,7 +1121,7 @@ export async function verifyAutopayCancellationControl(
 
   try {
     const receipt = await publicClient.getTransactionReceipt({
-      hash: params.txHash,
+      hash: evmTxHash,
     });
 
     if (receipt.status !== "success") {

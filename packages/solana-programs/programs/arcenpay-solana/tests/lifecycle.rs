@@ -39,6 +39,7 @@ const DISC_SUBSCRIBE: [u8; 8] = [254, 28, 191, 138, 156, 179, 183, 53];
 const DISC_EXECUTE: [u8; 8] = [130, 221, 242, 154, 13, 193, 189, 29];
 const DISC_CANCEL: [u8; 8] = [232, 219, 223, 41, 219, 236, 220, 190];
 const DISC_CHANGE_PLAN: [u8; 8] = [75, 206, 141, 79, 34, 245, 125, 189];
+const DISC_REAUTHORIZE_AUTOPAY: [u8; 8] = [75, 224, 241, 210, 10, 248, 52, 186];
 const DISC_AUTHORIZE_SETTLER: [u8; 8] = [194, 185, 224, 99, 141, 104, 196, 21];
 const DISC_FUND_SESSION: [u8; 8] = [40, 175, 120, 162, 32, 100, 32, 38];
 const DISC_SETTLE: [u8; 8] = [175, 42, 185, 87, 144, 131, 102, 212];
@@ -117,6 +118,7 @@ fn subscribe_ix(
     plan: Pubkey,
     subscription: Pubkey,
     by_wallet: Pubkey,
+    delegate: Pubkey,
     mint: Pubkey,
     subscriber_token: Pubkey,
     provider_token: Pubkey,
@@ -135,6 +137,7 @@ fn subscribe_ix(
             meta(subscriber, true, true),
             meta(subscription, false, true),
             meta(by_wallet, false, true),
+            meta(delegate, false, false),
             meta(mint, false, false),
             meta(subscriber_token, false, true),
             meta(provider_token, false, true),
@@ -146,34 +149,57 @@ fn subscribe_ix(
     }
 }
 
+/// `execute` takes no amount (the charge is the on-chain snapshot) and is
+/// submitted by any funded relayer; the (owner, mint) delegate PDA is the SPL
+/// spender.
 #[allow(clippy::too_many_arguments)]
 fn execute_ix(
-    payer: Pubkey,
+    relayer: Pubkey,
     config: Pubkey,
     plan: Pubkey,
     subscription: Pubkey,
+    delegate: Pubkey,
     mint: Pubkey,
     payer_token: Pubkey,
     provider_token: Pubkey,
     treasury_token: Pubkey,
-    amount: u64,
 ) -> Instruction {
-    let mut data = DISC_EXECUTE.to_vec();
-    data.extend_from_slice(&amount.to_le_bytes());
     Instruction {
         program_id: ID,
         accounts: vec![
             meta(config, false, false),
             meta(plan, false, false),
             meta(subscription, false, true),
-            meta(payer, true, true),
+            meta(relayer, true, true),
+            meta(delegate, false, false),
             meta(mint, false, false),
             meta(payer_token, false, true),
             meta(provider_token, false, true),
             meta(treasury_token, false, true),
             meta(spl_token::id(), false, false),
         ],
-        data,
+        data: DISC_EXECUTE.to_vec(),
+    }
+}
+
+fn reauthorize_autopay_ix(
+    owner: Pubkey,
+    subscription: Pubkey,
+    delegate: Pubkey,
+    subscriber_token: Pubkey,
+    mint: Pubkey,
+) -> Instruction {
+    Instruction {
+        program_id: ID,
+        accounts: vec![
+            meta(subscription, false, true),
+            meta(owner, true, false),
+            meta(delegate, false, false),
+            meta(subscriber_token, false, true),
+            meta(mint, false, false),
+            meta(spl_token::id(), false, false),
+        ],
+        data: DISC_REAUTHORIZE_AUTOPAY.to_vec(),
     }
 }
 
@@ -429,6 +455,13 @@ async fn token_balance(ctx: &mut ProgramTestContext, key: Pubkey) -> u64 {
     TokenAccount::unpack(&acct.data).unwrap().amount
 }
 
+/// Reads the SPL `(delegate, delegated_amount)` pair from a token account.
+async fn token_delegation(ctx: &mut ProgramTestContext, key: Pubkey) -> (Pubkey, u64) {
+    let acct = ctx.banks_client.get_account(key).await.unwrap().unwrap();
+    let token = TokenAccount::unpack(&acct.data).unwrap();
+    (token.delegate.unwrap(), token.delegated_amount)
+}
+
 fn config_pda() -> Pubkey {
     Pubkey::find_program_address(&[b"config"], &ID).0
 }
@@ -438,6 +471,10 @@ fn plan_pda(plan_id: u64) -> Pubkey {
 fn subscription_pda(token_id: u64) -> Pubkey {
     Pubkey::find_program_address(&[b"subscription", &token_id.to_le_bytes()], &ID).0
 }
+/// The shared autopay authority PDA for one (owner, mint) token account.
+fn delegate_pda(owner: Pubkey, mint: Pubkey) -> (Pubkey, u8) {
+    Pubkey::find_program_address(&[b"subscription_delegate", owner.as_ref(), mint.as_ref()], &ID)
+}
 fn by_wallet_pda(owner: Pubkey) -> Pubkey {
     Pubkey::find_program_address(&[b"subscription_wallet", owner.as_ref()], &ID).0
 }
@@ -445,15 +482,26 @@ fn by_wallet_pda(owner: Pubkey) -> Pubkey {
 const DISC_SUBSCRIPTION_ACCOUNT: [u8; 8] = [64, 7, 26, 135, 102, 132, 98, 33];
 
 /// Serializes a `Subscription` account fixture (Anchor account discriminator +
-/// Borsh fields, matching `Subscription::LEN`).
+/// Borsh fields, matching `Subscription::LEN`), including the immutable autopay
+/// snapshot.
 #[allow(clippy::too_many_arguments)]
 fn subscription_account(
     owner: Pubkey,
     token_id: u64,
     plan_id: u64,
-    last_renewed_at: i64,
     expiration: i64,
     total_paid: u64,
+    renewal_price: u64,
+    renewal_interval: i64,
+    accepted_token: Pubkey,
+    provider: Pubkey,
+    subscriber_token: Pubkey,
+    provider_token: Pubkey,
+    treasury_token: Pubkey,
+    authorization_expires_at: i64,
+    remaining_renewals: u16,
+    autopay_enabled: bool,
+    delegate_bump: u8,
     bump: u8,
 ) -> Account {
     let mut data = DISC_SUBSCRIPTION_ACCOUNT.to_vec();
@@ -464,8 +512,19 @@ fn subscription_account(
     data.extend_from_slice(&expiration.to_le_bytes());
     data.push(1); // active
     data.extend_from_slice(&0i64.to_le_bytes()); // minted_at
-    data.extend_from_slice(&last_renewed_at.to_le_bytes());
+    data.extend_from_slice(&0i64.to_le_bytes()); // last_renewed_at
     data.extend_from_slice(&total_paid.to_le_bytes());
+    data.extend_from_slice(&renewal_price.to_le_bytes());
+    data.extend_from_slice(&renewal_interval.to_le_bytes());
+    data.extend_from_slice(accepted_token.as_ref());
+    data.extend_from_slice(provider.as_ref());
+    data.extend_from_slice(subscriber_token.as_ref());
+    data.extend_from_slice(provider_token.as_ref());
+    data.extend_from_slice(treasury_token.as_ref());
+    data.extend_from_slice(&authorization_expires_at.to_le_bytes());
+    data.extend_from_slice(&remaining_renewals.to_le_bytes());
+    data.push(autopay_enabled as u8);
+    data.push(delegate_bump);
     data.push(bump);
     assert_eq!(data.len(), 8 + Subscription::LEN, "fixture size");
     Account {
@@ -498,6 +557,11 @@ async fn full_lifecycle_including_renewal() {
     let (renew_key, renew_bump) =
         Pubkey::find_program_address(&[b"subscription", &RENEW_TOKEN_ID.to_le_bytes()], &ID);
 
+    // The autopay authority is shared per (owner, mint) — both subscriptions
+    // below (token 1 and token 2) charge the same subscriber token account and
+    // therefore share this one delegate.
+    let (delegate_key, delegate_bump) = delegate_pda(subscriber.pubkey(), mint);
+
     // Session-vault fixtures.
     let settler = Keypair::new();
     let (vault_authority, _) = Pubkey::find_program_address(&[b"vault"], &ID);
@@ -526,7 +590,25 @@ async fn full_lifecycle_including_renewal() {
     pt.add_account(vault_token, token_account(mint, vault_authority, 0));
     pt.add_account(
         renew_key,
-        subscription_account(subscriber.pubkey(), RENEW_TOKEN_ID, 1, 0, 0, 0, renew_bump),
+        subscription_account(
+            subscriber.pubkey(),
+            RENEW_TOKEN_ID,
+            1,
+            0, // expiration — already due
+            0, // total_paid
+            PRICE,
+            INTERVAL,
+            mint,
+            provider.pubkey(),
+            subscriber_token,
+            provider_token,
+            treasury_token,
+            i64::MAX, // authorization_expires_at
+            12,       // remaining_renewals
+            true,     // autopay_enabled
+            delegate_bump,
+            renew_bump,
+        ),
     );
 
     let mut ctx = pt.start_with_context().await;
@@ -562,6 +644,7 @@ async fn full_lifecycle_including_renewal() {
         plan1,
         sub_key,
         by_wallet_pda(subscriber.pubkey()),
+        delegate_key,
         mint,
         subscriber_token,
         provider_token,
@@ -585,25 +668,47 @@ async fn full_lifecycle_including_renewal() {
         config,
         plan1,
         sub_key,
+        delegate_key,
         mint,
         subscriber_token,
         provider_token,
         treasury_token,
-        PRICE,
     );
     assert!(fails(&mut ctx, early, &[&subscriber]).await, "early renewal must fail");
 
+    // The subscription snapshotted the (shared) delegate and an allowance that
+    // covers the whole authorization horizon (monthly ⇒ 12 renewals).
+    let delegation = token_delegation(&mut ctx, subscriber_token).await;
+    assert_eq!(delegation.0, delegate_key, "delegate is the shared (owner, mint) PDA");
+    assert_eq!(delegation.1, PRICE * 12, "allowance covers 12 renewals");
+
+    // Reauthorizing TOPS UP the shared allowance rather than replacing it, so a
+    // reauthorize on one subscription can never wipe a sibling's budget.
+    let ix = reauthorize_autopay_ix(
+        subscriber.pubkey(),
+        sub_key,
+        delegate_key,
+        subscriber_token,
+        mint,
+    );
+    send(&mut ctx, &[ix], &[&subscriber]).await;
+    let topped_up = token_delegation(&mut ctx, subscriber_token).await;
+    assert_eq!(topped_up.0, delegate_key);
+    assert_eq!(topped_up.1, PRICE * 24, "reauthorize tops up the shared allowance");
+
     // Positive renewal: the aged subscription (token 2) renews successfully.
+    // The relayer here is the subscriber, but it has no spending power — the
+    // shared delegate PDA signs the transfer.
     let ix = execute_ix(
         subscriber.pubkey(),
         config,
         plan1,
         renew_key,
+        delegate_key,
         mint,
         subscriber_token,
         provider_token,
         treasury_token,
-        PRICE,
     );
     send(&mut ctx, &[ix], &[&subscriber]).await;
     let renewed = read_subscription(&mut ctx, renew_key).await;

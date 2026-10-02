@@ -91,3 +91,11 @@ echo "  ARCENPAY_CONTRACT_9100001_mirrorRegistry=$PROGRAM_ID"
 echo
 echo "Then initialize the program (admin-only):"
 echo "  initialize_config(treasury=<treasury pubkey>, fee_bps=50)"
+echo
+echo "⚠ REQUIRED before the first subscribe: create the TREASURY's token account."
+echo "  Subscribe transfers the protocol fee into it, and the program expects the"
+echo "  account to already exist (Anchor AccountNotInitialized / 3012 otherwise)."
+echo "  Anyone can pay the rent — the treasury does not need to sign:"
+echo "    spl-token create-account <ACCEPTED_MINT> \\"
+echo "      --owner <treasury pubkey> --url ${CLUSTER:-devnet} -k $KEYPAIR"
+echo "  For devnet USDC that is mint 4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU."
