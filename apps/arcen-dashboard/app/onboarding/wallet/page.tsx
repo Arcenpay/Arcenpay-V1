@@ -72,9 +72,9 @@ const routeAfterWalletLink = async () => {
                   : 84532;
             const name =
               family === "solana"
-                ? "Solana Devnet"
+                ? "Solana"
                 : family === "stellar"
-                  ? "Stellar Testnet"
+                  ? "Stellar"
                   : "Development";
             const createRes = await apiFetch("/api/environments", {
               method: "POST",

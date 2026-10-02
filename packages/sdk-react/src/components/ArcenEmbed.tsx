@@ -1926,7 +1926,7 @@ function WalletSelector({
                 marginTop: 2,
               }}
             >
-              Solana wallet for devnet &amp; mainnet
+              Solana wallet for SOL &amp; SPL tokens
             </div>
           </div>
           <svg
@@ -2007,7 +2007,7 @@ function WalletSelector({
                 marginTop: 2,
               }}
             >
-              Stellar wallet for testnet & mainnet
+              Stellar wallet for XLM &amp; tokens
             </div>
           </div>
           <svg
@@ -7156,6 +7156,10 @@ function PaymentContent({
   const hasInvalidCustomerEmail =
     hasCustomerEmail && !isValidCustomerEmail(normalizedCustomerEmail);
   const paymentMethod = data.paymentMethod as ComponentPaymentMethod | null;
+  const explicitFamily =
+    (typeof data.component?.chainFamily === "string" ? data.component.chainFamily : null) ??
+    (typeof data.chainFamily === "string" ? data.chainFamily : null);
+
   const chainId =
     paymentMethod?.chainId ??
     selectedPlan?.acceptedChainId ??
@@ -7166,7 +7170,7 @@ function PaymentContent({
     data.chainId ??
     data.plans?.[0]?.acceptedChainId ??
     data.plans?.[0]?.chainId ??
-    runtimeChainId;
+    (explicitFamily === "solana" ? 9100001 : explicitFamily === "stellar" ? 9000001 : runtimeChainId);
   const serverSmartAccountAddress =
     typeof paymentMethod?.walletAddress === "string"
       ? paymentMethod.walletAddress
@@ -7235,6 +7239,10 @@ function PaymentContent({
   const isNarrowPayment = containerWidth < 700;
 
   // ── Family-aware wallet resolution ────────────────────────────────────────
+  const explicitPaymentFamily =
+    (typeof data.component?.chainFamily === "string" ? data.component.chainFamily : null) ??
+    (typeof data.chainFamily === "string" ? data.chainFamily : null);
+
   const planChainId =
     selectedPlan?.acceptedChainId ??
     selectedPlan?.chainId ??
@@ -7245,9 +7253,9 @@ function PaymentContent({
     data.chainId ??
     data.plans?.[0]?.acceptedChainId ??
     data.plans?.[0]?.chainId ??
-    runtimeChainId;
-  const isStellarChain = planChainId !== 0 && getChainFamily(planChainId) === "stellar";
-  const isSolanaChain = planChainId !== 0 && getChainFamily(planChainId) === "solana";
+    (explicitPaymentFamily === "solana" ? 9100001 : explicitPaymentFamily === "stellar" ? 9000001 : runtimeChainId);
+  const isStellarChain = (planChainId !== 0 && getChainFamily(planChainId) === "stellar") || explicitPaymentFamily === "stellar";
+  const isSolanaChain = (planChainId !== 0 && getChainFamily(planChainId) === "solana") || explicitPaymentFamily === "solana";
   const stellarWallet = useSafeStellarAccount(planChainId);
   const solanaWallet = useSolanaEmbedWallet();
   const isNonEvmChain = isStellarChain || isSolanaChain;
@@ -9872,6 +9880,10 @@ function UnsubscribeContent({
   >("idle");
   const [txError, setTxError] = useState("");
   const paymentMethod = data.paymentMethod as ComponentPaymentMethod | null;
+  const explicitUnsubFamily =
+    (typeof data.component?.chainFamily === "string" ? data.component.chainFamily : null) ??
+    (typeof data.chainFamily === "string" ? data.chainFamily : null);
+
   const chainId =
     paymentMethod?.chainId ??
     activePlan?.acceptedChainId ??
@@ -9880,9 +9892,9 @@ function UnsubscribeContent({
     data.chainId ??
     data.plans?.[0]?.acceptedChainId ??
     data.plans?.[0]?.chainId ??
-    runtimeChainId;
-  const isStellarChain = chainId !== 0 && getChainFamily(chainId) === "stellar";
-  const isSolanaChain = chainId !== 0 && getChainFamily(chainId) === "solana";
+    (explicitUnsubFamily === "solana" ? 9100001 : explicitUnsubFamily === "stellar" ? 9000001 : runtimeChainId);
+  const isStellarChain = (chainId !== 0 && getChainFamily(chainId) === "stellar") || explicitUnsubFamily === "stellar";
+  const isSolanaChain = (chainId !== 0 && getChainFamily(chainId) === "solana") || explicitUnsubFamily === "solana";
   const stellarWallet = useSafeStellarAccount(chainId);
   const solanaWallet = useSolanaEmbedWallet();
   const smartAccountAddress =

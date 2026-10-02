@@ -307,9 +307,7 @@ export function OverviewSection() {
         <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-secondary border border-border">
           <AlertTriangle className="w-4 h-4 text-warning shrink-0" />
           <p className="text-sm text-muted-foreground">
-            {isStellarEnv
-              ? "Stellar wallet disconnected — showing data for Stellar Testnet."
-              : `Wallet disconnected — showing data for ${getChainLabel(effectiveChainId)}.`}
+            Wallet disconnected — showing data for {getChainLabel(effectiveChainId)}.
           </p>
         </div>
       )}

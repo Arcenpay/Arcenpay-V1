@@ -1583,7 +1583,7 @@ export function SettingsSection() {
                   Stellar Account Identity
                 </CardTitle>
                 <CardDescription>
-                  Your linked Stellar wallet is used for Soroban smart contract interactions on Stellar Testnet / Mainnet.
+                  Your linked Stellar wallet is used for Soroban smart contract interactions on Stellar.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -1635,7 +1635,7 @@ export function SettingsSection() {
                   Solana Account Identity
                 </CardTitle>
                 <CardDescription>
-                  Your linked Solana wallet is used for Anchor program interactions on Solana Devnet.
+                  Your linked Solana wallet is used for Anchor program interactions on Solana.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">

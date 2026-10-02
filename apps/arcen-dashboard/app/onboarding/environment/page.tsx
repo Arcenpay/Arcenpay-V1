@@ -290,11 +290,11 @@ export default function EnvironmentOnboardingPage() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="bg-popover border-border text-popover-foreground">
-                  <SelectItem value="DEVELOPMENT">Development (Testnet-only)</SelectItem>
+                  <SelectItem value="DEVELOPMENT">Development</SelectItem>
                   <SelectItem value="PRODUCTION" disabled={!productionEnabled}>
                     {productionEnabled
-                      ? "Production (Mainnet-only)"
-                      : "Production (Mainnet-only — not enabled yet)"}
+                      ? "Production"
+                      : "Production (not enabled yet)"}
                   </SelectItem>
                 </SelectContent>
               </Select>

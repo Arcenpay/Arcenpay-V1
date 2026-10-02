@@ -1,6 +1,6 @@
 {
   "name": "@arcenpay/react",
-  "version": "1.1.1",
+  "version": "1.2.0",
   "description": "ArcenPay SDK \u2014 React components for Web3 subscription billing",
   "license": "MIT",
   "homepage": "https://app.arcenpay.com",

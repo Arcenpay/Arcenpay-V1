@@ -1,6 +1,6 @@
 {
   "name": "@arcenpay/agent",
-  "version": "1.1.1",
+  "version": "1.2.0",
   "description": "ArcenPay SDK \u2014 AI agent client for autonomous x402 payments",
   "license": "MIT",
   "homepage": "https://app.arcenpay.com",

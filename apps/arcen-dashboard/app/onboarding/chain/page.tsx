@@ -93,14 +93,15 @@ export default function ChainFamilyPage() {
               </div>
               <div className="flex-1 min-w-0">
                 <h3 className="text-base font-semibold text-foreground group-hover:text-brand transition-colors">
-                  EVM Networks
+                  EVM Chains
                 </h3>
                 <p className="text-sm text-muted-foreground mt-1.5 leading-relaxed">
-                  BOT Chain, Base, Arc, Ethereum — connect with MetaMask, Rainbow, or any
+                  Base, BOT Chain, Arc, Ethereum &amp; EVM-compatible chains with ERC-4337
+                  smart accounts — connect with MetaMask, Coinbase, Rainbow, or any
                   WalletConnect-compatible wallet.
                 </p>
                 <div className="flex flex-wrap gap-1.5 mt-3">
-                  {["BOT Chain", "Base", "Arc Testnet", "Sepolia", "Ethereum"].map((c) => (
+                  {["Base", "BOT Chain", "Arc", "Ethereum"].map((c) => (
                     <span
                       key={c}
                       className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground font-medium"
@@ -124,14 +125,14 @@ export default function ChainFamilyPage() {
               </div>
               <div className="flex-1 min-w-0">
                 <h3 className="text-base font-semibold text-foreground group-hover:text-brand transition-colors">
-                  Stellar Networks
+                  Stellar
                 </h3>
                 <p className="text-sm text-muted-foreground mt-1.5 leading-relaxed">
-                  Stellar Mainnet &amp; Testnet with Soroban smart contracts —
-                  connect with Freighter wallet.
+                  Stellar network with Soroban smart contracts — connect with
+                  Freighter wallet, xBull, or LOBSTR.
                 </p>
                 <div className="flex flex-wrap gap-1.5 mt-3">
-                  {["Stellar Testnet", "Stellar Mainnet"].map((c) => (
+                  {["Stellar", "Soroban"].map((c) => (
                     <span
                       key={c}
                       className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground font-medium"
@@ -155,14 +156,14 @@ export default function ChainFamilyPage() {
               </div>
               <div className="flex-1 min-w-0">
                 <h3 className="text-base font-semibold text-foreground group-hover:text-brand transition-colors">
-                  Solana Networks
+                  Solana
                 </h3>
                 <p className="text-sm text-muted-foreground mt-1.5 leading-relaxed">
-                  Solana Devnet with the ArcenPay Anchor program — connect with
+                  Solana network with the ArcenPay Anchor program — connect with
                   Phantom or Solflare.
                 </p>
                 <div className="flex flex-wrap gap-1.5 mt-3">
-                  {["Solana Devnet", "Solana Mainnet"].map((c) => (
+                  {["Solana", "Anchor"].map((c) => (
                     <span
                       key={c}
                       className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground font-medium"

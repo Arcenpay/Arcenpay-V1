@@ -295,9 +295,9 @@ export function EmailAuthFlow({
                     : 84532;
               const name =
                 family === "solana"
-                  ? "Solana Devnet"
+                  ? "Solana"
                   : family === "stellar"
-                    ? "Stellar Testnet"
+                    ? "Stellar"
                     : "Development";
               const createRes = await apiFetch("/api/environments", {
                 method: "POST",
@@ -827,10 +827,10 @@ export function EmailAuthFlow({
                   </div>
                   <div className="flex-1 min-w-0">
                     <h3 className="text-sm font-semibold text-foreground group-hover:text-brand transition-colors">
-                      EVM Networks
+                      EVM Chains
                     </h3>
                     <p className="text-xs text-muted-foreground mt-1">
-                      Base, Arc, BOT, Ethereum — MetaMask, Rainbow,
+                      Base, Arc, BOT, Ethereum &amp; EVM-compatible chains — MetaMask, Rainbow,
                       WalletConnect
                     </p>
                   </div>
@@ -847,10 +847,10 @@ export function EmailAuthFlow({
                   </div>
                   <div className="flex-1 min-w-0">
                     <h3 className="text-sm font-semibold text-foreground group-hover:text-brand transition-colors">
-                      Stellar Networks
+                      Stellar
                     </h3>
                     <p className="text-xs text-muted-foreground mt-1">
-                      Stellar Testnet &amp; Mainnet — Freighter, xBull, LOBSTR
+                      Stellar Network — Freighter, xBull, LOBSTR
                     </p>
                   </div>
                   <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-brand transition-colors shrink-0" />
@@ -866,10 +866,10 @@ export function EmailAuthFlow({
                   </div>
                   <div className="flex-1 min-w-0">
                     <h3 className="text-sm font-semibold text-foreground group-hover:text-brand transition-colors">
-                      Solana Networks
+                      Solana
                     </h3>
                     <p className="text-xs text-muted-foreground mt-1">
-                      Solana Devnet — Phantom, Solflare
+                      Solana Network — Phantom, Solflare
                     </p>
                   </div>
                   <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-brand transition-colors shrink-0" />
