@@ -101,7 +101,6 @@ import {
 import type { TokenOption } from "@/lib/contracts";
 import {
   DEFAULT_CHAIN_ID,
-  DEFAULT_TESTNET_CHAIN_ID,
   DEFAULT_MAINNET_CHAIN_ID,
   getChainLabel,
   isSupportedDashboardChainId,
@@ -274,33 +273,37 @@ function resolveMaxOnChainChargeMicros(plan: Pick<CatalogPlan, "price" | "annual
 function getInitialTokenForEnvironment(
   env: EnvMode,
   connectedChainId?: number,
-  lockedChainId?: number,
+  lockedChainId?: number | null,
 ): string {
   const resolvedChainId = lockedChainId ?? resolveEnvironmentChainId(env);
-  const envTokens = lockedChainId
-    ? getTokenOptionsForChain(lockedChainId)
-    : getTokenOptionsForEnvironment(env);
+  if (!resolvedChainId) return "";
 
-  const preferredConnectedToken =
-    connectedChainId && connectedChainId === resolvedChainId
-      ? getUsdcAddress(connectedChainId)
-      : null;
+  const envTokens = getTokenOptionsForChain(resolvedChainId);
+  if (envTokens.length === 0) return "";
 
-  if (
-    preferredConnectedToken &&
-    envTokens.some((token) => {
-      // EVM addresses are case-insensitive hex; Stellar addresses are
-      // base32 and case-sensitive (lowercasing corrupts them).
+  if (connectedChainId && connectedChainId === resolvedChainId) {
+    const matchedToken = envTokens.find((token) => {
       if (isEvmChain(resolvedChainId)) {
-        return token.address.toLowerCase() === preferredConnectedToken.toLowerCase();
+        try {
+          const preferred = getUsdcAddress(connectedChainId);
+          return token.address.toLowerCase() === preferred.toLowerCase();
+        } catch {
+          return false;
+        }
       }
-      return token.address === preferredConnectedToken;
-    })
-  ) {
-    return preferredConnectedToken;
+      try {
+        const preferred = getUsdcAddress(connectedChainId);
+        return token.address === preferred;
+      } catch {
+        return false;
+      }
+    });
+    if (matchedToken) {
+      return matchedToken.address;
+    }
   }
 
-  return envTokens[0]?.address ?? getUsdcAddress(resolvedChainId);
+  return envTokens[0]?.address ?? "";
 }
 
 function isOwnerActionRequired(data: RegisterOnChainResponse): boolean {
@@ -533,9 +536,23 @@ function CreatePlanDialog({
     .replace(/\s+/g, "-")
     .replace(/[^a-z0-9-]/g, "");
 
+  useEffect(() => {
+    const token = getInitialTokenForEnvironment(env, chainId, lockedChainId);
+    setForm((p) => {
+      const currentTokenValid = envTokens.some((t) => t.address === p.acceptedToken);
+      if (!currentTokenValid || !p.acceptedToken) {
+        return { ...p, acceptedToken: token };
+      }
+      return p;
+    });
+  }, [lockedChainId, env, chainId]);
+
   function validate() {
     const e: Record<string, string> = {};
     if (!form.name.trim()) e.name = "Required";
+    if (!form.acceptedToken || !selectedChainOpt) {
+      e.acceptedToken = "A valid token for the active chain is required";
+    }
     if (planType === "paid") {
       const p = Number(form.price);
       if (!form.price || isNaN(p) || p <= 0)
@@ -554,13 +571,14 @@ function CreatePlanDialog({
     setBillingIntervalDays(2_592_000);
     setHasAnnualPrice(false);
     setAnnualDiscount("20");
+    const freshToken = getInitialTokenForEnvironment(env, chainId, lockedChainId);
     setForm({
       name: "",
       tier: "",
       description: "",
       price: "",
       annualPrice: "",
-      acceptedToken: initialAcceptedToken,
+      acceptedToken: freshToken,
     });
     setErrors({});
   }
@@ -1361,7 +1379,7 @@ function CreatePlanDialog({
           <Button
             form="create-plan-form"
             type="submit"
-            disabled={loading}
+            disabled={loading || !selectedChainOpt}
             className="min-w-[140px]"
           >
             {loading ? (
@@ -1418,6 +1436,17 @@ function CreateAddOnDialog({
     .replace(/\s+/g, "-")
     .replace(/[^a-z0-9-]/g, "");
 
+  useEffect(() => {
+    const token = getInitialTokenForEnvironment(env, chainId, lockedChainId);
+    setForm((p) => {
+      const currentTokenValid = envTokens.some((t) => t.address === p.acceptedToken);
+      if (!currentTokenValid || !p.acceptedToken) {
+        return { ...p, acceptedToken: token };
+      }
+      return p;
+    });
+  }, [lockedChainId, env, chainId]);
+
   const selectedChainOpt = envTokens.find(
     (o) => o.address === form.acceptedToken,
   );
@@ -1436,6 +1465,9 @@ function CreateAddOnDialog({
   function validate() {
     const e: Record<string, string> = {};
     if (!form.name.trim()) e.name = "Required";
+    if (!form.acceptedToken || !selectedChainOpt) {
+      e.acceptedToken = "A valid token for the active chain is required";
+    }
     const p = Number(form.price);
     if (!form.price || isNaN(p) || p <= 0) e.price = "Must be positive";
     return e;
@@ -1443,13 +1475,14 @@ function CreateAddOnDialog({
 
   function resetForm() {
     setBillingIntervalDays(30);
+    const freshToken = getInitialTokenForEnvironment(env, chainId, lockedChainId);
     setForm({
       name: "",
       description: "",
       billingType: "ONE_TIME",
       saleMode: "STANDALONE",
       price: "",
-      acceptedToken: initialAcceptedToken,
+      acceptedToken: freshToken,
     });
     setErrors({});
   }
@@ -2092,7 +2125,7 @@ function CreateAddOnDialog({
           <Button
             form="create-addon-form"
             type="submit"
-            disabled={loading}
+            disabled={loading || !selectedChainOpt}
             className="min-w-[140px]"
           >
             {loading ? (
@@ -2149,6 +2182,17 @@ function CreateCreditTypeDialog({
     .replace(/\s+/g, "-")
     .replace(/[^a-z0-9-]/g, "");
 
+  useEffect(() => {
+    const token = getInitialTokenForEnvironment(env, chainId, lockedChainId);
+    setForm((p) => {
+      const currentTokenValid = envTokens.some((t) => t.address === p.acceptedToken);
+      if (!currentTokenValid || !p.acceptedToken) {
+        return { ...p, acceptedToken: token };
+      }
+      return p;
+    });
+  }, [lockedChainId, env, chainId]);
+
   const selectedChainOpt = envTokens.find(
     (o) => o.address === form.acceptedToken,
   );
@@ -2168,6 +2212,9 @@ function CreateCreditTypeDialog({
     const e: Record<string, string> = {};
     if (!form.name.trim()) e.name = "Required";
     if (!form.unitNameSingle.trim()) e.unitNameSingle = "Required";
+    if (!form.acceptedToken || !selectedChainOpt) {
+      e.acceptedToken = "A valid token for the active chain is required";
+    }
     const upp = Number(form.unitsPerPack);
     if (!form.unitsPerPack || isNaN(upp) || upp <= 0 || !Number.isInteger(upp))
       e.unitsPerPack = "Must be a positive integer";
@@ -2177,6 +2224,7 @@ function CreateCreditTypeDialog({
   }
 
   function resetForm() {
+    const freshToken = getInitialTokenForEnvironment(env, chainId, lockedChainId);
     setForm({
       name: "",
       description: "",
@@ -2184,7 +2232,7 @@ function CreateCreditTypeDialog({
       unitNamePlural: "",
       unitsPerPack: "100",
       price: "",
-      acceptedToken: initialAcceptedToken,
+      acceptedToken: freshToken,
     });
     setErrors({});
   }
@@ -2678,7 +2726,7 @@ function CreateCreditTypeDialog({
           <Button
             form="create-credit-form"
             type="submit"
-            disabled={loading}
+            disabled={loading || !selectedChainOpt}
             className="min-w-[140px]"
           >
             {loading ? (
@@ -5837,10 +5885,10 @@ function ConfigurationTab() {
   const hasPublishedPlans = catalogPlans.length > 0;
   const hasPublishedAddOns = configAddOns.length > 0;
   const hasPublishedCreditBundles = liveCreditCandidates.length > 0;
-  const isStellarEnv = isStellarChainId(configuredChainId);
-  const isSolanaEnv = isSolanaChainId(configuredChainId);
-  const stellarWallet = useStellarWallet(configuredChainId);
-  const solanaWallet = useSolanaWallet(configuredChainId);
+  const isStellarEnv = Boolean(configuredChainId && isStellarChainId(configuredChainId));
+  const isSolanaEnv = Boolean(configuredChainId && isSolanaChainId(configuredChainId));
+  const stellarWallet = useStellarWallet(configuredChainId ?? undefined);
+  const solanaWallet = useSolanaWallet(configuredChainId ?? undefined);
   // Family-aware wallet status: on a Solana/Stellar environment the status bar
   // must reflect THAT wallet, not wagmi's (unrelated) EVM connection.
   const envWalletConnected = isStellarEnv

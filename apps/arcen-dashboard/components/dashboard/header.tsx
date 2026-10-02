@@ -91,8 +91,10 @@ export function Header({ activeSection, onMobileMenuToggle }: HeaderProps) {
   const configuredChainLabel = getChainLabel(configuredChainId);
   // Solana/Stellar wallets have no wagmi "account modal" — the wallet-specific
   // picker (Phantom/Solflare, Freighter) is opened via reconnect instead.
-  const isNonEvmEnv =
-    isStellarChainId(configuredChainId) || isSolanaChainId(configuredChainId);
+  const isNonEvmEnv = Boolean(
+    configuredChainId &&
+      (isStellarChainId(configuredChainId) || isSolanaChainId(configuredChainId)),
+  );
   const {
     storedWallet,
     connectedWalletLabel,
@@ -320,7 +322,7 @@ export function Header({ activeSection, onMobileMenuToggle }: HeaderProps) {
                 <p className="mt-1 text-xs text-muted-foreground">
                   Network: {currentNetworkLabel ?? "Not connected"}
                 </p>
-                {isSolanaChainId(configuredChainId) ? (
+                {Boolean(configuredChainId && isSolanaChainId(configuredChainId)) ? (
                   <SolanaWalletBalance />
                 ) : null}
               </div>
@@ -367,7 +369,7 @@ export function Header({ activeSection, onMobileMenuToggle }: HeaderProps) {
                     size="sm"
                     variant="outline"
                     className="w-full"
-                    onClick={() => void switchToRequiredNetwork(configuredChainId)}
+                    onClick={() => void switchToRequiredNetwork(configuredChainId ?? undefined)}
                     disabled={isSwitchingChain}
                   >
                     {isSwitchingChain

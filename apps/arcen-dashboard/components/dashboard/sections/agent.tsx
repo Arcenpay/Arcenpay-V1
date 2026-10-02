@@ -103,7 +103,8 @@ const ERC20_ALLOWANCE_ABI = [{
   stateMutability: "view",
 }] as const;
 
-function getExplorerTxUrl(chainId: number, hash: string): string {
+function getExplorerTxUrl(chainId: number | null | undefined, hash: string): string {
+  if (!chainId) return `https://explorer?tx=${hash}`;
   const descriptor = getChainDescriptor(chainId);
   if (descriptor?.blockExplorerUrl) {
     return `${descriptor.blockExplorerUrl}/tx/${hash}`;
@@ -516,8 +517,8 @@ function QuickstartTab() {
   const { envMode, activeEnvironment } = useEnvironment();
   const configuredChainId =
     activeEnvironment?.chainId ?? resolveEnvironmentChainId(envMode);
-  const isStellar = isStellarChainId(configuredChainId);
-  const isSolana = isSolanaChainId(configuredChainId);
+  const isStellar = Boolean(configuredChainId && isStellarChainId(configuredChainId));
+  const isSolana = Boolean(configuredChainId && isSolanaChainId(configuredChainId));
 
   const installCode = `npm install @arcenpay/agent${
     isStellar ? " @stellar/stellar-sdk" : isSolana ? " @solana/web3.js" : " viem"
@@ -735,11 +736,11 @@ function PermissionsTab() {
   const { envMode, activeEnvironment } = useEnvironment();
   const configuredChainId =
     activeEnvironment?.chainId ?? resolveEnvironmentChainId(envMode);
-  const isStellar = isStellarChainId(configuredChainId);
-  const isSolana = isSolanaChainId(configuredChainId);
+  const isStellar = Boolean(configuredChainId && isStellarChainId(configuredChainId));
+  const isSolana = Boolean(configuredChainId && isSolanaChainId(configuredChainId));
   const isNonEvm = isStellar || isSolana;
-  const stellar = useStellarWallet(configuredChainId);
-  const solana = useSolanaWallet(configuredChainId);
+  const stellar = useStellarWallet(configuredChainId ?? undefined);
+  const solana = useSolanaWallet(configuredChainId ?? undefined);
 
   const [permissions, setPermissions] = useState<PermissionConfig>({
     autoTopUp: { mode: "off", dailyLimit: "5.00", perTxnLimit: "1.00", threshold: "0.50" },
@@ -911,7 +912,7 @@ function PermissionsTab() {
       }
 
       // 2. Direct on-chain fallback for EVM
-      if (!isStellar && !isSolana && publicClient) {
+      if (!isStellar && !isSolana && publicClient && configuredChainId) {
         const safeAgent = safeAddress(effectiveAgentWallet);
         const safeUser = safeAddress(userWallet);
         const rawUsdc = getUsdcAddress(configuredChainId);
@@ -1036,7 +1037,7 @@ function PermissionsTab() {
         setWalletBalance(wStr);
         setVaultBalance(vStr);
         setTotalBalance(tStr);
-      } else if (isStellar) {
+      } else if (isStellar && configuredChainId) {
         try {
           const { Horizon } = await import("@stellar/stellar-sdk");
           const passphrase = getStellarNetworkPassphrase(configuredChainId);
@@ -1100,7 +1101,7 @@ function PermissionsTab() {
     onFail: () => void,
   ) => {
     const { createPublicClient: makeClient, http: makeHttp } = await import("viem");
-    const desc = getChainDescriptor(configuredChainId);
+    const desc = configuredChainId ? getChainDescriptor(configuredChainId) : null;
     const primaryRpc = desc?.rpcUrl || (configuredChainId === 5042002 ? "https://rpc.testnet.arc.network" : "https://rpc.testnet.arc.network");
     const fallbackRpc = configuredChainId === 5042002 ? "https://5042002.rpc.thirdweb.com" : primaryRpc;
 
@@ -1246,7 +1247,7 @@ function PermissionsTab() {
       void recordApproval({
         amount,
         txHash: directHash,
-        chainId: evmChainId || configuredChainId,
+        chainId: (evmChainId || configuredChainId) ?? 0,
         mode: "transfer",
       }).then(() => {
         void refreshAgentBalance();
@@ -1291,7 +1292,7 @@ function PermissionsTab() {
       void recordApproval({
         amount,
         txHash: fundHash,
-        chainId: evmChainId || configuredChainId,
+        chainId: (evmChainId || configuredChainId) ?? 0,
         mode: "approve_and_fund",
         sessionId: extractedSessionId,
       }).then(() => {
@@ -1431,7 +1432,7 @@ function PermissionsTab() {
   };
 
   const handleStellarTransfer = async () => {
-    if (!stellar.isConnected || !stellar.address || !agentWallet) return;
+    if (!stellar.isConnected || !stellar.address || !agentWallet || !configuredChainId) return;
     setApproving(true);
     try {
       const { Asset, Horizon, TransactionBuilder, Operation, BASE_FEE, Keypair } =
@@ -1552,8 +1553,8 @@ function PermissionsTab() {
   };
 
   const handleSolanaTransfer = async () => {
-    if (!solana.address) {
-      toast.error("Connect your Solana wallet first");
+    if (!solana.address || !configuredChainId) {
+      toast.error(!configuredChainId ? "No network configured" : "Connect your Solana wallet first");
       return;
     }
     setApproving(true);
@@ -2061,7 +2062,7 @@ function PermissionsTab() {
                     <Copy className="w-3.5 h-3.5" />
                   </button>
                   <a
-                    href={getExplorerTxUrl(configuredChainId, agentWallet).replace("/tx/", "/address/")}
+                    href={configuredChainId ? getExplorerTxUrl(configuredChainId, agentWallet).replace("/tx/", "/address/") : "#"}
                     target="_blank"
                     rel="noreferrer"
                     className="text-muted-foreground hover:text-foreground transition-colors"
@@ -2294,8 +2295,8 @@ function PermissionsTab() {
               <Button
                 size="sm"
                 variant="outline"
-                disabled={isSwitchingNetwork}
-                onClick={() => void switchChainAsync({ chainId: configuredChainId })}
+                disabled={isSwitchingNetwork || !configuredChainId}
+                onClick={() => configuredChainId && void switchChainAsync({ chainId: configuredChainId })}
                 className="shrink-0 gap-1.5 h-8 text-xs"
               >
                 <ArrowRightLeft className="w-3.5 h-3.5" />
@@ -3024,10 +3025,10 @@ export function AgentSection() {
   const { envMode, activeEnvironment } = useEnvironment();
   const agentSectionChainId =
     activeEnvironment?.chainId ?? resolveEnvironmentChainId(envMode);
-  const isStellar = isStellarChainId(agentSectionChainId);
-  const isSolana = isSolanaChainId(agentSectionChainId);
-  const stellar = useStellarWallet(agentSectionChainId);
-  const solana = useSolanaWallet(agentSectionChainId);
+  const isStellar = Boolean(agentSectionChainId && isStellarChainId(agentSectionChainId));
+  const isSolana = Boolean(agentSectionChainId && isSolanaChainId(agentSectionChainId));
+  const stellar = useStellarWallet(agentSectionChainId ?? undefined);
+  const solana = useSolanaWallet(agentSectionChainId ?? undefined);
   // Family-aware connection for the header badge: wagmi's isConnected is
   // meaningless on a Stellar/Solana environment.
   const walletConnected = isStellar

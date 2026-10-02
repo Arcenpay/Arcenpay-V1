@@ -370,6 +370,7 @@ export interface ComponentPlanSummary {
   billingInterval: number;
   acceptedToken?: string;
   acceptedChainId?: number;
+  chainId?: number;
   onChainPlanId?: string | null;
   description?: string;
   metadata?: {
@@ -470,7 +471,13 @@ export interface ComponentRenderData {
     name: string;
     elements: ComponentElement[];
     design: ComponentDesign;
+    chainId?: number | null;
+    chainFamily?: string | null;
+    environmentId?: string | null;
   };
+  chainId?: number | null;
+  chainFamily?: string | null;
+  environmentId?: string | null;
   activePlan: ComponentPlanSummary | null;
   entitlements: ComponentEntitlement[];
   usage: ComponentUsageItem[];

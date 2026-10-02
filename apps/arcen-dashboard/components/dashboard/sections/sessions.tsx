@@ -148,10 +148,10 @@ export function SessionsSection() {
   const configuredChainId = activeEnvironment?.chainId ?? resolveEnvironmentChainId(envMode);
   const environmentKey = activeEnvironment?.id ?? envMode;
   const contractAddresses = useContractAddresses(configuredChainId);
-  const isStellar = isStellarChainId(configuredChainId);
-  const isSolana = isSolanaChainId(configuredChainId);
-  const stellar = useStellarWallet(configuredChainId);
-  const solana = useSolanaWallet(configuredChainId);
+  const isStellar = Boolean(configuredChainId && isStellarChainId(configuredChainId));
+  const isSolana = Boolean(configuredChainId && isSolanaChainId(configuredChainId));
+  const stellar = useStellarWallet(configuredChainId ?? undefined);
+  const solana = useSolanaWallet(configuredChainId ?? undefined);
   // Family-aware connection: wagmi's isConnected is EVM-only and always false
   // for Freighter/Phantom users on a Stellar/Solana environment.
   const walletConnected = isStellar
@@ -189,7 +189,15 @@ export function SessionsSection() {
   }, []);
 
   const effectiveChainId = configuredChainId;
-  const sessionFundingToken = getUsdcAddress(configuredChainId);
+  const sessionFundingToken = configuredChainId
+    ? (() => {
+        try {
+          return getUsdcAddress(configuredChainId);
+        } catch {
+          return null;
+        }
+      })()
+    : null;
 
   const loadSessionsData = useCallback(async () => {
     if (!mounted || envLoading) return;
@@ -198,8 +206,8 @@ export function SessionsSection() {
       setSessionsLoading(true);
       setSessionsError(null);
       const params = new URLSearchParams({
-        chainId: String(effectiveChainId),
         environmentMode: envMode,
+        ...(effectiveChainId ? { chainId: String(effectiveChainId) } : {}),
       });
 
       // Fetch sessions and agent permissions in parallel
@@ -286,9 +294,12 @@ export function SessionsSection() {
         const { Asset, Horizon, TransactionBuilder, Operation, BASE_FEE } =
           await import("@stellar/stellar-sdk");
         const { contract: stellarContract } = await import("@stellar/stellar-sdk");
+        if (!configuredChainId) {
+          throw new Error("No network configured for this environment.");
+        }
         const passphrase = getStellarNetworkPassphrase(configuredChainId);
         const server = new Horizon.Server(stellarHorizonUrl(passphrase));
-        const vaultAddress = contractAddresses.sessionVault;
+        const vaultAddress = contractAddresses?.sessionVault;
         if (!vaultAddress || !sessionFundingToken) {
           throw new Error("Session vault or USDC asset not configured for this chain.");
         }
@@ -371,8 +382,11 @@ export function SessionsSection() {
       }
       try {
         const { contract: stellarContract } = await import("@stellar/stellar-sdk");
+        if (!configuredChainId) {
+          throw new Error("No network configured for this environment.");
+        }
         const passphrase = getStellarNetworkPassphrase(configuredChainId);
-        const vaultAddress = contractAddresses.sessionVault;
+        const vaultAddress = contractAddresses?.sessionVault;
         if (!vaultAddress) {
           throw new Error("Session vault not configured for this chain.");
         }
@@ -861,7 +875,7 @@ export function SessionsSection() {
                       )}
                     </button>
                     <a
-                      href={getBlockExplorerUrl(chainId, "tx", proof.txHash)}
+                      href={chainId ? getBlockExplorerUrl(chainId, "tx", proof.txHash) : "#"}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-muted-foreground hover:text-foreground transition-colors"
@@ -934,11 +948,15 @@ export function SessionsSection() {
               </p>
               {yieldStrategy && (
                 <a
-                  href={getBlockExplorerUrl(
-                    chainId,
-                    "address",
-                    yieldStrategy as string,
-                  )}
+                  href={
+                    chainId
+                      ? getBlockExplorerUrl(
+                          chainId,
+                          "address",
+                          yieldStrategy as string,
+                        )
+                      : "#"
+                  }
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground mt-1 transition-colors"

@@ -38,7 +38,7 @@ import {
   setOnboardingChainFamily,
 } from "@/lib/onboarding-chain-family";
 import { isPlatformAdminEmail } from "@/lib/admin";
-import type { ChainFamily } from "@arcenpay/internal-core";
+import { getChainFamily, type ChainFamily } from "@arcenpay/internal-core";
 import {
   InputOTP,
   InputOTPGroup,
@@ -269,6 +269,51 @@ export function EmailAuthFlow({
           keyStatus === "EXPIRED" || keyStatus === "REVOKED";
         if (isActivated || isExpiredOrRevoked) {
           const environments = Array.isArray(data?.environments) ? data.environments : [];
+          const family = chainFamily ?? getOnboardingChainFamily();
+
+          if (environments.length > 0 && family) {
+            const matchingEnv = environments.find(
+              (e: any) => getChainFamily(e.chainId) === family,
+            );
+            if (matchingEnv) {
+              await apiFetch("/api/environments/select", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ environmentId: matchingEnv.id }),
+              }).catch(() => {});
+              window.location.href = "/";
+              return;
+            }
+
+            // Auto-create environment for this chain
+            try {
+              const chainId =
+                family === "solana"
+                  ? 9100001
+                  : family === "stellar"
+                    ? 9000001
+                    : 84532;
+              const name =
+                family === "solana"
+                  ? "Solana Devnet"
+                  : family === "stellar"
+                    ? "Stellar Testnet"
+                    : "Development";
+              const createRes = await apiFetch("/api/environments", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ name, mode: "DEVELOPMENT", chainId }),
+              });
+              if (createRes.ok) {
+                window.location.href = "/";
+                return;
+              }
+            } catch {}
+
+            window.location.href = "/onboarding/environment";
+            return;
+          }
+
           const destination = environments.length > 0 ? "/" : "/onboarding/provider-profile";
           window.location.href = destination;
           return;
@@ -1207,7 +1252,7 @@ export function EmailAuthFlow({
               <div className="space-y-6">
                 {existingAccountWallet ? (
                   <div className="rounded-xl border border-amber-500/30 bg-amber-50 p-3 text-xs text-amber-800">
-                    <p className="font-medium">You already have an ArcEnPay account</p>
+                    <p className="font-medium">You already have an ArcenPay account</p>
                     <p className="mt-1 leading-relaxed">
                       This email is linked to{" "}
                       <code className="font-mono">
@@ -1215,8 +1260,8 @@ export function EmailAuthFlow({
                       </code>
                       . Continuing links your{" "}
                       {isSolana ? "Solana" : isStellar ? "Stellar" : "EVM"} wallet to that
-                      same account — your existing workspaces stay intact, and you can
-                      create a new {chainFamily ?? "chain"} environment afterwards.
+                      same account — your existing workspaces stay intact, and a{" "}
+                      {isSolana ? "Solana" : isStellar ? "Stellar" : "EVM"} environment will be set up for your platform.
                     </p>
                   </div>
                 ) : null}

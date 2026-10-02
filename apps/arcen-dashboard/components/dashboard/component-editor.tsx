@@ -4,11 +4,13 @@ import { apiFetch } from "@/lib/api-client";
 import React, { useState, useEffect, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { ArcenEmbed, renderElement, getDesignTokens } from "@arcenpay/react";
-import type {
-  ComponentRenderData,
-  ComponentDesign,
+import {
+  type ComponentRenderData,
+  type ComponentDesign,
+  type ComponentElement as SdkComponentElement,
+  getChainFamily,
 } from "@arcenpay/internal-core";
-import type { ComponentElement as SdkComponentElement } from "@arcenpay/internal-core";
+import { useEnvironment } from "@/contexts/environment-context";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -1495,6 +1497,7 @@ export function ComponentEditor({
     null,
   );
   const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const { activeEnvironment } = useEnvironment();
   const [copiedCode, setCopiedCode] = useState(false);
   const [selectedElement, setSelectedElement] = useState<string | null>(null);
   const [viewportSize, setViewportSize] = useState<
@@ -1582,7 +1585,7 @@ export function ComponentEditor({
         // Set empty real data so the "no data" states are shown instead of demo
         setLiveData({ plans: [], flags: [] });
       });
-  }, []);
+  }, [activeEnvironment?.id]);
 
   // ── Company selector for preview ─────────────────────────────────────────
   interface PreviewCompany {
@@ -1613,7 +1616,7 @@ export function ComponentEditor({
       .catch(() => {
         /* silently ignore */
       });
-  }, []);
+  }, [activeEnvironment?.id]);
 
   async function loadCompanyPreviewData(companyId: string) {
     try {
@@ -1976,6 +1979,15 @@ export function ComponentEditor({
         ? [...planEntitlements, ...planCreditGrantEntitlements]
         : fallbackEntitlements;
 
+    const previewChainId =
+      activeEnvironment?.chainId ??
+      activePlan?.acceptedChainId ??
+      activePlan?.chainId ??
+      84532;
+    const previewFamily = getChainFamily(previewChainId);
+    const isSolana = previewFamily === "solana";
+    const isStellar = previewFamily === "stellar";
+
     return {
       component: {
         id: "preview",
@@ -2005,11 +2017,21 @@ export function ComponentEditor({
           sections: (config.styling.sections ??
             "separate") as ComponentDesign["sections"],
         } as ComponentDesign,
+        chainId: previewChainId,
+        chainFamily: previewFamily,
+        environmentId: activeEnvironment?.id ?? null,
       },
+      chainId: previewChainId,
+      chainFamily: previewFamily,
+      environmentId: activeEnvironment?.id ?? null,
       company: {
         id: "preview",
         name: "Preview Company",
-        walletAddress: "0x1234567890abcdef1234",
+        walletAddress: isSolana
+          ? "9WzDXwBbmkg8ZTbNMqUxvQRAyrZzDsGYdLVL9zYtAWWM"
+          : isStellar
+            ? "GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN"
+            : "0x1234567890abcdef1234",
       },
       activePlan,
       plans: sdkPlans,
@@ -2023,9 +2045,15 @@ export function ComponentEditor({
       paymentMethod:
         activePlan && parseFloat(String(activePlan.price ?? "0")) > 0
           ? {
-              walletAddress: "0x1234567890abcdef1234567890abcdef12345678",
-              token: activePlan.acceptedToken ?? "USDC",
-              chainId: 5042002,
+              walletAddress: isSolana
+                ? "9WzDXwBbmkg8ZTbNMqUxvQRAyrZzDsGYdLVL9zYtAWWM"
+                : isStellar
+                  ? "GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN"
+                  : "0x1234567890abcdef1234567890abcdef12345678",
+              token: isSolana
+                ? (activePlan.acceptedToken ?? "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v")
+                : (activePlan.acceptedToken ?? "USDC"),
+              chainId: previewChainId,
             }
           : null,
       recentInvoices:

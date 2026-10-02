@@ -14,7 +14,7 @@ type ActivityItem = {
 };
 
 interface RecentActivityProps {
-  chainId: number;
+  chainId?: number | null;
   environmentKey: string;
 }
 
@@ -28,8 +28,9 @@ export function RecentActivity({ chainId, environmentKey }: RecentActivityProps)
     const fetchActivity = async () => {
       try {
         setLoading(true);
+        const query = chainId ? `&chainId=${chainId}` : "";
         // Try the unified activity feed first; fall back to proof history
-        const res = await apiFetch(`/api/platform/activity?limit=6&chainId=${chainId}`);
+        const res = await apiFetch(`/api/platform/activity?limit=6${query}`);
         if (res.ok) {
           const payload = await res.json();
           if (!cancelled) {
@@ -38,7 +39,7 @@ export function RecentActivity({ chainId, environmentKey }: RecentActivityProps)
           return;
         }
         // Fallback to proof history endpoint for older deployments
-        const fallback = await apiFetch(`/api/proofs/history?limit=6&chainId=${chainId}`);
+        const fallback = await apiFetch(`/api/proofs/history?limit=6${query}`);
         if (!fallback.ok) {
           if (!cancelled) setItems([]);
           return;

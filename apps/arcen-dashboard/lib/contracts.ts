@@ -22,6 +22,7 @@ import {
   STELLAR_TESTNET_CHAIN_ID,
   STELLAR_FUTURENET_CHAIN_ID,
   SOLANA_DEVNET_CHAIN_ID,
+  SOLANA_MAINNET_CHAIN_ID,
 } from "@arcenpay/internal-core";
 import {
   BASE_SEPOLIA_CHAIN_ID,
@@ -147,6 +148,11 @@ const MAINNET_CHAIN_LIST: Array<{
     label: getChainLabel(STELLAR_MAINNET_CHAIN_ID),
     tag: "mainnet",
   },
+  {
+    chainId: SOLANA_MAINNET_CHAIN_ID,
+    label: getChainLabel(SOLANA_MAINNET_CHAIN_ID),
+    tag: "mainnet",
+  },
 ];
 
 // All chains (used when no env mode filter is required)
@@ -166,7 +172,8 @@ export function getTokenOptions(): TokenOption[] {
   return buildTokenOptions(CHAIN_LIST);
 }
 
-export function getTokenOptionsForChain(chainId: number): TokenOption[] {
+export function getTokenOptionsForChain(chainId?: number | null): TokenOption[] {
+  if (!chainId) return [];
   const chain = CHAIN_LIST.find((entry) => entry.chainId === chainId);
   if (!chain) return [];
   return buildTokenOptions([chain]);
@@ -227,9 +234,9 @@ export function getUsdcTokenOptions() {
 /** Returns live contract addresses for the requested chain, or the wallet's
  * current chain when no override is supplied. Falls back to the configured
  * default chain when unsupported in development. */
-export function useContractAddresses(chainIdOverride?: number) {
+export function useContractAddresses(chainIdOverride?: number | null) {
   const walletChainId = useChainId();
-  const chainId = chainIdOverride ?? walletChainId;
+  const chainId = (chainIdOverride !== undefined && chainIdOverride !== null) ? chainIdOverride : walletChainId;
   try {
     const addresses = getContractAddresses(chainId);
     if (process.env.NODE_ENV === "production") {

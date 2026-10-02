@@ -28,6 +28,7 @@ import {
   type ComponentElement,
 } from "@/components/dashboard/component-editor";
 import { normalizeComponentStyling } from "@/lib/component-design";
+import { useEnvironment } from "@/contexts/environment-context";
 import { SkeletonGrid } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import type { Section } from "@/app/(dashboard)/page";
@@ -346,6 +347,7 @@ interface ComponentsSectionProps {
 }
 
 export function ComponentsSection({ onSectionChange }: ComponentsSectionProps = {}) {
+  const { activeEnvironment } = useEnvironment();
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [customComponents, setCustomComponents] = useState<ComponentConfig[]>(
@@ -391,10 +393,11 @@ export function ComponentsSection({ onSectionChange }: ComponentsSectionProps = 
         setPrereqs((p) => ({ ...p, loading: false }));
         toast.error("Failed to load prerequisites");
       });
-  }, []);
+  }, [activeEnvironment?.id]);
 
-  // Load components from server on mount
+  // Load components from server on mount or when active environment changes
   useEffect(() => {
+    setLoading(true);
     apiFetch("/api/v1/components")
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
@@ -434,7 +437,7 @@ export function ComponentsSection({ onSectionChange }: ComponentsSectionProps = 
         toast.error("Failed to load components");
       })
       .finally(() => setLoading(false));
-  }, []);
+  }, [activeEnvironment?.id]);
 
   const filteredComponents = customComponents.filter(
     (c) =>

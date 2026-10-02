@@ -21,7 +21,11 @@ export default async function LoginPage({
     if (params.invite) {
       redirect(`/invite?token=${encodeURIComponent(params.invite)}`);
     }
-    const hasWallet = Boolean(session.walletAddress || session.stellarWalletAddress);
+    const hasWallet = Boolean(
+      session.walletAddress ||
+      session.stellarWalletAddress ||
+      session.solanaWalletAddress,
+    );
     if (hasWallet) {
       const environments = Array.isArray(session.environments) ? session.environments : [];
       redirect(environments.length > 0 ? "/" : "/onboarding/provider-profile");

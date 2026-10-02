@@ -137,13 +137,13 @@ const ADDRESSES: Record<number, ContractAddresses> = {
   // (ARCENPAY_CONTRACT_<chainId>_<key>) or `setContractAddresses` after the
   // Anchor program is deployed. Empty string is the family "unset" sentinel.
   [SOLANA_MAINNET_CHAIN_ID]: {
-    subscriptionRegistry: "",
-    autopayModule: "",
-    planFactory: "",
-    feeCollector: "",
-    sessionVault: "",
-    zkUsageVerifier: "",
-    mirrorRegistry: "",
+    subscriptionRegistry: "D4ECHyomENvFHrdXWHcRncTwwQ1EQbyY4ga3CkcaYCP3",
+    autopayModule: "D4ECHyomENvFHrdXWHcRncTwwQ1EQbyY4ga3CkcaYCP3",
+    planFactory: "D4ECHyomENvFHrdXWHcRncTwwQ1EQbyY4ga3CkcaYCP3",
+    feeCollector: "D4ECHyomENvFHrdXWHcRncTwwQ1EQbyY4ga3CkcaYCP3",
+    sessionVault: "D4ECHyomENvFHrdXWHcRncTwwQ1EQbyY4ga3CkcaYCP3",
+    zkUsageVerifier: "D4ECHyomENvFHrdXWHcRncTwwQ1EQbyY4ga3CkcaYCP3",
+    mirrorRegistry: "D4ECHyomENvFHrdXWHcRncTwwQ1EQbyY4ga3CkcaYCP3",
   },
   // ── Solana Devnet — synthetic chainId 9_100_001 ──
   // Deployed 2026-09-30. The ArcenPay Anchor program serves all roles, so

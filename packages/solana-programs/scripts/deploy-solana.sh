@@ -44,8 +44,15 @@ case "$KEYPAIR_ABS" in
     ;;
 esac
 
-echo "→ Building SBF artifact…"
-( cd "$CRATE_DIR" && cargo-build-sbf )
+# SIZE MATTERS: rent is charged per byte of program, so the optimization level
+# directly determines how much SOL you must lock up.
+#   default release build : ~398 KB -> 2.027 SOL rent
+#   opt-level = "z"       : ~324 KB -> 1.647 SOL rent   (-19%)
+# Set SOLANA_OPT_LEVEL=3 (or "") to build at the default size instead.
+OPT_LEVEL="${SOLANA_OPT_LEVEL-z}"
+
+echo "→ Building SBF artifact… (opt-level=${OPT_LEVEL:-default})"
+( cd "$CRATE_DIR" && CARGO_PROFILE_RELEASE_OPT_LEVEL="$OPT_LEVEL" cargo-build-sbf )
 
 PROGRAM_KEYPAIR="$ROOT_DIR/target/deploy/${PROGRAM_NAME}-keypair.json"
 if [ ! -f "$PROGRAM_KEYPAIR" ]; then
@@ -64,18 +71,60 @@ rm -f "$CRATE_DIR/src/lib.rs.bak"
 sed -i.bak -E "s/arcenpay_solana = \"[^\"]*\"/arcenpay_solana = \"$PROGRAM_ID\"/g" "$ROOT_DIR/Anchor.toml"
 rm -f "$ROOT_DIR/Anchor.toml.bak"
 
-# Rebuild so the embedded id matches before deploying.
-( cd "$CRATE_DIR" && cargo-build-sbf )
+# Rebuild so the embedded id matches before deploying (same opt-level, so the
+# artifact stays the small one whose rent we budgeted for).
+( cd "$CRATE_DIR" && CARGO_PROFILE_RELEASE_OPT_LEVEL="$OPT_LEVEL" cargo-build-sbf )
 
 RPC_ARGS=(--url "$CLUSTER")
 if [ -n "$RPC" ]; then RPC_ARGS=(--url "$RPC"); fi
 
+# ── Resumable deploy ────────────────────────────────────────────────────────
+# `solana program deploy` uploads the program into a BUFFER account first, then
+# moves it into the ProgramData account. If the deploy runs out of SOL mid-way
+# (or is interrupted), the buffer STILL EXISTS and still holds the rent you
+# already paid for the upload.
+#
+# Pass that buffer back with `--buffer <address>` and the CLI skips the upload
+# entirely — you do NOT pay for it twice. The address is persisted below after a
+# failed attempt, so simply re-running this script resumes automatically.
+BUFFER_STATE="$ROOT_DIR/target/deploy/.${PROGRAM_NAME}-buffer"
+DEPLOY_ARGS=("${RPC_ARGS[@]}" -k "$KEYPAIR" --program-id "$PROGRAM_KEYPAIR")
+
+if [ -s "$BUFFER_STATE" ]; then
+  EXISTING_BUFFER="$(tr -d '[:space:]' < "$BUFFER_STATE")"
+  if [ -n "$EXISTING_BUFFER" ]; then
+    echo "→ Found an in-progress buffer from a previous run: $EXISTING_BUFFER"
+    echo "  Resuming from it — the SOL already spent on this upload is reused,"
+    echo "  so you only pay the remainder."
+    DEPLOY_ARGS+=(--buffer "$EXISTING_BUFFER")
+  fi
+fi
+
 echo "→ Deploying to ${RPC:-$CLUSTER}…"
-solana program deploy \
-  "${RPC_ARGS[@]}" \
-  -k "$KEYPAIR" \
-  --program-id "$PROGRAM_KEYPAIR" \
-  "$ROOT_DIR/target/deploy/${PROGRAM_NAME}.so"
+DEPLOY_LOG="$(mktemp -t arcenpay-deploy)"
+if solana program deploy \
+  "${DEPLOY_ARGS[@]}" \
+  "$ROOT_DIR/target/deploy/${PROGRAM_NAME}.so" 2>&1 | tee "$DEPLOY_LOG"; then
+  rm -f "$BUFFER_STATE"
+else
+  # On failure the CLI prints `solana program close <BUFFER_ADDRESS>`, which is
+  # also the buffer we can resume from.
+  RESCUED="$(grep -oE 'solana program close [1-9A-HJ-NP-Za-km-z]+' "$DEPLOY_LOG" | awk '{print $NF}' | head -1)"
+  echo
+  if [ -n "$RESCUED" ]; then
+    echo "$RESCUED" > "$BUFFER_STATE"
+    echo "✗ Deploy did not finish — but nothing is wasted."
+    echo "    Upload saved in buffer: $RESCUED"
+    echo
+    echo "  → Re-run this script to RESUME. It reuses that buffer, so the SOL you"
+    echo "    already spent on the upload is NOT charged again."
+    echo "  → To recover the lamports instead:  solana program close $RESCUED"
+  else
+    echo "✗ Deploy failed before a buffer was recorded. See the log above."
+    echo "  Re-running is safe — it starts a fresh buffer."
+  fi
+  exit 1
+fi
 
 echo
 echo "✓ Deployed $PROGRAM_ID to ${RPC:-$CLUSTER}"

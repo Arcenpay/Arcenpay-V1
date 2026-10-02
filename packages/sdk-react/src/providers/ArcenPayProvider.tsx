@@ -464,13 +464,15 @@ function ArcenPayRuntime({
   rpcUrls,
 }: ArcenPayRuntimeProps) {
   const { chainId: walletChainId, isConnected } = useAccount();
+  const [sessionChainId, setSessionChainId] = useState<number | null>(null);
   const chainId =
-    !lockChainId &&
+    sessionChainId ??
+    (!lockChainId &&
     isConnected &&
     walletChainId &&
     isSupportedChainId(walletChainId)
       ? walletChainId
-      : configuredChainId;
+      : configuredChainId);
 
   // ── Session state ──────────────────────────────────────────────────────
   //
@@ -605,10 +607,15 @@ function ArcenPayRuntime({
               token?: string;
               company_id?: string;
               user_id?: string;
+              chain_id?: number | null;
+              chain_family?: string | null;
             };
           };
 
           const nextToken = tokenData.data?.token ?? null;
+          if (tokenData.data?.chain_id && isSupportedChainId(tokenData.data.chain_id)) {
+            setSessionChainId(tokenData.data.chain_id);
+          }
 
           patchSession({
             isReady: true,

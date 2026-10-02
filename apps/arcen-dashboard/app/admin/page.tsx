@@ -31,6 +31,7 @@ interface UserItem {
   emailVerified?: boolean;
   walletAddress: string | null;
   stellarWalletAddress: string | null;
+  solanaWalletAddress: string | null;
   createdAt: string;
   lastSeenAt?: string;
   isAdmin?: boolean;
@@ -922,6 +923,13 @@ function UsersTab({
                         <div className="flex items-center gap-1 font-mono text-[11px]">
                           <span>{u.stellarWalletAddress.slice(0, 6)}...{u.stellarWalletAddress.slice(-4)}</span>
                           <button onClick={() => copyToClipboard(u.stellarWalletAddress)} className="text-muted-foreground hover:text-foreground">
+                            <Copy className="w-3 h-3" />
+                          </button>
+                        </div>
+                      ) : u.solanaWalletAddress ? (
+                        <div className="flex items-center gap-1 font-mono text-[11px]">
+                          <span>{u.solanaWalletAddress.slice(0, 6)}...{u.solanaWalletAddress.slice(-4)}</span>
+                          <button onClick={() => copyToClipboard(u.solanaWalletAddress)} className="text-muted-foreground hover:text-foreground">
                             <Copy className="w-3 h-3" />
                           </button>
                         </div>

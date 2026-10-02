@@ -110,7 +110,11 @@ export default function Dashboard() {
         const session = await response.json();
         if (cancelled) return;
 
-        if (!session?.user?.walletAddress && !session?.user?.stellarWalletAddress) {
+        if (
+          !session?.user?.walletAddress &&
+          !session?.user?.stellarWalletAddress &&
+          !session?.user?.solanaWalletAddress
+        ) {
           window.location.replace("/login");
           return;
         }

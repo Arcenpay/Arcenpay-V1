@@ -135,10 +135,10 @@ export function SettingsSection() {
     isPlatformAdminEmail(sessionData?.user?.email);
   const chainId = useChainId();
   const configuredChainId = activeEnvironment?.chainId ?? resolveEnvironmentChainId(envMode);
-  const stellar = useStellarWallet(configuredChainId);
-  const solanaWallet = useSolanaWallet(configuredChainId);
-  const isStellarEnv = isStellarChainId(configuredChainId);
-  const isSolanaEnv = isSolanaChainId(configuredChainId);
+  const stellar = useStellarWallet(configuredChainId ?? undefined);
+  const solanaWallet = useSolanaWallet(configuredChainId ?? undefined);
+  const isStellarEnv = Boolean(configuredChainId && isStellarChainId(configuredChainId));
+  const isSolanaEnv = Boolean(configuredChainId && isSolanaChainId(configuredChainId));
   const isNonEvmEnv = isStellarEnv || isSolanaEnv;
 
   const linkedWallet = isStellarEnv
@@ -187,13 +187,21 @@ export function SettingsSection() {
       : (currentNetworkLabel ?? "Not connected");
   const contractAddresses = useContractAddresses(configuredChainId);
   const configuredChainLabel = getChainLabel(configuredChainId);
-  const activeUsdcAddress = getUsdcAddress(configuredChainId);
+  const activeUsdcAddress = configuredChainId
+    ? (() => {
+        try {
+          return getUsdcAddress(configuredChainId);
+        } catch {
+          return null;
+        }
+      })()
+    : null;
   const activePlanFactoryAddress =
-    typeof contractAddresses.planFactory === "string"
+    contractAddresses && typeof contractAddresses.planFactory === "string"
       ? contractAddresses.planFactory
       : null;
   const activeSubscriptionRegistryAddress =
-    typeof contractAddresses.subscriptionRegistry === "string"
+    contractAddresses && typeof contractAddresses.subscriptionRegistry === "string"
       ? contractAddresses.subscriptionRegistry
       : null;
 
@@ -903,7 +911,7 @@ export function SettingsSection() {
                     {hasConnectedWallet && !isOnConfiguredNetwork ? (
                       <Button
                         variant="outline"
-                        onClick={() => void switchToRequiredNetwork(configuredChainId)}
+                        onClick={() => void switchToRequiredNetwork(configuredChainId ?? undefined)}
                         disabled={isSwitchingChain}
                       >
                         {isSwitchingChain ? (
@@ -1212,7 +1220,7 @@ export function SettingsSection() {
                               onClick={() =>
                                 handleCopyAddress(
                                   "Active USDC",
-                                  activeUsdcAddress,
+                                  activeUsdcAddress ?? "",
                                 )
                               }
                             >
@@ -1993,11 +2001,15 @@ export function SettingsSection() {
                             asChild
                           >
                             <a
-                              href={getBlockExplorerUrl(
-                                configuredChainId,
-                                "address",
-                                addr,
-                              )}
+                              href={
+                                configuredChainId
+                                  ? getBlockExplorerUrl(
+                                      configuredChainId,
+                                      "address",
+                                      addr,
+                                    )
+                                  : "#"
+                              }
                               target="_blank"
                               rel="noopener noreferrer"
                             >

@@ -89,9 +89,14 @@ export async function GET(c: Context) {
         )
       : null;
 
+  const environmentId = activeEnvironment?.id ?? auth.activeEnvironmentId ?? null;
+  if (!environmentId) {
+    return c.json({ error: "No workspace environment selected" }, 409 as any);
+  }
+
   const paymentLinks = await listPaymentLinks(
     auth.teamId,
-    activeEnvironment?.id ?? undefined,
+    environmentId,
   );
   return c.json({
     paymentLinks: paymentLinks.map(withCheckoutUrl),
@@ -130,8 +135,14 @@ export async function POST(c: Context) {
   let amount = parsed.data.amount;
   let acceptedToken = parsed.data.acceptedToken;
   let companyId = parsed.data.companyId ?? null;
-  let resolvedEnvironmentId = activeEnvironment?.id ?? null;
-  let resolvedChainId = parsed.data.chainId ?? activeEnvironment?.chainId ?? RUNTIME_CHAIN_ID;
+  let resolvedEnvironmentId = activeEnvironment?.id ?? auth.activeEnvironmentId ?? null;
+  if (!resolvedEnvironmentId) {
+    return c.json({ error: "No workspace environment selected" }, 409 as any);
+  }
+  let resolvedChainId = parsed.data.chainId ?? activeEnvironment?.chainId ?? null;
+  if (!resolvedChainId) {
+    return c.json({ error: "Cannot resolve chain for the active environment" }, 400 as any);
+  }
 
   if (parsed.data.catalogAddOnId) {
     const addOn = await db.catalogAddOn.findFirst({

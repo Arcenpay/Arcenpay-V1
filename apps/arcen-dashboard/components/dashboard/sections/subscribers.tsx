@@ -2,6 +2,7 @@
 import { apiFetch } from "@/lib/api-client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useEnvironment } from "@/contexts/environment-context";
 import { SkeletonList, SkeletonTable } from "@/components/ui/skeleton";
 import {
   Users,
@@ -298,6 +299,7 @@ function CreateUserSheet({
 }
 
 export function SubscribersSection() {
+  const { activeEnvironment } = useEnvironment();
   const [users, setUsers] = useState<UserRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -319,7 +321,7 @@ export function SubscribersSection() {
     } finally {
       setLoading(false);
     }
-  }, [search]);
+  }, [search, activeEnvironment?.id]);
 
   useEffect(() => {
     void fetchUsers();

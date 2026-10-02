@@ -43,23 +43,23 @@ function shortEvmAddress(address: string): string {
 }
 
 export function useUnifiedDashboardWallet(
-  configuredChainId: number,
+  configuredChainId: number | null | undefined,
   evmStoredWallet: string | null,
   stellarStoredWallet: string | null,
   solanaStoredWallet: string | null = null,
 ): UnifiedWalletState {
-  const isStellar = isStellarChainId(configuredChainId);
-  const isSolana = isSolanaChainId(configuredChainId);
+  const isStellar = Boolean(configuredChainId && isStellarChainId(configuredChainId));
+  const isSolana = Boolean(configuredChainId && isSolanaChainId(configuredChainId));
 
   // EVM wallet state (always active in background — wagmi is global)
   const evm = useDashboardWallet(evmStoredWallet);
 
   // Stellar wallet state — pass the configured chain so the wallet kit signs
   // with the matching network passphrase (testnet vs mainnet).
-  const stellar = useStellarWallet(configuredChainId);
+  const stellar = useStellarWallet(configuredChainId ?? undefined);
 
   // Solana wallet state — injected provider (Phantom/Solflare/…).
-  const solana = useSolanaWallet(configuredChainId);
+  const solana = useSolanaWallet(configuredChainId ?? undefined);
 
   return useMemo(() => {
     if (isSolana) {
@@ -166,7 +166,7 @@ export function useUnifiedDashboardWallet(
       hasLinkedWallet: evm.hasLinkedWallet,
       isLinkedWalletConnected: evm.isLinkedWalletConnected,
       isWrongWalletConnected: evm.isWrongWalletConnected,
-      isOnConfiguredNetwork: evm.isConnected && evm.chainId === configuredChainId,
+      isOnConfiguredNetwork: Boolean(configuredChainId && evm.isConnected && evm.chainId === configuredChainId),
       isWrongNetwork: evm.isWrongNetwork,
       isLoading: false,
       isSwitchingChain: evm.isSwitchingChain,
@@ -176,7 +176,13 @@ export function useUnifiedDashboardWallet(
       openAccountModal: evm.openAccountModal,
       reconnectWallet: evm.reconnectWallet,
       disconnectWallet: evm.disconnectWallet,
-      switchToRequiredNetwork: evm.switchToSupportedNetwork,
+      switchToRequiredNetwork: async () => {
+        if (configuredChainId) {
+          await evm.switchToSupportedNetwork(configuredChainId);
+        } else {
+          await evm.switchToSupportedNetwork();
+        }
+      },
     };
   }, [
     isStellar,

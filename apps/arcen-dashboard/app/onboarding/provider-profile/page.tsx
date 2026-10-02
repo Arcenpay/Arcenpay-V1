@@ -52,7 +52,12 @@ export default function ProviderProfilePage() {
     apiFetch("/api/auth/session")
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
-        if (!data?.user?.id || (!data?.user?.walletAddress && !data?.user?.stellarWalletAddress)) {
+        if (
+          !data?.user?.id ||
+          (!data?.user?.walletAddress &&
+            !data?.user?.stellarWalletAddress &&
+            !data?.user?.solanaWalletAddress)
+        ) {
           router.replace("/login");
           return;
         }

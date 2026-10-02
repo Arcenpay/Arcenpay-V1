@@ -37,12 +37,10 @@ export const TESTNET_CHAIN_IDS = [
   STELLAR_FUTURENET_CHAIN_ID,
   SOLANA_DEVNET_CHAIN_ID,
 ] as const;
-// Production environments are strictly restricted to BOT Chain Mainnet,
-// as BOT Chain is the only network with verified production contract
-// deployments. Solana mainnet is added once the Anchor program is deployed
-// there (see SOLANA_MAINNET_CHAIN_ID).
+// Production environments support BOT Chain Mainnet and Solana Mainnet Beta.
 export const MAINNET_CHAIN_IDS = [
   BOT_MAINNET_CHAIN_ID,
+  SOLANA_MAINNET_CHAIN_ID,
 ] as const;
 
 const ALL_SUPPORTED = [...TESTNET_CHAIN_IDS, ...MAINNET_CHAIN_IDS] as const;
@@ -110,11 +108,6 @@ export function getChainIdsForEnvironment(
 export const DEFAULT_CHAIN_ID: SupportedDashboardChainId =
   parseChainId(getConfiguredRuntimeChainId()) ?? BOT_MAINNET_CHAIN_ID;
 
-export const DEFAULT_TESTNET_CHAIN_ID: TestnetChainId =
-  TESTNET_SET.has(DEFAULT_CHAIN_ID)
-    ? (DEFAULT_CHAIN_ID as TestnetChainId)
-    : BASE_SEPOLIA_CHAIN_ID;
-
 export const DEFAULT_MAINNET_CHAIN_ID: MainnetChainId = BOT_MAINNET_CHAIN_ID;
 
 export const DEFAULT_PRODUCTION_CHAIN_ID: SupportedDashboardChainId =
@@ -131,7 +124,7 @@ export function normalizeEnvironmentMode(value: unknown): EnvironmentMode {
 export function resolveEnvironmentChainId(
   environmentMode: EnvironmentMode,
   requestedChainId?: unknown,
-): SupportedDashboardChainId {
+): SupportedDashboardChainId | null {
   const explicit = parseChainId(requestedChainId);
   if (explicit) {
     // Validate the requested chain is valid for this env
@@ -140,10 +133,11 @@ export function resolveEnvironmentChainId(
   }
   return environmentMode === "PRODUCTION"
     ? DEFAULT_MAINNET_CHAIN_ID
-    : DEFAULT_TESTNET_CHAIN_ID;
+    : null;
 }
 
-export function getChainLabel(chainId: number): string {
+export function getChainLabel(chainId?: number | null): string {
+  if (!chainId) return "Select network";
   // Family-aware: viem `getChain()` only knows EVM chains; for Stellar (and
   // any future non-EVM family) fall back to the chain descriptor from
   // internal-core's CHAIN_REGISTRY.

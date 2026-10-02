@@ -123,8 +123,8 @@ export function OverviewSection() {
   const { data: sessionData } = useDashboardSession();
   const overviewChainId =
     activeEnvironment?.chainId ?? resolveEnvironmentChainId(envMode);
-  const stellar = useStellarWallet(overviewChainId);
-  const solana = useSolanaWallet(overviewChainId);
+  const stellar = useStellarWallet(overviewChainId ?? undefined);
+  const solana = useSolanaWallet(overviewChainId ?? undefined);
 
   const isStellarEnv = overviewChainId
     ? isStellarChainId(overviewChainId)
@@ -166,8 +166,8 @@ export function OverviewSection() {
       try {
         setLoadingOverview(true);
         const params = new URLSearchParams({
-          chainId: String(effectiveChainId),
           environmentMode: envMode,
+          ...(effectiveChainId ? { chainId: String(effectiveChainId) } : {}),
         });
         const res = await apiFetch(`/api/platform/overview?${params.toString()}`, {
           cache: "no-store",
@@ -272,7 +272,10 @@ export function OverviewSection() {
   ];
 
   /* ── Onboarding checklist logic ──────────────────────── */
-  const hasWallet = !!sessionData?.user.walletAddress || !!sessionData?.user.stellarWalletAddress;
+  const hasWallet =
+    !!sessionData?.user.walletAddress ||
+    !!sessionData?.user.stellarWalletAddress ||
+    !!sessionData?.user.solanaWalletAddress;
   const hasEnvironment = !!activeEnvironment;
   const hasPlans = Number(metrics.activePlans) > 0;
 

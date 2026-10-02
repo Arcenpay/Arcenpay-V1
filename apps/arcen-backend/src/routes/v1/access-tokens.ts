@@ -518,6 +518,9 @@ export async function POST(c: Context) {
       expires_at: expiresAt.toISOString(),
       company_id: companyId,
       user_id: userId,
+      environment_id: activeEnvironment.id,
+      chain_id: activeEnvironment.chainId,
+      chain_family: activeEnvironment.chainFamily,
     },
   }, 200, corsHeaders(origin));
 }

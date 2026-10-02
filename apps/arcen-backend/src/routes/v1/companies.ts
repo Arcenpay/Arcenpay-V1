@@ -18,9 +18,14 @@ export async function GET(c: Context) {
   if (isAnyAuthError(ctx)) return c.json({ ok: false, error: ctx.error }, ctx.status as any);
 
   const { teamId } = ctx;
-  const environmentFilter = ctx.activeEnvironmentId
-    ? await getCompanyEnvironmentWhere(ctx.activeEnvironmentId)
-    : null;
+  const environmentId = ctx.activeEnvironmentId;
+  if (!environmentId) {
+    return c.json(
+      { ok: false, error: "No environment selected.", code: "ENVIRONMENT_REQUIRED" },
+      400 as any,
+    );
+  }
+  const environmentFilter = await getCompanyEnvironmentWhere(environmentId);
   const limit = Math.min(Number(c.req.query("limit") ?? 50), 200);
   const cursor = c.req.query("cursor");
   if (cursor !== null && cursor !== undefined && cursor.trim() === "") {

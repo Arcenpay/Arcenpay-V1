@@ -121,12 +121,19 @@ export async function verifyEmail(c: Context) {
     select: {
       id: true,
       walletAddress: true,
+      stellarWalletAddress: true,
+      solanaWalletAddress: true,
     },
   });
 
   await createSession(c, refreshedUser.id);
+  const hasAnyWallet = Boolean(
+    refreshedUser.walletAddress ||
+    refreshedUser.stellarWalletAddress ||
+    refreshedUser.solanaWalletAddress,
+  );
   console.info("[DEBUG-auth-20260907] email verified and session issued", {
-    hasWallet: Boolean(refreshedUser.walletAddress),
+    hasWallet: hasAnyWallet,
   });
 
   return c.json({
@@ -138,6 +145,6 @@ export async function verifyEmail(c: Context) {
     ...(existingAccountWallet
       ? { existingAccountWallet, existingAccount: true }
       : {}),
-    redirectTo: refreshedUser.walletAddress ? "/" : "/onboarding/wallet",
+    redirectTo: hasAnyWallet ? "/" : "/onboarding/wallet",
   });
 }

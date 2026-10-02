@@ -28,7 +28,9 @@ if [ -e "$OUT" ]; then
 fi
 
 mkdir -p "$(dirname "$OUT")"
-chmod 700 "$(dirname "$OUT")"
+# Best-effort: tighten the parent directory, but never fail the run for it
+# (e.g. when the keypair sits in a directory we do not own).
+chmod 700 "$(dirname "$OUT")" 2>/dev/null || true
 
 echo "→ Generating a new keypair at $OUT"
 echo "  (a 12-word recovery phrase will be printed once — write it down)"

@@ -186,8 +186,13 @@ export async function GET(c: Context) {
     activeEnvironmentId = activeEnvironment.id;
   }
 
+  if (!activeEnvironmentId) {
+    return c.json({ error: "No workspace environment selected" }, 409 as any);
+  }
+
   const where = {
     teamId: auth.teamId,
+    environmentId: activeEnvironmentId,
     ...(parsed.data.status && { status: parsed.data.status }),
     ...(parsed.data.q && {
       OR: [
@@ -207,29 +212,9 @@ export async function GET(c: Context) {
       ],
     }),
   };
-  // Broader plan lookup: all plans in the team (cross-environment safety net)
-  const allTeamPlanIds = (
-    await db.catalogPlan.findMany({
-      where: { teamId: auth.teamId },
-      select: { id: true },
-    })
-  ).map((plan) => plan.id);
 
   const invoices = await db.invoice.findMany({
-    where: {
-      ...where,
-      AND: [
-        {
-          OR: [
-            ...(activeEnvironmentId ? [{ environmentId: activeEnvironmentId }] : []),
-            { environmentId: null },
-            ...(allTeamPlanIds.length > 0
-              ? [{ planId: { in: allTeamPlanIds } }]
-              : []),
-          ],
-        },
-      ],
-    },
+    where,
     include: {
       lineItems: true,
       deliveries: { orderBy: { createdAt: "desc" }, take: 3 },

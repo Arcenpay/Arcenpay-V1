@@ -54,10 +54,15 @@ export async function GET(c: Context) {
         )
       : null;
 
+  const environmentId = activeEnvironment?.id ?? auth.activeEnvironmentId ?? null;
+  if (!environmentId) {
+    return c.json({ error: "No workspace environment selected" }, 409 as any);
+  }
+
   const checkoutSessions = await db.checkoutSession.findMany({
     where: {
       teamId: auth.teamId,
-      ...(activeEnvironment ? { environmentId: activeEnvironment.id } : {}),
+      environmentId,
     },
     include: {
       paymentLink: {
@@ -156,9 +161,14 @@ export async function POST(c: Context) {
     return c.json({ checkoutSession: session }, 201 as any);
   }
 
+  const resolvedEnvironmentId = activeEnvironment?.id ?? auth.activeEnvironmentId ?? null;
+  if (!resolvedEnvironmentId) {
+    return c.json({ error: "No workspace environment selected" }, 409 as any);
+  }
+
   const session = await createCheckoutSession({
     teamId: auth.teamId,
-    environmentId: activeEnvironment?.id ?? null,
+    environmentId: resolvedEnvironmentId,
     purpose: parsed.data.purpose!,
     companyId: parsed.data.companyId,
     catalogAddOnId: parsed.data.catalogAddOnId,

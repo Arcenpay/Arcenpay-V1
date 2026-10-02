@@ -24,10 +24,10 @@ export const TESTNET_CHAIN_IDS = [
   STELLAR_FUTURENET_CHAIN_ID,
   SOLANA_DEVNET_CHAIN_ID,
 ] as const;
-// Production environments are strictly restricted to BOT Chain Mainnet,
-// as BOT Chain is the only network with verified production contract deployments.
+// Production environments support BOT Chain Mainnet and Solana Mainnet Beta.
 export const MAINNET_CHAIN_IDS = [
   BOT_MAINNET_CHAIN_ID,
+  SOLANA_MAINNET_CHAIN_ID,
 ] as const;
 
 const ALL_SUPPORTED = [...TESTNET_CHAIN_IDS, ...MAINNET_CHAIN_IDS] as const;
@@ -75,11 +75,6 @@ export function isSupportedWalletAuthChainId(chainId: unknown): boolean {
 export const DEFAULT_CHAIN_ID: SupportedDashboardChainId =
   parseChainId(getConfiguredRuntimeChainId()) ?? BOT_MAINNET_CHAIN_ID;
 
-export const DEFAULT_TESTNET_CHAIN_ID: SupportedDashboardChainId =
-  TESTNET_CHAIN_ID_SET.has(DEFAULT_CHAIN_ID)
-    ? DEFAULT_CHAIN_ID
-    : BASE_SEPOLIA_CHAIN_ID;
-
 export const DEFAULT_MAINNET_CHAIN_ID: SupportedDashboardChainId = BOT_MAINNET_CHAIN_ID;
 
 export const DEFAULT_PRODUCTION_CHAIN_ID: SupportedDashboardChainId =
@@ -102,15 +97,13 @@ export function getChainIdsForEnvironment(
 export function resolveEnvironmentChainId(
   environmentMode: EnvironmentMode,
   requestedChainId?: unknown,
-): SupportedDashboardChainId {
+): SupportedDashboardChainId | null {
   const explicit = parseChainId(requestedChainId);
   if (explicit) {
     const allowed = getChainIdsForEnvironment(environmentMode);
     if ((allowed as readonly number[]).includes(explicit)) return explicit;
   }
-  return environmentMode === "PRODUCTION"
-    ? DEFAULT_MAINNET_CHAIN_ID
-    : DEFAULT_TESTNET_CHAIN_ID;
+  return environmentMode === "PRODUCTION" ? DEFAULT_MAINNET_CHAIN_ID : null;
 }
 
 export function getChainLabel(chainId: number): string {

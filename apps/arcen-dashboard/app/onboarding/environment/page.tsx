@@ -41,10 +41,7 @@ import type { ChainFamily } from "@arcenpay/internal-core";
 // Stellar users see only Stellar networks (Stellar Testnet/Mainnet/Futurenet).
 function buildChainOptions(mode: EnvironmentMode, family: ChainFamily) {
   return getChainIdsForEnvironment(mode)
-    .filter((chainId) => {
-      if (mode === "PRODUCTION") return true;
-      return getChainFamily(chainId) === family;
-    })
+    .filter((chainId) => getChainFamily(chainId) === family)
     .map((chainId) => ({
       chainId,
       label: getChainLabel(chainId),
@@ -128,9 +125,13 @@ export default function EnvironmentOnboardingPage() {
 
   useEffect(() => {
     if (data?.activeEnvironment) {
-      window.location.assign("/");
+      const activeFamily = getChainFamily(data.activeEnvironment.chainId);
+      // Only redirect away if the active environment already belongs to the target family
+      if (activeFamily === selectedFamily) {
+        window.location.assign("/");
+      }
     }
-  }, [data?.activeEnvironment]);
+  }, [data?.activeEnvironment, selectedFamily]);
 
   async function handleSelect(environmentId: string) {
     setSubmitting(true);

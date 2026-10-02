@@ -2,6 +2,7 @@
 import { apiFetch } from "@/lib/api-client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useEnvironment } from "@/contexts/environment-context";
 import {
   Building2, Search, Plus, Wallet, Mail, ChevronRight,
   RefreshCw, Shield, Copy, Check, Users, ExternalLink,
@@ -421,6 +422,7 @@ function CreateCompanySheet({ open, onOpenChange, onCreated }: {
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 export function CompaniesSection() {
+  const { activeEnvironment } = useEnvironment();
   const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -442,7 +444,7 @@ export function CompaniesSection() {
     } finally {
       setLoading(false);
     }
-  }, [search]);
+  }, [search, activeEnvironment?.id]);
 
   useEffect(() => { fetchCompanies(); }, [fetchCompanies]);
 

@@ -236,14 +236,24 @@ export function PaymentsSection() {
     sessionData?.user?.solanaWalletAddress ?? null,
   );
   const defaultRecipientWallet = wallet.connectedAddress ?? wallet.storedWallet ?? "";
-  const runtimeUsdc = getUsdcAddress(configuredChainId);
+  const runtimeUsdc = configuredChainId
+    ? (() => {
+        try {
+          return getUsdcAddress(configuredChainId);
+        } catch {
+          return "";
+        }
+      })()
+    : "";
   const runtimeChainLabel = getChainLabel(configuredChainId);
   // Recipient wallet shape depends on the active environment's chain family:
   // Stellar environments take G… base32 accounts, Solana base58 addresses, and
   // EVM environments 0x hex addresses.
-  const recipientPlaceholder = isStellarChainId(configuredChainId)
+  const recipientPlaceholder = Boolean(
+    configuredChainId && isStellarChainId(configuredChainId),
+  )
     ? "G... (Stellar account)"
-    : isSolanaChainId(configuredChainId)
+    : Boolean(configuredChainId && isSolanaChainId(configuredChainId))
       ? "Base58 (Solana address)"
       : "0x...";
   const [paymentLinks, setPaymentLinks] = useState<PaymentLinkRow[]>([]);

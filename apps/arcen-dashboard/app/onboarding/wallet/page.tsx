@@ -46,7 +46,53 @@ const routeAfterWalletLink = async () => {
       const isExpiredOrRevoked = keyStatus === "EXPIRED" || keyStatus === "REVOKED";
       if (isActivated || isExpiredOrRevoked) {
         const environments = Array.isArray(data?.environments) ? data.environments : [];
-        window.location.href = environments.length > 0 ? "/" : "/onboarding/provider-profile";
+        const family = getOnboardingChainFamily();
+
+        if (environments.length > 0 && family) {
+          const matchingEnv = environments.find(
+            (e: any) => getChainFamily(e.chainId) === family,
+          );
+          if (matchingEnv) {
+            await apiFetch("/api/environments/select", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ environmentId: matchingEnv.id }),
+            }).catch(() => {});
+            window.location.href = "/";
+            return;
+          }
+
+          // Try to create the environment for this chain family
+          try {
+            const chainId =
+              family === "solana"
+                ? 9100001
+                : family === "stellar"
+                  ? 9000001
+                  : 84532;
+            const name =
+              family === "solana"
+                ? "Solana Devnet"
+                : family === "stellar"
+                  ? "Stellar Testnet"
+                  : "Development";
+            const createRes = await apiFetch("/api/environments", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ name, mode: "DEVELOPMENT", chainId }),
+            });
+            if (createRes.ok) {
+              window.location.href = "/";
+              return;
+            }
+          } catch {}
+
+          window.location.href = "/onboarding/environment";
+          return;
+        }
+
+        window.location.href =
+          environments.length > 0 ? "/" : "/onboarding/provider-profile";
         return;
       }
     }

@@ -85,4 +85,17 @@ describe("addresses", () => {
     const addresses = getContractAddresses(11155111);
     expect(addresses.feeCollector).toBe(next);
   });
+
+  it("returns registered program ID D4ECHyomENvFHrdXWHcRncTwwQ1EQbyY4ga3CkcaYCP3 for all roles on Solana Mainnet (9100000)", () => {
+    process.env.NODE_ENV = "production";
+    const addresses = getContractAddresses(9100000);
+    const expectedProgramId = "D4ECHyomENvFHrdXWHcRncTwwQ1EQbyY4ga3CkcaYCP3";
+    expect(addresses.subscriptionRegistry).toBe(expectedProgramId);
+    expect(addresses.autopayModule).toBe(expectedProgramId);
+    expect(addresses.planFactory).toBe(expectedProgramId);
+    expect(addresses.feeCollector).toBe(expectedProgramId);
+    expect(addresses.sessionVault).toBe(expectedProgramId);
+    expect(addresses.zkUsageVerifier).toBe(expectedProgramId);
+    expect(addresses.mirrorRegistry).toBe(expectedProgramId);
+  });
 });

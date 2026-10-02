@@ -523,6 +523,16 @@ export async function GET(c: Context) {
       teamId,
       ...(environmentId ? { environmentId } : {}),
     },
+    include: {
+      environment: {
+        select: {
+          id: true,
+          chainId: true,
+          mode: true,
+          chainFamily: true,
+        },
+      },
+    },
   });
 
   if (!component) {
@@ -696,6 +706,12 @@ export async function GET(c: Context) {
             ),
           };
         }
+        if (activePlan) {
+          activePlan = {
+            ...activePlan,
+            acceptedChainId: (activePlan as any).chainId ?? undefined,
+          };
+        }
       }
 
       activeBillingPeriod =
@@ -706,7 +722,9 @@ export async function GET(c: Context) {
         deriveBillingPeriodFromInterval(activePlan?.billingInterval);
       const configuredChainId =
         (typeof activePlan?.chainId === "number" ? activePlan.chainId : null) ??
-        (company.subscriptionState?.chainId ?? DEFAULT_CHAIN_ID);
+        company.subscriptionState?.chainId ??
+        component.environment?.chainId ??
+        DEFAULT_CHAIN_ID;
       const now = new Date();
 
       const deferredBillingPeriodRepair = resolveDeferredBillingPeriodRepair({
@@ -1325,6 +1343,7 @@ export async function GET(c: Context) {
   }
 
   let effectiveEnvironmentId =
+    scopedEnvironmentId ??
     companyEnvironmentId ??
     (typeof activePlan?.environmentId === "string"
       ? (activePlan.environmentId as string)
@@ -1412,6 +1431,7 @@ export async function GET(c: Context) {
       const recoveredIds = new Map<string, string>();
 
       for (const [chainId, chainPlans] of plansByChain) {
+        if (getChainFamily(chainId) !== "evm") continue;
         const contracts = getContractAddresses(chainId);
         const planFactoryAddress = contracts.planFactory as `0x${string}`;
         if (
@@ -1621,14 +1641,40 @@ export async function GET(c: Context) {
     metadata: plan.metadata,
     acceptedToken: plan.acceptedToken,
     onChainPlanId: plan.onChainPlanId,
+    chainId: plan.chainId ?? undefined,
+    acceptedChainId: plan.chainId ?? undefined,
   }));
+
+  const compEnvChainId =
+    component.environment?.chainId ??
+    (typeof activePlan?.chainId === "number" ? (activePlan.chainId as number) : undefined) ??
+    (plansForResponse[0]?.chainId ? Number(plansForResponse[0].chainId) : undefined);
+  const compFamily =
+    component.environment?.chainFamily?.toLowerCase() ??
+    (compEnvChainId ? getChainFamily(compEnvChainId) : "evm");
 
   // Get provider's wallet (team owner) for payment routing
   const teamOwnerMember = await db.teamMember.findFirst({
     where: { teamId: teamId ?? "", role: "OWNER" },
-    select: { user: { select: { walletAddress: true } } },
+    select: {
+      user: {
+        select: {
+          walletAddress: true,
+          solanaWalletAddress: true,
+          stellarWalletAddress: true,
+        },
+      },
+    },
   });
-  const providerWallet = teamOwnerMember?.user?.walletAddress ?? null;
+
+  let providerWallet: string | null = null;
+  if (compFamily === "solana") {
+    providerWallet = teamOwnerMember?.user?.solanaWalletAddress ?? null;
+  } else if (compFamily === "stellar") {
+    providerWallet = teamOwnerMember?.user?.stellarWalletAddress ?? null;
+  } else {
+    providerWallet = teamOwnerMember?.user?.walletAddress ?? null;
+  }
 
   const rawElements = Array.isArray(component.elements)
     ? (component.elements as Array<Record<string, unknown>>)
@@ -1652,7 +1698,13 @@ export async function GET(c: Context) {
             type: normalizeElementType(String(el.type ?? "")),
           })),
           design: normalizeComponentDesign(rawDesign),
+          chainId: compEnvChainId ?? null,
+          chainFamily: compFamily,
+          environmentId: component.environment?.id ?? component.environmentId ?? null,
         },
+        chainId: compEnvChainId ?? null,
+        chainFamily: compFamily,
+        environmentId: component.environment?.id ?? component.environmentId ?? null,
         branding: {
           hideBrandingAllowed: brandingGate.allowed,
         },

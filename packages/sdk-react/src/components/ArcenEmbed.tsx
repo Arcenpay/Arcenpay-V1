@@ -1017,8 +1017,30 @@ function normalizeComponentRenderData(value: unknown): ComponentRenderData {
       ? (raw.component as Record<string, unknown>)
       : {};
 
+  const resolvedChainId =
+    typeof raw.chainId === "number"
+      ? raw.chainId
+      : typeof rawComponent.chainId === "number"
+        ? rawComponent.chainId
+        : undefined;
+  const resolvedChainFamily =
+    typeof raw.chainFamily === "string"
+      ? raw.chainFamily
+      : typeof rawComponent.chainFamily === "string"
+        ? rawComponent.chainFamily
+        : undefined;
+  const resolvedEnvironmentId =
+    typeof raw.environmentId === "string"
+      ? raw.environmentId
+      : typeof rawComponent.environmentId === "string"
+        ? rawComponent.environmentId
+        : undefined;
+
   return {
     ...(raw as Partial<ComponentRenderData>),
+    chainId: resolvedChainId,
+    chainFamily: resolvedChainFamily,
+    environmentId: resolvedEnvironmentId,
     component: {
       id: typeof rawComponent.id === "string" ? rawComponent.id : "",
       name: typeof rawComponent.name === "string" ? rawComponent.name : "",
@@ -1029,6 +1051,9 @@ function normalizeComponentRenderData(value: unknown): ComponentRenderData {
         rawComponent.design && typeof rawComponent.design === "object"
           ? (rawComponent.design as ComponentRenderData["component"]["design"])
           : {},
+      chainId: resolvedChainId,
+      chainFamily: resolvedChainFamily,
+      environmentId: resolvedEnvironmentId,
     },
     activePlan:
       raw.activePlan && typeof raw.activePlan === "object"
@@ -7131,7 +7156,17 @@ function PaymentContent({
   const hasInvalidCustomerEmail =
     hasCustomerEmail && !isValidCustomerEmail(normalizedCustomerEmail);
   const paymentMethod = data.paymentMethod as ComponentPaymentMethod | null;
-  const chainId = paymentMethod?.chainId ?? runtimeChainId;
+  const chainId =
+    paymentMethod?.chainId ??
+    selectedPlan?.acceptedChainId ??
+    selectedPlan?.chainId ??
+    activePlan?.acceptedChainId ??
+    activePlan?.chainId ??
+    data.component?.chainId ??
+    data.chainId ??
+    data.plans?.[0]?.acceptedChainId ??
+    data.plans?.[0]?.chainId ??
+    runtimeChainId;
   const serverSmartAccountAddress =
     typeof paymentMethod?.walletAddress === "string"
       ? paymentMethod.walletAddress
@@ -7202,8 +7237,14 @@ function PaymentContent({
   // ── Family-aware wallet resolution ────────────────────────────────────────
   const planChainId =
     selectedPlan?.acceptedChainId ??
+    selectedPlan?.chainId ??
     activePlan?.acceptedChainId ??
+    activePlan?.chainId ??
     paymentMethod?.chainId ??
+    data.component?.chainId ??
+    data.chainId ??
+    data.plans?.[0]?.acceptedChainId ??
+    data.plans?.[0]?.chainId ??
     runtimeChainId;
   const isStellarChain = planChainId !== 0 && getChainFamily(planChainId) === "stellar";
   const isSolanaChain = planChainId !== 0 && getChainFamily(planChainId) === "solana";
@@ -9831,7 +9872,15 @@ function UnsubscribeContent({
   >("idle");
   const [txError, setTxError] = useState("");
   const paymentMethod = data.paymentMethod as ComponentPaymentMethod | null;
-  const chainId = paymentMethod?.chainId ?? runtimeChainId;
+  const chainId =
+    paymentMethod?.chainId ??
+    activePlan?.acceptedChainId ??
+    activePlan?.chainId ??
+    data.component?.chainId ??
+    data.chainId ??
+    data.plans?.[0]?.acceptedChainId ??
+    data.plans?.[0]?.chainId ??
+    runtimeChainId;
   const isStellarChain = chainId !== 0 && getChainFamily(chainId) === "stellar";
   const isSolanaChain = chainId !== 0 && getChainFamily(chainId) === "solana";
   const stellarWallet = useSafeStellarAccount(chainId);

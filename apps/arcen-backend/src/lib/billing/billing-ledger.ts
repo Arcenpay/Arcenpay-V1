@@ -20,12 +20,17 @@ async function resolveCompany(
     companyId?: string | null;
     walletAddress?: string | null;
     onChainTokenId?: string | null;
+    environmentId?: string | null;
   },
   client: BillingLedgerDb = db,
 ) {
   if (input.companyId) {
     return client.arcenCompany.findFirst({
-      where: { id: input.companyId, teamId: input.teamId },
+      where: {
+        id: input.companyId,
+        teamId: input.teamId,
+        ...(input.environmentId ? { environmentId: input.environmentId } : {}),
+      },
       select: {
         id: true,
         teamId: true,
@@ -39,7 +44,11 @@ async function resolveCompany(
   const onChainTokenId = input.onChainTokenId?.trim();
   if (onChainTokenId) {
     const companyByToken = await client.subscriptionState.findFirst({
-      where: { teamId: input.teamId, onChainTokenId },
+      where: {
+        teamId: input.teamId,
+        onChainTokenId,
+        ...(input.environmentId ? { environmentId: input.environmentId } : {}),
+      },
       select: {
         company: {
           select: {
@@ -62,7 +71,11 @@ async function resolveCompany(
   if (!walletAddress) return null;
 
   const companyByIdentityWallet = await client.arcenCompany.findFirst({
-    where: { teamId: input.teamId, walletAddress },
+    where: {
+      teamId: input.teamId,
+      walletAddress,
+      ...(input.environmentId ? { environmentId: input.environmentId } : {}),
+    },
     select: {
       id: true,
       teamId: true,
