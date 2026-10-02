@@ -104,14 +104,36 @@ function isRetryableConnectionError(error: unknown): boolean {
   );
 }
 
+// Single-flight + rate-limited. Previously every retryable error tore down and
+// rebuilt the pool with no guard, so a storm of failing requests (which is
+// exactly what a failing/retrying caller produces) created one new pool per
+// request. The old pools were still open while the new ones connected, so
+// Postgres hit its connection ceiling, which produced MORE errors, which
+// triggered MORE resets — the connection death-spiral. One reset at a time,
+// and never more often than MIN_RESET_INTERVAL_MS.
+let resetInFlight: Promise<void> | null = null;
+let lastResetAt = 0;
+const MIN_RESET_INTERVAL_MS = 5_000;
+
 async function resetPrismaClient(expectedPool?: Pool): Promise<void> {
-  const currentClient = globalForPrisma.prisma;
   const currentPool = globalForPrisma.prismaPool;
   if (expectedPool && currentPool !== expectedPool) return;
 
-  globalForPrisma.prisma = undefined;
-  globalForPrisma.prismaPool = undefined;
-  await Promise.allSettled([currentClient?.$disconnect(), currentPool?.end()]);
+  if (resetInFlight) return resetInFlight;
+  if (Date.now() - lastResetAt < MIN_RESET_INTERVAL_MS) return;
+
+  resetInFlight = (async () => {
+    const client = globalForPrisma.prisma;
+    const pool = globalForPrisma.prismaPool;
+    globalForPrisma.prisma = undefined;
+    globalForPrisma.prismaPool = undefined;
+    await Promise.allSettled([client?.$disconnect(), pool?.end()]);
+    lastResetAt = Date.now();
+  })().finally(() => {
+    resetInFlight = null;
+  });
+
+  return resetInFlight;
 }
 
 export async function withPrismaReconnect<T>(

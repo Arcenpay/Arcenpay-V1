@@ -222,10 +222,18 @@ export class DurableJobQueue {
     // unbounded number of overlapping runs on slow ticks. This drains up to
     // `concurrency` jobs concurrently and never exceeds it, so a burst (e.g. a
     // renewal wave) drains quickly without unbounded fan-out.
+    // INVARIANT: QUEUE_CONCURRENCY x activeWorkers <= DB_POOL_MAX.
+    //
+    // These jobs land on the backend, which holds the ONLY database pool in the
+    // system (the facilitator opens no DB connections itself). The previous
+    // default of 10 was sized as if one worker existed, so two chain processes
+    // pushed 20 concurrent requests at a 10-connection pool — which is what
+    // exhausted Postgres. Keep this small; scale throughput by raising
+    // DB_POOL_MAX and the database plan, not by fanning out here.
     const concurrency = Math.max(
       1,
       options?.concurrency ??
-        Number(process.env.QUEUE_CONCURRENCY || 10),
+        Number(process.env.QUEUE_CONCURRENCY || 3),
     );
     let inFlight = 0;
 

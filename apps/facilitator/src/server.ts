@@ -1409,9 +1409,20 @@ async function postToDashboard(
   payload: unknown,
   options?: { method?: "POST" | "PATCH" },
 ): Promise<boolean> {
-  if (!DASHBOARD_URL) {
+  // Post to the BACKEND directly, not the public dashboard origin.
+  //
+  // DASHBOARD_URL is a public origin, so routing every billing event, sync and
+  // webhook through it takes a needless internet round trip and subjects the
+  // facilitator to the edge rate limiter — which is what produced the 429
+  // retry storm. In the all-in-one container the launcher points
+  // INTERNAL_API_BASE_URL at the co-located backend; in a split deployment
+  // BACKEND_URL is the backend's own origin. DASHBOARD_URL stays as the
+  // fallback for dashboard-only setups, matching how plan resolution,
+  // maintenance and the sync routes already resolve this base.
+  const baseUrl = INTERNAL_API_BASE_URL || DASHBOARD_URL;
+  if (!baseUrl) {
     console.warn(
-      `[Facilitator] Cannot post ${pathname} — DASHBOARD_URL is not configured.`,
+      `[Facilitator] Cannot post ${pathname} — neither INTERNAL_API_BASE_URL nor DASHBOARD_URL is configured.`,
     );
     return false;
   }
@@ -1422,7 +1433,7 @@ async function postToDashboard(
     if (FACILITATOR_SECRET) {
       headers.Authorization = `Bearer ${FACILITATOR_SECRET}`;
     }
-    const response = await fetch(buildInternalApiUrl(DASHBOARD_URL, pathname), {
+    const response = await fetch(buildInternalApiUrl(baseUrl, pathname), {
       method: options?.method ?? "POST",
       headers,
       body: JSON.stringify(payload),
@@ -4564,7 +4575,7 @@ app.post(
         triggerInvoice,
         source,
       },
-      { idempotencyKey: `billing:${idempotencyKey}` },
+      { idempotencyKey: `billing:${CHAIN_ID}:${idempotencyKey}` },
     );
 
     return res.status(202).json({

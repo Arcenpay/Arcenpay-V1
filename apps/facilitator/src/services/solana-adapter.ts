@@ -232,14 +232,17 @@ export class SolanaChainAdapter implements ChainAdapter {
     for (const entry of [...signatures].reverse()) {
       if (!entry.signature || this.seenSignatures.has(entry.signature)) continue;
       this.seenSignatures.add(entry.signature);
-      await this.processTransaction(entry.signature);
+      await this.processTransaction(entry.signature, programId);
     }
 
     // Cursor = newest signature (first element).
     this.lastSignature.set(programId, signatures[0].signature);
   }
 
-  private async processTransaction(signature: string): Promise<void> {
+  private async processTransaction(
+    signature: string,
+    programId?: string,
+  ): Promise<void> {
     if (!this.connection) return;
     const tx = await this.connection.getParsedTransaction(signature, {
       maxSupportedTransactionVersion: 0,
@@ -251,8 +254,36 @@ export class SolanaChainAdapter implements ChainAdapter {
     const slot = tx?.slot ?? 0;
     const blockTime = tx?.blockTime ?? Math.floor(Date.now() / 1000);
 
+    // Every Anchor program logs `Program data: <base64>`, so a raw scan of the
+    // log lines decodes ANY program's event payload with OUR discriminator
+    // table. That produced subscription events with garbage tokenIds that could
+    // never resolve a teamId. Attribute each data line to the program that
+    // emitted it by tracking the runtime's invoke stack, and only decode lines
+    // belonging to the program we are watching. If the log format is not
+    // recognised the stack stays empty and we fall back to the previous
+    // behaviour rather than silently dropping real events.
+    const invokeStack: string[] = [];
+    const invokeRe = /^Program ([1-9A-HJ-NP-Za-km-z]{32,44}) invoke \[\d+\]$/;
+    const finishRe = /^Program ([1-9A-HJ-NP-Za-km-z]{32,44}) (success|failed)/;
+
     for (const log of logs) {
+      const invoke = invokeRe.exec(log);
+      if (invoke) {
+        invokeStack.push(invoke[1]);
+        continue;
+      }
+      const finish = finishRe.exec(log);
+      if (finish) {
+        if (invokeStack[invokeStack.length - 1] === finish[1]) invokeStack.pop();
+        continue;
+      }
+
       if (!log.startsWith(PROGRAM_DATA_LOG_PREFIX)) continue;
+
+      const emittingProgram = invokeStack[invokeStack.length - 1];
+      if (programId && emittingProgram && emittingProgram !== programId) {
+        continue;
+      }
       let payload: Buffer;
       try {
         payload = Buffer.from(

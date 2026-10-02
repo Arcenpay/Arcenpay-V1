@@ -79,6 +79,12 @@ export function resolvePlanNetwork(input: {
     if (rawToken && isValidAddressForChain(rawToken, requestedChainId)) {
       return { chainId: requestedChainId, acceptedToken: rawToken };
     }
+
+    // A chain was explicitly requested, so never fall through and resolve a
+    // DIFFERENT chain from the token address alone. That fall-through is what
+    // let a plan created in a Solana environment be silently stored against an
+    // EVM chain when the client sent an EVM token address. Refuse instead.
+    return null;
   }
 
   // No chain requested — try to resolve chain from token address alone
