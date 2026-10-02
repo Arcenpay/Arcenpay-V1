@@ -37,6 +37,7 @@ import {
   decodeSubscriptionRecord,
   u64le,
 } from "./solana-event-codec.js";
+import { createSolanaConnection } from "./solana-instruction-codec.js";
 
 // ─── Config ─────────────────────────────────────────────────────────────────
 
@@ -124,7 +125,7 @@ export class SolanaChainAdapter implements ChainAdapter {
       return;
     }
 
-    this.connection = new Connection(this.rpcUrl, "confirmed");
+    this.connection = createSolanaConnection(this.chainId);
     console.log(
       `[SolanaChainAdapter] Starting event listener for chain ${this.chainId} ` +
         `(rpc=${this.rpcUrl})`,
@@ -175,7 +176,7 @@ export class SolanaChainAdapter implements ChainAdapter {
     if (!this.subscriptionRegistryProgramId) return null;
     try {
       if (!this.connection) {
-        this.connection = new Connection(this.rpcUrl, "confirmed");
+        this.connection = createSolanaConnection(this.chainId);
       }
       const programId = new PublicKey(this.subscriptionRegistryProgramId);
       const [pda] = PublicKey.findProgramAddressSync(

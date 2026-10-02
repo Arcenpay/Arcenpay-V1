@@ -923,6 +923,9 @@ const jobQueue = new DurableJobQueue({
 let queueRedisClient: QueueRedisClient | null = null;
 const subscriptionRouteStore = createSubscriptionRouteStore({
   keyPrefix: REDIS_PREFIX,
+  // Scope route state by chain: tokenId is per-chain, so EVM tokenId=1 and
+  // Solana tokenId=1 are different subscriptions and must not share a key.
+  chainId: CHAIN_ID,
   maxAgeMs: 30 * 24 * 60 * 60 * 1000,
   getStorage: () => queueRedisClient,
   onWarn: (message, error) => {
@@ -1571,7 +1574,8 @@ async function persistBillingEvent(
       wallet: routing?.wallet ?? null,
       chainId: CHAIN_ID,
     } satisfies BillingEventJobPayload,
-    { idempotencyKey: `billing:${eventEnvelope.idempotencyKey}` },
+    // Namespaced by chain: an idempotency key is unique per chain, not globally.
+    { idempotencyKey: `billing:${CHAIN_ID}:${eventEnvelope.idempotencyKey}` },
   );
 }
 
@@ -1586,6 +1590,9 @@ async function enqueueSubscriptionSync(input: {
   chainId?: number;
 }): Promise<void> {
   const dedupeParts = [
+    // Namespaced by chain so the same wallet/tokenId/tx shape on two chains
+    // cannot be deduped into a single sync job.
+    input.chainId ?? CHAIN_ID,
     input.event,
     // Family-aware normalization: EVM lowercases, Stellar/Solana keep case.
     (input.wallet

@@ -212,54 +212,74 @@ export class DurableJobQueue {
   startWorker<T>(
     queueName: string,
     handler: JobHandler<T>,
-    options?: { pollIntervalMs?: number },
+    options?: { pollIntervalMs?: number; concurrency?: number },
   ): void {
     if (this.workers.has(queueName)) return;
 
     const pollMs = options?.pollIntervalMs ?? 1_000;
+    // Bounded concurrency. The previous implementation dequeued ONE job per
+    // tick and, because `setInterval` does not await the handler, could start an
+    // unbounded number of overlapping runs on slow ticks. This drains up to
+    // `concurrency` jobs concurrently and never exceeds it, so a burst (e.g. a
+    // renewal wave) drains quickly without unbounded fan-out.
+    const concurrency = Math.max(
+      1,
+      options?.concurrency ??
+        Number(process.env.QUEUE_CONCURRENCY || 10),
+    );
+    let inFlight = 0;
 
-    const interval = setInterval(async () => {
+    const interval = setInterval(() => {
       const queue = this.getOrCreate(queueName);
-      const now = Date.now();
+      let capacity = concurrency - inFlight;
 
-      // Pick the first job that's ready (nextRetryAt ≤ now)
-      const idx = queue.pending.findIndex((j) => j.nextRetryAt <= now);
-      if (idx === -1) return;
+      while (capacity > 0) {
+        const now = Date.now();
+        // Pick the first job that's ready (nextRetryAt ≤ now)
+        const idx = queue.pending.findIndex((j) => j.nextRetryAt <= now);
+        if (idx === -1) break;
 
-      const job = queue.pending.splice(idx, 1)[0] as Job<T>;
-      job.attempts += 1;
-      job.processedAt = now;
+        const job = queue.pending.splice(idx, 1)[0] as Job<T>;
+        job.attempts += 1;
+        job.processedAt = now;
+        inFlight += 1;
+        capacity -= 1;
 
-      try {
-        await handler(job);
+        void (async () => {
+          try {
+            await handler(job);
 
-        // Success — extend idempotency TTL so a late duplicate is still dropped
-        if (job.idempotencyKey) {
-          queue.seenIdempotencyKeys.set(
-            job.idempotencyKey,
-            now + DurableJobQueue.IDEMPOTENCY_TTL_MS,
-          );
-        }
-      } catch (err) {
-        job.lastError = err instanceof Error ? err.message : String(err);
+            // Success — extend idempotency TTL so a late duplicate is dropped
+            if (job.idempotencyKey) {
+              queue.seenIdempotencyKeys.set(
+                job.idempotencyKey,
+                Date.now() + DurableJobQueue.IDEMPOTENCY_TTL_MS,
+              );
+            }
+          } catch (err) {
+            job.lastError = err instanceof Error ? err.message : String(err);
 
-        if (job.attempts >= job.maxRetries) {
-          // Dead-letter
-          (queue as QueueState<unknown>).deadLetter.push(job as Job<unknown>);
-          console.error(
-            `[Queue:${queueName}] Job ${job.id} dead-lettered after ${job.attempts} attempts: ${job.lastError}`,
-          );
-          await this.redisPersist(queueName, "dead", job as Job);
-        } else {
-          // Re-queue with exponential backoff
-          const delay = retryDelayFor(job.attempts);
-          job.nextRetryAt = now + delay;
-          (queue as QueueState<unknown>).pending.push(job as Job<unknown>);
-          console.warn(
-            `[Queue:${queueName}] Job ${job.id} retry ${job.attempts}/${job.maxRetries} ` +
-              `in ${(delay / 1000).toFixed(0)}s: ${job.lastError}`,
-          );
-        }
+            if (job.attempts >= job.maxRetries) {
+              // Dead-letter
+              (queue as QueueState<unknown>).deadLetter.push(job as Job<unknown>);
+              console.error(
+                `[Queue:${queueName}] Job ${job.id} dead-lettered after ${job.attempts} attempts: ${job.lastError}`,
+              );
+              await this.redisPersist(queueName, "dead", job as Job);
+            } else {
+              // Re-queue with exponential backoff
+              const delay = retryDelayFor(job.attempts);
+              job.nextRetryAt = Date.now() + delay;
+              (queue as QueueState<unknown>).pending.push(job as Job<unknown>);
+              console.warn(
+                `[Queue:${queueName}] Job ${job.id} retry ${job.attempts}/${job.maxRetries} ` +
+                  `in ${(delay / 1000).toFixed(0)}s: ${job.lastError}`,
+              );
+            }
+          } finally {
+            inFlight -= 1;
+          }
+        })();
       }
     }, pollMs);
 
