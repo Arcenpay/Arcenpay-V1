@@ -7170,7 +7170,7 @@ function PaymentContent({
     data.chainId ??
     data.plans?.[0]?.acceptedChainId ??
     data.plans?.[0]?.chainId ??
-    (explicitFamily === "solana" ? 9100001 : explicitFamily === "stellar" ? 9000001 : runtimeChainId);
+    (explicitFamily === "solana" ? 9100000 : explicitFamily === "stellar" ? 9000001 : runtimeChainId);
   const serverSmartAccountAddress =
     typeof paymentMethod?.walletAddress === "string"
       ? paymentMethod.walletAddress
@@ -7253,7 +7253,7 @@ function PaymentContent({
     data.chainId ??
     data.plans?.[0]?.acceptedChainId ??
     data.plans?.[0]?.chainId ??
-    (explicitPaymentFamily === "solana" ? 9100001 : explicitPaymentFamily === "stellar" ? 9000001 : runtimeChainId);
+    (explicitPaymentFamily === "solana" ? 9100000 : explicitPaymentFamily === "stellar" ? 9000001 : runtimeChainId);
   const isStellarChain = (planChainId !== 0 && getChainFamily(planChainId) === "stellar") || explicitPaymentFamily === "stellar";
   const isSolanaChain = (planChainId !== 0 && getChainFamily(planChainId) === "solana") || explicitPaymentFamily === "solana";
   const stellarWallet = useSafeStellarAccount(planChainId);
@@ -9892,7 +9892,7 @@ function UnsubscribeContent({
     data.chainId ??
     data.plans?.[0]?.acceptedChainId ??
     data.plans?.[0]?.chainId ??
-    (explicitUnsubFamily === "solana" ? 9100001 : explicitUnsubFamily === "stellar" ? 9000001 : runtimeChainId);
+    (explicitUnsubFamily === "solana" ? 9100000 : explicitUnsubFamily === "stellar" ? 9000001 : runtimeChainId);
   const isStellarChain = (chainId !== 0 && getChainFamily(chainId) === "stellar") || explicitUnsubFamily === "stellar";
   const isSolanaChain = (chainId !== 0 && getChainFamily(chainId) === "solana") || explicitUnsubFamily === "solana";
   const stellarWallet = useSafeStellarAccount(chainId);

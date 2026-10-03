@@ -32,7 +32,7 @@ import {
 } from "@/hooks/use-dashboard-wallet";
 import { useStellarWallet } from "@/hooks/use-stellar-wallet";
 import { useSolanaWallet } from "@/hooks/use-solana-wallet";
-import { SOLANA_DEVNET_CHAIN_ID } from "@/lib/default-chain";
+import { SOLANA_MAINNET_CHAIN_ID } from "@/lib/default-chain";
 import {
   getOnboardingChainFamily,
   setOnboardingChainFamily,
@@ -87,7 +87,7 @@ export function EmailAuthFlow({
     switchToRequiredNetwork,
   } = useDashboardWallet();
   const stellarWallet = useStellarWallet();
-  const solanaWallet = useSolanaWallet(SOLANA_DEVNET_CHAIN_ID);
+  const solanaWallet = useSolanaWallet(SOLANA_MAINNET_CHAIN_ID);
   const [step, setStep] = useState<Step>(initialStep ?? "chain");
   const [chainFamily, setChainFamily] = useState<ChainFamily | null>(() =>
     getOnboardingChainFamily(),
@@ -388,7 +388,7 @@ export function EmailAuthFlow({
             message,
             signature: signedMessage,
             address: solanaWallet.address,
-            chainId: SOLANA_DEVNET_CHAIN_ID,
+            chainId: SOLANA_MAINNET_CHAIN_ID,
             nonce,
           }),
         });

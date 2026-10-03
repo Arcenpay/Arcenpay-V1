@@ -14,7 +14,7 @@ import { getSolanaRpcUrl } from "@arcenpay/internal-core";
 // The picker modal's styles (wallet list, "Other wallets", install links).
 import "@solana/wallet-adapter-react-ui/styles.css";
 
-const DEVNET_CHAIN_ID = 9_100_001;
+const MAINNET_CHAIN_ID = 9_100_000;
 
 /**
  * Solana wallet stack — the Solana counterpart to Reown/AppKit for EVM.
@@ -27,7 +27,7 @@ const DEVNET_CHAIN_ID = 9_100_001;
  */
 export function SolanaWalletProvider({ children }: { children: ReactNode }) {
   const endpoint = useMemo(
-    () => getSolanaRpcUrl(DEVNET_CHAIN_ID) || "https://api.devnet.solana.com",
+    () => getSolanaRpcUrl(MAINNET_CHAIN_ID) || "https://api.mainnet-beta.solana.com",
     [],
   );
 

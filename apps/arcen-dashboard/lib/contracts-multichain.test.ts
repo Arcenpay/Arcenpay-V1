@@ -13,14 +13,9 @@ describe("Dashboard multi-chain token options & network labels", () => {
     expect(getTokenOptionsForChain(undefined)).toEqual([]);
   });
 
-  it("returns only Solana tokens for Solana Devnet (9100001), never EVM addresses", () => {
+  it("returns empty token list for disabled Solana Devnet (9100001)", () => {
     const tokens = getTokenOptionsForChain(SOLANA_DEVNET_CHAIN_ID);
-    expect(tokens.length).toBeGreaterThan(0);
-    for (const token of tokens) {
-      expect(token.chainId).toBe(SOLANA_DEVNET_CHAIN_ID);
-      // Solana mint addresses are base58, never starting with 0x
-      expect(token.address.startsWith("0x")).toBe(false);
-    }
+    expect(tokens).toEqual([]);
   });
 
   it("returns only Solana tokens for Solana Mainnet (9100000), including canonical Circle USDC", () => {
@@ -57,7 +52,7 @@ describe("Dashboard multi-chain token options & network labels", () => {
   });
 
   it("getChainLabel returns friendly labels for Solana and Stellar", () => {
-    expect(getChainLabel(SOLANA_DEVNET_CHAIN_ID)).toContain("Solana");
+    expect(getChainLabel(SOLANA_MAINNET_CHAIN_ID)).toContain("Solana");
     expect(getChainLabel(STELLAR_TESTNET_CHAIN_ID)).toContain("Stellar");
   });
 });

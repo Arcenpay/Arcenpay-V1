@@ -24,7 +24,7 @@ import {
 } from "@/hooks/use-dashboard-wallet";
 import { useStellarWallet } from "@/hooks/use-stellar-wallet";
 import { useSolanaWallet } from "@/hooks/use-solana-wallet";
-import { SOLANA_DEVNET_CHAIN_ID } from "@/lib/default-chain";
+import { SOLANA_MAINNET_CHAIN_ID } from "@/lib/default-chain";
 import { getOnboardingChainFamily, setOnboardingChainFamily } from "@/lib/onboarding-chain-family";
 import { getChainFamily } from "@arcenpay/internal-core";
 import { toast } from "sonner";
@@ -453,7 +453,7 @@ function StellarWalletConnect({ onLinked }: { onLinked: (address: string) => voi
 // ── Solana wallet section ───────────────────────────────────────────────────
 
 function SolanaWalletConnect({ onLinked }: { onLinked: (address: string) => void }) {
-  const wallet = useSolanaWallet(SOLANA_DEVNET_CHAIN_ID);
+  const wallet = useSolanaWallet(SOLANA_MAINNET_CHAIN_ID);
   const [isSigning, setIsSigning] = useState(false);
 
   const handleLink = async () => {
@@ -474,7 +474,7 @@ function SolanaWalletConnect({ onLinked }: { onLinked: (address: string) => void
           message,
           signature: signedMessage,
           address: wallet.address,
-          chainId: SOLANA_DEVNET_CHAIN_ID,
+          chainId: SOLANA_MAINNET_CHAIN_ID,
           nonce,
         }),
       });

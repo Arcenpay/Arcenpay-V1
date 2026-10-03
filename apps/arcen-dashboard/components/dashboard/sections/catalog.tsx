@@ -3700,14 +3700,8 @@ function PlansTable({
           "confirmed",
         );
         if (walletBalance === 0) {
-          const isDevnetRpc =
-            rpc.includes("devnet") || rpc.includes("localhost");
           throw new Error(
-            `Your Solana wallet ${solana.address} has 0 SOL. It needs SOL to pay the transaction fee and the rent for the new plan account — ` +
-              `that is why the simulation reports AccountNotFound.` +
-              (isDevnetRpc
-                ? ` Fund it from the devnet faucet (https://faucet.solana.com) and retry.`
-                : ` Fund it, then retry.`),
+            `Your Solana wallet ${solana.address} has 0 SOL. It needs SOL to pay the transaction fee and the rent for the new plan account — please fund your wallet with SOL and retry.`,
           );
         }
 

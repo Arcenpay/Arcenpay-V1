@@ -1,5 +1,6 @@
 import type { Context } from "hono";
 import { z } from "zod";
+import { db } from "../../../db.js";
 import {
   getCheckoutSessionById,
   updateCheckoutSessionCustomerDetails,
@@ -16,6 +17,18 @@ export async function getCheckout(c: Context) {
   const checkoutSession = await getCheckoutSessionById(sessionId!);
   if (!checkoutSession) {
     return c.json({ error: "Checkout session not found" }, 404 as any);
+  }
+
+  if (
+    checkoutSession.status === "PENDING" &&
+    checkoutSession.expiresAt &&
+    checkoutSession.expiresAt.getTime() <= Date.now()
+  ) {
+    await db.checkoutSession.update({
+      where: { id: checkoutSession.id },
+      data: { status: "EXPIRED" },
+    });
+    checkoutSession.status = "EXPIRED";
   }
 
   return c.json({

@@ -19,9 +19,9 @@ describe("Multi-chain platform isolation & default-chain resolution", () => {
     expect(resolveEnvironmentChainId("DEVELOPMENT", null)).toBeNull();
   });
 
-  it("correctly resolves Solana Devnet (9100001) in DEVELOPMENT without EVM coercion", () => {
+  it("seamlessly migrates disabled Solana Devnet (9100001) to Solana Mainnet (9100000) without EVM coercion", () => {
     const chainId = resolveEnvironmentChainId("DEVELOPMENT", 9100001);
-    expect(chainId).toBe(9100001);
+    expect(chainId).toBe(9100000);
     expect(isSolanaChainId(chainId!)).toBe(true);
     expect(isEvmChain(chainId!)).toBe(false);
     expect(isStellarChainId(chainId!)).toBe(false);
@@ -53,12 +53,13 @@ describe("Multi-chain platform isolation & default-chain resolution", () => {
     expect(isSupportedDashboardChainId(99999999)).toBe(false);
   });
 
-  it("enforces strict mode separation (mainnet chains rejected in DEVELOPMENT)", () => {
-    // BOT Mainnet (677) and Solana Mainnet (9100000) are production chains, must be rejected in DEVELOPMENT
+  it("enforces strict mode separation (EVM mainnet chains rejected in DEVELOPMENT)", () => {
+    // BOT Mainnet (677) is a production-only EVM chain, must be rejected in DEVELOPMENT
     expect(resolveEnvironmentChainId("DEVELOPMENT", 677)).toBeNull();
-    expect(resolveEnvironmentChainId("DEVELOPMENT", 9100000)).toBeNull();
-    // Testnet chains are rejected in PRODUCTION
-    expect(resolveEnvironmentChainId("PRODUCTION", 9100001)).toBe(DEFAULT_MAINNET_CHAIN_ID);
+    // Solana Mainnet (9100000) is allowed in DEVELOPMENT as the sole active Solana network
+    expect(resolveEnvironmentChainId("DEVELOPMENT", 9100000)).toBe(9100000);
+    // Legacy devnet requests in PRODUCTION migrate to Solana Mainnet
+    expect(resolveEnvironmentChainId("PRODUCTION", 9100001)).toBe(9100000);
   });
 
   it("correctly resolves and allows Solana Mainnet (9100000) in PRODUCTION", () => {
@@ -69,10 +70,11 @@ describe("Multi-chain platform isolation & default-chain resolution", () => {
     expect(getChainFamily(9100000)).toBe("solana");
   });
 
-  it("allows Solana Devnet (9100001) and Stellar Testnet (9000001) environment creation in DEVELOPMENT", () => {
-    expect(isChainAllowedForMode("DEVELOPMENT", 9100001)).toBe(true);
+  it("allows Solana Mainnet (9100000) and Stellar Testnet (9000001) environment creation in DEVELOPMENT", () => {
+    expect(isChainAllowedForMode("DEVELOPMENT", 9100000)).toBe(true);
     expect(isChainAllowedForMode("DEVELOPMENT", 9000001)).toBe(true);
     expect(isChainAllowedForMode("DEVELOPMENT", 84532)).toBe(true);
+    expect(isChainAllowedForMode("DEVELOPMENT", 9100001)).toBe(false);
     expect(isChainAllowedForMode("DEVELOPMENT", 99999999)).toBe(false);
   });
 

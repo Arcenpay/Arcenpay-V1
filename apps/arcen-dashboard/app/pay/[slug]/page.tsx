@@ -6,6 +6,7 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import {
   useAccount,
   useChainId,
+  useReadContract,
   useSwitchChain,
   useWaitForTransactionReceipt,
   useWriteContract,
@@ -48,6 +49,16 @@ const ERC20_TRANSFER_ABI = [
       { name: "amount", type: "uint256" },
     ],
     outputs: [{ name: "", type: "bool" }],
+  },
+] as const;
+
+const ERC20_BALANCE_ABI = [
+  {
+    name: "balanceOf",
+    type: "function",
+    stateMutability: "view",
+    inputs: [{ name: "account", type: "address" }],
+    outputs: [{ name: "", type: "uint256" }],
   },
 ] as const;
 
@@ -433,6 +444,9 @@ function CheckoutContent() {
   const [sentTxHash, setSentTxHash] = useState<string | null>(null);
   const [verifying, setVerifying] = useState(false);
   const [verificationFailed, setVerificationFailed] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [solanaBalance, setSolanaBalance] = useState<number | null>(null);
+  const [stellarBalance, setStellarBalance] = useState<number | null>(null);
 
   // Stellar wallet (StellarWalletsKit: Freighter/xBull/Albedo/Lobstr).
   // Only active when the checkout session is on a Stellar chain. The chainId
@@ -450,6 +464,25 @@ function CheckoutContent() {
       ? (session?.chainId as number)
       : 9_100_001,
   );
+
+  // EVM token balance
+  const isEvmToken = Boolean(
+    session &&
+      session.chainFamily !== "STELLAR" &&
+      session.chainFamily !== "SOLANA" &&
+      session.acceptedToken &&
+      isAddress(session.acceptedToken),
+  );
+  const { data: rawPayerBalance } = useReadContract({
+    address: session?.acceptedToken as `0x${string}`,
+    abi: ERC20_BALANCE_ABI,
+    functionName: "balanceOf",
+    args: address ? [address] : undefined,
+    query: {
+      enabled: Boolean(address && isEvmToken),
+      refetchInterval: 10_000,
+    },
+  });
 
   const countdown = useExpiryCountdown(session?.expiresAt);
   const normalizedCustomerEmail = normalizeCustomerEmail(customerEmail);
@@ -514,6 +547,76 @@ function CheckoutContent() {
   const accentTextColor = getAccentTextColor(accentColor);
   const isStellar = Boolean(session && session.chainFamily === "STELLAR");
   const isSolana = Boolean(session && session.chainFamily === "SOLANA");
+
+  // Solana token balance
+  useEffect(() => {
+    if (!isSolana || !solana.address || !session?.chainId || !session.acceptedToken) {
+      setSolanaBalance(null);
+      return;
+    }
+    let cancelled = false;
+    async function loadSolanaBal() {
+      try {
+        const { Connection, PublicKey } = await import("@solana/web3.js");
+        const rpcUrl = getSolanaRpcUrl(session!.chainId);
+        if (!rpcUrl) return;
+        const connection = new Connection(rpcUrl, "confirmed");
+        const accounts = await connection.getParsedTokenAccountsByOwner(
+          new PublicKey(solana.address!),
+          { mint: new PublicKey(session!.acceptedToken) },
+        );
+        if (cancelled) return;
+        const total = accounts.value.reduce((sum, { account }) => {
+          const amt = (account.data as any)?.parsed?.info?.tokenAmount?.uiAmount;
+          return sum + (typeof amt === "number" ? amt : 0);
+        }, 0);
+        setSolanaBalance(total);
+      } catch {
+        // ignore
+      }
+    }
+    void loadSolanaBal();
+    return () => {
+      cancelled = true;
+    };
+  }, [isSolana, solana.address, session?.chainId, session?.acceptedToken]);
+
+  // Stellar token balance
+  useEffect(() => {
+    if (!isStellar || !stellar.address || !session?.chainId) {
+      setStellarBalance(null);
+      return;
+    }
+    let cancelled = false;
+    async function loadStellarBal() {
+      try {
+        const passphrase = getStellarNetworkPassphrase(session!.chainId);
+        const horizonUrl = horizonUrlForPassphrase(passphrase);
+        const res = await fetch(`${horizonUrl}/accounts/${stellar.address}`);
+        if (!res.ok || cancelled) return;
+        const acc = await res.json();
+        const usdc = acc.balances?.find((b: any) => b.asset_code === "USDC");
+        if (usdc && "balance" in usdc && !cancelled) {
+          setStellarBalance(parseFloat(usdc.balance));
+        }
+      } catch {
+        // ignore
+      }
+    }
+    void loadStellarBal();
+    return () => {
+      cancelled = true;
+    };
+  }, [isStellar, stellar.address, session?.chainId]);
+
+  const payerBalanceNumber = isStellar
+    ? stellarBalance
+    : isSolana
+      ? solanaBalance
+      : rawPayerBalance !== undefined
+        ? Number(rawPayerBalance) / 1e6
+        : null;
+
   const isAgentic = Boolean(
     session?.paymentLink &&
       (session.paymentLink.isAgentic ||
@@ -529,13 +632,37 @@ function CheckoutContent() {
       : isSolana
         ? solana.address === session?.recipientWallet
         : stellarAddressMatches(address, session?.recipientWallet));
+
+  const isExpired = Boolean(
+    session?.status === "EXPIRED" ||
+      (session?.expiresAt &&
+        new Date(session.expiresAt).getTime() <= Date.now()) ||
+      countdown === "0:00",
+  );
+
+  const walletConnectedForBalance = isStellar
+    ? stellar.isConnected
+    : isSolana
+      ? solana.isConnected
+      : isConnected;
+
+  const isInsufficientBalance = Boolean(
+    walletConnectedForBalance &&
+      payerBalanceNumber !== null &&
+      session &&
+      payerBalanceNumber < Number(session.amount),
+  );
+
   const canSubmitPayment =
     !isSending &&
+    !isSubmitting &&
     !missingCustomerName &&
     !missingCustomerEmail &&
     !invalidCustomerEmail &&
     isCorrectNetwork &&
-    !isSelfPayment;
+    !isSelfPayment &&
+    !isInsufficientBalance &&
+    !isExpired;
 
   const { data: receipt, isLoading: isConfirming } = useWaitForTransactionReceipt({
     hash: sentTxHash as `0x${string}` | undefined,
@@ -851,8 +978,20 @@ function CheckoutContent() {
 
   async function handlePay() {
     if (!session) return;
+    if (isExpired) {
+      setError("This checkout session has expired.");
+      return;
+    }
+    if (isInsufficientBalance) {
+      setError(
+        `Insufficient ${session.currency} balance. Required: ${session.amount} ${session.currency}, Available: ${(payerBalanceNumber ?? 0).toFixed(4)} ${session.currency}.`,
+      );
+      return;
+    }
+    setIsSubmitting(true);
     if (isStellar) {
       if (!stellar.address) {
+        setIsSubmitting(false);
         setError("Connect your Stellar wallet before paying.");
         return;
       }
@@ -881,12 +1020,15 @@ function CheckoutContent() {
           setError(errMsg);
         }
         setSentTxHash(null);
+      } finally {
+        setIsSubmitting(false);
       }
       return;
     }
 
     if (isSolana) {
       if (!solana.address) {
+        setIsSubmitting(false);
         setError("Connect your Solana wallet before paying.");
         return;
       }
@@ -919,11 +1061,16 @@ function CheckoutContent() {
           setError(errMsg);
         }
         setSentTxHash(null);
+      } finally {
+        setIsSubmitting(false);
       }
       return;
     }
 
-    if (!address) return;
+    if (!address) {
+      setIsSubmitting(false);
+      return;
+    }
     setError(null);
     setVerificationFailed(false);
     try {
@@ -969,6 +1116,8 @@ function CheckoutContent() {
       if (!errMsg.includes("User rejected") && !errMsg.includes("User denied")) {
         setError(errMsg);
       }
+    } finally {
+      setIsSubmitting(false);
     }
   }
 
@@ -1019,12 +1168,13 @@ function CheckoutContent() {
     !sentTxHash &&
     !verificationFailed;
   const showProcessing =
-    sentTxHash &&
-    (isConfirming ||
-      isSending ||
-      verifying ||
-      ((isStellar || isSolana) && !verificationFailed)) &&
-    session?.status === "PENDING";
+    isSubmitting ||
+    (Boolean(sentTxHash) &&
+      (isConfirming ||
+        isSending ||
+        verifying ||
+        ((isStellar || isSolana) && !verificationFailed)) &&
+      session?.status === "PENDING");
   const showError =
     sendError ||
     verificationFailed ||
@@ -1035,13 +1185,19 @@ function CheckoutContent() {
     receipt &&
     receipt.status === "reverted" &&
     session?.status === "PENDING";
-  const paymentButtonLabel = isSending
-    ? "Confirm in wallet"
-    : isConfirming
-      ? "Waiting for confirmation"
-      : verifying
-        ? "Processing payment"
-        : payButtonLabel;
+  const paymentButtonLabel = isSubmitting
+    ? "Preparing payment…"
+    : isSending
+      ? "Confirm in wallet"
+      : isConfirming
+        ? "Waiting for confirmation"
+        : verifying
+          ? "Processing payment"
+          : isExpired
+            ? "Session expired"
+            : isInsufficientBalance
+              ? `Insufficient ${session?.currency ?? "balance"}`
+              : payButtonLabel;
 
   return (
     <main className="min-h-screen overflow-hidden bg-[#f6f4f1] px-4 py-8 sm:px-6 lg:px-8">
@@ -1177,7 +1333,10 @@ function CheckoutContent() {
         {/* EXPIRED / CANCELLED / FAILED */}
         {!loading &&
           session &&
-          (session.status === "EXPIRED" || session.status === "CANCELLED" || session.status === "FAILED") && (
+          (session.status === "EXPIRED" ||
+            (isExpired && session.status !== "PAID") ||
+            session.status === "CANCELLED" ||
+            session.status === "FAILED") && (
             <div className="pt-6 sm:pt-10">
               <div className="mx-auto max-w-3xl overflow-hidden border border-[#e5e7eb] bg-white shadow-[0_20px_60px_-40px_rgba(15,23,42,0.28)]">
                 <div className="border-b border-[#eceff4] bg-[#f5f5f7] px-6 py-6 sm:px-8">
@@ -1185,14 +1344,14 @@ function CheckoutContent() {
                     Hosted checkout
                   </p>
                   <h1 className="mt-3 text-2xl font-semibold text-[#151922]">
-                    {session.status === "EXPIRED"
+                    {session.status === "EXPIRED" || isExpired
                       ? "Session expired"
                       : session.status === "CANCELLED"
                         ? "Session cancelled"
                         : "Payment failed"}
                   </h1>
                   <p className="mt-2 max-w-xl text-sm leading-6 text-[#6f7480]">
-                    {session.status === "EXPIRED"
+                    {session.status === "EXPIRED" || isExpired
                       ? "This checkout session has ended before payment was completed."
                       : session.status === "CANCELLED"
                         ? "This checkout session is no longer active."
@@ -1224,7 +1383,7 @@ function CheckoutContent() {
           )}
 
         {/* PENDING — active checkout */}
-        {!loading && session?.status === "PENDING" && (
+        {!loading && session?.status === "PENDING" && !isExpired && (
           <div className="pt-6 sm:pt-10">
             <div className="mx-auto max-w-[110rem] overflow-hidden border border-[#e5e7eb] bg-white shadow-[0_20px_60px_-40px_rgba(15,23,42,0.28)] lg:grid lg:grid-cols-[1.02fr_0.98fr]">
               <section className="bg-[#f5f5f7] px-6 py-8 sm:px-10 lg:px-12 lg:py-10">
@@ -1392,7 +1551,7 @@ function CheckoutContent() {
                         void stellar.connect();
                         return;
                       }
-                      if (showPay) {
+                      if (showPay && !isInsufficientBalance && !isExpired) {
                         void handlePay();
                       }
                       return;
@@ -1402,7 +1561,7 @@ function CheckoutContent() {
                         void solana.connect();
                         return;
                       }
-                      if (showPay) {
+                      if (showPay && !isInsufficientBalance && !isExpired) {
                         void handlePay();
                       }
                       return;
@@ -1411,31 +1570,44 @@ function CheckoutContent() {
                       open();
                       return;
                     }
-                    if (showPay) {
+                    if (showPay && !isInsufficientBalance && !isExpired) {
                       void handlePay();
                     }
                   }}
-                  disabled={showProcessing || isSending || stellar.isLoading || solana.isLoading}
+                  disabled={showProcessing || isSending || isSubmitting || stellar.isLoading || solana.isLoading || isExpired || (walletConnected && isInsufficientBalance)}
                   className="inline-flex h-12 w-full items-center justify-center gap-3 rounded-lg px-5 text-base font-semibold text-white transition disabled:cursor-not-allowed disabled:opacity-60"
                   style={{
                     backgroundColor: accentColor,
                     color: accentTextColor,
                   }}
                 >
-                  <Wallet className="h-4 w-4" />
-                  {showProcessing
-                    ? "Processing payment"
-                    : isStellar
-                      ? stellar.isConnected
-                        ? "Pay with wallet"
-                        : "Connect Stellar wallet to pay"
-                      : isSolana
-                        ? solana.isConnected
-                          ? "Pay with wallet"
-                          : "Connect Solana wallet to pay"
-                        : isConnected
-                          ? "Pay with wallet"
-                          : "Connect wallet to pay"}
+                  {isSubmitting || showProcessing ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      {paymentButtonLabel}
+                    </>
+                  ) : (
+                    <>
+                      <Wallet className="h-4 w-4" />
+                      {isStellar
+                        ? stellar.isConnected
+                          ? isInsufficientBalance
+                            ? `Insufficient ${session.currency}`
+                            : "Pay with wallet"
+                          : "Connect Stellar wallet to pay"
+                        : isSolana
+                          ? solana.isConnected
+                            ? isInsufficientBalance
+                              ? `Insufficient ${session.currency}`
+                              : "Pay with wallet"
+                            : "Connect Solana wallet to pay"
+                          : isConnected
+                            ? isInsufficientBalance
+                              ? `Insufficient ${session.currency}`
+                              : "Pay with wallet"
+                            : "Connect wallet to pay"}
+                    </>
+                  )}
                 </button>
 
                 <div className="my-7 flex items-center gap-4 text-sm text-[#b2b6bf]">
@@ -1674,13 +1846,30 @@ function CheckoutContent() {
                     </div>
                   ) : null}
 
+                  {walletConnected && isInsufficientBalance ? (
+                    <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+                      <div className="flex items-start gap-3">
+                        <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-red-600" />
+                        <div>
+                          <p className="font-semibold text-red-900">
+                            Insufficient {session.currency} balance
+                          </p>
+                          <p className="mt-1 text-xs text-red-700">
+                            Required: {session.amount} {session.currency}. Your balance: {(payerBalanceNumber ?? 0).toFixed(4)} {session.currency}.
+                            Please fund your wallet with {session.currency} before completing this payment.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  ) : null}
+
                   <button
                     type="button"
                     onClick={() => void handlePay()}
-                    disabled={!showPay || !canSubmitPayment}
+                    disabled={!showPay || !canSubmitPayment || isSubmitting || isInsufficientBalance || isExpired}
                     className="inline-flex h-14 w-full items-center justify-center gap-3 rounded-lg bg-[#111111] px-5 text-base font-semibold text-white transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-50"
                   >
-                    {showProcessing || isSending ? (
+                    {showProcessing || isSending || isSubmitting ? (
                       <>
                         <Loader2 className="h-5 w-5 animate-spin" />
                         {paymentButtonLabel}

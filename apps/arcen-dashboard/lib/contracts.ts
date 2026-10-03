@@ -125,11 +125,6 @@ const TESTNET_CHAIN_LIST: Array<{
     label: getChainLabel(STELLAR_FUTURENET_CHAIN_ID),
     tag: "testnet",
   },
-  {
-    chainId: SOLANA_DEVNET_CHAIN_ID,
-    label: getChainLabel(SOLANA_DEVNET_CHAIN_ID),
-    tag: "testnet",
-  },
 ];
 
 const MAINNET_CHAIN_LIST: Array<{

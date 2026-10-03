@@ -621,7 +621,7 @@ HORIZON_URL=https://horizon-testnet.stellar.org
 ARCENPAY_FACILITATOR_URL=https://facilitator.arcenpay.xyz`
     : isSolana
       ? `AGENT_SECRET_KEY=<base58 or JSON-array secret>
-SOLANA_RPC_URL=https://api.devnet.solana.com
+SOLANA_RPC_URL=https://api.mainnet-beta.solana.com
 ARCENPAY_FACILITATOR_URL=https://facilitator.arcenpay.xyz`
       : `AGENT_PRIVATE_KEY=0x...
 RPC_URL=https://mainnet.base.org
@@ -1307,6 +1307,9 @@ function PermissionsTab() {
   }, [isFundSuccess, fundHash, fundReceipt, approveAmount, evmChainId, configuredChainId, recordApproval, checkAllowance, refreshAgentBalance]);
 
   const handleDirectTransfer = async () => {
+    if (isStellar || isSolana) {
+      return handlePreApprove();
+    }
     if (chainMismatch) {
       toast.error(`Your wallet is on network ${evmChainId}; switch to ${configuredChainId} before funding.`);
       return;
@@ -2501,6 +2504,31 @@ function PermissionsTab() {
                 <Button onClick={() => void stellar.connect()} className="w-full h-10 gap-2">
                   <Wallet className="w-4 h-4" />
                   <span>Connect Stellar Wallet</span>
+                </Button>
+              )
+            ) : isSolana ? (
+              solana.isConnected && solana.address ? (
+                <Button
+                  onClick={handlePreApprove}
+                  disabled={!approveAmount || approving || parseFloat(approveAmount || "0") <= 0}
+                  className="w-full h-10 gap-2 font-medium"
+                >
+                  {approving ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Signing transfer in Solana wallet…</span>
+                    </>
+                  ) : (
+                    <>
+                      <ArrowRightLeft className="w-4 h-4" />
+                      <span>Transfer ${approveAmount || "0"} USDC to Agent</span>
+                    </>
+                  )}
+                </Button>
+              ) : (
+                <Button onClick={() => void solana.connect()} className="w-full h-10 gap-2">
+                  <Wallet className="w-4 h-4" />
+                  <span>Connect Solana Wallet</span>
                 </Button>
               )
             ) : isConnected && userWallet ? (

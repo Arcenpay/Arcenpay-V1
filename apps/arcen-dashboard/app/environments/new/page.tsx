@@ -23,7 +23,6 @@ import {
   BASE_SEPOLIA_CHAIN_ID,
   STELLAR_TESTNET_CHAIN_ID,
   STELLAR_MAINNET_CHAIN_ID,
-  SOLANA_DEVNET_CHAIN_ID,
   SOLANA_MAINNET_CHAIN_ID,
   getChainLabel,
   getChainIdsForEnvironment,
@@ -60,13 +59,12 @@ function buildChainOptions(mode: EnvironmentMode, family: ChainFamily): ChainOpt
 function firstChainForFamily(mode: EnvironmentMode, family: ChainFamily): number {
   const opts = buildChainOptions(mode, family);
   if (opts.length > 0) return opts[0].chainId;
+  if (family === "solana") return SOLANA_MAINNET_CHAIN_ID;
   if (mode === "PRODUCTION") {
-    if (family === "solana") return SOLANA_MAINNET_CHAIN_ID;
     if (family === "stellar") return STELLAR_MAINNET_CHAIN_ID;
     return BOT_MAINNET_CHAIN_ID;
   }
   if (family === "stellar") return STELLAR_TESTNET_CHAIN_ID;
-  if (family === "solana") return SOLANA_DEVNET_CHAIN_ID;
   return BASE_SEPOLIA_CHAIN_ID;
 }
 
@@ -245,7 +243,7 @@ export default function NewEnvironmentPage() {
           message,
           signature: signedMessage,
           address: solanaWallet.address,
-          chainId: chainId ?? SOLANA_DEVNET_CHAIN_ID,
+          chainId: chainId ?? SOLANA_MAINNET_CHAIN_ID,
           nonce,
         }),
       });
