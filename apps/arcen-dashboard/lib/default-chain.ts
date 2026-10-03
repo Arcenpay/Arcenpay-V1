@@ -34,12 +34,13 @@ export const TESTNET_CHAIN_IDS = [
   BASE_SEPOLIA_CHAIN_ID,
   ARC_TESTNET_CHAIN_ID,
   STELLAR_TESTNET_CHAIN_ID,
-  STELLAR_FUTURENET_CHAIN_ID,
+  SOLANA_DEVNET_CHAIN_ID,
 ] as const;
-// Production environments support BOT Chain Mainnet, Stellar Mainnet, and Solana Mainnet Beta.
+
+// Production environments support BOT Chain Mainnet and Solana Mainnet.
+// NOTE: Stellar is not deployed on mainnet, so STELLAR_MAINNET_CHAIN_ID is excluded.
 export const MAINNET_CHAIN_IDS = [
   BOT_MAINNET_CHAIN_ID,
-  STELLAR_MAINNET_CHAIN_ID,
   SOLANA_MAINNET_CHAIN_ID,
 ] as const;
 
@@ -101,10 +102,7 @@ export function isMainnetChainId(value: unknown): value is MainnetChainId {
 export function getChainIdsForEnvironment(
   mode: EnvironmentMode,
 ): readonly number[] {
-  // Solana devnet is disabled entirely; Solana Mainnet (9100000) is the sole Solana network.
-  return mode === "PRODUCTION"
-    ? MAINNET_CHAIN_IDS
-    : [...TESTNET_CHAIN_IDS, SOLANA_MAINNET_CHAIN_ID];
+  return mode === "PRODUCTION" ? MAINNET_CHAIN_IDS : TESTNET_CHAIN_IDS;
 }
 
 /** The runtime-configured default (from env var). Falls back to Arc Testnet. */
@@ -128,10 +126,7 @@ export function resolveEnvironmentChainId(
   environmentMode: EnvironmentMode,
   requestedChainId?: unknown,
 ): SupportedDashboardChainId | null {
-  const numeric = Number(requestedChainId);
-  // Seamlessly upgrade any legacy Solana devnet requests (9100001) to Solana Mainnet (9100000)
-  const normalized = numeric === SOLANA_DEVNET_CHAIN_ID ? SOLANA_MAINNET_CHAIN_ID : requestedChainId;
-  const explicit = parseChainId(normalized);
+  const explicit = parseChainId(requestedChainId);
   if (explicit) {
     // Validate the requested chain is valid for this env
     const allowed = getChainIdsForEnvironment(environmentMode);

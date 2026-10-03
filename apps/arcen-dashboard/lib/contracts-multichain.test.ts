@@ -13,9 +13,13 @@ describe("Dashboard multi-chain token options & network labels", () => {
     expect(getTokenOptionsForChain(undefined)).toEqual([]);
   });
 
-  it("returns empty token list for disabled Solana Devnet (9100001)", () => {
+  it("returns Solana tokens for Solana Devnet (9100001)", () => {
     const tokens = getTokenOptionsForChain(SOLANA_DEVNET_CHAIN_ID);
-    expect(tokens).toEqual([]);
+    expect(tokens.length).toBeGreaterThan(0);
+    const usdc = tokens.find((t) => t.symbol === "USDC");
+    expect(usdc).toBeDefined();
+    expect(usdc!.address).toBe("4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU");
+    expect(usdc!.address.startsWith("0x")).toBe(false);
   });
 
   it("returns only Solana tokens for Solana Mainnet (9100000), including canonical Circle USDC", () => {

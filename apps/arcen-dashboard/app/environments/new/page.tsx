@@ -22,7 +22,7 @@ import {
   BOT_MAINNET_CHAIN_ID,
   BASE_SEPOLIA_CHAIN_ID,
   STELLAR_TESTNET_CHAIN_ID,
-  STELLAR_MAINNET_CHAIN_ID,
+  SOLANA_DEVNET_CHAIN_ID,
   SOLANA_MAINNET_CHAIN_ID,
   getChainLabel,
   getChainIdsForEnvironment,
@@ -41,10 +41,50 @@ interface ChainOption {
   label: string;
 }
 
-const CHAIN_FAMILIES: Array<{ value: ChainFamily; label: string }> = [
-  { value: "evm", label: "EVM (BOT Chain, Base, Arc, Ethereum)" },
-  { value: "stellar", label: "Stellar (Soroban)" },
-  { value: "solana", label: "Solana (Anchor)" },
+const ALL_CHAIN_FAMILIES: Array<{
+  value: ChainFamily;
+  label: string;
+  renderLabel: () => React.ReactNode;
+}> = [
+  {
+    value: "evm",
+    label: "EVM (BOT Chain, Base, Arc, Ethereum)",
+    renderLabel: () => (
+      <span className="flex items-center gap-2">
+        <span className="w-[18px] h-[18px] rounded-full overflow-hidden inline-flex items-center justify-center bg-white dark:bg-white p-px ring-1 ring-border shrink-0">
+          <Image
+            src="/botchain.jpg"
+            alt="BOT Chain"
+            width={18}
+            height={18}
+            className="rounded-full object-cover shrink-0"
+            unoptimized
+          />
+        </span>
+        EVM (BOT Chain, Base, Arc, Ethereum)
+      </span>
+    ),
+  },
+  {
+    value: "stellar",
+    label: "Stellar (Soroban)",
+    renderLabel: () => (
+      <span className="flex items-center gap-2">
+        <NetworkIcon name="stellar" variant="branded" size={18} className="rounded-full bg-white dark:bg-white p-px" />
+        Stellar (Soroban)
+      </span>
+    ),
+  },
+  {
+    value: "solana",
+    label: "Solana (Anchor)",
+    renderLabel: () => (
+      <span className="flex items-center gap-2">
+        <NetworkIcon name="solana" variant="branded" size={18} className="rounded-full bg-white dark:bg-white p-px" />
+        Solana (Anchor)
+      </span>
+    ),
+  },
 ];
 
 function buildChainOptions(mode: EnvironmentMode, family: ChainFamily): ChainOption[] {
@@ -59,11 +99,11 @@ function buildChainOptions(mode: EnvironmentMode, family: ChainFamily): ChainOpt
 function firstChainForFamily(mode: EnvironmentMode, family: ChainFamily): number {
   const opts = buildChainOptions(mode, family);
   if (opts.length > 0) return opts[0].chainId;
-  if (family === "solana") return SOLANA_MAINNET_CHAIN_ID;
   if (mode === "PRODUCTION") {
-    if (family === "stellar") return STELLAR_MAINNET_CHAIN_ID;
+    if (family === "solana") return SOLANA_MAINNET_CHAIN_ID;
     return BOT_MAINNET_CHAIN_ID;
   }
+  if (family === "solana") return SOLANA_DEVNET_CHAIN_ID;
   if (family === "stellar") return STELLAR_TESTNET_CHAIN_ID;
   return BASE_SEPOLIA_CHAIN_ID;
 }
@@ -95,6 +135,18 @@ export default function NewEnvironmentPage() {
 
   const canManage =
     data?.currentTeam?.role === "OWNER" || data?.currentTeam?.role === "ADMIN";
+
+  const availableFamilies = useMemo(() => {
+    return ALL_CHAIN_FAMILIES.filter(
+      (f) => buildChainOptions(mode, f.value).length > 0,
+    );
+  }, [mode]);
+
+  useEffect(() => {
+    if (!availableFamilies.some((f) => f.value === chainFamily)) {
+      setChainFamily(availableFamilies[0]?.value ?? "evm");
+    }
+  }, [availableFamilies, chainFamily]);
 
   const chainOptions = useMemo(
     () => buildChainOptions(mode, chainFamily),
@@ -452,33 +504,11 @@ export default function NewEnvironmentPage() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="bg-popover border-border text-popover-foreground">
-                  <SelectItem value="evm">
-                    <span className="flex items-center gap-2">
-                      <span className="w-[18px] h-[18px] rounded-full overflow-hidden inline-flex items-center justify-center bg-white dark:bg-white p-px ring-1 ring-border shrink-0">
-                        <Image
-                          src="/botchain.jpg"
-                          alt="BOT Chain"
-                          width={18}
-                          height={18}
-                          className="rounded-full object-cover shrink-0"
-                          unoptimized
-                        />
-                      </span>
-                      EVM (BOT Chain, Base, Arc, Ethereum)
-                    </span>
-                  </SelectItem>
-                  <SelectItem value="stellar">
-                    <span className="flex items-center gap-2">
-                      <NetworkIcon name="stellar" variant="branded" size={18} className="rounded-full bg-white dark:bg-white p-px" />
-                      Stellar (Soroban)
-                    </span>
-                  </SelectItem>
-                  <SelectItem value="solana">
-                    <span className="flex items-center gap-2">
-                      <NetworkIcon name="solana" variant="branded" size={18} className="rounded-full bg-white dark:bg-white p-px" />
-                      Solana (Anchor)
-                    </span>
-                  </SelectItem>
+                  {availableFamilies.map((family) => (
+                    <SelectItem key={family.value} value={family.value}>
+                      {family.renderLabel()}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>

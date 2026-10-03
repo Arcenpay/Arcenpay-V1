@@ -121,8 +121,8 @@ const TESTNET_CHAIN_LIST: Array<{
     tag: "testnet",
   },
   {
-    chainId: STELLAR_FUTURENET_CHAIN_ID,
-    label: getChainLabel(STELLAR_FUTURENET_CHAIN_ID),
+    chainId: SOLANA_DEVNET_CHAIN_ID,
+    label: getChainLabel(SOLANA_DEVNET_CHAIN_ID),
     tag: "testnet",
   },
 ];
@@ -133,18 +133,8 @@ const MAINNET_CHAIN_LIST: Array<{
   tag: "testnet" | "mainnet";
 }> = [
   {
-    chainId: BASE_MAINNET_CHAIN_ID,
-    label: getChainLabel(BASE_MAINNET_CHAIN_ID),
-    tag: "mainnet",
-  },
-  {
     chainId: BOT_MAINNET_CHAIN_ID,
     label: getChainLabel(BOT_MAINNET_CHAIN_ID),
-    tag: "mainnet",
-  },
-  {
-    chainId: STELLAR_MAINNET_CHAIN_ID,
-    label: getChainLabel(STELLAR_MAINNET_CHAIN_ID),
     tag: "mainnet",
   },
   {

@@ -15,11 +15,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import Image from "next/image";
+import { NetworkIcon } from "@web3icons/react/dynamic";
 import {
   BOT_MAINNET_CHAIN_ID,
   BASE_SEPOLIA_CHAIN_ID,
   STELLAR_TESTNET_CHAIN_ID,
-  STELLAR_MAINNET_CHAIN_ID,
+  SOLANA_DEVNET_CHAIN_ID,
   SOLANA_MAINNET_CHAIN_ID,
   getChainLabel,
   getChainIdsForEnvironment,
@@ -34,6 +36,52 @@ import {
 import { useDashboardSession } from "@/hooks/use-dashboard-session";
 import { OnboardingShell } from "@/components/onboarding/onboarding-shell";
 import type { ChainFamily } from "@arcenpay/internal-core";
+
+const ALL_CHAIN_FAMILIES: Array<{
+  value: ChainFamily;
+  label: string;
+  renderLabel: () => React.ReactNode;
+}> = [
+  {
+    value: "evm",
+    label: "EVM (BOT Chain, Base, Arc, Ethereum)",
+    renderLabel: () => (
+      <span className="flex items-center gap-2">
+        <span className="w-[18px] h-[18px] rounded-full overflow-hidden inline-flex items-center justify-center bg-white dark:bg-white p-px ring-1 ring-border shrink-0">
+          <Image
+            src="/botchain.jpg"
+            alt="BOT Chain"
+            width={18}
+            height={18}
+            className="rounded-full object-cover shrink-0"
+            unoptimized
+          />
+        </span>
+        EVM (BOT Chain, Base, Arc, Ethereum)
+      </span>
+    ),
+  },
+  {
+    value: "stellar",
+    label: "Stellar (Soroban)",
+    renderLabel: () => (
+      <span className="flex items-center gap-2">
+        <NetworkIcon name="stellar" variant="branded" size={18} className="rounded-full bg-white dark:bg-white p-px" />
+        Stellar (Soroban)
+      </span>
+    ),
+  },
+  {
+    value: "solana",
+    label: "Solana (Anchor)",
+    renderLabel: () => (
+      <span className="flex items-center gap-2">
+        <NetworkIcon name="solana" variant="branded" size={18} className="rounded-full bg-white dark:bg-white p-px" />
+        Solana (Anchor)
+      </span>
+    ),
+  },
+];
 
 // Chain picker strictly filtered to the selected family:
 // EVM users see only EVM networks (BOT/Base/Arc/Sepolia).
@@ -51,11 +99,11 @@ function defaultChainIdForFamily(
   mode: EnvironmentMode,
   family: ChainFamily,
 ): number {
-  if (family === "solana") return SOLANA_MAINNET_CHAIN_ID;
   if (mode === "PRODUCTION") {
-    if (family === "stellar") return STELLAR_MAINNET_CHAIN_ID;
+    if (family === "solana") return SOLANA_MAINNET_CHAIN_ID;
     return BOT_MAINNET_CHAIN_ID;
   }
+  if (family === "solana") return SOLANA_DEVNET_CHAIN_ID;
   if (family === "stellar") return STELLAR_TESTNET_CHAIN_ID;
   return BASE_SEPOLIA_CHAIN_ID;
 }
@@ -94,6 +142,20 @@ export default function EnvironmentOnboardingPage() {
     data?.user?.stellarWalletAddress,
     data?.user?.solanaWalletAddress,
   ]);
+
+  const availableFamilies = useMemo(() => {
+    return ALL_CHAIN_FAMILIES.filter(
+      (f) => buildChainOptions(mode, f.value).length > 0,
+    );
+  }, [mode]);
+
+  useEffect(() => {
+    if (!availableFamilies.some((f) => f.value === selectedFamily)) {
+      const nextFamily = availableFamilies[0]?.value ?? "evm";
+      setSelectedFamily(nextFamily);
+      setOnboardingChainFamily(nextFamily);
+    }
+  }, [availableFamilies, selectedFamily]);
 
   const chainOptions = useMemo(
     () => buildChainOptions(mode, selectedFamily),
@@ -272,7 +334,7 @@ export default function EnvironmentOnboardingPage() {
             </div>
           </div>
 
-          {/* Type & Chain Grid */}
+          {/* Mode, Ecosystem & Chain */}
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="environment-type" className="text-sm font-medium text-foreground">
@@ -297,28 +359,56 @@ export default function EnvironmentOnboardingPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="environment-chain" className="text-sm font-medium text-foreground">
-                Target Blockchain Network
+              <Label htmlFor="environment-family" className="text-sm font-medium text-foreground">
+                Blockchain Ecosystem
               </Label>
               <Select
-                value={String(chainId)}
-                onValueChange={(value) => setChainId(Number(value))}
+                value={selectedFamily}
+                onValueChange={(value) => {
+                  const fam = value as ChainFamily;
+                  setSelectedFamily(fam);
+                  setOnboardingChainFamily(fam);
+                }}
               >
-                <SelectTrigger id="environment-chain" className="bg-background border-input text-foreground h-11 focus:ring-brand">
+                <SelectTrigger id="environment-family" className="bg-background border-input text-foreground h-11 focus:ring-brand">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="bg-popover border-border text-popover-foreground">
-                  {chainOptions.map((chain) => (
-                    <SelectItem key={chain.chainId} value={String(chain.chainId)}>
-                      <span className="flex items-center gap-2">
-                        <Web3Icon chainId={chain.chainId} size="sm" />
-                        {chain.label}
-                      </span>
+                  {availableFamilies.map((family) => (
+                    <SelectItem key={family.value} value={family.value}>
+                      {family.renderLabel()}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="environment-chain" className="text-sm font-medium text-foreground">
+              Target Blockchain Network
+            </Label>
+            <Select
+              value={String(chainId)}
+              onValueChange={(value) => setChainId(Number(value))}
+            >
+              <SelectTrigger id="environment-chain" className="bg-background border-input text-foreground h-11 focus:ring-brand">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="bg-popover border-border text-popover-foreground">
+                {chainOptions.map((chain) => (
+                  <SelectItem key={chain.chainId} value={String(chain.chainId)}>
+                    <span className="flex items-center gap-2">
+                      <Web3Icon chainId={chain.chainId} size="sm" />
+                      {chain.label}
+                    </span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              {chainOptions.length} {chainOptions.length === 1 ? "network" : "networks"} available in {mode === "DEVELOPMENT" ? "development" : "production"} mode.
+            </p>
           </div>
 
           {/* Info note */}

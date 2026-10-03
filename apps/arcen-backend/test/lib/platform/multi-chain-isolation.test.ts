@@ -19,9 +19,9 @@ describe("Multi-chain platform isolation & default-chain resolution", () => {
     expect(resolveEnvironmentChainId("DEVELOPMENT", null)).toBeNull();
   });
 
-  it("seamlessly migrates disabled Solana Devnet (9100001) to Solana Mainnet (9100000) without EVM coercion", () => {
+  it("correctly resolves Solana Devnet (9100001) in DEVELOPMENT without EVM coercion", () => {
     const chainId = resolveEnvironmentChainId("DEVELOPMENT", 9100001);
-    expect(chainId).toBe(9100000);
+    expect(chainId).toBe(9100001);
     expect(isSolanaChainId(chainId!)).toBe(true);
     expect(isEvmChain(chainId!)).toBe(false);
     expect(isStellarChainId(chainId!)).toBe(false);
@@ -53,13 +53,15 @@ describe("Multi-chain platform isolation & default-chain resolution", () => {
     expect(isSupportedDashboardChainId(99999999)).toBe(false);
   });
 
-  it("enforces strict mode separation (EVM mainnet chains rejected in DEVELOPMENT)", () => {
-    // BOT Mainnet (677) is a production-only EVM chain, must be rejected in DEVELOPMENT
+  it("enforces strict mode separation (mainnet chains rejected in DEVELOPMENT, testnet rejected in PRODUCTION)", () => {
+    // BOT Mainnet (677) and Solana Mainnet (9100000) are production chains, must be rejected in DEVELOPMENT
     expect(resolveEnvironmentChainId("DEVELOPMENT", 677)).toBeNull();
-    // Solana Mainnet (9100000) is allowed in DEVELOPMENT as the sole active Solana network
-    expect(resolveEnvironmentChainId("DEVELOPMENT", 9100000)).toBe(9100000);
-    // Legacy devnet requests in PRODUCTION migrate to Solana Mainnet
-    expect(resolveEnvironmentChainId("PRODUCTION", 9100001)).toBe(9100000);
+    expect(resolveEnvironmentChainId("DEVELOPMENT", 9100000)).toBeNull();
+    // Testnet chains are rejected in PRODUCTION (falls back to default mainnet chain)
+    expect(resolveEnvironmentChainId("PRODUCTION", 9100001)).toBe(DEFAULT_MAINNET_CHAIN_ID);
+    expect(resolveEnvironmentChainId("PRODUCTION", 84532)).toBe(DEFAULT_MAINNET_CHAIN_ID);
+    // Stellar Mainnet (9000000) has no deployed contracts, must not be valid
+    expect(resolveEnvironmentChainId("PRODUCTION", 9000000)).toBe(DEFAULT_MAINNET_CHAIN_ID);
   });
 
   it("correctly resolves and allows Solana Mainnet (9100000) in PRODUCTION", () => {
@@ -70,12 +72,13 @@ describe("Multi-chain platform isolation & default-chain resolution", () => {
     expect(getChainFamily(9100000)).toBe("solana");
   });
 
-  it("allows Solana Mainnet (9100000) and Stellar Testnet (9000001) environment creation in DEVELOPMENT", () => {
-    expect(isChainAllowedForMode("DEVELOPMENT", 9100000)).toBe(true);
+  it("allows Solana Devnet (9100001) and Stellar Testnet (9000001) environment creation in DEVELOPMENT", () => {
+    expect(isChainAllowedForMode("DEVELOPMENT", 9100001)).toBe(true);
     expect(isChainAllowedForMode("DEVELOPMENT", 9000001)).toBe(true);
     expect(isChainAllowedForMode("DEVELOPMENT", 84532)).toBe(true);
-    expect(isChainAllowedForMode("DEVELOPMENT", 9100001)).toBe(false);
+    expect(isChainAllowedForMode("DEVELOPMENT", 9100000)).toBe(false);
     expect(isChainAllowedForMode("DEVELOPMENT", 99999999)).toBe(false);
+    expect(isChainAllowedForMode("PRODUCTION", 9000000)).toBe(false);
   });
 
   it("allows multi-chain environments on FREE tier without hitting single-chain ceiling", async () => {
