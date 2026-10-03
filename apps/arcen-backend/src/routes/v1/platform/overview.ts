@@ -77,9 +77,12 @@ export async function getOverview(c: Context) {
   }
   const environmentMode = activeEnvironment.mode;
   const chainId = activeEnvironment.chainId;
-  const allTeamPlanIds = (
+  const environmentPlanIds = (
     await db.catalogPlan.findMany({
-      where: { teamId: auth.team.teamId },
+      where: {
+        teamId: auth.team.teamId,
+        environmentId: activeEnvironment.id,
+      },
       select: { id: true },
     })
   ).map((plan) => plan.id);
@@ -125,9 +128,8 @@ export async function getOverview(c: Context) {
           },
           OR: [
             { environmentId: activeEnvironment.id },
-            { environmentId: null },
-            ...(allTeamPlanIds.length > 0
-              ? [{ planId: { in: allTeamPlanIds } }]
+            ...(environmentPlanIds.length > 0
+              ? [{ planId: { in: environmentPlanIds } }]
               : []),
           ],
         },

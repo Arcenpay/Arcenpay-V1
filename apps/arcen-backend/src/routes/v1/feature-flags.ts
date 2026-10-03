@@ -8,12 +8,18 @@ import { requirePermission, isErrorResponse } from "../../lib/auth/api-auth.js";
 import { db } from "../../db.js";
 import { loadPublishedPlanEntitlementsByFeatureKey } from "../../lib/catalog/catalog-entitlements.js";
 import { getTierLimits, TIER_FEATURES } from "../../lib/catalog/tier-guard.js";
+import { findResolvedActiveEnvironment } from "../../lib/environments/workspace-environments.js";
 
 export async function GET(c: Context) {
   const ctx = await requirePermission(c, "catalog:read");
   if (isErrorResponse(ctx)) return c.json({ ok: false, error: ctx.error }, ctx.status as any);
 
   const { team } = ctx;
+  const activeEnvironment = await findResolvedActiveEnvironment(
+    ctx.session,
+    team.teamId,
+  );
+  const environmentId = activeEnvironment?.id ?? null;
 
   const [flags, planEntitlementsByFeatureKey] = await Promise.all([
     db.catalogFeatureFlag.findMany({
@@ -26,7 +32,7 @@ export async function GET(c: Context) {
       },
       orderBy: { createdAt: "desc" },
     }),
-    loadPublishedPlanEntitlementsByFeatureKey(team.teamId),
+    loadPublishedPlanEntitlementsByFeatureKey(team.teamId, environmentId),
   ]);
 
   const data = flags.map((flag) => ({

@@ -556,6 +556,10 @@ export async function getAgentBalance(c: Context) {
       }
     }
 
+    const chainPreApprovals = preApprovals.filter(
+      (p: any) => !p.chainId || p.chainId === activeChainId,
+    );
+
     // Recorded preApprovals reconciliation fallback. This models the EVM
     // SessionVault / approve-and-fund flow only — Stellar and Solana have no
     // vault, and applying it there fabricates a balance from stale EVM-style
@@ -563,7 +567,7 @@ export async function getAgentBalance(c: Context) {
     // on-chain balance is zero.
     if (fam === "evm") {
       if (parseFloat(vaultBalanceUsdc) <= 0) {
-        const preVault = preApprovals
+        const preVault = chainPreApprovals
           .filter((p: any) => p.mode === "approve_and_fund" && Number(p.amount) > 0)
           .reduce((sum: number, p: any) => sum + Number(p.amount), 0);
         if (preVault > 0) {
@@ -572,7 +576,7 @@ export async function getAgentBalance(c: Context) {
       }
 
       if (parseFloat(walletBalanceUsdc) <= 0) {
-        const preTransfer = preApprovals
+        const preTransfer = chainPreApprovals
           .filter((p: any) => p.mode === "transfer" && Number(p.amount) > 0)
           .reduce((sum: number, p: any) => sum + Number(p.amount), 0);
         if (preTransfer > 0) {
@@ -593,7 +597,7 @@ export async function getAgentBalance(c: Context) {
         walletBalanceUsdc,
         vaultBalanceUsdc,
         totalUsdc,
-        preApprovals,
+        preApprovals: chainPreApprovals,
       },
     });
   } catch (err: any) {

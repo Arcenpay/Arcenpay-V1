@@ -151,12 +151,16 @@ export async function loadPublishedPlanLinksByFeatureKey(teamId: string) {
   );
 }
 
-export async function loadPublishedPlanEntitlementsByFeatureKey(teamId: string) {
+export async function loadPublishedPlanEntitlementsByFeatureKey(
+  teamId: string,
+  environmentId?: string | null,
+) {
   const plans = await db.catalogPlan.findMany({
     where: {
       teamId,
       active: true,
       status: "PUBLISHED",
+      ...(environmentId ? { environmentId } : {}),
     },
     select: {
       id: true,

@@ -285,40 +285,7 @@ export function EmailAuthFlow({
               return;
             }
 
-            // Auto-create environment for this chain
-            try {
-              const chainId =
-                family === "solana"
-                  ? 9100001
-                  : family === "stellar"
-                    ? 9000001
-                    : 84532;
-              const name =
-                family === "solana"
-                  ? "Solana"
-                  : family === "stellar"
-                    ? "Stellar"
-                    : "Development";
-              const createRes = await apiFetch("/api/environments", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ name, mode: "DEVELOPMENT", chainId }),
-              });
-              if (createRes.ok) {
-                const envPayload = await createRes.json().catch(() => ({}));
-                const newEnvId = envPayload?.environment?.id;
-                if (newEnvId) {
-                  await apiFetch("/api/environments/select", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ environmentId: newEnvId }),
-                  }).catch(() => {});
-                }
-                window.location.href = "/";
-                return;
-              }
-            } catch {}
-
+            // No environment exists yet for this family — let the user configure it
             window.location.href = "/onboarding/environment";
             return;
           }

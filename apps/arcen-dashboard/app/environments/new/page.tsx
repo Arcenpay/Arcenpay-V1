@@ -280,10 +280,20 @@ export default function NewEnvironmentPage() {
           chainId,
         }),
       });
-      const payload = (await res.json().catch(() => ({}))) as { error?: string };
+      const payload = (await res.json().catch(() => ({}))) as {
+        error?: string;
+        environment?: { id: string };
+      };
       if (!res.ok) {
         setError(payload.error || "Failed to create environment");
         return;
+      }
+      if (payload.environment?.id) {
+        await apiFetch("/api/environments/select", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ environmentId: payload.environment.id }),
+        }).catch(() => {});
       }
       await refresh();
       window.location.assign("/");

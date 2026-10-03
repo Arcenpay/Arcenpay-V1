@@ -123,16 +123,6 @@ export default function EnvironmentOnboardingPage() {
       .catch(() => setProductionEnabled(false));
   }, []);
 
-  useEffect(() => {
-    if (data?.activeEnvironment) {
-      const activeFamily = getChainFamily(data.activeEnvironment.chainId);
-      // Only redirect away if the active environment already belongs to the target family
-      if (activeFamily === selectedFamily) {
-        window.location.assign("/");
-      }
-    }
-  }, [data?.activeEnvironment, selectedFamily]);
-
   async function handleSelect(environmentId: string) {
     setSubmitting(true);
     setError(null);
@@ -167,10 +157,20 @@ export default function EnvironmentOnboardingPage() {
           chainId,
         }),
       });
-      const payload = (await res.json().catch(() => ({}))) as { error?: string };
+      const payload = (await res.json().catch(() => ({}))) as {
+        error?: string;
+        environment?: { id: string };
+      };
       if (!res.ok) {
         setError(payload.error || "Failed to create environment");
         return;
+      }
+      if (payload.environment?.id) {
+        await apiFetch("/api/environments/select", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ environmentId: payload.environment.id }),
+        }).catch(() => {});
       }
       await refresh();
       // A full navigation ensures the server dashboard layout reads the

@@ -797,7 +797,7 @@ function PermissionsTab() {
   // Normalized with safeAddress for EVM to guarantee EIP-55 checksum compliance.
   const rawAgentWallet =
     (agentWallets && agentWallets[String(configuredChainId)]) || agentWalletAddress || "";
-  const agentWallet = isStellar
+  const agentWallet = (isStellar || isSolana)
     ? rawAgentWallet
     : (safeAddress(rawAgentWallet) ?? rawAgentWallet);
 
@@ -2636,39 +2636,45 @@ function PermissionsTab() {
           </div>
 
           {/* Recent Funding History */}
-          {preApprovals.length > 0 && (
-            <div className="pt-3 border-t border-border/60">
-              <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground block mb-2">
-                Recent Funding Activity
-              </span>
-              <div className="space-y-1.5 max-h-36 overflow-y-auto pr-1">
-                {[...preApprovals].reverse().slice(0, 5).map((entry, i) => (
-                  <div key={`${entry.txHash}-${i}`} className="flex items-center justify-between p-2 rounded-md bg-secondary/30 border border-border/40 text-xs">
-                    <div className="flex items-center gap-2">
-                      <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-normal">
-                        {entry.mode === "transfer" ? "Direct Transfer" : "Session Vault"}
-                      </Badge>
-                      <span className="font-semibold text-foreground">+${entry.amount} USDC</span>
+          {(() => {
+            const chainPreApprovals = preApprovals.filter(
+              (entry) => !entry.chainId || entry.chainId === configuredChainId,
+            );
+            if (chainPreApprovals.length === 0) return null;
+            return (
+              <div className="pt-3 border-t border-border/60">
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground block mb-2">
+                  Recent Funding Activity
+                </span>
+                <div className="space-y-1.5 max-h-36 overflow-y-auto pr-1">
+                  {[...chainPreApprovals].reverse().slice(0, 5).map((entry, i) => (
+                    <div key={`${entry.txHash}-${i}`} className="flex items-center justify-between p-2 rounded-md bg-secondary/30 border border-border/40 text-xs">
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-normal">
+                          {entry.mode === "transfer" ? "Direct Transfer" : "Session Vault"}
+                        </Badge>
+                        <span className="font-semibold text-foreground">+${entry.amount} USDC</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+                        <span>{new Date(entry.createdAt).toLocaleDateString()}</span>
+                        {entry.txHash && (
+                          <a
+                            href={getExplorerTxUrl(entry.chainId || configuredChainId, entry.txHash)}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="hover:text-foreground inline-flex items-center"
+                            title="View on Explorer"
+                          >
+                            <ArrowUpRight className="w-3 h-3" />
+                          </a>
+                        )}
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
-                      <span>{new Date(entry.createdAt).toLocaleDateString()}</span>
-                      {entry.txHash && (
-                        <a
-                          href={getExplorerTxUrl(entry.chainId || configuredChainId, entry.txHash)}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="hover:text-foreground inline-flex items-center"
-                          title="View on Explorer"
-                        >
-                          <ArrowUpRight className="w-3 h-3" />
-                        </a>
-                      )}
-                    </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
         </div>
       )}
 

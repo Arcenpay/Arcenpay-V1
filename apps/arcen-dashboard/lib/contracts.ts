@@ -76,6 +76,10 @@ export function getUsdcAddress(chainId: number): string {
   const token = getTokenAddress(chainId, "USDC");
   if (token && isValidAddressForChain(token, chainId)) return token;
 
+  // BOT Chain (677, 968) has no native USDC — fall back to USDT
+  const usdtToken = getTokenAddress(chainId, "USDT");
+  if (usdtToken && isValidAddressForChain(usdtToken, chainId)) return usdtToken;
+
   throw new Error(
     `No USDC address configured for chain ${chainId}. Set NEXT_PUBLIC_USDC_ADDRESS_${chainId} or NEXT_PUBLIC_USDC_ADDRESS.`,
   );
@@ -263,4 +267,10 @@ export function useContractAddresses(chainIdOverride?: number | null) {
 }
 
 /** Backward-compatible alias for Sepolia token resolution */
-export const SEPOLIA_USDC = getUsdcAddress(DEFAULT_CHAIN_ID);
+export const SEPOLIA_USDC = (() => {
+  try {
+    return getUsdcAddress(BASE_SEPOLIA_CHAIN_ID);
+  } catch {
+    return "0x036CbD53842c5426634e7929541eC2318f3dCF7e";
+  }
+})();
