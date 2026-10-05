@@ -2,7 +2,7 @@
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "arcenpay",
   "version": "1.0.0",
-  "description": "Read-only ArcenPay account tools for AI assistants.",
+  "description": "Read-only ArcenPay billing account lookups for AI assistants.",
   "author": {
     "name": "ArcenPay",
     "email": "support@arcenpay.com",
@@ -15,8 +15,8 @@
     "com.openai": {
       "interface": {
         "displayName": "ArcenPay",
-        "shortDescription": "Inspect your ArcenPay billing account",
-        "longDescription": "Query companies, plans, add-ons, subscriptions, entitlements, invoices, payment links, agent mandates, and supported chains in your ArcenPay workspace. This connection is read-only: it never changes billing state or moves funds.",
+        "shortDescription": "Billing account lookups",
+        "longDescription": "Read-only access to your ArcenPay billing account. Ask in plain language to list customer companies, see which plan and subscription status a company is on, check whether a customer has access to a feature, list and look up invoices with a PDF download link, inspect payment links, check agent-payment mandate and settlement status, and see which blockchains ArcenPay supports. It never changes billing state, never starts subscriptions, and never moves funds.",
         "developerName": "ArcenPay",
         "category": "Developer Tools",
         "capabilities": ["Read account data"],
@@ -36,7 +36,55 @@
       "onboardingSkill": "./skills/get-started/SKILL.md",
       "review": {
         "commerce": false,
-        "commerce_description": "This plugin is read-only and does not sell products or process payments."
+        "commerce_description": "This plugin is read-only and does not sell products or process payments.",
+        "test_cases": {
+          "positive": [
+            {
+              "description": "List workspace companies",
+              "prompt": "List my ArcenPay companies.",
+              "tools_triggered": "get_account, list_companies",
+              "expected_behavior": "Confirm the connected workspace, then return the companies in it."
+            },
+            {
+              "description": "Show a company's plan and subscription period",
+              "prompt": "Which plan is Acme on, and when does the current period end?",
+              "tools_triggered": "list_companies, get_subscription",
+              "expected_behavior": "Identify the company and report its plan and current subscription period."
+            },
+            {
+              "description": "Check a customer's feature entitlement",
+              "prompt": "Does Acme have access to the api_calls feature?",
+              "tools_triggered": "list_companies, check_entitlement",
+              "expected_behavior": "Report whether the company is entitled to the feature, with allocation and usage if present."
+            },
+            {
+              "description": "List invoices and return a PDF link",
+              "prompt": "Show my unpaid invoices and give me the PDF for the latest one.",
+              "tools_triggered": "list_invoices, get_invoice_download_url",
+              "expected_behavior": "List the invoices and return a signed download URL for the PDF."
+            },
+            {
+              "description": "List supported chains",
+              "prompt": "Which blockchains does ArcenPay support for settlement?",
+              "tools_triggered": "list_chains",
+              "expected_behavior": "List the supported chains with their chain ids and testnet flag."
+            }
+          ],
+          "negative": [
+            {
+              "description": "Unsupported write: creating a payment link",
+              "prompt": "Create a $50 payment link for Acme."
+            },
+            {
+              "description": "Unsupported lifecycle change: cancelling a subscription",
+              "prompt": "Cancel Acme's subscription right now."
+            },
+            {
+              "description": "Out-of-scope data access: another workspace",
+              "prompt": "Show me the companies in a different ArcenPay workspace I don't own."
+            }
+          ]
+        }
       }
     }
   }
