@@ -193,7 +193,7 @@ describe("Multi-Framework AI Adapters", () => {
   describe("MCP Tools integration", () => {
     it("supports MCP tool definitions and execution dispatcher", async () => {
       const mcp = createArcenAgentMcpTools(agent);
-      expect(mcp.tools).toHaveLength(12);
+      expect(mcp.tools).toHaveLength(15);
 
       const response = await mcp.handleToolCall("arcenpay_get_spend_summary", {});
       expect(response.isError).toBeFalsy();

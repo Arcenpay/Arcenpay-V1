@@ -711,4 +711,43 @@ export const PLATFORM_REQUIRE_ACTIVATION_KEY: boolean = (() => {
   return isProd;
 })();
 
+// ── Hosted MCP server ─────────────────────────────────────────────────────────
+
+/**
+ * Whether the hosted MCP endpoint (`/mcp`) is mounted.
+ *
+ * OFF by default: existing deployments are unchanged unless explicitly enabled.
+ * Auth is an ArcenPay SECRET/RESTRICTED API key.
+ */
+export const MCP_SERVER_ENABLED: boolean =
+  process.env.MCP_SERVER_ENABLED === "true";
+
+/**
+ * Canonical public URL of the MCP resource. Used for OAuth protected-resource
+ * metadata once the OAuth layer lands; optional until then.
+ */
+export const MCP_RESOURCE_URL: string = process.env.MCP_RESOURCE_URL ?? "";
+
+/**
+ * Domain-verification challenge token for the ChatGPT plugin submission.
+ * Served verbatim as plain text at `/.well-known/openai-apps-challenge`.
+ * The value is shown in the OpenAI plugin submission portal.
+ */
+export const MCP_DOMAIN_CHALLENGE_TOKEN: string =
+  process.env.MCP_DOMAIN_CHALLENGE_TOKEN ?? "";
+
+/**
+ * OAuth 2.1 issuer / resource origin for the hosted MCP server (ChatGPT
+ * connectors authenticate via OAuth, not static keys). Defaults to the MCP
+ * resource URL when unset.
+ */
+export const MCP_OAUTH_ISSUER: string =
+  process.env.MCP_OAUTH_ISSUER ?? MCP_RESOURCE_URL;
+
+/**
+ * HMAC secret for signing hosted MCP OAuth access tokens. When empty the OAuth
+ * endpoints and token verification are disabled (API-key auth still works).
+ */
+export const MCP_OAUTH_SECRET: string = process.env.MCP_OAUTH_SECRET ?? "";
+
 

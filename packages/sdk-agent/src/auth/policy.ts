@@ -11,7 +11,7 @@ import type {
 } from "../internal/core";
 
 /**
- * Evaluates whether a domain matches a pattern with optional wildcard (e.g. "*.arcenpay.xyz").
+ * Evaluates whether a domain matches a pattern with optional wildcard (e.g. "*.arcenpay.com").
  */
 export function matchDomain(domain: string, pattern: string): boolean {
   const d = domain.trim().toLowerCase();

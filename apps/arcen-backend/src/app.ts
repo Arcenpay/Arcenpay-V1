@@ -13,6 +13,10 @@ import {
 import { csrfOriginGuard } from "./middleware/csrf-origin.js";
 import { appRouter } from "./routes/index.js";
 import { arcjetGlobalProtect } from "./middleware/arcjet-global.js";
+import { MCP_SERVER_ENABLED } from "./config.js";
+import { handleMcpRequest } from "./mcp/server.js";
+import { mcpWellKnownRoutes } from "./mcp/well-known.js";
+import { createOAuthRoutes } from "./mcp/oauth.js";
 
 /**
  * Maximum accepted request body.
@@ -102,6 +106,16 @@ export function createApp() {
 
   // ── Mount all routes under /api/v1 ─────────────────────────────────────────
   app.route("/api/v1", appRouter);
+
+  // ── Hosted MCP server (opt-in) ─────────────────────────────────────────────
+  // Read-only tool tier over MCP Streamable HTTP. Off unless MCP_SERVER_ENABLED
+  // is "true", so existing deployments are unaffected. Auth is an ArcenPay
+  // SECRET/RESTRICTED API key (Bearer).
+  if (MCP_SERVER_ENABLED) {
+    app.route("/.well-known", mcpWellKnownRoutes);
+    app.route("/oauth", createOAuthRoutes());
+    app.all("/mcp", (c) => handleMcpRequest(c.req.raw));
+  }
 
   // ── 404 fallback ───────────────────────────────────────────────────────────
   app.notFound((c) =>

@@ -52,7 +52,7 @@ const MOCK_RECEIPT: AgentPaymentReceipt = {
   timestamp: new Date().toISOString(),
 };
 
-describe("MCP Tools Suite — 12 Production Tools", () => {
+describe("MCP Tools Suite — 15 Production Tools", () => {
   let agent: ArcenAgent;
   let originalFetch: typeof globalThis.fetch;
 
@@ -70,8 +70,8 @@ describe("MCP Tools Suite — 12 Production Tools", () => {
     vi.restoreAllMocks();
   });
 
-  it("should define exactly 12 standard MCP tools with valid schemas", () => {
-    expect(ARCENPAY_MCP_TOOL_DEFINITIONS).toHaveLength(12);
+  it("should define exactly 15 standard MCP tools with valid schemas", () => {
+    expect(ARCENPAY_MCP_TOOL_DEFINITIONS).toHaveLength(15);
     const names = ARCENPAY_MCP_TOOL_DEFINITIONS.map((t) => t.name);
 
     expect(names).toEqual([
@@ -79,6 +79,9 @@ describe("MCP Tools Suite — 12 Production Tools", () => {
       "arcenpay_pay_payment_link",
       "arcenpay_create_payment_link",
       "arcenpay_get_spend_summary",
+      "arcenpay_check_balance",
+      "arcenpay_fund_session",
+      "arcenpay_fetch",
       "arcenpay_issue_mandate",
       "arcenpay_check_policy",
       "arcenpay_revoke_mandate",
@@ -163,6 +166,58 @@ describe("MCP Tools Suite — 12 Production Tools", () => {
     const parsed = JSON.parse(res.content[0].text);
     expect(parsed).toHaveProperty("dailySpent");
     expect(parsed).toHaveProperty("totalSpent");
+  });
+
+  it("should handle arcenpay_check_balance", async () => {
+    const mcp = createArcenAgentMcpTools(agent);
+    vi.spyOn(agent, "getBalance").mockResolvedValue(12_500_000n);
+
+    const res = await mcp.handleToolCall("arcenpay_check_balance", {});
+    expect(res.isError).toBeFalsy();
+    const parsed = JSON.parse(res.content[0].text);
+    expect(parsed.balanceAtomic).toBe("12500000");
+    expect(parsed.balanceUsdc).toBe("12.500000");
+    expect(parsed.address).toBe(agent.address);
+  });
+
+  it("should handle arcenpay_fund_session", async () => {
+    const mcp = createArcenAgentMcpTools(agent);
+
+    // Missing amount
+    const errorRes = await mcp.handleToolCall("arcenpay_fund_session", {});
+    expect(errorRes.isError).toBe(true);
+
+    vi.spyOn(agent, "fundSession").mockResolvedValue("sess_funded_1");
+
+    const res = await mcp.handleToolCall("arcenpay_fund_session", { amount: "5.00" });
+    expect(res.isError).toBeFalsy();
+    const parsed = JSON.parse(res.content[0].text);
+    expect(parsed.sessionId).toBe("sess_funded_1");
+    expect(parsed.fundedAmountUsdc).toBe("5.00");
+  });
+
+  it("should handle arcenpay_fetch", async () => {
+    const mcp = createArcenAgentMcpTools(agent);
+
+    // Missing url
+    const errorRes = await mcp.handleToolCall("arcenpay_fetch", {});
+    expect(errorRes.isError).toBe(true);
+
+    vi.spyOn(agent, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ ok: true }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      }),
+    );
+
+    const res = await mcp.handleToolCall("arcenpay_fetch", {
+      url: "https://api.example.com/data",
+    });
+    expect(res.isError).toBeFalsy();
+    const parsed = JSON.parse(res.content[0].text);
+    expect(parsed.status).toBe(200);
+    expect(parsed.ok).toBe(true);
+    expect(parsed.body.ok).toBe(true);
   });
 
   it("should handle arcenpay_issue_mandate", async () => {

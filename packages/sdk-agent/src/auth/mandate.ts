@@ -122,7 +122,7 @@ export function createAgentMandate(params: CreateMandateParams): Omit<ArcenPayAg
     },
     revocation: params.revocation ?? {
       method: "offchain_endpoint",
-      checkUrl: `https://mandate.arcenpay.xyz/${mandateId}/status`,
+      checkUrl: `https://api.arcenpay.com/api/v1/mandates/${mandateId}/status`,
     },
     humanAttestation: params.humanAttestation ?? null,
     issuedAt: new Date().toISOString(),

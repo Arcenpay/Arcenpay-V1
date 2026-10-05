@@ -42,7 +42,7 @@ export const ARCENPAY_MCP_TOOL_DEFINITIONS: McpToolDefinition[] = [
       properties: {
         urlOrSlug: {
           type: "string",
-          description: "Full ArcenPay checkout URL (e.g. 'https://app.arcenpay.xyz/pay/my-slug') or payment link slug.",
+          description: "Full ArcenPay checkout URL (e.g. 'https://app.arcenpay.com/pay/my-slug') or payment link slug.",
         },
       },
       required: ["urlOrSlug"],
@@ -125,6 +125,61 @@ export const ARCENPAY_MCP_TOOL_DEFINITIONS: McpToolDefinition[] = [
     inputSchema: {
       type: "object",
       properties: {},
+    },
+  },
+  {
+    name: "arcenpay_check_balance",
+    description:
+      "Checks the agent's available on-chain balance (ArcenPay Session Vault, Stellar Horizon, or direct wallet token balance). Returns the balance in both atomic units and decimal USDC. Use before paying to confirm the agent can afford a charge.",
+    inputSchema: {
+      type: "object",
+      properties: {},
+    },
+  },
+  {
+    name: "arcenpay_fund_session",
+    description:
+      "Pre-funds (deposits USDC into) an ArcenPay session vault to enable autonomous micro-payments. Returns the session id and funded amount.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        amount: {
+          type: "string",
+          description: "Amount of USDC to deposit (e.g. '5.00').",
+        },
+      },
+      required: ["amount"],
+    },
+  },
+  {
+    name: "arcenpay_fetch",
+    description:
+      "Performs an autonomous HTTP request to an x402 payment-gated API. If the endpoint returns HTTP 402, the agent negotiates and signs payment within its budget, then retries. Returns the response status, ok flag, and body.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        url: {
+          type: "string",
+          description: "The target API URL.",
+        },
+        maxPrice: {
+          type: "string",
+          description: "Maximum price willing to spend (e.g. '0.05').",
+        },
+        method: {
+          type: "string",
+          description: "HTTP method (GET, POST, etc.). Defaults to GET.",
+        },
+        headers: {
+          type: "object",
+          description: "Optional HTTP headers.",
+        },
+        body: {
+          type: "string",
+          description: "Optional request body.",
+        },
+      },
+      required: ["url"],
     },
   },
   {

@@ -398,27 +398,32 @@ dispatch: {
 
 Arcen Agent is fully compatible with Anthropic's **Model Context Protocol (MCP)**, enabling AI models in Claude Desktop, Cursor, or custom MCP clients to access ArcenPay payment, authorization, and escrow tools natively.
 
-### Pre-Built MCP Tool Definitions (12 Production Tools)
+/### Pre-Built MCP Tool Definitions (15 Production Tools)
 
-ArcenPay exports 12 standard MCP tool definitions via `ARCENPAY_MCP_TOOL_DEFINITIONS`:
+ArcenPay exports 15 standard MCP tool definitions via `ARCENPAY_MCP_TOOL_DEFINITIONS`:
+
+#### Runtime & Session Tools (3 Tools)
+1. `arcenpay_check_balance` — Reads the agent's available on-chain balance (Session Vault, Stellar Horizon, or wallet token balance).
+2. `arcenpay_fund_session` — Pre-funds a session vault with USDC to enable x402 micro-payments.
+3. `arcenpay_fetch` — Performs an x402 payment-gated HTTP request, auto-negotiating 402 challenges within budget.
 
 #### Payment Link Tools (4 Tools)
-1. `arcenpay_resolve_payment_link` — Discovers and inspects payment links without spending funds. Returns price, currency, chain, recipient, and status.
-2. `arcenpay_pay_payment_link` — Executes autonomous payments within configured budget limits. Handles on-chain ERC-20 / SAC transfer and returns a cryptographic payment receipt.
-3. `arcenpay_create_payment_link` — Programmatically creates payment links for agent merchants (`isAgentic: true`).
-4. `arcenpay_get_spend_summary` — Returns real-time budget diagnostics, daily spend totals, and audit logs.
+4. `arcenpay_resolve_payment_link` — Discovers and inspects payment links without spending funds. Returns price, currency, chain, recipient, and status.
+5. `arcenpay_pay_payment_link` — Executes autonomous payments within configured budget limits. Handles on-chain ERC-20 / SAC transfer and returns a cryptographic payment receipt.
+6. `arcenpay_create_payment_link` — Programmatically creates payment links for agent merchants (`isAgentic: true`).
+7. `arcenpay_get_spend_summary` — Returns real-time budget diagnostics, daily spend totals, and audit logs.
 
 #### ArcenAuth Mandate & Policy Tools (4 Tools)
-5. `arcenpay_issue_mandate` — Issues and cryptographically signs an Autonomous Agent Mandate (AAM) or scoped sub-mandate delegation for worker agents with strict spending ceilings.
-6. `arcenpay_check_policy` — Evaluates a prospective transaction against local and facilitator policy rules using the deterministic Turnkey-style policy engine before signing.
-7. `arcenpay_revoke_mandate` — Revokes an active agent mandate via on-chain `SessionVault` transaction or central registry broadcast, immediately invalidating worker delegation.
-8. `arcenpay_mandate_status` — Queries authoritative mandate status (`active`, `revoked`, `expired`, `superseded`) from backend or on-chain state.
+8. `arcenpay_issue_mandate` — Issues and cryptographically signs an Autonomous Agent Mandate (AAM) or scoped sub-mandate delegation for worker agents with strict spending ceilings.
+9. `arcenpay_check_policy` — Evaluates a prospective transaction against local and facilitator policy rules using the deterministic Turnkey-style policy engine before signing.
+10. `arcenpay_revoke_mandate` — Revokes an active agent mandate via on-chain `SessionVault` transaction or central registry broadcast, immediately invalidating worker delegation.
+11. `arcenpay_mandate_status` — Queries authoritative mandate status (`active`, `revoked`, `expired`, `superseded`) from backend or on-chain state.
 
 #### Verify-Then-Settle Escrow Tools (4 Tools)
-9. `arcenpay_fetch_escrowed` — Initiates an escrow-backed request (`exact_hash` or `schema_conformance`), locking funds in reservation until the deliverable is verified.
-10. `arcenpay_verify_commitment` — Verifies provider deliverables against the cryptographic commitment (SHA-256 hash or schema structure) before settlement.
-11. `arcenpay_dispute_claim` — Files a dispute against an invalid, non-conforming, or expired deliverable to claim an automated escrow refund.
-12. `arcenpay_settlement_status` — Checks the reservation, challenge window, and settlement status of an escrowed payment.
+12. `arcenpay_fetch_escrowed` — Initiates an escrow-backed request (`exact_hash` or `schema_conformance`), locking funds in reservation until the deliverable is verified.
+13. `arcenpay_verify_commitment` — Verifies provider deliverables against the cryptographic commitment (SHA-256 hash or schema structure) before settlement.
+14. `arcenpay_dispute_claim` — Files a dispute against an invalid, non-conforming, or expired deliverable to claim an automated escrow refund.
+15. `arcenpay_settlement_status` — Checks the reservation, challenge window, and settlement status of an escrowed payment.
 
 ### MCP Tool Dispatcher (`createArcenAgentMcpTools`)
 
@@ -427,12 +432,12 @@ import { ArcenAgent, createArcenAgentMcpTools } from "@arcenpay/agent";
 
 const agent = new ArcenAgent({
   privateKey: process.env.AGENT_PRIVATE_KEY!,
-  chainId: 8453, // Base Mainnet
+  chainId: 84532, // Base Sepolia
 });
 
 const mcp = createArcenAgentMcpTools(agent);
 
-// List available tools (returns all 12 MCP definitions)
+// List available tools (returns all 15 MCP definitions)
 console.log(mcp.tools.map(t => t.name));
 
 // Execute tool call from LLM runtime
@@ -1142,7 +1147,9 @@ fetchVerifiedDataset();
 
 ### Tutorial 6: Full MCP Agent Server
 
-A complete Model Context Protocol server exposing all 12 ArcenPay tools to LLMs:
+`@arcenpay/agent` ships this server for you — run it with the `arcenpay-mcp` bin
+(`AGENT_PRIVATE_KEY=0x... npx -y -p @arcenpay/agent arcenpay-mcp`). The equivalent
+custom implementation, exposing all 15 ArcenPay tools to LLMs, is:
 
 ```typescript
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
@@ -1155,7 +1162,7 @@ import { ArcenAgent, createArcenAgentMcpTools } from "@arcenpay/agent";
 
 const agent = new ArcenAgent({
   privateKey: process.env.AGENT_PRIVATE_KEY!,
-  chainId: Number(process.env.CHAIN_ID || 8453),
+  chainId: Number(process.env.CHAIN_ID || 84532),
   maxDailySpend: 50,
 });
 
@@ -1440,7 +1447,7 @@ All components of the Arcen Agent architecture, MCP tools, ArcenAuth delegation,
 
 | Workspace / Package | Test Files | Total Tests | Status | Scope |
 |---|:---:|:---:|:---:|---|
-| **`@arcenpay/agent`** | 8 | **81** | **PASSED** | 12 MCP tools, AAM mandates, Turnkey-style policy evaluation, Verify-Then-Settle Escrow, x402 negotiation, Agentic payment links. |
+| **`@arcenpay/agent`** | 11 | **104** | **PASSED** | 15 MCP tools, AAM mandates, Turnkey-style policy evaluation, Verify-Then-Settle Escrow, x402 negotiation, Agentic payment links. |
 | **`@arcenpay/node`** | 6 | **34** | **PASSED** | Client auth, nonce store, HMAC webhook verification, event contracts, x402 middleware timestamps and resource bounds. |
 | **`@arcenpay/react`** | 5 | **23** | **PASSED** | Subscription lifecycle, billing period calculations, feature gating guards, API utilities, error codes. |
 | **`@arcenpay/internal-core`** | 4 | **26** | **PASSED** | Chain family definitions, environment configurations, contract address registries, app origins. |

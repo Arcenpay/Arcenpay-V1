@@ -210,7 +210,7 @@ describe("ArcenAgent — Agentic Payment Links", () => {
 
   describe("MCP Tools", () => {
     it("should export MCP tool definitions with schemas", () => {
-      expect(ARCENPAY_MCP_TOOL_DEFINITIONS).toHaveLength(12);
+      expect(ARCENPAY_MCP_TOOL_DEFINITIONS).toHaveLength(15);
       const names = ARCENPAY_MCP_TOOL_DEFINITIONS.map((t) => t.name);
       expect(names).toContain("arcenpay_resolve_payment_link");
       expect(names).toContain("arcenpay_pay_payment_link");

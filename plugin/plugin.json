@@ -1,0 +1,43 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "arcenpay",
+  "version": "1.0.0",
+  "description": "Read-only ArcenPay account tools for AI assistants.",
+  "author": {
+    "name": "ArcenPay",
+    "email": "support@arcenpay.com",
+    "url": "https://arcenpay.com"
+  },
+  "homepage": "https://arcenpay.com",
+  "license": "MIT",
+  "keywords": ["billing", "subscriptions", "entitlements", "invoices", "web3"],
+  "extensions": {
+    "com.openai": {
+      "interface": {
+        "displayName": "ArcenPay",
+        "shortDescription": "Inspect your ArcenPay billing account",
+        "longDescription": "Query companies, plans, add-ons, subscriptions, entitlements, invoices, payment links, agent mandates, and supported chains in your ArcenPay workspace. This connection is read-only: it never changes billing state or moves funds.",
+        "developerName": "ArcenPay",
+        "category": "Developer Tools",
+        "capabilities": ["Read account data"],
+        "websiteURL": "https://arcenpay.com",
+        "supportURL": "https://arcenpay.com/support",
+        "privacyPolicyURL": "https://arcenpay.com/privacy",
+        "termsOfServiceURL": "https://arcenpay.com/terms",
+        "defaultPrompt": [
+          "List my ArcenPay companies.",
+          "Which plan is Acme on?",
+          "Show my unpaid invoices."
+        ],
+        "brandColor": "#10A37F",
+        "logo": "./assets/logo.svg",
+        "composerIcon": "./assets/icon.svg"
+      },
+      "onboardingSkill": "./skills/get-started/SKILL.md",
+      "review": {
+        "commerce": false,
+        "commerce_description": "This plugin is read-only and does not sell products or process payments."
+      }
+    }
+  }
+}

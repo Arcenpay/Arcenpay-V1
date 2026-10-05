@@ -123,7 +123,7 @@ export interface AgentConfig {
   sorobanRpcUrl?: string;
   /** Stellar-only: network passphrase. Defaults from the chain registry. */
   networkPassphrase?: string;
-  /** Optional ArcenPay API base URL (e.g., 'https://api.arcenpay.xyz' or 'http://localhost:3300') */
+  /** Optional ArcenPay API base URL (e.g., 'https://api.arcenpay.com' or 'http://localhost:3300') */
   apiUrl?: string;
   /** Optional API key for authenticated merchant/provider operations (such as creating payment links) */
   apiKey?: string;
