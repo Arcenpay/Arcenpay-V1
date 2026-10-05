@@ -24,6 +24,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { buildSIWEMessage } from "@/lib/auth";
+import { resolveReturnTo } from "@/lib/return-to";
 import { wagmiConfig } from "@/lib/wagmi";
 import {
   DEFAULT_WALLET_CHAIN_LABEL,
@@ -49,6 +50,7 @@ type EmailAuthFlowProps = {
   inviteToken?: string | null;
   initialStep?: Step;
   initialKey?: string | null;
+  returnTo?: string | null;
 };
 
 type Step = "chain" | "wallet" | "email" | "code" | "sign" | "activate";
@@ -74,6 +76,7 @@ export function EmailAuthFlow({
   inviteToken,
   initialStep,
   initialKey,
+  returnTo,
 }: EmailAuthFlowProps) {
   const router = useRouter();
   const { address, isConnected } = useAccount();
@@ -255,6 +258,13 @@ export function EmailAuthFlow({
   }, [retryAt, timerLabel]);
 
   const navigatePostAuth = async () => {
+    // If login was entered from another flow (e.g. the MCP OAuth authorize
+    // URL), hand control straight back so that flow can complete.
+    const resolvedReturnTo = resolveReturnTo(returnTo);
+    if (resolvedReturnTo) {
+      window.location.href = resolvedReturnTo;
+      return;
+    }
     try {
       const sessionRes = await apiFetch("/api/auth/session");
       if (sessionRes.ok) {
