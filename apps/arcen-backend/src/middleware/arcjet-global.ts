@@ -45,6 +45,23 @@ export async function arcjetGlobalProtect(c: Context, next: Next) {
     return next();
   }
 
+  // The hosted MCP surface is consumed by machine clients — OpenAI's plugin
+  // verifier, ChatGPT/Codex connectors, and other MCP hosts — which look like
+  // bots to Arcjet. Bot/shield blocking them returns a 429 and breaks domain
+  // verification and the OAuth/metadata discovery fetches. These routes never
+  // serve user HTML and enforce their own auth (OAuth 2.1 or an API key), so
+  // they are exempt from edge bot/shield protection.
+  if (
+    pathname === "/mcp" ||
+    pathname.startsWith("/mcp/") ||
+    pathname === "/oauth" ||
+    pathname.startsWith("/oauth/") ||
+    pathname === "/.well-known" ||
+    pathname.startsWith("/.well-known/")
+  ) {
+    return next();
+  }
+
   // Internal/machine traffic (Railway health checks, in-container calls from the
   // co-located facilitator) arrives with no proxy-appended client IP. Arcjet
   // cannot fingerprint it, so evaluating shield/bot here only produces
