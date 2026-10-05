@@ -4,7 +4,7 @@ import { resolveMcpAuth } from "./auth.js";
 import { createDefaultMcpDeps, type McpDeps } from "./deps.js";
 import { registerReadOnlyTools } from "./tools.js";
 import type { ApiKeyContext } from "../lib/auth/api-key-auth.js";
-import { MCP_OAUTH_ISSUER } from "../config.js";
+import { MCP_OAUTH_ISSUER, MCP_OAUTH_SECRET } from "../config.js";
 
 export const MCP_SERVER_NAME = "arcenpay";
 export const MCP_SERVER_VERSION = "1.0.0";
@@ -46,10 +46,13 @@ export async function handleMcpRequest(
     const challenge = resourceMetadataUrl
       ? `Bearer realm="arcenpay-mcp", resource_metadata="${resourceMetadataUrl}"`
       : 'Bearer realm="arcenpay-mcp"';
+    const message = MCP_OAUTH_SECRET
+      ? "Authentication required"
+      : resolution.error.error;
     return new Response(
       JSON.stringify({
         ok: false,
-        error: resolution.error.error,
+        error: message,
         code: "UNAUTHORIZED",
       }),
       {
