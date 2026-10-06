@@ -17,6 +17,9 @@ import {
   ArrowRight,
   KeyRound,
   LogOut,
+  Sparkles,
+  Copy,
+  Check,
 } from "lucide-react";
 import { NetworkIcon } from "@web3icons/react/dynamic";
 import { AuthMarketingPanel } from "./auth-marketing-panel";
@@ -118,6 +121,8 @@ export function EmailAuthFlow({
   const [existingAccountWallet, setExistingAccountWallet] = useState<string | null>(null);
 
   /* Activation key states */
+  const EARLY_ACCESS_KEY = "ARCN-45F2-7FE9-7C74";
+  const [copiedEarlyKey, setCopiedEarlyKey] = useState(false);
   const [activationKey, setActivationKey] = useState(initialKey?.trim() || "");
   const [verifyingKey, setVerifyingKey] = useState(false);
   const [redeemingKey, setRedeemingKey] = useState(false);
@@ -1757,6 +1762,45 @@ export function EmailAuthFlow({
                     "Activate and continue"
                   )}
                 </Button>
+
+                {/* Early user bottom helper note */}
+                <div className="rounded-lg bg-muted/40 border border-border/60 p-3 text-center sm:text-left flex flex-col sm:flex-row items-center justify-between gap-2 text-xs">
+                  <span className="text-muted-foreground">
+                    Early user? Use free code{" "}
+                    <code className="font-mono font-semibold text-foreground px-1.5 py-0.5 rounded bg-muted border border-border/40 select-all">
+                      {EARLY_ACCESS_KEY}
+                    </code>
+                  </span>
+                  <div className="flex items-center gap-2.5 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigator.clipboard.writeText(EARLY_ACCESS_KEY);
+                        setCopiedEarlyKey(true);
+                        toast.success("Code copied!");
+                        setTimeout(() => setCopiedEarlyKey(false), 2000);
+                      }}
+                      className="text-muted-foreground hover:text-foreground transition-colors p-0.5 rounded"
+                      title="Copy code"
+                    >
+                      {copiedEarlyKey ? (
+                        <Check className="h-3.5 w-3.5 text-emerald-500" />
+                      ) : (
+                        <Copy className="h-3.5 w-3.5" />
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        handleActivationKeyChange(EARLY_ACCESS_KEY);
+                        toast.success("Early access code applied!");
+                      }}
+                      className="font-medium text-blue-600 dark:text-blue-400 hover:underline text-xs"
+                    >
+                      Click to apply &rarr;
+                    </button>
+                  </div>
+                </div>
 
                 <div className="flex items-center justify-between gap-3 text-xs pt-2">
                   <a

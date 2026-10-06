@@ -1,14 +1,14 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "arcenpay",
-  "version": "1.0.3",
+  "version": "1.0.5",
   "description": "Read-only ArcenPay billing account lookups for AI assistants.",
   "author": {
     "name": "ArcenPay",
     "email": "support@arcenpay.com",
-    "url": "https://arcenpay.com"
+    "url": "https://www.arcenpay.com"
   },
-  "homepage": "https://arcenpay.com",
+  "homepage": "https://www.arcenpay.com",
   "license": "MIT",
   "keywords": ["billing", "subscriptions", "entitlements", "invoices", "web3"],
   "extensions": {
@@ -16,22 +16,22 @@
       "interface": {
         "displayName": "ArcenPay",
         "shortDescription": "Billing account lookups",
-        "longDescription": "Read-only access to your ArcenPay billing account. Ask in plain language to list customer companies, see which plan and subscription status a company is on, check whether a customer has access to a feature, list and look up invoices with a PDF download link, inspect payment links, check agent-payment mandate and settlement status, and see which blockchains ArcenPay supports. It never changes billing state, never starts subscriptions, and never moves funds.",
+        "longDescription": "ArcenPay is a billing and entitlement platform. This plugin gives you read-only access to your ArcenPay account: list customer companies, see which plan and subscription status a company is on, check whether a customer has access to a feature, list and look up invoices with a PDF download link, inspect payment links, check agent-payment mandate and settlement status, and see which blockchains ArcenPay supports. It never changes billing state, never starts subscriptions, and never moves funds.",
         "developerName": "ArcenPay",
-        "category": "Developer Tools",
+        "category": "Productivity",
         "capabilities": ["Read account data"],
-        "websiteURL": "https://arcenpay.com",
-        "supportURL": "https://arcenpay.com/support",
-        "privacyPolicyURL": "https://arcenpay.com/privacy",
-        "termsOfServiceURL": "https://arcenpay.com/terms",
+        "websiteURL": "https://www.arcenpay.com",
+        "supportURL": "https://www.arcenpay.com/support",
+        "privacyPolicyURL": "https://www.arcenpay.com/privacy",
+        "termsOfServiceURL": "https://www.arcenpay.com/terms",
         "defaultPrompt": [
           "List my ArcenPay companies.",
           "Which plan is Acme on?",
           "Show my unpaid invoices."
         ],
-        "brandColor": "#10A37F",
-        "logo": "./assets/logo.svg",
-        "composerIcon": "./assets/icon.svg"
+        "brandColor": "#0B59E5",
+        "logo": "./assets/logo.png",
+        "composerIcon": "./assets/icon.png"
       },
       "onboardingSkill": "./skills/get-started/SKILL.md",
       "review": {
@@ -73,15 +73,18 @@
           "negative": [
             {
               "description": "Unsupported write: creating a payment link",
-              "prompt": "Create a $50 payment link for Acme."
+              "prompt": "Create a $50 payment link for Acme.",
+              "expected_behavior": "Explain that this connection is read-only and cannot create payment links, and do not call any write tool."
             },
             {
               "description": "Unsupported lifecycle change: cancelling a subscription",
-              "prompt": "Cancel Acme's subscription right now."
+              "prompt": "Cancel Acme's subscription right now.",
+              "expected_behavior": "Explain that subscription changes are not available here and direct the user to the ArcenPay dashboard."
             },
             {
               "description": "Out-of-scope data access: another workspace",
-              "prompt": "Show me the companies in a different ArcenPay workspace I don't own."
+              "prompt": "Show me the companies in a different ArcenPay workspace I don't own.",
+              "expected_behavior": "Explain that only the connected workspace's own data can be accessed and refuse the request."
             }
           ]
         }
