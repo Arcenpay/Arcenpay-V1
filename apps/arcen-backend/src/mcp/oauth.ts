@@ -225,8 +225,12 @@ export function createOAuthRoutes(): Hono {
 
     const session = await getSessionFromCtx(c);
     if (!session) {
-      const next = encodeURIComponent(c.req.url);
-      return c.redirect(`${APP_URL}/login?next=${next}`);
+      // Hand off to the dashboard's consent screen. The dashboard holds the
+      // user's session cookie first-party, so after a one-click "Authorize" it
+      // resumes this endpoint same-site (cookie sent) and we issue the code —
+      // no repeated full login.
+      const consentUrl = `${APP_URL.replace(/\/+$/, "")}/oauth/authorize?${url.searchParams.toString()}`;
+      return c.redirect(consentUrl);
     }
     if (!session.currentTeamId) {
       return c.redirect(

@@ -35,6 +35,7 @@ import {
   protectedResourceMetadata,
   authorizationServerMetadata,
 } from "../../src/mcp/oauth.js";
+import { getSessionFromCtx } from "../../src/lib/auth/auth.server.js";
 import { resolveMcpAuth } from "../../src/mcp/auth.js";
 
 const CLIENT_ID = "https://chatgpt.com/oauth/client.json";
@@ -83,6 +84,16 @@ describe("hosted MCP OAuth 2.1", () => {
     expect(`${location.origin}${location.pathname}`).toBe(REDIRECT);
     expect(location.searchParams.get("code")).toBeTruthy();
     expect(location.searchParams.get("state")).toBe("xyz");
+  });
+
+  it("hands off to the dashboard consent screen when there is no session", async () => {
+    vi.mocked(getSessionFromCtx).mockResolvedValueOnce(null as never);
+    const res = await authorize();
+    expect(res.status).toBe(302);
+    const location = res.headers.get("location") ?? "";
+    expect(location).toContain("https://app.test/oauth/authorize?");
+    expect(location).toContain("client_id=");
+    expect(location).toContain("code_challenge=");
   });
 
   it("exchanges a code for an access token the MCP accepts", async () => {
