@@ -3,7 +3,7 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { createArcenMcpServer, handleMcpRequest } from "../../src/mcp/server.js";
-import type { McpDeps } from "../../src/mcp/deps.js";
+import { createDefaultMcpDeps, type McpDeps } from "../../src/mcp/deps.js";
 import type { ApiKeyContext } from "../../src/lib/auth/api-key-auth.js";
 
 const CTX: ApiKeyContext = {
@@ -191,6 +191,26 @@ describe("hosted MCP read-only tools", () => {
     expect(JSON.parse(text(chains))[0].chainId).toBe(84532);
 
     await client.close();
+  });
+
+  it("default deps listChains supports all chain families without throwing", async () => {
+    const deps = createDefaultMcpDeps();
+    const chains = (await deps.listChains()) as Array<{
+      chainId: number;
+      name: string;
+      testnet: boolean;
+      family: string;
+      contracts: Record<string, string> | null;
+    }>;
+    expect(chains.length).toBeGreaterThan(0);
+    const stellarChain = chains.find((c) => c.chainId === 9000000);
+    expect(stellarChain).toBeDefined();
+    expect(stellarChain?.family).toBe("stellar");
+    expect(stellarChain?.name).toBe("Stellar Mainnet");
+
+    const evmChain = chains.find((c) => c.chainId === 84532);
+    expect(evmChain).toBeDefined();
+    expect(evmChain?.family).toBe("evm");
   });
 
   it("get_subscription and check_entitlement scope to a company", async () => {

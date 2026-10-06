@@ -1,6 +1,6 @@
 import {
   CHAIN_REGISTRY,
-  getChain,
+  getChainDescriptor,
   getChainFamily,
   getContractAddresses,
 } from "@arcenpay/internal-core";
@@ -312,7 +312,7 @@ export function createDefaultMcpDeps(): McpDeps {
     async listChains() {
       return Object.keys(CHAIN_REGISTRY).map((key) => {
         const chainId = Number(key);
-        const chain = getChain(chainId);
+        const descriptor = getChainDescriptor(chainId) ?? CHAIN_REGISTRY[chainId];
         let contracts: Record<string, string> | null = null;
         try {
           contracts = getContractAddresses(chainId) as unknown as Record<
@@ -324,9 +324,9 @@ export function createDefaultMcpDeps(): McpDeps {
         }
         return {
           chainId,
-          name: chain.name,
-          testnet: Boolean(chain.testnet),
-          family: getChainFamily(chainId),
+          name: descriptor?.name ?? `Chain ${chainId}`,
+          testnet: Boolean(descriptor?.testnet),
+          family: descriptor?.family ?? getChainFamily(chainId) ?? "evm",
           contracts,
         };
       });
