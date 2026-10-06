@@ -35,85 +35,9 @@ ArcenPay provides SaaS operators, Web3 protocols, and AI agent developers with a
 
 ---
 
-## System Topology & Architecture
 
-```
-┌──────────────────────────────────────────────────────────────────────────────────┐
-│                                ON-CHAIN PROTOCOLS                                │
-│                                                                                  │
-│   EVM Chains (Base, Sepolia, BOT Chain, Arc)        Stellar Soroban Network      │
-│   ├─ SubscriptionRegistry (ERC-721/State)           ├─ subscription_registry     │
-│   ├─ ERC-7579 Autopay Module                        ├─ autopay_account           │
-│   └─ SessionVault & ZKUsageVerifier                 └─ session_vault             │
-└──────────────────────────────┬─────────────────────────────────┬─────────────────┘
-                               │ Poll (12s)                      │
-                               ▼                                 ▼
-┌──────────────────────────────────────────────────────────────────────────────────┐
-│                         FACILITATOR BRIDGE NODE (:3402)                          │
-│                                                                                  │
-│  • EventListenerService   : Ingests on-chain mints, renewals, and cancellations  │
-│  • BillingKeeper          : Automated renewal scanner & execution on-chain       │
-│  • SettlementWriter       : ZK batch settlement orchestration                    │
-│  • DurableJobQueue        : Redis-backed queue with fault-tolerant memory fallback│
-│  • Webhook Fan-Out        : Svix / HMAC-SHA256 signed event delivery             │
-└──────────────────────────────┬───────────────────────────────────────────────────┘
-                               │ POST /api/v1/billing/events (Idempotency Key)
-                               ▼
-┌──────────────────────────────────────────────────────────────────────────────────┐
-│                           BACKEND API ENGINE (:3300)                             │
-│                                                                                  │
-│  Hono v4 Core • Prisma v7 • PostgreSQL :5433 • Centralized Configuration         │
-│                                                                                  │
-│  • billing-events.ts      : Deduplication and transactional event router         │
-│  • billing-ledger.ts      : Subscription state upsert & micro-accounting ledger  │
-│  • billing-recovery.ts    : 4-stage exponential retry queue (5m -> 8h)           │
-│  • billing-dunning.ts     : Grace period enforcement & automated plan downgrades │
-│  • billing-proration.ts   : Second-precision mid-cycle plan transition delta     │
-│  • usage-credits.ts       : Expiry-aware FIFO/LIFO metered usage burn ledger     │
-│  • invoice-documents.ts   : ISO 20022 XML & PDF generation with HMAC download    │
-└──────────────────────────────┬───────────────────────────────────────────────────┘
-                               │ Session Tokens / Entitlements / Access Checks
-                               ▼
-┌──────────────────────────────────────────────────────────────────────────────────┐
-│                           CLIENT & INTEGRATION SURFACE                           │
-│                                                                                  │
-│  Provider Dashboard        React SDK                  Node SDK       Agent SDK   │
-│     (Next.js 16)       (@arcenpay/react)          (@arcenpay/node) (@arcenpay/   │
-│     • Plan Config       • ArcenPayProvider         • ArcenClient     agent)      │
-│     • Invoicing         • ArcenEmbed Modal         • Webhooks       • x402 Client│
-│     • Analytics         • useEntitlement()         • Server Verify  • MCP Tools  │
-└──────────────────────────────────────────────────────────────────────────────────┘
-```
 
----
 
-## Monorepo Layout
-
-This repository is managed with [Turborepo](https://turbo.build/) and structured across modular application and library boundaries:
-
-```
-arcenpay-v1/
-├── apps/
-│   ├── arcen-dashboard/       # Provider Control Plane (Next.js 16 App Router, Tailwind CSS)
-│   ├── arcen-backend/         # Core Billing Engine & REST API (Hono v4, Prisma v7, PostgreSQL)
-│   ├── facilitator/           # Bridge Node & On-chain Keeper (Express v5, Redis Queue, Ethers/Viem)
-│   ├── demo-dapp/             # Production Reference App (Vite, React 19, Stellar Freighter, Wagmi)
-│   └── arcenpay-docs/         # Developer Documentation & API Specifications (Mintlify)
-├── packages/
-│   ├── sdk-react/             # @arcenpay/react (v1.0.0) — Frontend UI components & React hooks
-│   ├── sdk-node/              # @arcenpay/node (v1.0.0) — Server SDK, access tokens & webhooks
-│   ├── sdk-agent/             # @arcenpay/agent (v1.0.0) — Autonomous x402 payments & MCP server
-│   ├── internal-core/         # @arcenpay/internal-core (v1.0.0) — Shared runtime constants & ABIs
-│   ├── shared-types/          # @arcenpay/shared-types (v1.0.0) — API envelopes & DTO contracts
-│   ├── contracts/             # Solidity Protocols (SubscriptionRegistry, Autopay, SessionVault)
-│   └── stellar-contracts/     # Stellar Soroban Smart Contracts (Rust, soroban-sdk v22+)
-├── circuits/                  # ZKVUB zk-SNARK Circuits (Groth16 via Circom & SnarkJS)
-├── subgraph/                  # TheGraph indexing manifests for on-chain billing events
-├── docker-compose.yml         # Local infrastructure (PostgreSQL 16, Redis 7)
-└── turbo.json                 # Monorepo build, test, and typecheck dependency pipelines
-```
-
----
 
 ## Supported Networks & Settlement Currencies
 
