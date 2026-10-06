@@ -15,10 +15,10 @@
     "com.openai": {
       "interface": {
         "displayName": "ArcenPay",
-        "shortDescription": "Billing account lookups",
-        "longDescription": "ArcenPay is a billing and entitlement platform. This plugin gives you read-only access to your ArcenPay account: list customer companies, see which plan and subscription status a company is on, check whether a customer has access to a feature, list and look up invoices with a PDF download link, inspect payment links, check agent-payment mandate and settlement status, and see which blockchains ArcenPay supports. It never changes billing state, never starts subscriptions, and never moves funds.",
+        "shortDescription": "Billing and invoice lookups",
+        "longDescription": "ArcenPay is a billing and entitlement platform. This plugin gives you read-only access to your ArcenPay finance account: list customer companies, see which plan and subscription status a company is on, check whether a customer has access to a feature, list and look up invoices with a PDF download link, inspect payment links, check agent-payment mandate and settlement status, and see which blockchains ArcenPay supports. It never changes billing state, never starts subscriptions, and never moves funds.",
         "developerName": "ArcenPay",
-        "category": "Productivity",
+        "category": "Finance",
         "capabilities": ["Read account data"],
         "websiteURL": "https://www.arcenpay.com",
         "supportURL": "https://www.arcenpay.com/support",
