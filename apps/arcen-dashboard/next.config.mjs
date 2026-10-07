@@ -37,6 +37,7 @@ const nextConfig = {
   },
   experimental: {
     cpus: 2,
+    optimizePackageImports: ["recharts", "lucide-react", "date-fns"],
   },
   webpack: (config) => {
     config.resolve.alias = {

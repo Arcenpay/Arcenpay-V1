@@ -1,8 +1,18 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import dynamic from "next/dynamic";
 import { Star } from "lucide-react";
-import { CanvasRevealEffect } from "@/components/ui/canvas-reveal-effect";
+
+// three.js + @react-three/fiber are large and purely decorative — load them on
+// the client only so they are excluded from the server (Worker) bundle.
+const CanvasRevealEffect = dynamic(
+  () =>
+    import("@/components/ui/canvas-reveal-effect").then(
+      (mod) => mod.CanvasRevealEffect,
+    ),
+  { ssr: false },
+);
 
 export const AUTH_TESTIMONIALS = [
   {
