@@ -11,6 +11,7 @@ dist/
 .next/
 out/
 build/
+.open-next/
 *.tsbuildinfo
 
 # Turborepo
