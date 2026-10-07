@@ -74,3 +74,5 @@ test-ledger/
 # --- production demo (uses published npm SDKs; never commit its .env) ---
 prod-demo/
 
+
+packages/solana-programs/scripts/*

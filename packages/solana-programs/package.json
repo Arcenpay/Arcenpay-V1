@@ -1,0 +1,21 @@
+{
+  "name": "@arcenpay/solana-programs",
+  "version": "0.1.0",
+  "private": true,
+  "description": "ArcenPay subscription billing program for Solana (Anchor)",
+  "license": "UNLICENSED",
+  "scripts": {
+    "test": "sh -c 'if command -v cargo >/dev/null 2>&1; then cargo test --manifest-path programs/arcenpay-solana/Cargo.toml; else echo \"[solana-programs] cargo unavailable; skipping unit tests\"; fi'",
+    "test:cargo": "cargo test --manifest-path programs/arcenpay-solana/Cargo.toml",
+    "check:cargo": "cargo check --manifest-path programs/arcenpay-solana/Cargo.toml",
+    "build:sbf": "cd programs/arcenpay-solana && cargo-build-sbf",
+    "smoke:localnet": "tsx scripts/localnet-smoke.ts",
+    "smoke:settlement": "tsx scripts/settlement-smoke.ts",
+    "anchor:build": "anchor build",
+    "anchor:test": "anchor test",
+    "anchor:deploy:devnet": "anchor deploy --provider.cluster devnet",
+    "anchor:deploy:mainnet": "anchor deploy --provider.cluster mainnet-beta",
+    "deploy:devnet": "SOLANA_CLUSTER=devnet scripts/deploy-solana.sh",
+    "deploy:mainnet": "SOLANA_CLUSTER=mainnet-beta scripts/deploy-solana.sh"
+  }
+}

@@ -1,0 +1,12 @@
+[package]
+name = "mock-groth16-verifier"
+version = "0.1.0"
+description = "Test-only mock verifier exercising the ArcenPay settle proof gate"
+edition = "2021"
+
+[lib]
+name = "mock_groth16_verifier"
+crate-type = ["lib"]
+
+[dependencies]
+solana-program = "1.18.26"
