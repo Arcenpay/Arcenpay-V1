@@ -29,7 +29,7 @@ import {
   ARC_TESTNET_CHAIN_ID,
   BOT_MAINNET_CHAIN_ID,
   BASE_MAINNET_CHAIN_ID,
-  DEFAULT_CHAIN_ID,
+  DEFAULT_EVM_CHAIN_ID,
   getChainLabel,
 } from "@/lib/default-chain";
 import type { EnvironmentMode } from "@/lib/default-chain";
@@ -247,7 +247,7 @@ export function useContractAddresses(chainIdOverride?: number | null) {
         `Unsupported chain ${chainId}. Configure supported production chain before enabling this workspace.`,
       );
     }
-    return getContractAddresses(DEFAULT_CHAIN_ID);
+    return getContractAddresses(DEFAULT_EVM_CHAIN_ID);
   }
 }
 

@@ -101,6 +101,7 @@ import {
 import type { TokenOption } from "@/lib/contracts";
 import {
   DEFAULT_CHAIN_ID,
+  DEFAULT_EVM_CHAIN_ID,
   DEFAULT_MAINNET_CHAIN_ID,
   getChainLabel,
   isSupportedDashboardChainId,
@@ -3435,7 +3436,7 @@ function PlansTable({
   const stellar = useStellarWallet(activeEnvironment?.chainId ?? 9_000_001);
   const solana = useSolanaWallet(activeEnvironment?.chainId ?? 9_100_001);
   const chainId = useChainId();
-  const publicClient = usePublicClient({ chainId: chainId || DEFAULT_CHAIN_ID });
+  const publicClient = usePublicClient({ chainId: chainId || DEFAULT_EVM_CHAIN_ID });
   const { signTypedDataAsync } = useSignTypedData();
   const { data: walletClient } = useWalletClient();
 

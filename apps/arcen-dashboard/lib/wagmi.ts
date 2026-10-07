@@ -9,7 +9,7 @@ import {
   BOT_TESTNET_CHAIN_ID,
   BASE_MAINNET_CHAIN_ID,
   BASE_SEPOLIA_CHAIN_ID,
-  DEFAULT_CHAIN_ID,
+  DEFAULT_EVM_CHAIN_ID,
 } from "@/lib/default-chain";
 
 export const projectId =
@@ -26,15 +26,15 @@ export const networks = [
 ] as const;
 
 export const defaultNetwork =
-  (DEFAULT_CHAIN_ID as number) === ARC_TESTNET_CHAIN_ID
+  (DEFAULT_EVM_CHAIN_ID as number) === ARC_TESTNET_CHAIN_ID
     ? arcTestnet
-    : (DEFAULT_CHAIN_ID as number) === BASE_SEPOLIA_CHAIN_ID
+    : (DEFAULT_EVM_CHAIN_ID as number) === BASE_SEPOLIA_CHAIN_ID
       ? baseSepolia
-      : (DEFAULT_CHAIN_ID as number) === BASE_MAINNET_CHAIN_ID
+      : (DEFAULT_EVM_CHAIN_ID as number) === BASE_MAINNET_CHAIN_ID
         ? base
-        : (DEFAULT_CHAIN_ID as number) === BOT_MAINNET_CHAIN_ID
+        : (DEFAULT_EVM_CHAIN_ID as number) === BOT_MAINNET_CHAIN_ID
           ? botMainnet
-          : (DEFAULT_CHAIN_ID as number) === BOT_TESTNET_CHAIN_ID
+          : (DEFAULT_EVM_CHAIN_ID as number) === BOT_TESTNET_CHAIN_ID
             ? botTestnet
             : baseSepolia;
 
@@ -313,7 +313,7 @@ export function patchConnectorChainId(connector: any) {
 
     // 5. Fallback to default network or Ethereum Mainnet (1)
     if (!id || isNaN(id) || id <= 0) {
-      id = (DEFAULT_CHAIN_ID as number) || 1;
+      id = (DEFAULT_EVM_CHAIN_ID as number) || 1;
     }
 
     // Synchronize AppKit ChainController if needed so AppKit UI stays in sync

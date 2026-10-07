@@ -5,14 +5,14 @@ import { useAppKit, useAppKitAccount } from "@reown/appkit/react";
 import { toast } from "sonner";
 import { useAccount, useChainId, useDisconnect, useSwitchChain } from "wagmi";
 import {
-  DEFAULT_CHAIN_ID,
+  DEFAULT_EVM_CHAIN_ID,
   isSupportedDashboardChainId,
   isSupportedWalletAuthChainId,
   getChainLabel,
   SUPPORTED_DASHBOARD_CHAIN_LABEL,
 } from "@/lib/default-chain";
 
-export const DEFAULT_WALLET_CHAIN_ID = DEFAULT_CHAIN_ID;
+export const DEFAULT_WALLET_CHAIN_ID = DEFAULT_EVM_CHAIN_ID;
 export const DEFAULT_WALLET_CHAIN_LABEL = getChainLabel(DEFAULT_WALLET_CHAIN_ID);
 export const SUPPORTED_WALLET_CHAIN_LABEL = SUPPORTED_DASHBOARD_CHAIN_LABEL;
 

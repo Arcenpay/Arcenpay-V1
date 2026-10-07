@@ -2,12 +2,14 @@ import {
   getChain,
   getChainDescriptor,
   getConfiguredRuntimeChainId,
+  isEvmChain,
   STELLAR_MAINNET_CHAIN_ID,
   STELLAR_TESTNET_CHAIN_ID,
   STELLAR_FUTURENET_CHAIN_ID,
   SOLANA_MAINNET_CHAIN_ID,
   SOLANA_DEVNET_CHAIN_ID,
 } from "@arcenpay/internal-core";
+import type { EvmSupportedChainId } from "@arcenpay/internal-core";
 
 export const SEPOLIA_CHAIN_ID = 11155111 as const;
 export const BASE_SEPOLIA_CHAIN_ID = 84532 as const;
@@ -105,11 +107,36 @@ export function getChainIdsForEnvironment(
   return mode === "PRODUCTION" ? MAINNET_CHAIN_IDS : TESTNET_CHAIN_IDS;
 }
 
-/** The runtime-configured default (from env var). Falls back to Arc Testnet. */
+/**
+ * Product-level default chain, resolved from env (see @arcenpay/internal-core
+ * runtime-profile) in this order:
+ *   ARCENPAY_DEFAULT_CHAIN_ID -> CHAIN_ID -> NEXT_PUBLIC_CHAIN_ID
+ * Used for label/analytics/subgraph fallbacks. Solana-first.
+ */
 export const DEFAULT_CHAIN_ID: SupportedDashboardChainId =
-  parseChainId(getConfiguredRuntimeChainId()) ?? BOT_MAINNET_CHAIN_ID;
+  parseChainId(getConfiguredRuntimeChainId()) ?? SOLANA_MAINNET_CHAIN_ID;
 
-export const DEFAULT_MAINNET_CHAIN_ID: MainnetChainId = BOT_MAINNET_CHAIN_ID;
+/**
+ * EVM-safe default for wagmi / viem / EVM-wallet code. Those APIs only
+ * understand EVM chains, so when DEFAULT_CHAIN_ID is a non-EVM chain
+ * (Solana/Stellar) they fall back to BOT Chain Mainnet instead of silently
+ * resolving to a testnet.
+ */
+export const DEFAULT_EVM_CHAIN_ID: EvmSupportedChainId = isEvmChain(
+  DEFAULT_CHAIN_ID,
+)
+  ? (DEFAULT_CHAIN_ID as EvmSupportedChainId)
+  : BOT_MAINNET_CHAIN_ID;
+
+/**
+ * Default chain for PRODUCTION environments when none is pinned — Solana-first.
+ * Follows the configured runtime default when that default is a mainnet.
+ */
+export const DEFAULT_MAINNET_CHAIN_ID: MainnetChainId = isMainnetChainId(
+  DEFAULT_CHAIN_ID,
+)
+  ? DEFAULT_CHAIN_ID
+  : SOLANA_MAINNET_CHAIN_ID;
 
 export const DEFAULT_PRODUCTION_CHAIN_ID: SupportedDashboardChainId =
   DEFAULT_MAINNET_CHAIN_ID;
