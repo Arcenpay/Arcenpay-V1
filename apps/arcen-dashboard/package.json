@@ -109,6 +109,6 @@
     "@types/react-dom": "^19",
     "@types/three": "^0.185.1",
     "baseline-browser-mapping": "^2.10.30",
-    "typescript": "^5"
+    "typescript": "^7"
   }
 }
