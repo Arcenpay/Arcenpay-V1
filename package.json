@@ -64,7 +64,7 @@
     "typescript": "^5.9.3"
   },
   "devDependencies": {
-    "@types/node": "^22.19.19",
+    "@types/node": "^26.6.4",
     "next": "^16.0.10",
     "picomatch": "^2.3.2",
     "prettier": "^3.4.0",
