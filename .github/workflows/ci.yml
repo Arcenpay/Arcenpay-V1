@@ -11,7 +11,7 @@ jobs:
     name: Typecheck, Test & Build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       - uses: actions/setup-node@v6
         with:
@@ -48,7 +48,7 @@ jobs:
     name: Repository Hygiene
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       - name: Check for unfinished work markers
         run: bash scripts/check-unfinished.sh
