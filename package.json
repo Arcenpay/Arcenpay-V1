@@ -53,22 +53,22 @@
     "send:launch:preview": "npx tsx scripts/send-launch-emails.ts --preview /tmp/launch-preview.html"
   },
   "dependencies": {
-    "@arcjet/next": "^1.4.0",
-    "@arcjet/node": "^1.4.0",
-    "@types/react": "^19.2.18",
-    "@types/react-dom": "^19.2.4",
-    "react": "^19.2.8",
-    "react-dom": "^19.2.8",
+    "@arcjet/next": "^1.14.0",
+    "@arcjet/node": "^1.14.0",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
     "tsup": "^8.3.0",
-    "turbo": "^2.10.12",
+    "turbo": "^2.11.7",
     "typescript": "^5.9.3"
   },
   "devDependencies": {
     "@types/node": "^22.19.19",
-    "next": "^16.0.10",
+    "next": "^16.3.8",
     "picomatch": "^2.3.2",
-    "prettier": "^3.4.0",
-    "turbo": "^2.10.12",
+    "prettier": "^3.9.9",
+    "turbo": "^2.11.7",
     "typescript": "^5.9.3"
   },
   "engines": {
@@ -79,9 +79,9 @@
     "@coinbase/cdp-sdk": "1.44.1"
   },
   "optionalDependencies": {
-    "@rollup/rollup-linux-x64-gnu": "^4.60.4",
-    "@tailwindcss/oxide-linux-x64-gnu": "4.2.1",
-    "@next/swc-linux-x64-gnu": "16.0.10",
-    "lightningcss-linux-x64-gnu": "1.31.1"
+    "@rollup/rollup-linux-x64-gnu": "^4.64.0",
+    "@tailwindcss/oxide-linux-x64-gnu": "4.3.3",
+    "@next/swc-linux-x64-gnu": "16.3.8",
+    "lightningcss-linux-x64-gnu": "1.33.0"
   }
 }
