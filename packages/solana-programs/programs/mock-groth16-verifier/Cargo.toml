@@ -9,4 +9,4 @@ name = "mock_groth16_verifier"
 crate-type = ["lib"]
 
 [dependencies]
-solana-program = "1.18.26"
+solana-program = "2.3.0"
