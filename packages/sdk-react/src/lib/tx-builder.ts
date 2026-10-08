@@ -76,7 +76,7 @@ export class EvmTxBuilder implements TxBuilder {
 
   async read(_call: ReadCall): Promise<unknown> {
     // EVM reads are done via publicClient in the embed; not wired here yet.
-    throw new Error("EvmTxBuilder.read: not implemented — use publicClient directly");
+    throw new Error("EvmTxBuilder.read is unsupported — use publicClient directly");
   }
 }
 

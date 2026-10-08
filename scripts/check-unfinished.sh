@@ -59,7 +59,7 @@ for dir in "${SCAN_DIRS[@]}"; do
 
   # Use grep (or rg if available) to find matches
   if command -v rg &> /dev/null; then
-    MATCHES=$(rg --no-heading --line-number -E "$PATTERNS" $INCLUDE_ARGS $EXCLUDE_ARGS "$dir" 2>/dev/null || true)
+    MATCHES=$(rg --no-heading --line-number "$PATTERNS" $INCLUDE_ARGS $EXCLUDE_ARGS "$dir" 2>/dev/null || true)
   else
     MATCHES=$(grep -rn -E "$PATTERNS" "$dir" \
       --include="*.ts" --include="*.tsx" --include="*.js" --include="*.jsx" \
@@ -83,7 +83,7 @@ for dir in "${SCAN_DIRS[@]}"; do
   fi
 
   if command -v rg &> /dev/null; then
-    STUB_MATCHES=$(rg --no-heading --line-number -E "(\bstub\b|Phase \d+ stub)" $INCLUDE_ARGS $EXCLUDE_ARGS "$dir" 2>/dev/null || true)
+    STUB_MATCHES=$(rg --no-heading --line-number "(\bstub\b|Phase \d+ stub)" $INCLUDE_ARGS $EXCLUDE_ARGS "$dir" 2>/dev/null || true)
   else
     STUB_MATCHES=$(grep -rn -wE "(stub|Phase [0-9]+ stub)" "$dir" \
       --include="*.ts" --include="*.tsx" --include="*.js" --include="*.jsx" \

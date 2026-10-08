@@ -339,7 +339,7 @@ async function requestHostedPaymasterData(params: {
   bundlerUrl: string;
   paymasterUrl: string;
   userOperation: any;
-  mode: "stub" | "final";
+  mode: "estimate" | "final";
 }) {
   const {
     chainId: _ignoredChainId,
@@ -348,7 +348,7 @@ async function requestHostedPaymasterData(params: {
   } = params.userOperation as Record<string, unknown>;
 
   const sponsorship =
-    params.mode === "stub"
+    params.mode === "estimate"
       ? await (params.paymasterClient as any).getPaymasterStubData({
           chainId: params.chainId,
           entryPointAddress: params.entryPointAddress,
@@ -742,7 +742,7 @@ async function createKernelExecutionContext(config: {
           bundlerUrl,
           paymasterUrl,
           userOperation,
-          mode: "stub",
+          mode: "estimate",
         });
 
         return {

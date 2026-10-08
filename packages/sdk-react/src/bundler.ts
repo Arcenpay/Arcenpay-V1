@@ -117,7 +117,7 @@ export function withArcenPayNextConfig<T extends NextConfigShape>(
       resolveAlias: {
         ...(nextConfig.turbopack?.resolveAlias ?? {}),
         // Turbopack has no "false" alias. Point the optional modules at an
-        // empty stub module instead, which is the supported equivalent.
+        // empty module instead, which is the supported equivalent.
         ...Object.fromEntries(
           ARCENPAY_OPTIONAL_MODULES.map((moduleName) => [
             moduleName,
