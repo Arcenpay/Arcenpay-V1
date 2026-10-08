@@ -17,7 +17,7 @@
     "test:e2e:report": "playwright show-report"
   },
   "dependencies": {
-    "@apollo/client": "^3.14.0",
+    "@apollo/client": "^4.3.1",
     "@arcenpay/internal-core": "*",
     "@arcenpay/react": "^1.0.0",
     "@arcenpay/shared-types": "*",

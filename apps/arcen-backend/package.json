@@ -23,7 +23,7 @@
     "db:studio": "prisma studio"
   },
   "dependencies": {
-    "@apollo/client": "^3.14.0",
+    "@apollo/client": "^4.3.1",
     "@arcenpay/internal-core": "*",
     "@arcenpay/shared-types": "*",
     "@arcjet/node": "^1.4.0",
