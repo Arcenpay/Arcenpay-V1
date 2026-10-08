@@ -1,0 +1,26 @@
+# Normalize line endings across the repository
+* text=auto eol=lf
+
+# Explicit text types
+*.ts text
+*.tsx text
+*.js text
+*.mjs text
+*.json text
+*.yml text
+*.yaml text
+*.md text
+*.rs text
+*.toml text
+*.circom text
+*.sh text eol=lf
+
+# Binary assets
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+*.pdf binary

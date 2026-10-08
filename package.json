@@ -2,7 +2,17 @@
   "name": "arcenpay",
   "version": "1.0.0",
   "private": true,
+  "license": "SEE LICENSE IN LICENSE",
   "description": "Web3 Entitlement Layer \u2014 ArcenPay + ZKVUB Protocol",
+  "author": "ArcenPay Inc.",
+  "homepage": "https://app.arcenpay.com",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Arcenpay/Arcenpay.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Arcenpay/Arcenpay/issues"
+  },
   "workspaces": [
     "packages/*",
     "apps/*",

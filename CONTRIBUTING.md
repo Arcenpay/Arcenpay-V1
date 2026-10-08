@@ -21,18 +21,24 @@ This document outlines the standards and workflows for contributing to the Arcen
 - Use React 19 patterns (no forwardRef unless wrapping a class component)
 - Error boundaries on every route segment
 
-### Solidity
+### Solana Programs (Rust / Anchor)
 
-- Solidity 0.8.26+ with optimizer enabled (1000 runs)
-- All external/public functions must have `@notice` NatSpec
-- Use Foundry for testing, Hardhat for deployment
-- Slither analysis runs in CI — zero `high` severity findings allowed
+- Anchor 0.30+ with the `arclang` / SPL conventions used in `packages/solana-programs`
+- All instruction handlers must validate accounts explicitly — never trust client input
+- Use checked arithmetic (`checked_add`, `checked_sub`) for every balance mutation
+- Run `cargo clippy` and `anchor test` before opening a PR
+
+### ZK Circuits (Circom)
+
+- Circuits live in `circuits/` — keep constraint counts documented in `circuits/artifact-manifest.json`
+- Every circuit change must regenerate proving keys and update the manifest
+- Add a corresponding fixture under `circuits/test/`
 
 ### General
 
 - No `console.log` in production code — use the shared `logger` utility
-- Environment variables accessed via `@/lib/config` (dashboard) or `validatedConfig` (facilitator)
-- API responses use standardized `apiError` / `apiSuccess` helpers from `@/lib/api-response`
+- Environment variables accessed via `@/lib/config` (dashboard) or `config.ts` (backend)
+- API responses use the standardized `apiError` / `apiSuccess` helpers
 - Error messages must not leak stack traces or internal paths in production
 
 ---
@@ -74,11 +80,11 @@ npm run test -- --watch
 
 Test files go in `__tests__/` directories adjacent to the code they test. Naming convention: `{module}.test.ts`.
 
-### Contract Tests (Foundry)
+### Program Tests (Anchor / cargo)
 
 ```bash
-cd packages/contracts
-forge test -vvv
+cd packages/solana-programs
+anchor test
 ```
 
 ### E2E Tests (Playwright)
@@ -98,7 +104,7 @@ Follow [Conventional Commits](https://www.conventionalcommits.org/):
 type(scope): description
 
 feat(sdk-react): add subscription pause/resume support
-fix(facilitator): handle empty plan list in billing keeper
+fix(backend): handle empty plan list in billing keeper
 chore(deps): update viem to v2.17
 docs(readme): add deployment guide
 ```
@@ -109,18 +115,11 @@ Types: `feat`, `fix`, `chore`, `docs`, `refactor`, `test`, `perf`, `ci`, `style`
 
 ## CI/CD
 
-All pushes and PRs run:
-- **Hygiene gate** — unfinished marker check
-- **TypeScript check** — `tsc --noEmit` across changed packages
-- **Lint** — Prettier format check + ESLint where configured
-- **Tests** — Vitest (SDK + dashboard), Foundry (contracts)
-- **Build** — Verify all packages and apps compile
-- **Slither** — Static analysis on Solidity contracts
-- **Subgraph** — Codegen + build check
+All pushes and PRs run the workflow matching the paths they touch:
 
-Push to `main` additionally triggers:
-- Docker image build for facilitator
-- E2E Playwright tests for dashboard
+- **CI** (`ci.yml`) — builds the shared packages, verifies the vendored `internal/core` copies are in sync, typechecks/tests/builds the SDK packages, and runs the hygiene gate
+- **Solana Programs** (`solana.yml`) — `cargo check` and `cargo test` for the Anchor program
+- **Hygiene gate** — unfinished-marker check (`scripts/check-unfinished.sh`)
 
 ---
 
@@ -128,13 +127,12 @@ Push to `main` additionally triggers:
 
 - **Code comments**: Explain _why_, not _what_. The code should be self-documenting for what it does.
 - **API routes**: Must have JSDoc describing auth requirements and response shape.
-- **Architecture decisions**: Document in `/docs/` with date prefix (e.g., `2026-05-06-rate-limiting-strategy.md`).
-- **Runbook updates**: If you change a deployment or operational procedure, update the relevant runbook.
+- **Architecture decisions**: Describe them in the pull request; persistent docs live in the hosted documentation site.
 
 ---
 
 ## Getting Help
 
-- Architecture questions → `docs/WIKI.md`
-- On-call procedures → `docs/OPERATIONS_RUNBOOK.md`
-- Incident response → `docs/INCIDENT_RUNBOOK.md`
+- Documentation → [docs.arcenpay.com](https://docs.arcenpay.com)
+- Questions & discussion → open a GitHub Discussion
+- Security issues → see [SECURITY.md](./SECURITY.md)

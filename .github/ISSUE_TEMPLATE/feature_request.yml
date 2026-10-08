@@ -1,0 +1,39 @@
+name: Feature request
+description: Suggest an idea or enhancement for ArcenPay
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What problem does this feature solve? Is it related to a frustration?
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed solution
+      description: A clear and concise description of what you want to happen.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+    validations:
+      required: false
+  - type: dropdown
+    id: workspace
+    attributes:
+      label: Area
+      options:
+        - sdk-react
+        - sdk-node
+        - backend
+        - dashboard
+        - solana-programs
+        - circuits
+        - docs
+        - other
+    validations:
+      required: true

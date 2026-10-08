@@ -4,20 +4,21 @@ All notable changes to ArcenPay are documented here.
 
 ---
 
-## [0.0.1] — Current (Pre-GA)
+## [1.0.0] — Current (Pre-GA)
 
 ### Added
+
 - Provider dashboard (Next.js 16 + Prisma + PostgreSQL)
-- Facilitator runtime bridge (Express + x402 middleware + event watchers)
-- 7 Solidity smart contracts deployed to Sepolia + Base Sepolia
-- 3 public SDK packages: `sdk-node`, `sdk-react`, `sdk-agent`, plus the private internal core
+- Core billing engine and REST API (Hono v4, Prisma v7, PostgreSQL)
+- Public SDK packages: `@arcenpay/node` and `@arcenpay/react`, plus the shared
+  private `@arcenpay/internal-core` runtime (chains, ABIs, addresses)
+- Solana subscription program (Anchor) with SDK-integrated chain support
+- Circom zk-SNARK circuits for usage billing proofs
 - Email magic-link authentication with wallet linking
 - EIP-712 x402 payment validation with anti-replay
-- Subscription minting via sponsored smart accounts + AutopayModule
-- Agent session vault with ZK usage proof settlement
+- Subscription minting via sponsored smart accounts + Autopay module
+- Session vault with ZK usage proof settlement
 - Embeddable billing UI via `ArcenEmbed`
-- The Graph subgraph for on-chain analytics
-- Circom zk-SNARK circuits for usage billing proofs
 - Catalog management: plans, add-ons, credits, coupons
 - Feature flag engine with DB-first rules and on-chain fallback
 - Invoicing, billing events, webhook delivery, dunning
@@ -37,12 +38,12 @@ All notable changes to ArcenPay are documented here.
 - Redesigned invoice/receipt emails around a shared on-brand email shell
 - Billing & Plan "What's included" feature matrix (invoice builder, white-label,
   support, cross-chain, ZK, x402 per tier)
-- Agent pre-approval/funding fix: dashboard Step 2 funds the ZKVUB session vault on EVM (approve vault to fundSession) instead of approving the bare agent EOA, records funding via a durable preApprovals ledger (POST /api/v1/agent/fund), and properly resets the Stellar transfer flow (previously stuck).
-- Agent multi-chain + funding reliability: wagmi-receipt-driven approval state machine (approve → fund → record) so Step 2 never hangs waiting for a receipt; chain-mismatch guard with in-UI "Switch network"; per-chain agent wallets (ArcenAgentConfig.agentWallets JSON map, migration 20260916000004) so each EVM/Stellar chain keeps its own agent wallet.
-
+- Agent pre-approval/funding flow: the dashboard funds the ZKVUB session vault
+  on EVM, records funding via a durable preApprovals ledger, and resets the
+  Stellar transfer flow cleanly
+- Agent multi-chain funding reliability: a receipt-driven approval state machine
+  (approve → fund → record) and per-chain agent wallets so each EVM/Stellar/
+  Solana chain keeps its own agent wallet
 - Platform tiers (FREE / PLUS / PRO) with limits
 - Gas sponsorship via hosted paymaster
-- Tableland flag mirroring (optional)
-- Lit Protocol subscription-gated decryption (optional)
-- Cross-chain relay (Axelar/CCIP — in progress)
-- CI/CD pipelines: hygiene gate, contract tests, typecheck, lint, E2E
+- CI/CD pipelines: hygiene gate, SDK, backend, dashboard, and Solana program

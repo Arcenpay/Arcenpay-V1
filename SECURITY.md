@@ -4,7 +4,7 @@
 
 **Do not open a public issue.** Report security vulnerabilities directly to the security team:
 
-- Email: `support@arcenpay.com`
+- Email: `security@arcenpay.com`
 - Include detailed steps to reproduce
 - Allow up to 48 hours for acknowledgment and 7 days for a fix
 
@@ -35,22 +35,19 @@ We follow a responsible disclosure process and will credit researchers who repor
 
 - Dashboard sessions use HMAC-SHA256 token hashes stored in httpOnly cookies
 - API keys are stored as SHA-256 hashes (never plaintext)
-- Facilitator internal routes require `FACILITATOR_SECRET` bearer token
-- x402 payments use EIP-712 signatures with SHA-256 replay protection
+- x402 payments use EIP-712 signatures with replay protection
 
-### Smart Contracts
+### Smart Contracts & Programs
 
-- All contracts audited by Slither static analysis in CI
-- `onlyBiller` / `onlyProvider` access controls on sensitive functions
+- Shared deployment constants and ABIs live in `packages/internal-core`
+- On-chain programs enforce `onlyBiller` / `onlyProvider`-style access controls on sensitive instructions
 - Fee calculation uses basis points to avoid floating-point precision loss
-- Reentrancy guards on cross-contract calls
-- Upgrade capability restricted to governance multisig
+- Reentrancy and account-substitution guards on cross-program calls
 
 ### API Security
 
 - CORS origins configured via `CORS_ORIGINS` env var — never wildcard in production
-- Rate limiting on auth endpoints, invite endpoints, and x402 payment routes
-- Request body size limited to 50KB on facilitator
+- Rate limiting on auth, invite, and x402 payment routes
 - All user input validated with Zod schemas before processing
 - SQL queries use parameterized statements (Prisma / `$1` bind parameters)
 
@@ -58,16 +55,15 @@ We follow a responsible disclosure process and will credit researchers who repor
 
 - Dependencies pinned in `package-lock.json`
 - CI runs `npm ci` to ensure lockfile integrity
-- Renovate/Dependabot configured for automated security updates
-- Slither analysis catches vulnerable Solidity patterns
+- Dependabot configured for automated security updates (`.github/dependabot.yml`)
 
 ---
 
 ## Security Architecture
 
 For a detailed security architecture overview, see:
-- `docs/WIKI.md` — Authentication and authorization flows
-- `apps/facilitator/src/server.ts` — x402 middleware validation and replay protection
+
+- `apps/arcen-backend/src/middleware/auth.ts` — API key and session authentication
 - `apps/arcen-dashboard/lib/embed-access-token.ts` — Embed token generation and verification
 - `packages/sdk-node/src/middleware/x402.ts` — On-chain payment verification
 
@@ -77,5 +73,4 @@ For a detailed security architecture overview, see:
 
 - Smart contract deployments verified on Etherscan/Basescan
 - Fee calculations use basis points (BPS) with `BPS_DENOMINATOR = 10000`
-- Gas sponsorship per-transaction limit: $0.50 USD (configurable)
 - Platform tiers enforce hard limits on plans, subscribers, and gas budget

@@ -1,0 +1,44 @@
+name: Solana Programs CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "packages/solana-programs/**"
+      - "package.json"
+      - "package-lock.json"
+  pull_request:
+    branches: [main]
+    paths:
+      - "packages/solana-programs/**"
+      - "package.json"
+      - "package-lock.json"
+
+jobs:
+  program:
+    name: Cargo Check & Test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: packages/solana-programs
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo registry
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            packages/solana-programs/target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('packages/solana-programs/Cargo.lock') }}
+
+      - name: Cargo check
+        run: cargo check --manifest-path programs/arcenpay-solana/Cargo.toml
+
+      - name: Cargo test
+        run: cargo test --manifest-path programs/arcenpay-solana/Cargo.toml

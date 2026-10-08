@@ -4,8 +4,8 @@
 #   docker compose down -v        → stop and wipe volumes
 #   docker compose logs -f        → tail all logs
 #
-# The dashboard and facilitator run outside Docker (npm run dev) and
-# connect to these services via localhost ports.
+# The apps run outside Docker (npm run dev) and connect to these
+# services via localhost ports.
 
 services:
   postgres:
