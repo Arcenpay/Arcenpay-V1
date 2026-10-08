@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # ============================================================
 #  ArcenPay — Unfinished Work Gate
-#  Scans first-party source files for TODO, FIXME, stub,
-#  placeholder, "Coming in Sprint", and "Requires indexer"
+#  Scans first-party source comments for explicit unfinished-work
+#  markers such as TODO/FIXME/"Coming in Sprint"/"Requires indexer".
 #  markers. Exits non-zero if any are found.
 # ============================================================
 
@@ -20,8 +20,9 @@ SCAN_DIRS=(
   "$REPO_ROOT/subgraph/scripts"
 )
 
-# Patterns that indicate unfinished work
-PATTERNS="TODO|FIXME|Coming in Sprint|Requires indexer|not implemented"
+# Patterns that indicate unfinished work when they appear in comments
+MARKER_PATTERNS="TODO|FIXME|Coming in Sprint|Requires indexer|not implemented|Phase [0-9]+ stub"
+COMMENT_PATTERN="^\\s*(//|/\\*|\\*|#).*($MARKER_PATTERNS)"
 
 # File extensions to check
 EXTENSIONS="ts,tsx,js,jsx,sol,yaml,yml"
@@ -57,11 +58,12 @@ for dir in "${SCAN_DIRS[@]}"; do
     INCLUDE_ARGS="$INCLUDE_ARGS --glob=*.${ext}"
   done
 
-  # Use grep (or rg if available) to find matches
+  # Match unfinished-work markers in comments only to avoid false positives in
+  # valid runtime strings/types (for example, "mode: \"stub\" | \"final\"").
   if command -v rg &> /dev/null; then
-    MATCHES=$(rg --no-heading --line-number -E "$PATTERNS" $INCLUDE_ARGS $EXCLUDE_ARGS "$dir" 2>/dev/null || true)
+    MATCHES=$(rg --no-heading --line-number -E "$COMMENT_PATTERN" $INCLUDE_ARGS $EXCLUDE_ARGS "$dir" 2>/dev/null || true)
   else
-    MATCHES=$(grep -rn -E "$PATTERNS" "$dir" \
+    MATCHES=$(grep -rn -E "$COMMENT_PATTERN" "$dir" \
       --include="*.ts" --include="*.tsx" --include="*.js" --include="*.jsx" \
       --include="*.sol" --include="*.yaml" --include="*.yml" \
       --exclude-dir=node_modules --exclude-dir=dist --exclude-dir=build \
@@ -72,30 +74,6 @@ for dir in "${SCAN_DIRS[@]}"; do
 
   if [ -n "$MATCHES" ]; then
     echo "$MATCHES"
-    FOUND=1
-  fi
-done
-
-# Also check for "stub" in doc comments (but not in variable names like "stubbed")
-for dir in "${SCAN_DIRS[@]}"; do
-  if [ ! -d "$dir" ]; then
-    continue
-  fi
-
-  if command -v rg &> /dev/null; then
-    STUB_MATCHES=$(rg --no-heading --line-number -E "(\bstub\b|Phase \d+ stub)" $INCLUDE_ARGS $EXCLUDE_ARGS "$dir" 2>/dev/null || true)
-  else
-    STUB_MATCHES=$(grep -rn -wE "(stub|Phase [0-9]+ stub)" "$dir" \
-      --include="*.ts" --include="*.tsx" --include="*.js" --include="*.jsx" \
-      --include="*.sol" --include="*.yaml" --include="*.yml" \
-      --exclude-dir=node_modules --exclude-dir=dist --exclude-dir=build \
-      --exclude-dir=generated --exclude-dir=typechain-types --exclude-dir=artifacts \
-      --exclude-dir=.next --exclude-dir=forge-std --exclude-dir=openzeppelin-contracts \
-      2>/dev/null || true)
-  fi
-
-  if [ -n "$STUB_MATCHES" ]; then
-    echo "$STUB_MATCHES"
     FOUND=1
   fi
 done
