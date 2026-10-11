@@ -267,6 +267,19 @@ export { shield, detectBot, fixedWindow, sensitiveInfo, tokenBucket };
 /** Generic API protection — shield + bot detection only. */
 export { aj };
 
+/**
+ * Shield-only protection, used when a request carries no user-agent.
+ *
+ * `detectBot` can only classify a request that HAS a user-agent. For callers
+ * that legitimately send none — server-to-server proxies (e.g. the Mintlify docs
+ * playground), native webviews, health probes — there is nothing to classify.
+ * Fabricating a placeholder UA made Arcjet score those as unknown automated
+ * clients and hard-429 them, turning a missing header into a block on legitimate
+ * first-party traffic. Shield still applies; only the (impossible) bot
+ * classification is skipped.
+ */
+export const ajShieldOnly = authAj;
+
 const rateLimitMode = isLive ? "LIVE" : "DRY_RUN";
 
 /** Auth nonce: 20 req/min per IP */

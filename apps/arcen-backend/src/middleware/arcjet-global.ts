@@ -1,6 +1,7 @@
 import type { Context, Next } from "hono";
 import {
   aj,
+  ajShieldOnly,
   shouldBypassGlobalProtection,
   arcjetNodeRequest,
   resolveTrustedClientIp,
@@ -87,9 +88,16 @@ export async function arcjetGlobalProtect(c: Context, next: Next) {
   // We therefore fail OPEN on infrastructure errors and log loudly, matching the
   // facilitator's existing Arcjet behaviour, while still failing CLOSED on a real
   // deny decision.
+  // `detectBot` can only classify a request that has a user-agent. When none is
+  // present we must NOT fabricate one (a placeholder scores as an unknown bot and
+  // 429s legitimate server-to-server / first-party callers such as the docs
+  // playground) — fall back to shield-only protection instead.
+  const hasUserAgent = Boolean(c.req.header("user-agent")?.trim());
+  const protector = hasUserAgent ? aj : ajShieldOnly;
+
   let decision: Awaited<ReturnType<typeof aj.protect>>;
   try {
-    decision = await aj.protect(arcjetNodeRequest(c.req.raw) as any);
+    decision = await protector.protect(arcjetNodeRequest(c.req.raw) as any);
   } catch (err) {
     console.error(
       "[arcjet] Global protection failed to evaluate; allowing request. " +
