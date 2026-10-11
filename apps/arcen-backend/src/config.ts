@@ -744,15 +744,21 @@ function assertDistinctSecrets(): void {
     }
   }
 
-  if (collisions.length === 0 && weak.length === 0 && TURNSTILE_SECRET_KEY) return;
-
-  const parts: string[] = [];
+  // A missing TURNSTILE_SECRET_KEY is a FEATURE toggle, not a secret-isolation
+  // breach. It must never gate startup: an unset optional key should disable the
+  // bot challenge, not take the whole API down. Report it here, then continue to
+  // the secret-hygiene checks below — only those may be fatal.
   if (!TURNSTILE_SECRET_KEY) {
-    parts.push(
-      "TURNSTILE_SECRET_KEY is not set — the bot challenge on the anonymous auth " +
-        "endpoints (email/activation) is DISABLED. Set it to enable Turnstile.",
+    console.warn(
+      "[config] TURNSTILE_SECRET_KEY is not set — the bot challenge on the " +
+        "anonymous auth endpoints (email/activation) is DISABLED. " +
+        "Set it to enable Turnstile.",
     );
   }
+
+  if (collisions.length === 0 && weak.length === 0) return;
+
+  const parts: string[] = [];
   if (collisions.length > 0) {
     parts.push(
       `Shared secrets across security domains: ${collisions.join(", ")}. ` +

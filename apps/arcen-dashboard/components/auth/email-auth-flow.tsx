@@ -111,6 +111,11 @@ export function EmailAuthFlow({
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  // Turnstile tokens are single-use. Bumping one of these after a failed submit
+  // makes the corresponding widget redeem a fresh token, so the user's retry is
+  // not rejected as `timeout-or-duplicate`.
+  const [emailWidgetReset, setEmailWidgetReset] = useState(0);
+  const [codeWidgetReset, setCodeWidgetReset] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [debugCode, setDebugCode] = useState<string | null>(null);
   const [retryAt, setRetryAt] = useState<string | null>(null);
@@ -640,6 +645,8 @@ export function EmailAuthFlow({
           setError(payload.error || "Could not send a verification code.");
         }
         if (payload.retryAt) setRetryAt(payload.retryAt);
+        // This request consumed the token; refresh it for the retry.
+        setEmailWidgetReset((n) => n + 1);
         return;
       }
 
@@ -652,6 +659,8 @@ export function EmailAuthFlow({
           : null,
       );
       setCode("");
+      // The email-step token is spent — the code-step widget supplies a fresh one.
+      setTurnstileToken(null);
       setStep("code");
     });
   };
@@ -693,6 +702,8 @@ export function EmailAuthFlow({
         } else {
           setError(payload.error || "Could not verify this code.");
         }
+        // This request consumed the token; refresh it for the retry.
+        setCodeWidgetReset((n) => n + 1);
         return;
       }
 
@@ -1203,7 +1214,10 @@ export function EmailAuthFlow({
                   />
                 </div>
 
-                <TurnstileWidget onToken={setTurnstileToken} />
+                <TurnstileWidget
+                  onToken={setTurnstileToken}
+                  resetSignal={emailWidgetReset}
+                />
 
                 <Button
                   type="button"
@@ -1336,7 +1350,10 @@ export function EmailAuthFlow({
                   ) : null}
                 </div>
 
-                <TurnstileWidget onToken={setTurnstileToken} />
+                <TurnstileWidget
+                  onToken={setTurnstileToken}
+                  resetSignal={codeWidgetReset}
+                />
 
                 <Button
                   type="button"

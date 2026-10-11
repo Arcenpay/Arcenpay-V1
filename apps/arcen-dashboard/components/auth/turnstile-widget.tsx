@@ -9,9 +9,9 @@ import { useEffect, useRef, useState } from "react";
  * The token is then sent in the auth request body as `cf-turnstile-response`,
  * which the backend verifies (see `lib/auth/turnstile.ts`).
  *
- * Fully inert when `NEXT_PUBLIC_TURNSTILE_SITE_KEY` is unset, so local dev and
- * preview deploys work without a Cloudflare account — matching the backend's
- * gating on `TURNSTILE_SECRET_KEY`.
+ * The backend only enforces the challenge when `TURNSTILE_SECRET_KEY` is set, so
+ * a deployment without the secret still works — but the dashboard should always
+ * render the widget so the two stay in sync (setting only one side 403s).
  */
 
 type TurnstileApi = {
@@ -26,6 +26,7 @@ type TurnstileApi = {
     },
   ) => string;
   remove: (id: string) => void;
+  reset: (id?: string) => void;
 };
 
 declare global {
@@ -36,14 +37,31 @@ declare global {
 
 const SCRIPT_SRC =
   "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
-const SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? "";
+
+// A Turnstile sitekey is PUBLIC — Cloudflare expects it embedded in the page
+// markup, and anyone can read it from the widget. Keeping the production value
+// as a fallback (env still wins) mirrors the hard-coded production fallback used
+// for BACKEND_URL in lib/config.ts, and means a missing build-time env var can
+// never silently disable bot protection in production. Register
+// `localhost`, `127.0.0.1` and `app.arcenpay.com` on the widget so dev and prod
+// can share this one key.
+const SITE_KEY =
+  (process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? "").trim() ||
+  "0x4AAAAAAFTptN-jqOuk1L5a";
 
 export function TurnstileWidget({
   onToken,
   className,
+  resetSignal = 0,
 }: {
   onToken: (token: string | null) => void;
   className?: string;
+  /**
+   * Bump this after a submit completes to redeem a fresh token. Turnstile
+   * tokens are single-use, so a retry with the previous token is rejected as
+   * `timeout-or-duplicate`.
+   */
+  resetSignal?: number;
 }) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const widgetIdRef = useRef<string | null>(null);
@@ -101,6 +119,20 @@ export function TurnstileWidget({
       widgetIdRef.current = null;
     };
   }, []);
+
+  // Redeem a fresh token whenever the parent reports that the previous one was
+  // consumed by a request. Skipped on the initial render (resetSignal === 0).
+  useEffect(() => {
+    if (resetSignal === 0) return;
+    if (widgetIdRef.current && window.turnstile) {
+      try {
+        window.turnstile.reset(widgetIdRef.current);
+      } catch {
+        // widget already gone — the next mount renders a fresh one
+      }
+    }
+    onTokenRef.current(null);
+  }, [resetSignal]);
 
   if (!SITE_KEY) return null;
 
