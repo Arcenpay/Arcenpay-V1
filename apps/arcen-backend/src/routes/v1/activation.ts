@@ -3,6 +3,8 @@ import { z } from "zod";
 import { ActivationKeyService } from "../../services/activation-key.service.js";
 import { getSessionFromCtx } from "../../lib/auth/auth.server.js";
 import { db } from "../../db.js";
+import { enforceRateLimit } from "../../lib/auth/rate-limit.js";
+import { enforceTurnstileForAnonymous } from "../../lib/auth/turnstile.js";
 
 const verifyKeySchema = z.object({
   key: z.string().min(1, "Key is required"),
@@ -16,22 +18,42 @@ const redeemKeySchema = z.object({
 export const activationRouter = new Hono()
   // Pre-flight verify key
   .post("/verify", async (c) => {
+    const limited = await enforceRateLimit(c, {
+      bucket: "activation-verify",
+      limit: 20,
+      windowMs: 5 * 60_000,
+    });
+    if (limited) return limited;
+
     const body = await c.req.json().catch(() => ({}));
     const parse = verifyKeySchema.safeParse(body);
     if (!parse.success) {
       return c.json({ ok: false, error: parse.error.errors[0]?.message || "Key is required", code: "BAD_REQUEST" }, 400 as any);
     }
 
+    const challenge = await enforceTurnstileForAnonymous(c, body);
+    if (challenge) return challenge;
+
     const result = await ActivationKeyService.verifyActivationKey(parse.data.key);
     return c.json({ ok: true, ...result });
   })
   // Redeem key
   .post("/redeem", async (c) => {
+    const limited = await enforceRateLimit(c, {
+      bucket: "activation-redeem",
+      limit: 10,
+      windowMs: 10 * 60_000,
+    });
+    if (limited) return limited;
+
     const body = await c.req.json().catch(() => ({}));
     const parse = redeemKeySchema.safeParse(body);
     if (!parse.success) {
       return c.json({ ok: false, error: parse.error.errors[0]?.message || "Invalid input", code: "BAD_REQUEST" }, 400 as any);
     }
+
+    const challenge = await enforceTurnstileForAnonymous(c, body);
+    if (challenge) return challenge;
 
     const session = await getSessionFromCtx(c);
     const teamId = parse.data.teamId || session?.currentTeamId;

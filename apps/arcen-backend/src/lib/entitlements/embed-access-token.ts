@@ -1,6 +1,7 @@
 import { createHash, createHmac } from "crypto";
 import { db } from "../../db.js";
 import { ACCESS_TOKEN_SECRET } from "../../config.js";
+import { secureCompare } from "../auth/secure-compare.js";
 
 export interface EmbedAccessTokenContext {
   teamId: string;
@@ -28,7 +29,7 @@ function verifySignedEmbedAccessToken(
       .update(unsigned)
       .digest("base64url");
 
-    if (sig !== expectedSig) return null;
+    if (!secureCompare(sig, expectedSig)) return null;
 
     const payload = JSON.parse(Buffer.from(body, "base64url").toString()) as {
       exp?: number;

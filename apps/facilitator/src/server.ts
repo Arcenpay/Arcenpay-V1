@@ -138,6 +138,41 @@ import { StellarChainAdapter } from "./services/stellar-adapter.js";
 import { SolanaChainAdapter } from "./services/solana-adapter.js";
 
 const app = express();
+
+// Trust exactly one proxy hop by default (Railway's edge). Without this,
+// Express uses the direct socket peer, so every IP-keyed control (Arcjet
+// shield/bot, the x402 per-wallet fallback) keys on the proxy address instead
+// of the real client — collapsing all callers into one bucket. Override with
+// TRUSTED_PROXY_HOPS when the topology differs.
+app.set(
+  "trust proxy",
+  (() => {
+    const raw = process.env.TRUSTED_PROXY_HOPS?.trim();
+    if (raw === undefined || raw === "") return 1;
+    if (raw === "false") return false;
+    const hops = Number(raw);
+    return Number.isFinite(hops) && hops >= 0 ? hops : 1;
+  })(),
+);
+
+// Baseline response security headers. The facilitator serves JSON/ops traffic
+// (no HTML), so lock it down hard: no framing, no sniffing, no referrer, HSTS.
+app.use((_req, res, next) => {
+  res.setHeader(
+    "Content-Security-Policy",
+    "default-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'",
+  );
+  res.setHeader("X-Frame-Options", "DENY");
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("Referrer-Policy", "no-referrer");
+  res.setHeader("X-DNS-Prefetch-Control", "off");
+  res.setHeader(
+    "Strict-Transport-Security",
+    "max-age=63072000; includeSubDomains",
+  );
+  next();
+});
+
 const PORT = process.env.PORT || 3402;
 const CHAIN_ID = parseInt(process.env.CHAIN_ID || "84532", 10);
 const CHAIN_ENV = getChainEnvironment(CHAIN_ID);
@@ -686,10 +721,7 @@ app.use(
 );
 
 app.use(async (req, res, next) => {
-  if (
-    FACILITATOR_SECRET &&
-    req.headers.authorization === `Bearer ${FACILITATOR_SECRET}`
-  ) {
+  if (FACILITATOR_SECRET && secureCompare(readBearerToken(req), FACILITATOR_SECRET)) {
     return next();
   }
 

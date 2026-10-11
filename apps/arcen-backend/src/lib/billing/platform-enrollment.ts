@@ -1,12 +1,13 @@
 import { randomBytes } from "node:crypto";
 import { db } from "../../db.js";
 import { toPrismaJson } from "../../utils/prisma-json.js";
-import { PLATFORM_BILLING_CHAIN_ID } from "../../config.js";
 import { resolveChainFamilyForPrisma } from "../platform/chain-family.js";
+import { getUsdcAddress } from "../platform/contracts.js";
 import { TIER_PRICING } from "../catalog/tier-guard.js";
 import { syncEntitlementsToFlagRules } from "../entitlements/sync-entitlements.js";
 import {
   buildPlatformTierEntitlements,
+  resolvePlatformBillingChainId,
 } from "./platform-tier-billing.js";
 import {
   ensurePlatformBillingCustomer,
@@ -70,6 +71,12 @@ async function ensurePlatformPlan(
     entitlements,
   });
 
+  // Resolve the chain + canonical token for this environment so the same code
+  // self-bills on EVM (Arc) or Solana with only env/environment changes.
+  const platformChainId = await resolvePlatformBillingChainId(environmentId);
+  const platformChainFamily = resolveChainFamilyForPrisma(platformChainId);
+  const platformToken = getUsdcAddress(platformChainId) ?? "";
+
   // Resolve the canonical first-party plan by environment + tier metadata,
   // not by display name. Owners are allowed to rename a plan to “Free” or
   // “Pro”; doing a name-only lookup would create a second plan and leave the
@@ -114,14 +121,9 @@ async function ensurePlatformPlan(
           price: String(TIER_PRICING[tier].priceUsdc),
           annualPrice: platformAnnualPrice(tier),
           billingInterval: 2_592_000,
-          acceptedToken: "0x0000000000000000000000000000000000000000",
-          // Tag this plan with the platform billing chainId + derived chainFamily
-          // (previously relied on the schema default 84532 = EVM, which is
-          // correct as long as platform billing stays EVM-only; making it
-          // explicit so a future Stellar platform-billing rollout tags rows
-          // correctly without further changes here).
-          chainId: PLATFORM_BILLING_CHAIN_ID,
-          chainFamily: resolveChainFamilyForPrisma(PLATFORM_BILLING_CHAIN_ID),
+          acceptedToken: platformToken,
+          chainId: platformChainId,
+          chainFamily: platformChainFamily,
           metadata,
         },
       });
@@ -139,6 +141,16 @@ async function ensurePlatformPlan(
         price: String(TIER_PRICING[tier].priceUsdc),
         annualPrice: platformAnnualPrice(tier),
         metadata,
+        // Repair plans created before the chain became configurable (they may
+        // be pinned to the wrong chain / a placeholder token). Never touch a
+        // plan that is already registered on-chain — those fields are frozen.
+        ...(!plan.onChainPlanId
+          ? {
+              chainId: platformChainId,
+              chainFamily: platformChainFamily,
+              ...(platformToken ? { acceptedToken: platformToken } : {}),
+            }
+          : {}),
       },
     });
   }
@@ -152,7 +164,7 @@ async function ensurePlatformPlan(
       where: {
         environmentId_chainId_tier: {
           environmentId,
-          chainId: PLATFORM_BILLING_CHAIN_ID,
+          chainId: platformChainId,
           tier,
         },
       },

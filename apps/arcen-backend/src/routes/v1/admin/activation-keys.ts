@@ -5,6 +5,7 @@ import { db } from "../../../db.js";
 import { ActivationKeyService } from "../../../services/activation-key.service.js";
 import { RESEND_API_KEY, EMAIL_FROM_ADMIN, APP_URL } from "../../../config.js";
 import { Resend } from "resend";
+import { publicErrorMessage } from "../../../utils/api-response.js";
 import type { ActivationKeyStatus, PlatformTier } from "../../../generated/client/client.js";
 
 const createKeySchema = z.object({
@@ -413,12 +414,12 @@ export const adminActivationKeysRouter = new Hono()
     const parse = revokeKeySchema.safeParse(body);
     const reason = parse.success ? parse.data.reason : undefined;
     try { const r = await ActivationKeyService.revokeActivationKey(id, reason); return c.json({ ok: true, data: r }); }
-    catch (err) { return c.json({ ok: false, error: err instanceof Error ? err.message : String(err) }, 400 as any); }
+    catch (err) { return c.json({ ok: false, error: publicErrorMessage(err) }, 400 as any); }
   })
   .post("/:id/reactivate", requireAdminAuth(), async (c) => {
     const id = c.req.param("id");
     try { const r = await ActivationKeyService.reactivateActivationKey(id); return c.json({ ok: true, data: r }); }
-    catch (err) { return c.json({ ok: false, error: err instanceof Error ? err.message : String(err) }, 400 as any); }
+    catch (err) { return c.json({ ok: false, error: publicErrorMessage(err) }, 400 as any); }
   })
   .post("/announce", requireAdminAuth(), async (c) => {
     const body = await c.req.json().catch(() => ({}));

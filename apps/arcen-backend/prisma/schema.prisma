@@ -1048,6 +1048,7 @@ model BillingEvent {
 
   @@index([teamId, createdAt])
   @@index([teamId, processed])
+  @@index([teamId, processed, createdAt])
 }
 
 model SubscriptionState {
@@ -1089,6 +1090,10 @@ model SubscriptionState {
   @@index([teamId, walletAddress])
   @@index([teamId, chainId])
   @@index([teamId, environmentId])
+  // Dunning + platform-tier sweeps scan by status and order/filter on
+  // graceEndsAt across teams (no teamId predicate), so this leading-order
+  // index is what keeps those sweeps off a sequential scan.
+  @@index([status, graceEndsAt])
 }
 
 model SubscriptionChangeRequest {
@@ -1566,6 +1571,9 @@ model ArcenCompany {
   @@unique([teamId, environmentId, externalId])
   @@index([teamId, environmentId, email])
   @@index([teamId, environmentId, lastSeenAt])
+  // Companies are looked up by their assigned plan (catalog config load,
+  // plan-companies listing) — without this those queries scan the table.
+  @@index([activePlanId])
 }
 
 model ArcenUser {
@@ -1613,6 +1621,10 @@ model ArcenEvent {
   @@index([teamId, environmentId, name, companyId, sentAt])
   @@index([teamId, environmentId, eventType, sentAt])
   @@index([teamId, environmentId, companyId, sentAt])
+  // Usage-count hot path filters teamId + companyId + eventType + name + sentAt
+  // WITHOUT environmentId, so the environmentId-leading indexes above can't
+  // serve it. This one can.
+  @@index([teamId, companyId, eventType, name, sentAt])
 }
 
 model CompanyAddOnGrant {
@@ -1899,6 +1911,7 @@ model CompanyOverride {
 
   @@unique([companyId, featureKey])
   @@index([teamId, companyId])
+  @@index([teamId, featureKey])
 }
 
 // Short-lived tokens for embeddable component authentication

@@ -56,3 +56,17 @@ export function apiInternalError(c: Context, err: unknown) {
     detail: isProduction ? undefined : message,
   });
 }
+
+/**
+ * Message safe to surface to clients: the real error message in development,
+ * a generic fallback in production. Use this instead of returning `err.message`
+ * directly — raw driver/Prisma error text leaks schema and infrastructure
+ * detail to callers.
+ */
+export function publicErrorMessage(
+  err: unknown,
+  fallback = "Internal server error",
+): string {
+  if (process.env.NODE_ENV === "production") return fallback;
+  return err instanceof Error ? err.message : fallback;
+}

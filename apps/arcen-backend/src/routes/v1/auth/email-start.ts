@@ -1,6 +1,7 @@
 import type { Context } from "hono";
 import { z } from "zod";
 import { authEmailStartProtect, arcjetNodeRequest } from "../../../lib/auth/arcjet.js";
+import { enforceTurnstile } from "../../../lib/auth/turnstile.js";
 import {
   EMAIL_AUTH_PURPOSE_LOGIN,
   EMAIL_AUTH_RESEND_COOLDOWN_MS,
@@ -42,6 +43,10 @@ export async function startEmail(c: Context) {
   }
 
   const email = normalizeEmail(parsed.data.email);
+
+  // Bot challenge before any email is sent or counted.
+  const challenge = await enforceTurnstile(c, body);
+  if (challenge) return challenge;
 
   // Arcjet rate limit: 5 req/10min per IP
   const decision = await authEmailStartProtect.protect(arcjetNodeRequest(c.req.raw) as any);

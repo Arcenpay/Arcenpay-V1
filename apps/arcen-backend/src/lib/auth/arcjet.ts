@@ -6,8 +6,16 @@ import arcjet, {
   tokenBucket,
 } from "@arcjet/node";
 import { createHash } from "crypto";
-import { isIP } from "node:net";
 import { db } from "../../db.js";
+import {
+  TRUSTED_PROXY_HOPS,
+  extractTrustedClientIp,
+  isValidIp,
+  resolveTrustedClientIp,
+} from "./client-ip.js";
+
+// Re-exported for existing call sites (middleware, routes) that import it here.
+export { resolveTrustedClientIp };
 
 const hasArcjetKey = Boolean(
   process.env.ARCJET_KEY &&
@@ -21,78 +29,6 @@ const isLive = isProduction && hasArcjetKey;
 // Ensure Arcjet knows whether we're in dev (silences the
 // "Set ARCJET_ENV to development" warning and enables dev log behavior).
 process.env.ARCJET_ENV ??= isProduction ? "production" : "development";
-
-/**
- * Number of trusted reverse proxies in front of this service.
- *
- * SECURITY: `X-Forwarded-For` is a *client-writable* header. Taking the FIRST
- * entry (the historical behaviour here) let any caller spoof an arbitrary IP
- * and rotate it per request, which silently disabled every IP-based control —
- * auth nonce/email rate limits and Arcjet shield/bot fingerprinting.
- *
- * Each proxy in the chain APPENDS the address of the peer it received the
- * request from. Therefore the last `TRUSTED_PROXY_HOPS` entries were written by
- * infrastructure we control, and the entry at exactly that offset is the real
- * client. With the default of 1 (Railway/Vercel/one nginx), the RIGHTMOST entry
- * is authoritative and everything to its left is attacker-controlled.
- */
-const TRUSTED_PROXY_HOPS: number = (() => {
-  const raw = process.env.TRUSTED_PROXY_HOPS?.trim();
-  if (!raw) return 1;
-  const parsed = Number.parseInt(raw, 10);
-  return Number.isFinite(parsed) && parsed >= 0 ? parsed : 1;
-})();
-
-/** Strict IP validation so garbage can never reach an Arcjet fingerprint. */
-function isValidIp(value: string | undefined): value is string {
-  if (!value) return false;
-  return isIP(value) !== 0;
-}
-
-/**
- * Public wrapper over the trusted-proxy IP resolution.
- *
- * Use this anywhere an audit record, rate-limit key, or log line needs a client
- * IP. Never read `x-forwarded-for` directly at a call site — the leftmost entry
- * is attacker-supplied.
- */
-export function resolveTrustedClientIp(headers: {
-  get(name: string): string | null | undefined;
-}): string | null {
-  return extractTrustedClientIp((name) => headers.get(name) ?? null);
-}
-
-/**
- * Resolves the real client IP from the forwarded chain using the trusted-proxy
- * hop count. Returns `null` when no trustworthy address can be determined.
- */
-function extractTrustedClientIp(get: (name: string) => string | null): string | null {
-  const forwarded = get("x-forwarded-for");
-  if (forwarded) {
-    const chain = forwarded
-      .split(",")
-      .map((entry) => entry.trim())
-      .filter(Boolean);
-
-    if (chain.length > 0) {
-      // Walk from the right: skip the entries appended by our own proxies.
-      const index = chain.length - TRUSTED_PROXY_HOPS;
-      const candidate = index >= 0 ? chain[index] : undefined;
-      if (isValidIp(candidate)) return candidate;
-    }
-  }
-
-  // `x-real-ip` / `cf-connecting-ip` are only meaningful when the edge
-  // overwrites them. They are never trusted for the *leftmost* hop decision,
-  // and only consulted when they validate as a real IP.
-  const realIp = get("x-real-ip")?.trim();
-  if (isValidIp(realIp)) return realIp;
-
-  const cfIp = get("cf-connecting-ip")?.trim();
-  if (isValidIp(cfIp)) return cfIp;
-
-  return null;
-}
 
 /**
  * Builds an Arcjet-Node-compatible request with a client IP so fingerprinting

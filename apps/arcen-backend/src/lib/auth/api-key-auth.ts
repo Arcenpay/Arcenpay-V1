@@ -16,10 +16,16 @@
 
 import { createHash, randomBytes } from "crypto";
 import { db } from "../../db.js";
-import {
-  apiKeyRateLimiter,
-  API_KEY_RATE_LIMIT,
-} from "./per-key-rate-limit.js";
+import { API_KEY_RATE_LIMIT } from "./per-key-rate-limit.js";
+import { consumeRateLimit } from "./rate-limit.js";
+import { resolveTrustedClientIp } from "./client-ip.js";
+
+/**
+ * Invalid-credential throttle. A request whose key does not resolve is counted
+ * against its client IP so guessing `sk_/pk_/rk_` values is bounded even though
+ * the per-key limiter never runs for an unknown key.
+ */
+const INVALID_KEY_LIMIT = { limit: 30, windowMs: 5 * 60_000 } as const;
 
 export type ApiKeyTypeName = "SECRET" | "PUBLISHABLE" | "RESTRICTED";
 
@@ -222,6 +228,20 @@ export async function requireApiKey(
   });
 
   if (!apiKey) {
+    const ip = resolveTrustedClientIp(request.headers) ?? "unknown";
+    const invalidAttempt = await consumeRateLimit(
+      INVALID_KEY_LIMIT,
+      `apikey-invalid:${ip}`,
+    );
+    if (!invalidAttempt.allowed) {
+      return {
+        error:
+          "Too many invalid authentication attempts. Try again in " +
+          `${invalidAttempt.retryAfterSeconds}s.`,
+        status: 429,
+        retryAfterSeconds: invalidAttempt.retryAfterSeconds,
+      };
+    }
     return { error: "Invalid API key", status: 401 };
   }
   if (apiKey.revokedAt) {
@@ -270,7 +290,13 @@ export async function requireApiKey(
   // already proven ownership of a valid, unrevoked, unexpired key, so bot
   // detection is inapplicable — applying it is what made `curl`, Postman and
   // every server SDK fail with a bogus 429. See per-key-rate-limit.ts.
-  const decision = apiKeyRateLimiter.consume(apiKey.id);
+  const decision = await consumeRateLimit(
+    {
+      limit: API_KEY_RATE_LIMIT.limit,
+      windowMs: API_KEY_RATE_LIMIT.windowMs,
+    },
+    `apikey:${apiKey.id}`,
+  );
   if (!decision.allowed) {
     return {
       error:

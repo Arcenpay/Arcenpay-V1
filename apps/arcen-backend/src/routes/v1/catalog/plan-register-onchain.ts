@@ -6,6 +6,7 @@ import { createResilientPublicClient, getRpcUrl } from "../../../config.js";
 import { isSupportedDashboardChainId } from "../../../lib/platform/default-chain.js";
 import { resolveChainFamilyForPrisma } from "../../../lib/platform/chain-family.js";
 import { resolvePlanNetwork } from "../../../lib/catalog/plan-network.js";
+import { syncPlatformBillingPlanFromCatalogPlan } from "../../../lib/billing/platform-tier-billing.js";
 import {
   createPublicClient,
   encodeFunctionData,
@@ -319,6 +320,10 @@ export async function registerPlanOnChain(c: Context) {
         },
       });
 
+      await syncPlatformBillingPlanFromCatalogPlan(plan.id).catch((error) => {
+        console.warn("[plan-register-onchain] Platform billing sync failed:", error);
+      });
+
       await writeAuditEvent({
         headers: c.req.raw.headers,
         teamId: auth.team.teamId,
@@ -405,6 +410,10 @@ export async function registerPlanOnChain(c: Context) {
           chainSyncError: null,
           chainSyncedAt: new Date(),
         },
+      });
+
+      await syncPlatformBillingPlanFromCatalogPlan(plan.id).catch((error) => {
+        console.warn("[plan-register-onchain] Platform billing sync failed:", error);
       });
 
       await writeAuditEvent({

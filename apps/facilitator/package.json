@@ -5,6 +5,7 @@
   "private": true,
   "description": "ArcenPay Facilitator Node — x402 payment validation and on-chain submission",
   "scripts": {
+    "predev": "npm run build --workspace=@arcenpay/internal-core && npm run build --workspace=@arcenpay/node",
     "build": "tsc",
     "dev": "tsx watch src/server.ts",
     "start": "node dist/server.js",

@@ -2,6 +2,7 @@ import type { Context } from "hono";
 import { db } from "../../../db.js";
 import { FACILITATOR_URL, FACILITATOR_SECRET } from "../../../config.js";
 import { requireTeamRoles, isErrorResponse } from "../../../lib/auth/api-auth.js";
+import { publicErrorMessage } from "../../../utils/api-response.js";
 
 export async function getWebhookLog(c: Context) {
   const auth = await requireTeamRoles(c, ["OWNER", "ADMIN"]);
@@ -79,7 +80,7 @@ export async function getWebhookLog(c: Context) {
     return c.json({
       entries: [],
       degraded: true,
-      message: err instanceof Error ? err.message : "Webhook log unavailable.",
+      message: publicErrorMessage(err, "Webhook log unavailable."),
       source: "facilitator",
     });
   }

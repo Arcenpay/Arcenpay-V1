@@ -5,6 +5,7 @@
   "description": "ArcenPay Backend API — standalone production server (Hono)",
   "type": "module",
   "scripts": {
+    "predev": "npm run build --workspace=@arcenpay/internal-core && npm run build --workspace=@arcenpay/shared-types",
     "build": "prisma generate && tsc",
     "dev": "prisma generate && tsx watch src/server.ts",
     "start": "node --import tsx dist/server.js",

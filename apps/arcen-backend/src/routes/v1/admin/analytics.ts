@@ -3,6 +3,7 @@ import { z } from "zod";
 import { requireAdminAuth } from "../../../middleware/auth.js";
 import { db } from "../../../db.js";
 import { DUNE_API_KEY } from "../../../config.js";
+import { publicErrorMessage } from "../../../utils/api-response.js";
 
 const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000;
 
@@ -108,7 +109,8 @@ export const adminAnalyticsRouter = new Hono()
       });
       if (!execRes.ok) {
         const errText = await execRes.text();
-        return c.json({ ok: false, error: `Dune execute error: ${execRes.status} ${errText}` }, 502 as any);
+        console.error("[admin/analytics] Dune execute failed", execRes.status, errText);
+        return c.json({ ok: false, error: `Dune execute error: ${execRes.status}` }, 502 as any);
       }
       const execData = await execRes.json() as { execution_id?: string };
       const executionId = execData.execution_id ?? "";
@@ -135,8 +137,8 @@ export const adminAnalyticsRouter = new Hono()
       duneCache = { data: resultData, ts: Date.now() };
       return c.json({ ok: true, data: resultData, cached: false });
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      return c.json({ ok: false, error: `Dune proxy error: ${msg}` }, 502 as any);
+      const msg = publicErrorMessage(err, "Dune proxy error");
+      return c.json({ ok: false, error: msg }, 502 as any);
     }
   })
   // ── Dune config status ──────────────────────────────────────────

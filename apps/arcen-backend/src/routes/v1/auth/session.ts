@@ -1,8 +1,6 @@
 import type { Context } from "hono";
-import { randomBytes } from "node:crypto";
-import { setCookie, getCookie } from "hono/cookie";
 import { db } from "../../../db.js";
-import { getSessionFromCtx, refreshSession, createSession as createDbSession } from "../../../lib/auth/auth.server.js";
+import { getSessionFromCtx, refreshSession } from "../../../lib/auth/auth.server.js";
 import {
   findResolvedActiveEnvironment,
   listEnvironmentSummaries,
@@ -119,24 +117,5 @@ export async function getSession(c: Context) {
       slug: membership.team.slug,
       role: membership.role,
     })),
-  });
-}
-
-export async function createSession(c: Context) {
-  const body = await c.req.json() .catch(() => ({}));
-  const { userId } = body as { userId?: string };
-
-  if (!userId) {
-    return c.json({ ok: false, error: "userId is required", code: "BAD_REQUEST" }, 400 as any);
-  }
-
-  const session = await createDbSession(c, userId);
-  return c.json({
-    sessionId: session.sessionId,
-    userId: session.userId,
-    email: session.email,
-    walletAddress: session.walletAddress,
-    currentTeamId: session.currentTeamId,
-    expiresAt: session.expiresAt.toISOString(),
   });
 }

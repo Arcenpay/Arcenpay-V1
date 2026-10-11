@@ -11,6 +11,8 @@ import {
   isEmailDeliveryConfigured,
   sendDispatchTestEmail,
 } from "../../lib/billing/email.js";
+import { assertSafeOutboundUrl } from "../../lib/security/ssrf-guard.js";
+import { publicErrorMessage } from "../../utils/api-response.js";
 
 export async function POST(c: Context) {
   const ctx = await requirePermission(c, "catalog:write");
@@ -87,6 +89,10 @@ export async function POST(c: Context) {
         if (!webhookUrl) {
           return c.json({ message: "Webhook URL is required for Discord" }, 400 as any);
         }
+        const safeDiscord = await assertSafeOutboundUrl(webhookUrl);
+        if (!safeDiscord.ok) {
+          return c.json({ message: `Webhook URL rejected: ${safeDiscord.reason}` }, 400 as any);
+        }
         const dcRes = await fetch(webhookUrl, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -106,6 +112,10 @@ export async function POST(c: Context) {
         const webhookUrl = provider.webhookUrl;
         if (!webhookUrl) {
           return c.json({ message: "Webhook URL is required for Slack" }, 400 as any);
+        }
+        const safeSlack = await assertSafeOutboundUrl(webhookUrl);
+        if (!safeSlack.ok) {
+          return c.json({ message: `Webhook URL rejected: ${safeSlack.reason}` }, 400 as any);
         }
         const slRes = await fetch(webhookUrl, {
           method: "POST",
@@ -146,6 +156,6 @@ export async function POST(c: Context) {
         return c.json({ message: `Provider type "${provider.type}" does not support test messages yet.` }, 400 as any);
     }
   } catch (err: any) {
-    return c.json({ message: `Failed to send test: ${err.message || "Unknown error"}` }, 500 as any);
+    return c.json({ message: `Failed to send test: ${publicErrorMessage(err, "Unknown error")}` }, 500 as any);
   }
 }

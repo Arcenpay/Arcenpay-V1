@@ -186,18 +186,57 @@ export function getGraphUrl(chainId: number): string {
 
 // ── ArcenPay Platform Self-Billing ───────────────────────────────────────────
 
-export const PLATFORM_BILLING_CHAIN_ID = Number(
-  process.env.PLATFORM_BILLING_CHAIN_ID || "5042002",
-);
+/**
+ * Explicit platform-billing chain override. When set, self-billing is pinned to
+ * this chain regardless of the platform provider environment. When unset, the
+ * chain is resolved at runtime from the provider WorkspaceEnvironment, falling
+ * back to the EVM Arc testnet default (legacy behaviour).
+ *
+ * Set `PLATFORM_BILLING_CHAIN_ID=9100001` for Solana devnet or `9100000` for
+ * Solana mainnet. No other code change is required to switch clusters.
+ */
+export const PLATFORM_BILLING_CHAIN_ID_OVERRIDE: number | null = (() => {
+  const raw = process.env.PLATFORM_BILLING_CHAIN_ID?.trim();
+  if (!raw) return null;
+  const parsed = Number(raw);
+  // Fail fast on a malformed override. Number("abc") is NaN, and `NaN != null`
+  // is true — which would otherwise mark the chain "explicitly non-EVM" and
+  // silently skip the production requirement for the EVM ops key and treasury
+  // (see PLATFORM_BILLING_EXPLICITLY_NON_EVM below). A typo must never relax a
+  // production secret requirement.
+  if (!Number.isInteger(parsed)) {
+    throw new Error(
+      `[config] PLATFORM_BILLING_CHAIN_ID must be an integer chain id (got "${raw}"). ` +
+        "Unset it to resolve the chain at runtime, or set e.g. 9100001 (Solana devnet).",
+    );
+  }
+  return parsed;
+})();
+
+export const PLATFORM_BILLING_CHAIN_ID =
+  PLATFORM_BILLING_CHAIN_ID_OVERRIDE ?? 5042002;
+
+// The EVM self-billing flow pays gas from an ops keypair whose address is the
+// treasury, so both are required in production. On Solana the provider admin
+// signs plan registration from the dashboard and renewals are relayer-only, so
+// neither is mandatory. Only relax the requirement when the chain is explicitly
+// pinned to a non-EVM family — an unset override keeps the legacy EVM default.
+const PLATFORM_BILLING_EXPLICITLY_NON_EVM =
+  PLATFORM_BILLING_CHAIN_ID_OVERRIDE != null &&
+  !ArcenPayCore.isEvmChain(PLATFORM_BILLING_CHAIN_ID_OVERRIDE);
 
 export const PLATFORM_BILLING_OPS_PRIVATE_KEY: string = (() => {
   const val = process.env.PLATFORM_BILLING_OPS_PRIVATE_KEY;
-  return requireInProd("PLATFORM_BILLING_OPS_PRIVATE_KEY", val);
+  return PLATFORM_BILLING_EXPLICITLY_NON_EVM
+    ? val ?? ""
+    : requireInProd("PLATFORM_BILLING_OPS_PRIVATE_KEY", val);
 })();
 
 export const PLATFORM_BILLING_TREASURY_ADDRESS: string = (() => {
   const val = process.env.PLATFORM_BILLING_TREASURY_ADDRESS;
-  return requireInProd("PLATFORM_BILLING_TREASURY_ADDRESS", val);
+  return PLATFORM_BILLING_EXPLICITLY_NON_EVM
+    ? val ?? ""
+    : requireInProd("PLATFORM_BILLING_TREASURY_ADDRESS", val);
 })();
 
 export const PLATFORM_BILLING_ACCEPTED_TOKEN: string = (() => {
@@ -205,7 +244,9 @@ export const PLATFORM_BILLING_ACCEPTED_TOKEN: string = (() => {
     process.env.PLATFORM_BILLING_ACCEPTED_TOKEN ||
     ArcenPayCore.getTokenAddress(PLATFORM_BILLING_CHAIN_ID, "USDC") ||
     "";
-  return requireInProd("PLATFORM_BILLING_ACCEPTED_TOKEN", val);
+  return PLATFORM_BILLING_EXPLICITLY_NON_EVM
+    ? val
+    : requireInProd("PLATFORM_BILLING_ACCEPTED_TOKEN", val);
 })();
 
 // ── Auth ──────────────────────────────────────────────────────────────────────
@@ -230,6 +271,25 @@ export const ACCESS_TOKEN_SECRET: string = (() => {
   const val = process.env.ACCESS_TOKEN_SECRET?.trim();
   return requireInProd("ACCESS_TOKEN_SECRET", val) || SIWE_JWT_SECRET;
 })();
+
+// ── Bot protection (Cloudflare Turnstile) ─────────────────────────────────────
+
+/**
+ * Cloudflare Turnstile secret key. When present (and `TURNSTILE_ENABLED` is not
+ * "false") the anonymous auth endpoints require a valid `cf-turnstile-response`
+ * token. Empty in development disables the check so local flows and tests work.
+ *
+ * NOT `requireInProd`: a missing challenge key degrades bot defense but does not
+ * make the platform unsafe (Arcjet + Redis rate limits remain). Crashing the
+ * whole service over a defense-in-depth layer would be the wrong trade, so this
+ * is surfaced as a loud production warning in `assertDistinctSecrets` instead.
+ */
+export const TURNSTILE_SECRET_KEY: string =
+  process.env.TURNSTILE_SECRET_KEY?.trim() || "";
+
+/** Enabled whenever a secret key resolves and it is not explicitly switched off. */
+export const TURNSTILE_ENABLED: boolean =
+  process.env.TURNSTILE_ENABLED !== "false" && TURNSTILE_SECRET_KEY.length > 0;
 
 // ── Email ─────────────────────────────────────────────────────────────────────
 
@@ -415,9 +475,10 @@ export function getRpcUrl(chainId: number): string {
     11155111: "https://rpc.sepolia.org",
     8453: "https://mainnet.base.org",
     84532: "https://sepolia.base.org",
-    // Arc Testnet: use QuikNode paid endpoint as dev fallback (higher rate limits)
-    5042002:
-      "https://sleek-sleek-resonance.arc-testnet.quiknode.pro/9447b76a1f0e822664b55dc6858f4ba4beebc153/",
+    // Arc Testnet public RPC. Production MUST set RPC_URL_5042002 / ARC_RPC_URL
+    // (a dedicated endpoint); this is a development fallback only. Never embed
+    // a provider API key here — it leaks into source and git history.
+    5042002: "https://rpc.testnet.arc.network",
     677: "https://rpc.botchain.ai",
     968: "https://rpc.bohr.life",
     1: "https://cloudflare-eth.com",
@@ -669,8 +730,12 @@ function assertDistinctSecrets(): void {
 
   const seen = new Map<string, string>();
   const collisions: string[] = [];
+  const weak: string[] = [];
   for (const [name, value] of named) {
     if (!value) continue;
+    if (value.length < MIN_SECRET_LENGTH) {
+      weak.push(`${name} (${value.length} chars)`);
+    }
     const existing = seen.get(value);
     if (existing) {
       collisions.push(`${name} == ${existing}`);
@@ -679,12 +744,30 @@ function assertDistinctSecrets(): void {
     }
   }
 
-  if (collisions.length === 0) return;
+  if (collisions.length === 0 && weak.length === 0 && TURNSTILE_SECRET_KEY) return;
+
+  const parts: string[] = [];
+  if (!TURNSTILE_SECRET_KEY) {
+    parts.push(
+      "TURNSTILE_SECRET_KEY is not set — the bot challenge on the anonymous auth " +
+        "endpoints (email/activation) is DISABLED. Set it to enable Turnstile.",
+    );
+  }
+  if (collisions.length > 0) {
+    parts.push(
+      `Shared secrets across security domains: ${collisions.join(", ")}. ` +
+        "Each domain must have its own value so that a leak of one cannot compromise " +
+        "the others (session signing, admin auth, invoice-URL signing, API tokens).",
+    );
+  }
+  if (weak.length > 0) {
+    parts.push(
+      `Secrets below the ${MIN_SECRET_LENGTH}-character entropy floor: ${weak.join(", ")}.`,
+    );
+  }
 
   const message =
-    `[config] Shared secrets across security domains: ${collisions.join(", ")}. ` +
-    "Each domain must have its own value so that a leak of one cannot compromise " +
-    "the others (session signing, admin auth, invoice-URL signing, API tokens). " +
+    `[config] ${parts.join(" ")} ` +
     "Rotate with: openssl rand -hex 32  —  then set SECRET_ISOLATION_ENFORCE=true " +
     "to keep it that way.";
 

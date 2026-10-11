@@ -94,7 +94,7 @@ function dedupeIds(ids: string[] | null): string[] | null {
 }
 
 async function loadEnvironmentScopedCatalog(teamId: string, environmentId: string) {
-  const [plans, addOns, creditTypes, companies, activeAddOnGrants] = await Promise.all([
+  const [plans, addOns, creditTypes, planCountRows, addOnGrantCountRows] = await Promise.all([
     db.catalogPlan.findMany({
       where: {
         teamId,
@@ -157,17 +157,19 @@ async function loadEnvironmentScopedCatalog(teamId: string, environmentId: strin
         updatedAt: true,
       },
     }),
-    db.arcenCompany.findMany({
+    // Aggregate counts in the database rather than loading every company /
+    // active grant row for the environment into memory and counting in JS.
+    db.arcenCompany.groupBy({
+      by: ["activePlanId"],
       where: {
         teamId,
         environmentId,
         activePlanId: { not: null },
       },
-      select: {
-        activePlanId: true,
-      },
+      _count: { _all: true },
     }),
-    db.companyAddOnGrant.findMany({
+    db.companyAddOnGrant.groupBy({
+      by: ["catalogAddOnId"],
       where: {
         teamId,
         status: "ACTIVE",
@@ -175,27 +177,19 @@ async function loadEnvironmentScopedCatalog(teamId: string, environmentId: strin
           environmentId,
         },
       },
-      select: {
-        catalogAddOnId: true,
-      },
+      _count: { _all: true },
     }),
   ]);
 
   const planCompanyCounts = new Map<string, number>();
-  for (const company of companies) {
-    if (!company.activePlanId) continue;
-    planCompanyCounts.set(
-      company.activePlanId,
-      (planCompanyCounts.get(company.activePlanId) ?? 0) + 1,
-    );
+  for (const row of planCountRows) {
+    if (!row.activePlanId) continue;
+    planCompanyCounts.set(row.activePlanId, row._count._all);
   }
 
   const addOnGrantCounts = new Map<string, number>();
-  for (const grant of activeAddOnGrants) {
-    addOnGrantCounts.set(
-      grant.catalogAddOnId,
-      (addOnGrantCounts.get(grant.catalogAddOnId) ?? 0) + 1,
-    );
+  for (const row of addOnGrantCountRows) {
+    addOnGrantCounts.set(row.catalogAddOnId, row._count._all);
   }
 
   return {

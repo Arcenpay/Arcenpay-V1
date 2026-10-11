@@ -20,10 +20,11 @@
  *      is attached                                      → REJECT. A well-behaved
  *      non-browser client uses a Bearer API key, not a browser session cookie.
  *
- * Requests authenticated with an `Authorization`/`X-API-Key` header are skipped
- * entirely — header-based credentials cannot be attached by a hostile page
- * (the browser would have to be told the key), so they are not CSRF-able.
- * Facilitator-to-backend calls use a Bearer token too, so internal traffic is
+ * Requests authenticated with a GENUINE API key in `Authorization`/`X-API-Key`
+ * are skipped entirely — a hostile page cannot attach a real key (the browser
+ * would have to be told it), so they are not CSRF-able. A bare or forged header
+ * value does NOT skip the check. Facilitator-to-backend calls use a Bearer
+ * token and carry no session cookie, so they fail the cookie gate and are
  * unaffected.
  */
 
@@ -31,6 +32,7 @@ import type { Context, Next } from "hono";
 import { getCookie } from "hono/cookie";
 import { resolveCorsOrigin } from "./cors.js";
 import { AUTH_COOKIE_NAME } from "../lib/auth/auth-constants.js";
+import { isApiKeyToken } from "../lib/auth/api-key-auth.js";
 
 const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
 
@@ -53,12 +55,14 @@ export async function csrfOriginGuard(c: Context, next: Next): Promise<Response 
     return next();
   }
 
-  // Header-based credentials are immune to CSRF — a hostile page cannot set
-  // them. Only cookie-authenticated requests need provenance validation.
-  const hasHeaderCredential = Boolean(
-    c.req.header("authorization") ?? c.req.header("x-api-key"),
-  );
-  if (hasHeaderCredential) {
+  // Only a *genuine* API key in the header is immune to CSRF — a hostile page
+  // cannot attach one because the browser would have to be told the key. A
+  // bare/forged `Authorization` header must NOT bypass the check: on dual-auth
+  // routes a junk header would otherwise let the handler fall back to the
+  // victim's session cookie and process a cross-site state change.
+  const authHeader = c.req.header("authorization");
+  const apiKeyHeader = c.req.header("x-api-key");
+  if (isApiKeyToken(apiKeyHeader) || isApiKeyToken(authHeader)) {
     return next();
   }
 
@@ -83,7 +87,11 @@ export async function csrfOriginGuard(c: Context, next: Next): Promise<Response 
     );
   }
 
-  if (fetchSite === "same-origin" || fetchSite === "none" || fetchSite === "same-site") {
+  // `same-site` is NOT blanket-trusted: any `*.arcenpay.com` host shares the
+  // `.arcenpay.com` session cookie, so a compromised sibling subdomain would
+  // otherwise be able to drive state changes. It falls through to the
+  // origin/referer check below, which still permits trusted first-party hosts.
+  if (fetchSite === "same-origin" || fetchSite === "none") {
     return next();
   }
 

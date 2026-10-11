@@ -4,6 +4,7 @@ import { isValidAnyFamilyTxHash } from "@arcenpay/internal-core";
 import { db } from "../../../db.js";
 import { requirePermission, isErrorResponse } from "../../../lib/auth/api-auth.js";
 import { writeAuditEvent } from "../../../lib/platform/audit.js";
+import { syncPlatformBillingPlanFromCatalogPlan } from "../../../lib/billing/platform-tier-billing.js";
 
 const confirmSchema = z.object({
   // Family-agnostic: EVM hex or a Solana base58 signature.
@@ -57,6 +58,12 @@ export async function confirmPlanOnChain(c: Context) {
       chainSyncedAt: true,
     },
   });
+
+  if (success && updatedPlan.onChainPlanId) {
+    await syncPlatformBillingPlanFromCatalogPlan(planId).catch((error) => {
+      console.warn("[plan-chain-confirm] Platform billing sync failed:", error);
+    });
+  }
 
   await writeAuditEvent({
     headers: c.req.raw.headers,

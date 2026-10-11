@@ -22,6 +22,7 @@ import { adminActivationKeysRouter } from "./admin/activation-keys.js";
 import { adminAnalyticsRouter } from "./admin/analytics.js";
 import { adminUsersRouter } from "./admin/users.js";
 import { activationRouter } from "./activation.js";
+import { ipRateLimit } from "../../middleware/rate-limit.js";
 
 // ── SDK flat files (Next.js-style exports: GET, POST, OPTIONS) ──────────────
 import { GET as getCheck, OPTIONS as checkOptions } from "./check.js";
@@ -93,6 +94,13 @@ export const v1Router = new Hono()
   .route("/admin/activation-keys", adminActivationKeysRouter)
   .route("/admin/users", adminUsersRouter)
   .route("/activation", activationRouter)
+
+  // Token-in-query read endpoints (embeddable SDK): reachable without an API
+  // key, so bound them per IP. Ceilings are generous because legitimate server
+  // SDKs can share a NAT egress IP and these are cheap reads.
+  .use("/check", ipRateLimit({ bucket: "sdk-check", limit: 600, windowMs: 60_000 }))
+  .use("/components/:id/render", ipRateLimit({ bucket: "sdk-component-render", limit: 600, windowMs: 60_000 }))
+  .use("/coupons/validate", ipRateLimit({ bucket: "sdk-coupon-validate", limit: 300, windowMs: 60_000 }))
 
   // ── SDK flat routes ──────────────────────────────────────────────────────
   .get("/check", getCheck)

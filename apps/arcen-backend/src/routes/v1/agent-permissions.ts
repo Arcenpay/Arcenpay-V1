@@ -18,6 +18,7 @@ import {
 } from "@arcenpay/internal-core";
 import { resolveChainFamilyForPrisma, type ChainFamilyPrisma } from "../../lib/platform/chain-family.js";
 import { toPrismaJson } from "../../utils/prisma-json.js";
+import { publicErrorMessage } from "../../utils/api-response.js";
 import { createPublicClient, http, getAddress, isAddress } from "viem";
 import { asRecord, readString } from "../../lib/billing/utils.js";
 
@@ -111,7 +112,7 @@ export async function GET(c: Context) {
     });
   } catch (err: any) {
     console.error("[agent/permissions GET]", err);
-    return c.json({ error: err.message || "Internal error" }, 500 as any);
+    return c.json({ error: publicErrorMessage(err) }, 500 as any);
   }
 }
 
@@ -602,6 +603,6 @@ export async function getAgentBalance(c: Context) {
     });
   } catch (err: any) {
     console.error("[getAgentBalance]", err);
-    return c.json({ error: err.message || "Internal error" }, 500 as any);
+    return c.json({ error: publicErrorMessage(err) }, 500 as any);
   }
 }

@@ -18,9 +18,10 @@ import { db } from "../src/db.js";
 import { toPrismaJson } from "../src/utils/prisma-json.js";
 import { bootstrapPlatformBillingPlans } from "../src/lib/billing/platform-tier-billing.js";
 import { ensureTierCatalogPlan } from "../src/lib/billing/platform-tier-billing.js";
+import { resolvePlatformBillingChainId } from "../src/lib/billing/platform-tier-billing.js";
 import { ensurePlatformSubscriptionCompany } from "../src/lib/billing/platform-tier-billing.js";
 import { upsertSubscriptionLedgerState } from "../src/lib/billing/billing-ledger.js";
-import { PLATFORM_BILLING_CHAIN_ID } from "../src/config.js";
+import { resolveChainFamilyForPrisma } from "../src/lib/platform/chain-family.js";
 
 // ── CLI ──────────────────────────────────────────────────────────────────────
 
@@ -137,22 +138,31 @@ async function main() {
   }
 
   // ── 5. Sync onChainPlanId from bootstrapped plans to CatalogPlan ───────
+  const platformChainId = await resolvePlatformBillingChainId(activeEnv?.id ?? null);
+  log(`Platform billing chain: ${platformChainId}`);
+
   for (const tier of ["PLUS", "PRO"] as const) {
     const onChainPlan = await db.platformBillingPlan.findFirst({
-      where: { chainId: PLATFORM_BILLING_CHAIN_ID, tier, syncStatus: "SYNCED" },
+      where: { chainId: platformChainId, tier, syncStatus: "SYNCED" },
       select: { onChainPlanId: true },
     });
 
     if (onChainPlan?.onChainPlanId && planIds[tier]) {
-      await db.catalogPlan.updateMany({
+      await db.catalogPlan.update({
         where: { id: planIds[tier] },
         data: {
           onChainPlanId: onChainPlan.onChainPlanId,
-          chainId: PLATFORM_BILLING_CHAIN_ID,
+          chainId: platformChainId,
+          chainFamily: resolveChainFamilyForPrisma(platformChainId),
           chainSyncStatus: "SYNCED",
         },
       });
       log(`  Synced onChainPlanId for ${tier}: ${onChainPlan.onChainPlanId}`);
+    } else if (planIds[tier]) {
+      log(
+        `  ${tier} plan ${planIds[tier]} has no on-chain id yet. ` +
+          `Register it in the dashboard (Catalog → Plans → Sync on-chain); this mirrors it automatically.`,
+      );
     }
   }
 

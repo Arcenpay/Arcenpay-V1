@@ -195,6 +195,15 @@ export class DurableJobQueue {
         idempotencyKey,
         now + DurableJobQueue.IDEMPOTENCY_TTL_MS,
       );
+
+      // The dedup map is only pruned lazily on lookup, so a long-running
+      // process processing distinct keys would grow it without bound. Sweep
+      // expired entries once it crosses a threshold.
+      if (queue.seenIdempotencyKeys.size > 10_000) {
+        for (const [key, expiresAt] of queue.seenIdempotencyKeys) {
+          if (now >= expiresAt) queue.seenIdempotencyKeys.delete(key);
+        }
+      }
     }
 
     queue.pending.push(job as Job<unknown>);
@@ -240,18 +249,29 @@ export class DurableJobQueue {
     const interval = setInterval(() => {
       const queue = this.getOrCreate(queueName);
       let capacity = concurrency - inFlight;
+      if (capacity <= 0) return;
 
-      while (capacity > 0) {
-        const now = Date.now();
-        // Pick the first job that's ready (nextRetryAt ≤ now)
-        const idx = queue.pending.findIndex((j) => j.nextRetryAt <= now);
-        if (idx === -1) break;
+      const now = Date.now();
 
-        const job = queue.pending.splice(idx, 1)[0] as Job<T>;
+      // Single-pass partition: take up to `capacity` ready jobs, keep the rest
+      // in order. The previous `findIndex` + `splice` per job was O(n) per
+      // dequeue — O(n²) to drain a large backlog. This is O(n) per tick.
+      const ready: Array<Job<T>> = [];
+      const remaining: Array<Job<unknown>> = [];
+      for (const job of queue.pending as Array<Job<T>>) {
+        if (capacity > 0 && job.nextRetryAt <= now) {
+          ready.push(job);
+          capacity -= 1;
+        } else {
+          remaining.push(job as Job<unknown>);
+        }
+      }
+      queue.pending = remaining;
+
+      for (const job of ready) {
         job.attempts += 1;
         job.processedAt = now;
         inFlight += 1;
-        capacity -= 1;
 
         void (async () => {
           try {

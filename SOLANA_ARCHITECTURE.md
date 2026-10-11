@@ -376,3 +376,28 @@ touched) and open items not on the critical path.
   spend-cap, provider/price substitution and revoke remain future work.
 - Mainnet program id, USDC mint and ATAs are **unset**; no canary has been run.
 
+---
+
+## 12. Platform self-billing (dogfooding) on Solana
+
+ArcenPay bills itself (Free / Pro / Enterprise) through the same provider model as every tenant.
+That stack now resolves its chain **at runtime** from the platform provider environment, with
+`PLATFORM_BILLING_CHAIN_ID` as an env override, so it self-bills on Solana with no code change:
+
+- `PLATFORM_BILLING_CHAIN_ID=9100001` (devnet) / `9100000` (mainnet); unset = provider environment.
+- Accepted token resolves per chain (`4zMMC9srt…` devnet / `EPjFWdd5…` mainnet USDC).
+- `PLATFORM_BILLING_TREASURY_ADDRESS` on Solana defaults to the provider team's linked Solana wallet;
+  no ops keypair is required (`PLATFORM_BILLING_OPS_PRIVATE_KEY` is EVM-only).
+
+**On-chain registration reuses the generic catalog flow** (admin dashboard wallet signs `create_plan`):
+`GET /catalog/plans/:id/sign-nonce` → wallet signs → `POST /catalog/plans/:id/register-on-chain`.
+On success the backend mirrors the plan into `PlatformBillingPlan` via
+`syncPlatformBillingPlanFromCatalogPlan` (`lib/billing/platform-tier-billing.ts`), which is the bridge
+that keeps first-party tier plans in sync. `bootstrapPlatformBillingPlans()` ensures the rows for
+non-EVM families and mirrors any already-registered plan (no server signer).
+
+Enrollment (`ensurePlatformPlan`) and tier-plan creation (`ensureTierCatalogPlan`) are chain-aware;
+entitlements flow through the existing `buildPlatformTierEntitlements` →
+`syncEntitlementsToFlagRules` path. The subscribe → activate → `projectPlatformBillingEntitlement`
+leg was already chain-agnostic. In the end, it is `Team.platformTier` that moves.
+

@@ -9,6 +9,7 @@ import type { Context } from "hono";
 import { withPrismaReconnect } from "../../db.js";
 import { SIWE_JWT_SECRET } from "../../config.js";
 import { AUTH_COOKIE_NAME, AUTH_SESSION_TTL_MS } from "./auth-constants.js";
+import { invalidateSessionCache } from "./session-cache.js";
 
 // Both the dashboard (app.arcenpay.com) and API (api.arcenpay.com) must read
 // the same session. A host-only API cookie authenticates API fetches but is
@@ -291,6 +292,9 @@ export async function clearSession(c: Context): Promise<void> {
         },
       }),
     );
+    // The middleware reads through a short-TTL Redis cache; without this the
+    // revoked session keeps authenticating until the TTL expires.
+    await invalidateSessionCache(tokenHash);
   }
 
   clearLegacyHostOnlySessionCookie(c);

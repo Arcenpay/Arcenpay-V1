@@ -183,39 +183,6 @@ export async function requireAdminSession(next = "/login?redirect=/admin"): Prom
   return session;
 }
 
-export async function createSession(userId: string): Promise<DashboardSession> {
-  const res = await fetch(`${BACKEND_URL}/api/v1/auth/session`, {
-    method: "POST", headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ userId }),
-  });
-  if (!res.ok) throw new Error("Failed to create session");
-  const setCookie = res.headers.get("set-cookie");
-  if (setCookie) {
-    const store = await cookies();
-    const match = setCookie.match(/arcen_session=([^;]+)/);
-    if (match) store.set("arcen_session", match[1], {
-      httpOnly: true, sameSite: "lax",
-      secure: process.env.NODE_ENV === "production", path: "/", maxAge: 30 * 24 * 60 * 60,
-    });
-  }
-  const data = await res.json();
-  const session = data.data ?? data;
-  return {
-    sessionId: session.sessionId ?? "",
-    userId: session.userId ?? "",
-    clerkUserId: session.userId ?? "",
-    email: session.email ?? null,
-    currentTeamId: session.currentTeamId ?? null,
-    walletAddress: session.walletAddress ?? null,
-    stellarWalletAddress: session.stellarWalletAddress ?? null,
-    solanaWalletAddress: session.solanaWalletAddress ?? null,
-    currentTeamRole: null,
-    activeEnvironment: null,
-    environments: [],
-    expiresAt: new Date(session.expiresAt ?? Date.now()),
-  };
-}
-
 export async function refreshSession(_sessionId: string): Promise<void> {
   const store = await cookies();
   const token = store.get("arcen_session")?.value;

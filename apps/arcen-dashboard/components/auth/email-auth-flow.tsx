@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { NetworkIcon } from "@web3icons/react/dynamic";
 import { AuthMarketingPanel } from "./auth-marketing-panel";
+import { TurnstileWidget } from "./turnstile-widget";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
@@ -109,6 +110,7 @@ export function EmailAuthFlow({
 
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [debugCode, setDebugCode] = useState<string | null>(null);
   const [retryAt, setRetryAt] = useState<string | null>(null);
@@ -616,6 +618,7 @@ export function EmailAuthFlow({
           email,
           walletAddress: walletAddr,
           ...(inviteToken ? { inviteToken } : {}),
+          ...(turnstileToken ? { "cf-turnstile-response": turnstileToken } : {}),
         }),
       });
 
@@ -669,6 +672,7 @@ export function EmailAuthFlow({
               ? solanaWallet.address
               : address || undefined,
           ...(inviteToken ? { inviteToken } : {}),
+          ...(turnstileToken ? { "cf-turnstile-response": turnstileToken } : {}),
         }),
       });
 
@@ -1199,6 +1203,8 @@ export function EmailAuthFlow({
                   />
                 </div>
 
+                <TurnstileWidget onToken={setTurnstileToken} />
+
                 <Button
                   type="button"
                   onClick={submitEmail}
@@ -1329,6 +1335,8 @@ export function EmailAuthFlow({
                     </p>
                   ) : null}
                 </div>
+
+                <TurnstileWidget onToken={setTurnstileToken} />
 
                 <Button
                   type="button"

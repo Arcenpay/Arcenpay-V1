@@ -3,6 +3,7 @@ import { z } from "zod";
 import { db } from "../../../db.js";
 import { requirePermission, isErrorResponse } from "../../../lib/auth/api-auth.js";
 import { writeAuditEvent } from "../../../lib/platform/audit.js";
+import { publicErrorMessage } from "../../../utils/api-response.js";
 import {
     listMetadataEntitlements,
     writeMetadataEntitlements,
@@ -53,7 +54,7 @@ export async function getAddOnEntitlements(c: Context) {
         return c.json({ entitlements: getEntitlements(addOn.metadata) });
     } catch (err) {
         console.error("[add-ons entitlements GET]", err);
-        return c.json({ error: "Internal server error", detail: err instanceof Error ? err.message : String(err) }, 500 as any);
+        return c.json({ error: "Internal server error", detail: publicErrorMessage(err) }, 500 as any);
     }
 }
 
@@ -113,7 +114,7 @@ export async function addAddOnEntitlement(c: Context) {
         return c.json({ entitlements: newEntitlements }, 201 as any);
     } catch (err) {
         console.error("[add-ons entitlements POST]", err);
-        return c.json({ error: "Internal server error", detail: err instanceof Error ? err.message : String(err) }, 500 as any);
+        return c.json({ error: "Internal server error", detail: publicErrorMessage(err) }, 500 as any);
     }
 }
 
@@ -160,7 +161,7 @@ export async function updateAddOnEntitlement(c: Context) {
         return c.json({ entitlements: existing });
     } catch (err) {
         console.error("[add-ons entitlements PUT]", err);
-        return c.json({ error: "Internal server error", detail: err instanceof Error ? err.message : String(err) }, 500 as any);
+        return c.json({ error: "Internal server error", detail: publicErrorMessage(err) }, 500 as any);
     }
 }
 
@@ -207,6 +208,6 @@ export async function deleteAddOnEntitlement(c: Context) {
         return c.json({ entitlements: filtered });
     } catch (err) {
         console.error("[add-ons entitlements DELETE]", err);
-        return c.json({ error: "Internal server error", detail: err instanceof Error ? err.message : String(err) }, 500 as any);
+        return c.json({ error: "Internal server error", detail: publicErrorMessage(err) }, 500 as any);
     }
 }

@@ -1,6 +1,7 @@
 import type { Context } from "hono";
 import { z } from "zod";
 import { authEmailVerifyProtect, arcjetNodeRequest } from "../../../lib/auth/arcjet.js";
+import { enforceTurnstile } from "../../../lib/auth/turnstile.js";
 import {
   EMAIL_AUTH_MAX_ATTEMPTS,
   EMAIL_AUTH_PURPOSE_LOGIN,
@@ -44,6 +45,10 @@ export async function verifyEmail(c: Context) {
   }
 
   const email = normalizeEmail(parsed.data.email);
+
+  // Bot challenge before the code is checked (and before any session is minted).
+  const challenge = await enforceTurnstile(c, body);
+  if (challenge) return challenge;
   if (parsed.data.inviteToken) {
     const invitation = await getActiveTeamInvitationByToken(parsed.data.inviteToken);
     if (!invitation || invitation.revokedAt || invitation.acceptedAt || invitation.expiresAt <= new Date()) {

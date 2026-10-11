@@ -17,9 +17,13 @@ import {
   getChain,
   getContractAddresses,
   getTokenAddress,
+  isEvmChain,
+  isSolanaChainId,
+  isValidAddressForChain,
 } from "@arcenpay/internal-core";
 import { db } from "../../db.js";
 import { toPrismaJson } from "../../utils/prisma-json.js";
+import { asRecord } from "./utils.js";
 import { allocateInvoiceNumber, toSix } from "./invoices.js";
 import {
   recordSuccessfulPayment,
@@ -33,6 +37,7 @@ import { resolveChainFamilyForPrisma } from "../platform/chain-family.js";
 import {
   PLATFORM_BILLING_ACCEPTED_TOKEN,
   PLATFORM_BILLING_CHAIN_ID,
+  PLATFORM_BILLING_CHAIN_ID_OVERRIDE,
   PLATFORM_BILLING_OPS_PRIVATE_KEY,
   PLATFORM_BILLING_TREASURY_ADDRESS,
   getRpcUrl,
@@ -66,6 +71,44 @@ function normalizePrivateKey(value?: string | null): `0x${string}` | null {
   const trimmed = value?.trim();
   if (!trimmed) return null;
   return (trimmed.startsWith("0x") ? trimmed : `0x${trimmed}`) as `0x${string}`;
+}
+
+/**
+ * Family-aware address validation/normalisation. EVM addresses are lower-cased
+ * (case-insensitive); Solana Base58 and Stellar addresses are case-sensitive
+ * and returned exactly as given.
+ */
+export function normalizePlatformAddress(
+  value: string | null | undefined,
+  chainId: number,
+): string | null {
+  const trimmed = value?.trim();
+  if (!trimmed || !isValidAddressForChain(trimmed, chainId)) return null;
+  return isEvmChain(chainId) ? trimmed.toLowerCase() : trimmed;
+}
+
+/**
+ * Resolve the chain platform self-billing runs on. An explicit
+ * `PLATFORM_BILLING_CHAIN_ID` env override always wins; otherwise the chain of
+ * the platform provider WorkspaceEnvironment is used, falling back to the
+ * legacy EVM default. This is what lets the same code self-bill ArcenPay on
+ * Solana devnet locally and mainnet in production with only env changes.
+ */
+export async function resolvePlatformBillingChainId(
+  environmentId?: string | null,
+): Promise<number> {
+  if (PLATFORM_BILLING_CHAIN_ID_OVERRIDE != null) {
+    return PLATFORM_BILLING_CHAIN_ID_OVERRIDE;
+  }
+  const account = environmentId
+    ? await db.platformBillingAccount.findFirst({
+        where: { environmentId },
+        select: { environment: { select: { chainId: true } } },
+      })
+    : await db.platformBillingAccount.findFirst({
+        select: { environment: { select: { chainId: true } } },
+      });
+  return account?.environment?.chainId ?? PLATFORM_BILLING_CHAIN_ID;
 }
 
 function buildTierIdempotencyKey(
@@ -105,27 +148,45 @@ function platformPlanAmountAtomic(tier: PlatformTier): bigint {
   return BigInt(tierPricing(tier).amountMicros);
 }
 
-function platformBillingToken(): `0x${string}` {
-  const configured = normalizeAddress(PLATFORM_BILLING_ACCEPTED_TOKEN);
-  const fallback = normalizeAddress(
-    getTokenAddress(PLATFORM_BILLING_CHAIN_ID, "USDC") ??
-    getTokenAddress(PLATFORM_BILLING_CHAIN_ID, "USDT"),
+/**
+ * Resolve the accepted token for a platform billing chain. Prefers an explicit
+ * `PLATFORM_BILLING_ACCEPTED_TOKEN`, then the chain's registered USDC/USDT, so
+ * the value is correct for whichever family the chain belongs to (EVM `0x…` or
+ * Solana Base58 mint).
+ */
+export function platformBillingToken(chainId: number = PLATFORM_BILLING_CHAIN_ID): string {
+  const configured = normalizePlatformAddress(PLATFORM_BILLING_ACCEPTED_TOKEN, chainId);
+  const fallback = normalizePlatformAddress(
+    getTokenAddress(chainId, "USDC") ?? getTokenAddress(chainId, "USDT"),
+    chainId,
   );
   const token = configured ?? fallback;
   if (!token) {
     throw new Error(
-      `PLATFORM_BILLING_ACCEPTED_TOKEN must be set for chain ${PLATFORM_BILLING_CHAIN_ID}.`,
+      `PLATFORM_BILLING_ACCEPTED_TOKEN must be set for chain ${chainId}.`,
     );
   }
   return token;
 }
 
-function platformBillingTreasury(): `0x${string}` {
-  const treasury = normalizeAddress(PLATFORM_BILLING_TREASURY_ADDRESS);
+/**
+ * Resolve the platform treasury for a chain. On EVM this is the ops-signer
+ * address; on Solana it is the platform provider team's Solana wallet (the
+ * account the admin signs `create_plan` with).
+ */
+function platformBillingTreasury(chainId: number = PLATFORM_BILLING_CHAIN_ID): string {
+  const treasury = normalizePlatformAddress(PLATFORM_BILLING_TREASURY_ADDRESS, chainId);
   if (!treasury) {
-    throw new Error("PLATFORM_BILLING_TREASURY_ADDRESS must be set.");
+    throw new Error(
+      `PLATFORM_BILLING_TREASURY_ADDRESS must be a valid address for platform billing chain ${chainId}.`,
+    );
   }
   return treasury;
+}
+
+/** Best-effort treasury resolution that does not throw (used by readiness). */
+function platformBillingTreasurySafe(chainId: number): string {
+  return normalizePlatformAddress(PLATFORM_BILLING_TREASURY_ADDRESS, chainId) ?? "";
 }
 
 function platformClients(chainId = PLATFORM_BILLING_CHAIN_ID) {
@@ -208,23 +269,82 @@ async function readOnChainPlatformPlan(
   };
 }
 
-async function ensurePlatformBillingPlanRow(tier: PlatformTier) {
+/**
+ * Resolve the platform treasury address for a chain. Prefers an explicit
+ * `PLATFORM_BILLING_TREASURY_ADDRESS`, then the provider team's wallet on that
+ * chain (the same account the admin signs on-chain plan registration with).
+ */
+export async function resolvePlatformProviderWallet(
+  teamId: string,
+  chainId: number,
+): Promise<string> {
+  const fromEnv = platformBillingTreasurySafe(chainId);
+  if (fromEnv) return fromEnv;
+
+  // Wallets live on the user identity; the provider wallet is the team owner's
+  // linked wallet (matching how the catalog sign-nonce route resolves it).
+  const members = await db.teamMember.findMany({
+    where: { teamId },
+    orderBy: { createdAt: "asc" },
+    select: {
+      role: true,
+      user: {
+        select: {
+          walletAddress: true,
+          solanaWalletAddress: true,
+          stellarWalletAddress: true,
+        },
+      },
+    },
+  });
+  const ordered = [
+    ...members.filter((member) => member.role === "OWNER"),
+    ...members.filter((member) => member.role !== "OWNER"),
+  ];
+
+  for (const member of ordered) {
+    const candidate = isEvmChain(chainId)
+      ? member.user.walletAddress
+      : isSolanaChainId(chainId)
+        ? member.user.solanaWalletAddress
+        : member.user.stellarWalletAddress;
+    const normalized = normalizePlatformAddress(candidate, chainId);
+    if (normalized) return normalized;
+  }
+  return "";
+}
+
+async function resolvePlatformBillingEnvironment(
+  chainId: number,
+): Promise<{ environmentId: string; providerTeamId: string } | null> {
+  return (
+    (await db.platformBillingAccount.findFirst({
+      where: { environment: { chainId } },
+      select: { environmentId: true, providerTeamId: true },
+    })) ??
+    (await db.platformBillingAccount.findFirst({
+      select: { environmentId: true, providerTeamId: true },
+    }))
+  );
+}
+
+async function ensurePlatformBillingPlanRow(
+  tier: PlatformTier,
+  chainId: number = PLATFORM_BILLING_CHAIN_ID,
+) {
   if (tier === "FREE") return null;
   const { amountMicros } = tierPricing(tier);
   const planName = tierPlanName(tier);
-  const acceptedToken = platformBillingToken();
-  const treasuryWallet = platformBillingTreasury();
-  const account = await db.platformBillingAccount.findFirst({
-    where: { environment: { chainId: PLATFORM_BILLING_CHAIN_ID } },
-    select: { environmentId: true },
-  });
+  const account = await resolvePlatformBillingEnvironment(chainId);
   if (!account) throw new Error("No platform billing environment is configured for this chain.");
+  const acceptedToken = platformBillingToken(chainId);
+  const treasuryWallet = await resolvePlatformProviderWallet(account.providerTeamId, chainId);
 
   return db.platformBillingPlan.upsert({
     where: {
       environmentId_chainId_tier: {
         environmentId: account.environmentId,
-        chainId: PLATFORM_BILLING_CHAIN_ID,
+        chainId,
         tier,
       },
     },
@@ -233,21 +353,171 @@ async function ensurePlatformBillingPlanRow(tier: PlatformTier) {
       priceMicros: amountMicros,
       billingIntervalSeconds: PLATFORM_BILLING_INTERVAL_SECONDS,
       acceptedToken,
-      treasuryWallet,
+      ...(treasuryWallet ? { treasuryWallet } : {}),
     },
-create: {
-       environmentId: account.environmentId,
-       chainId: PLATFORM_BILLING_CHAIN_ID,
-       chainFamily: resolveChainFamilyForPrisma(PLATFORM_BILLING_CHAIN_ID),
-       tier,
-       planName,
-       priceMicros: amountMicros,
-       billingIntervalSeconds: PLATFORM_BILLING_INTERVAL_SECONDS,
-       acceptedToken,
-       treasuryWallet,
-       syncStatus: "PENDING",
-     },
+    create: {
+      environmentId: account.environmentId,
+      chainId,
+      chainFamily: resolveChainFamilyForPrisma(chainId),
+      tier,
+      planName,
+      priceMicros: amountMicros,
+      billingIntervalSeconds: PLATFORM_BILLING_INTERVAL_SECONDS,
+      acceptedToken,
+      treasuryWallet: treasuryWallet || "",
+      syncStatus: "PENDING",
+    },
   });
+}
+
+/**
+ * Mirror a catalog plan that has just been registered on-chain into the
+ * first-party `PlatformBillingPlan` row.
+ *
+ * This is the bridge for the "admin dashboard wallet signs `create_plan`"
+ * model: the platform admin registers a tier plan through the normal catalog
+ * "Sync on-chain" flow, and this keeps the platform self-billing tables in
+ * sync. No-op for plans that are not first-party platform tier plans.
+ */
+export async function syncPlatformBillingPlanFromCatalogPlan(
+  catalogPlanId: string,
+): Promise<void> {
+  const plan = await db.catalogPlan.findUnique({
+    where: { id: catalogPlanId },
+    select: {
+      id: true,
+      teamId: true,
+      environmentId: true,
+      name: true,
+      tier: true,
+      chainId: true,
+      chainFamily: true,
+      onChainPlanId: true,
+      acceptedToken: true,
+      billingInterval: true,
+      price: true,
+      metadata: true,
+    },
+  });
+  if (!plan?.onChainPlanId || !plan.environmentId) return;
+
+  const meta = asRecord(plan.metadata);
+  if (meta.isPlatformTierPlan !== true && meta.isFirstPartyPlan !== true) return;
+
+  const tier: PlatformTier | null =
+    plan.tier === "enterprise"
+      ? "PRO"
+      : plan.tier === "pro"
+        ? "PLUS"
+        : plan.tier === "starter"
+          ? "FREE"
+          : null;
+  if (!tier || tier === "FREE") return;
+
+  const priceMicros = Math.round(parseFloat(plan.price.toString()) * 1_000_000);
+  const treasuryWallet =
+    (await resolvePlatformProviderWallet(plan.teamId, plan.chainId)) ||
+    (
+      await db.platformBillingPlan.findUnique({
+        where: {
+          environmentId_chainId_tier: {
+            environmentId: plan.environmentId,
+            chainId: plan.chainId,
+            tier,
+          },
+        },
+        select: { treasuryWallet: true },
+      })
+    )?.treasuryWallet ||
+    "";
+
+  await db.platformBillingPlan.upsert({
+    where: {
+      environmentId_chainId_tier: {
+        environmentId: plan.environmentId,
+        chainId: plan.chainId,
+        tier,
+      },
+    },
+    update: {
+      onChainPlanId: plan.onChainPlanId,
+      chainFamily: plan.chainFamily,
+      acceptedToken: plan.acceptedToken,
+      syncStatus: "SYNCED",
+      syncError: null,
+      syncedAt: new Date(),
+      ...(treasuryWallet ? { treasuryWallet } : {}),
+    },
+    create: {
+      environmentId: plan.environmentId,
+      chainId: plan.chainId,
+      chainFamily: plan.chainFamily,
+      tier,
+      planName: plan.name,
+      priceMicros,
+      billingIntervalSeconds: plan.billingInterval,
+      acceptedToken: plan.acceptedToken,
+      treasuryWallet,
+      onChainPlanId: plan.onChainPlanId,
+      syncStatus: "SYNCED",
+      syncedAt: new Date(),
+    },
+  });
+}
+
+/**
+ * Non-EVM (Solana/Stellar) bootstrap. There is no server-side signer — the
+ * admin registers `create_plan` from the dashboard wallet — so this only
+ * ensures the `PlatformBillingPlan` rows exist and mirrors any catalog tier
+ * plan the admin has already registered on-chain.
+ */
+async function bootstrapNonEvmPlatformBillingPlans(chainId: number): Promise<{
+  chainId: number;
+  plans: Array<{
+    tier: PlatformTier;
+    onChainPlanId: string | null;
+    syncStatus: string;
+    txHash: string | null;
+  }>;
+}> {
+  const results: Array<{
+    tier: PlatformTier;
+    onChainPlanId: string | null;
+    syncStatus: string;
+    txHash: string | null;
+  }> = [];
+
+  for (const tier of PLATFORM_BILLING_TIERS) {
+    let row = await ensurePlatformBillingPlanRow(tier, chainId);
+    if (!row) continue;
+
+    const catalogPlan = await db.catalogPlan.findFirst({
+      where: {
+        chainId,
+        onChainPlanId: { not: null },
+        tier: tier === "PRO" ? "enterprise" : "pro",
+        OR: [
+          { metadata: { path: ["isPlatformTierPlan"], equals: toPrismaJson(true) } },
+          { metadata: { path: ["isFirstPartyPlan"], equals: toPrismaJson(true) } },
+        ],
+      },
+      orderBy: { chainSyncedAt: "desc" },
+      select: { id: true },
+    });
+    if (catalogPlan) {
+      await syncPlatformBillingPlanFromCatalogPlan(catalogPlan.id);
+      row = (await db.platformBillingPlan.findUnique({ where: { id: row.id } })) ?? row;
+    }
+
+    results.push({
+      tier,
+      onChainPlanId: row.onChainPlanId,
+      syncStatus: row.syncStatus,
+      txHash: row.bootstrapTxHash,
+    });
+  }
+
+  return { chainId, plans: results };
 }
 
 export async function bootstrapPlatformBillingPlans(): Promise<{
@@ -259,6 +529,11 @@ export async function bootstrapPlatformBillingPlans(): Promise<{
     txHash: string | null;
   }>;
 }> {
+  const platformChainId = await resolvePlatformBillingChainId();
+  if (!isEvmChain(platformChainId)) {
+    return bootstrapNonEvmPlatformBillingPlans(platformChainId);
+  }
+
   const { publicClient, walletClient } = platformWalletClient();
   const contracts = getContractAddresses(PLATFORM_BILLING_CHAIN_ID);
   const planFactoryAddress = normalizeAddress(contracts.planFactory);
@@ -401,9 +676,10 @@ export async function bootstrapPlatformBillingPlans(): Promise<{
 }
 
 export async function getPlatformBillingPlans() {
-  await Promise.all(PLATFORM_BILLING_TIERS.map((tier) => ensurePlatformBillingPlanRow(tier)));
+  const chainId = await resolvePlatformBillingChainId();
+  await Promise.all(PLATFORM_BILLING_TIERS.map((tier) => ensurePlatformBillingPlanRow(tier, chainId)));
   return db.platformBillingPlan.findMany({
-    where: { chainId: PLATFORM_BILLING_CHAIN_ID },
+    where: { chainId },
     orderBy: { tier: "asc" },
   });
 }
@@ -430,6 +706,11 @@ export async function preparePlatformTierActivation(input: {
 }> {
   if (input.targetTier === "FREE") {
     throw new Error("FREE tier does not require activation.");
+  }
+  if (!isEvmChain(PLATFORM_BILLING_CHAIN_ID)) {
+    throw new Error(
+      "The AutopayModule platform-tier flow is EVM-only. On Solana use the generic subscription flow (POST /api/v1/subscriptions/activate).",
+    );
   }
   const paymentAccount = normalizeAddress(input.paymentAccount);
   if (!paymentAccount) throw new Error("paymentAccount must be a valid EVM address.");
@@ -718,10 +999,12 @@ export async function ensureTierCatalogPlan(
         select: { mode: true, chainId: true },
       })
     : null;
-  const catalogChainId = environment?.chainId ?? PLATFORM_BILLING_CHAIN_ID;
+  const catalogChainId =
+    environment?.chainId ??
+    (await resolvePlatformBillingChainId(resolvedEnvironmentId));
   const catalogToken =
-    normalizeAddress(getTokenAddress(catalogChainId, "USDC")) ??
-    platformBillingToken();
+    normalizePlatformAddress(getTokenAddress(catalogChainId, "USDC"), catalogChainId) ??
+    platformBillingToken(catalogChainId);
 
   const expectedCatalogTier =
     tier === "PRO" ? "enterprise" : tier === "PLUS" ? "pro" : "starter";
@@ -798,11 +1081,11 @@ export async function ensureTierCatalogPlan(
     await syncEntitlementsToFlagRules(teamId, plan.id, entitlements);
   }
 
-  // Sync onChainPlanId from bootstrapped platform billing plan
+  // Sync onChainPlanId from the (possibly admin-registered) platform billing plan
   if (tier !== "FREE" && options.syncOnchain !== false) {
     const onChainPlan = await db.platformBillingPlan.findFirst({
       where: {
-        chainId: PLATFORM_BILLING_CHAIN_ID,
+        chainId: catalogChainId,
         tier,
         syncStatus: "SYNCED",
       },
@@ -814,9 +1097,10 @@ export async function ensureTierCatalogPlan(
         where: { id: plan.id },
         data: {
           onChainPlanId: onChainPlan.onChainPlanId,
-          chainId: PLATFORM_BILLING_CHAIN_ID,
+          chainId: catalogChainId,
+          chainFamily: resolveChainFamilyForPrisma(catalogChainId),
           chainSyncStatus: "SYNCED",
-          acceptedToken: platformBillingToken(),
+          acceptedToken: platformBillingToken(catalogChainId),
         },
       });
     }
@@ -919,6 +1203,18 @@ export async function confirmPlatformTierActivation(input: {
 
   if (targetTier === "FREE") {
     return { ok: false, subscriptionStateId: null, invoiceId: null, paymentId: null, deduped: false, error: "FREE tier does not require on-chain activation." };
+  }
+
+  if (!isEvmChain(PLATFORM_BILLING_CHAIN_ID)) {
+    return {
+      ok: false,
+      subscriptionStateId: null,
+      invoiceId: null,
+      paymentId: null,
+      deduped: false,
+      error:
+        "The AutopayModule platform-tier flow is EVM-only. On Solana use the generic subscription flow (POST /api/v1/subscriptions/activate).",
+    };
   }
 
   const normalizedPaymentAccount = normalizeAddress(paymentAccount);
@@ -1663,10 +1959,14 @@ export async function getTeamPlatformBillingReadiness(teamId: string): Promise<{
     graceEndsAt: Date | null;
   } | null;
 }> {
-  // Check env config
-  const hasConfig =
-    Boolean(PLATFORM_BILLING_OPS_PRIVATE_KEY) &&
-    Boolean(PLATFORM_BILLING_TREASURY_ADDRESS);
+  // Resolve the chain the platform bills on, then check config. EVM needs an
+  // ops signer + treasury; Solana uses the provider admin's wallet (no server
+  // signer), so a configured provider environment is sufficient.
+  const chainId = await resolvePlatformBillingChainId();
+  const hasConfig = isEvmChain(chainId)
+    ? Boolean(PLATFORM_BILLING_OPS_PRIVATE_KEY) &&
+      Boolean(PLATFORM_BILLING_TREASURY_ADDRESS)
+    : Boolean(await resolvePlatformBillingEnvironment(chainId));
 
   if (!hasConfig) {
     return { readiness: "NOT_CONFIGURED", platformPlans: [], subscription: null };
@@ -1674,7 +1974,7 @@ export async function getTeamPlatformBillingReadiness(teamId: string): Promise<{
 
   // Load platform plan rows
   const plans = await db.platformBillingPlan.findMany({
-    where: { chainId: PLATFORM_BILLING_CHAIN_ID },
+    where: { chainId },
     select: {
       tier: true,
       onChainPlanId: true,
@@ -1699,7 +1999,7 @@ export async function getTeamPlatformBillingReadiness(teamId: string): Promise<{
   // Those plans are the authoritative portal plans, so readiness must accept
   // them when both are published, active, and have an on-chain identity.
   const platformAccount = await db.platformBillingAccount.findFirst({
-    where: { environment: { chainId: PLATFORM_BILLING_CHAIN_ID } },
+    where: { environment: { chainId } },
     select: { providerTeamId: true, environmentId: true },
   });
   const catalogPaidPlans = platformAccount
@@ -1710,7 +2010,7 @@ export async function getTeamPlatformBillingReadiness(teamId: string): Promise<{
           active: true,
           status: "PUBLISHED",
           tier: { in: ["pro", "enterprise"] },
-          chainId: PLATFORM_BILLING_CHAIN_ID,
+          chainId,
           onChainPlanId: { not: null },
         },
         select: {

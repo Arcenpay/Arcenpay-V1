@@ -11,6 +11,7 @@
 import { createHmac, randomBytes } from "crypto";
 import { db } from "../../db.js";
 import { toPrismaJson } from "../../utils/prisma-json.js";
+import { assertSafeOutboundUrl } from "../security/ssrf-guard.js";
 
 export interface SendWebhookDeliveryInput {
   teamId: string;
@@ -66,8 +67,15 @@ async function resolveWebhookTarget(
   if (!webhookUrl) return null;
   if (!signingSecret) return null;
 
-  // Security: only deliver to HTTPS endpoints
-  if (!webhookUrl.startsWith("https://")) return null;
+  // Security: only deliver to safe, public HTTPS endpoints. This blocks SSRF
+  // to cloud metadata (169.254.169.254), loopback and private network hosts.
+  const safeTarget = await assertSafeOutboundUrl(webhookUrl);
+  if (!safeTarget.ok) {
+    console.warn(
+      `[deliverWebhook] Refusing to deliver to unsafe URL: ${safeTarget.reason}`,
+    );
+    return null;
+  }
 
   const prefs = Array.isArray(profile?.notificationPreferences)
     ? (profile.notificationPreferences as Array<{

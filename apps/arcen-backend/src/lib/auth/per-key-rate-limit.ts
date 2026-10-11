@@ -150,9 +150,3 @@ export class FixedWindowRateLimiter {
     if (this.sweeper) clearInterval(this.sweeper);
   }
 }
-
-/** Process-wide limiter used by `requireApiKey`. */
-export const apiKeyRateLimiter = new FixedWindowRateLimiter(
-  API_KEY_RATE_LIMIT.limit,
-  API_KEY_RATE_LIMIT.windowMs,
-);

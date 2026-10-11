@@ -4,6 +4,7 @@ import { requireTeamRoles, isErrorResponse } from "../../../lib/auth/api-auth.js
 import { writeAuditEvent } from "../../../lib/platform/audit.js";
 import { sendWebhookDelivery } from "../../../lib/webhooks/deliver-webhook.js";
 import { requireResolvedActiveEnvironment } from "../../../lib/environments/workspace-environments.js";
+import { assertSafeOutboundUrl } from "../../../lib/security/ssrf-guard.js";
 
 const testWebhookSchema = z.object({
   url: z
@@ -42,6 +43,19 @@ export async function testWebhook(c: Context) {
   }
 
   const { team } = auth;
+
+  const safeUrl = await assertSafeOutboundUrl(parsed.data.url);
+  if (!safeUrl.ok) {
+    return c.json(
+      {
+        ok: false,
+        error: `Webhook URL rejected: ${safeUrl.reason}`,
+        code: "INVALID_WEBHOOK_URL",
+      },
+      400 as any,
+    );
+  }
+
   const result = await sendWebhookDelivery({
     teamId: team.teamId,
     environmentId: activeEnvironment.id,

@@ -57,7 +57,13 @@ function buildPrismaState(): { client: PrismaClient; pool: Pool } {
   const pool = new Pool({
     connectionString,
     ssl: isCloudOrSsl ? { rejectUnauthorized: false } : undefined,
+    // INVARIANT: DB_POOL_MAX × running replicas ≤ Postgres max_connections
+    // (minus headroom for the facilitator). A transaction-mode pooler
+    // (PgBouncer/Supavisor) in front of Postgres multiplies the effective
+    // ceiling; keep this conservative and rely on the pooler for aggregate
+    // concurrency rather than raising it per process.
     max: Number(process.env.DB_POOL_MAX || 10),
+    min: Number(process.env.DB_POOL_MIN || 0),
     connectionTimeoutMillis: 10_000,
     idleTimeoutMillis: 30_000,
     keepAlive: true,
@@ -155,4 +161,30 @@ export async function withPrismaReconnect<T>(
   throw lastError;
 }
 
-export const db = getClient();
+/**
+ * `db` is a Proxy, not a captured client instance.
+ *
+ * WHY: `resetPrismaClient()` disconnects and replaces the pool on a connection
+ * failure. With a plain `export const db = getClient()` the binding would be
+ * frozen to the ORIGINAL client forever, so every direct `db.` caller would keep
+ * issuing queries against a disposed pool while only `withPrismaReconnect`
+ * callers recovered. Resolving the client on each property access repairs every
+ * call site at once.
+ *
+ * Function members (`$transaction`, `$queryRaw`, …) are bound to the live
+ * client so `this` resolves correctly. Model delegates (`db.user`, …) are
+ * objects whose methods bind internally and are returned as-is.
+ */
+export const db: PrismaClient = new Proxy({} as PrismaClient, {
+  get(_target, prop) {
+    const client = getClient();
+    const value = Reflect.get(client, prop);
+    return typeof value === "function" ? value.bind(client) : value;
+  },
+  has(_target, prop) {
+    return prop in getClient();
+  },
+  getPrototypeOf() {
+    return Object.getPrototypeOf(getClient());
+  },
+});
