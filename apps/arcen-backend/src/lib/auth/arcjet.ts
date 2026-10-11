@@ -228,8 +228,23 @@ export async function shouldBypassGlobalProtection(
       return false;
     }
     return true;
-  } catch {
-    // On DB failure, fail-closed → treat as not-bypassable (bot/shield applies).
+  } catch (error) {
+    // Fail-closed (bot/shield still applies) — but say so loudly. During a
+    // database outage this is the reason a VALID API key gets BOT_BLOCKED
+    // instead of being served, and the 429 response gives no hint of that.
+    const lines =
+      error instanceof Error
+        ? error.message
+            .split("\n")
+            .map((line) => line.trim())
+            .filter(Boolean)
+        : [];
+    console.error(
+      "[arcjet] API-key bypass check failed (database unreachable?) — treating " +
+        "this request as non-bypassable. Valid keys stay blocked until the " +
+        "database is reachable again.",
+      lines.length > 0 ? lines[lines.length - 1] : String(error),
+    );
     return false;
   }
 }

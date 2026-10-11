@@ -21,6 +21,29 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
+  async headers() {
+    // Security headers applied to every route. Deliberately conservative:
+    //
+    //  * No `frame-ancestors` / `X-Frame-Options` — the dashboard is embedded in
+    //    an iframe on purpose (ArcenEmbed, and the go-live embed preview in the
+    //    admin console). Framing protection must be scoped to the non-embed
+    //    routes, not applied globally, or embedding breaks.
+    //  * No `default-src` / `script-src` CSP — Reown/WalletConnect, Turnstile,
+    //    GA and Sentry all inject script, so a strict policy needs a report-only
+    //    rollout first.
+    //
+    // The directives below are safe today and close real gaps: transport
+    // downgrade (HSTS), MIME sniffing, referrer leakage, device-permission
+    // abuse, and <base>/<object> injection.
+    const securityHeaders = [
+      { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains" },
+      { key: "X-Content-Type-Options", value: "nosniff" },
+      { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+      { key: "Permissions-Policy", value: "microphone=(), geolocation=()" },
+      { key: "Content-Security-Policy", value: "base-uri 'self'; object-src 'none'" },
+    ];
+    return [{ source: "/:path*", headers: securityHeaders }];
+  },
   serverExternalPackages: [
     "pino",
     "pino-pretty",

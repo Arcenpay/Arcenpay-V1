@@ -46,6 +46,15 @@ export async function arcjetGlobalProtect(c: Context, next: Next) {
     return next();
   }
 
+  // Routes that are unauthenticated BY DESIGN (`/api/v1/public/*`: checkout,
+  // payment links, smart-account-config, escrow). `detectBot` exists to stop
+  // automation abusing a credential — there is no credential here to abuse, so
+  // classifying these clients as bots only breaks legitimate traffic: the
+  // hosted payment page, the docs playground, the agent SDK and first-party
+  // server-side proxies all look like headless clients. Shield and the per-IP
+  // rate limits on those routes still apply.
+  const isCredentiallessPublicRoute = pathname.startsWith("/api/v1/public/");
+
   // The hosted MCP surface is consumed by machine clients — OpenAI's plugin
   // verifier, ChatGPT/Codex connectors, and other MCP hosts — which look like
   // bots to Arcjet. Bot/shield blocking them returns a 429 and breaks domain
@@ -93,7 +102,7 @@ export async function arcjetGlobalProtect(c: Context, next: Next) {
   // 429s legitimate server-to-server / first-party callers such as the docs
   // playground) — fall back to shield-only protection instead.
   const hasUserAgent = Boolean(c.req.header("user-agent")?.trim());
-  const protector = hasUserAgent ? aj : ajShieldOnly;
+  const protector = hasUserAgent && !isCredentiallessPublicRoute ? aj : ajShieldOnly;
 
   let decision: Awaited<ReturnType<typeof aj.protect>>;
   try {

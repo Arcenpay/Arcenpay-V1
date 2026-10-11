@@ -12,6 +12,28 @@ const globalForPrisma = globalThis as unknown as PrismaGlobal;
 const RETRYABLE_PRISMA_ERROR_CODES = new Set(["P1001", "P1017", "P2024"]);
 const PRISMA_RETRY_ATTEMPTS = 3;
 
+if (!(process.env.DATABASE_URL || "").trim()) {
+  const message =
+    "[db] DATABASE_URL is not set — Postgres is unreachable and every DB-backed " +
+    "request will fail. Set it to the service connection string (include " +
+    "?sslmode=require for Aiven / Neon / Supabase).";
+  // Fail fast in production: an empty URL silently builds a pool that targets
+  // localhost, so the process reports itself healthy while every query 500s.
+  if (process.env.NODE_ENV === "production") throw new Error(message);
+  console.warn(message);
+}
+
+/** Host (no credentials) of the configured database, for log output only. */
+function safeDatabaseHost(): string {
+  const raw = (process.env.DATABASE_URL || "").trim();
+  if (!raw) return "<unset>";
+  try {
+    return new URL(raw).host || "<no-host>";
+  } catch {
+    return "<unparseable DATABASE_URL>";
+  }
+}
+
 function getErrorCode(error: unknown): string | null {
   if (!error || typeof error !== "object" || !("code" in error)) return null;
   const code = (error as { code?: unknown }).code;
@@ -42,13 +64,20 @@ function sleep(ms: number): Promise<void> {
 
 function buildPrismaState(): { client: PrismaClient; pool: Pool } {
   let connectionString = process.env.DATABASE_URL || "";
+  // An explicit `sslmode=disable` must win. Passing an `ssl` option overrides
+  // whatever pg's connection-string parser inferred, so without this the blanket
+  // production default would force TLS onto a host that does not speak it — an
+  // internal/private Postgres (e.g. Railway's internal URL) then fails with
+  // "The server does not support SSL connections".
+  const sslDisabled = /[?&]sslmode=disable(?:&|$)/i.test(connectionString);
   const isCloudOrSsl =
-    connectionString.includes("sslmode=") ||
-    connectionString.includes("aivencloud.com") ||
-    connectionString.includes("railway.app") ||
-    connectionString.includes("supabase.co") ||
-    connectionString.includes("neon.tech") ||
-    process.env.NODE_ENV === "production";
+    !sslDisabled &&
+    (connectionString.includes("sslmode=") ||
+      connectionString.includes("aivencloud.com") ||
+      connectionString.includes("railway.app") ||
+      connectionString.includes("supabase.co") ||
+      connectionString.includes("neon.tech") ||
+      process.env.NODE_ENV === "production");
 
   if (isCloudOrSsl && connectionString.includes("sslmode=require") && !connectionString.includes("uselibpqcompat=true")) {
     connectionString += (connectionString.includes("?") ? "&" : "?") + "uselibpqcompat=true";
@@ -188,3 +217,69 @@ export const db: PrismaClient = new Proxy({} as PrismaClient, {
     return Object.getPrototypeOf(getClient());
   },
 });
+
+/**
+ * Graceful shutdown: disconnect Prisma and end the pool.
+ *
+ * Small managed-Postgres plans (free tiers especially) cap `max_connections`
+ * low. Every redeploy starts a new container while the old one is still being
+ * torn down; if the process never closes its sockets, the old pool's
+ * connections linger until the server times them out and the next boot can hit
+ * "too many clients". Closing them explicitly on SIGTERM is what keeps a
+ * tight plan usable across frequent deploys.
+ */
+export async function closeDatabase(): Promise<void> {
+  const client = globalForPrisma.prisma;
+  const pool = globalForPrisma.prismaPool;
+  globalForPrisma.prisma = undefined;
+  globalForPrisma.prismaPool = undefined;
+  await Promise.allSettled([client?.$disconnect(), pool?.end()]);
+}
+
+/**
+ * Boot-time connectivity probe.
+ *
+ * Runs after the port is bound so an unreachable database never delays startup
+ * (which would trip the platform health check and start a restart loop), but is
+ * reported loudly — instead of surfacing as a wave of unexplained 500s. That is
+ * the exact failure mode of a deleted/renamed managed Postgres, whose hostname
+ * resolves to NXDOMAIN.
+ */
+export async function verifyDatabaseConnection(attempts = 5): Promise<boolean> {
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    try {
+      await db.$queryRawUnsafe("SELECT 1");
+      return true;
+    } catch (error) {
+      // Prisma prints a multi-line message whose LAST non-empty line carries the
+      // actual cause (e.g. "Can't reach database server at …"); the first line is
+      // just the `Invalid \`prisma.…\` invocation:` wrapper.
+      const lines =
+        error instanceof Error
+          ? error.message
+              .split("\n")
+              .map((line) => line.trim())
+              .filter(Boolean)
+          : [];
+      const detail = lines.length > 0 ? lines[lines.length - 1] : String(error);
+      if (attempt === attempts) {
+        console.error(
+          `\n${"=".repeat(78)}\n` +
+            `[db] POSTGRES UNREACHABLE at ${safeDatabaseHost()} after ${attempts} attempts.\n` +
+            `     Every DB-backed request returns 500 until this is fixed.\n` +
+            `     Check that the database still exists (a deleted or renamed managed\n` +
+            `     Postgres resolves to NXDOMAIN) and that DATABASE_URL is current.\n` +
+            `     Last error: ${detail}\n` +
+            `${"=".repeat(78)}\n`,
+        );
+      } else {
+        console.warn(
+          `[db] connectivity probe ${attempt}/${attempts} failed ` +
+            `(${safeDatabaseHost()}): ${detail}`,
+        );
+        await sleep(500 * attempt);
+      }
+    }
+  }
+  return false;
+}

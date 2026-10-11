@@ -1,12 +1,15 @@
 import type { Context } from "hono";
-import { resolveSession } from "../../../middleware/auth.js";
+import { requireTeamRoles, isErrorResponse } from "../../../lib/auth/api-auth.js";
 import { FACILITATOR_URL, FACILITATOR_SECRET } from "../../../config.js";
 import { checkSubgraphHealth } from "../../../lib/platform/graphql.js";
 
 export async function getWorkerHealth(c: Context) {
-  const session = await resolveSession(c);
-  if (!session) {
-    return c.json({ error: "Unauthorized" }, 401 as any);
+  // SECURITY: this exposes facilitator queue/SLO/settlement internals. It is
+  // OWNER/ADMIN-only, like every sibling ops route — previously any logged-in
+  // user of any team could read it.
+  const auth = await requireTeamRoles(c, ["OWNER", "ADMIN"]);
+  if (isErrorResponse(auth)) {
+    return c.json({ ok: false, error: auth.error }, auth.status as any);
   }
 
   const [facilitatorResult, subgraphResult] = await Promise.allSettled([

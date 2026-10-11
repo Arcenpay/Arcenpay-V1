@@ -595,10 +595,12 @@ export class ActivationKeyService {
         isPlatformActivated: true,
         allowPlatformBilling: true,
         activationKeyId: true,
+        // NOTE: `key` is deliberately NOT selected — this value is returned to
+        // the caller, and a team's redeemable activation key must never be
+        // echoed back (it is a credential, not display metadata).
         activationKey: {
           select: {
             id: true,
-            key: true,
             name: true,
             tier: true,
             allowPlatformBilling: true,

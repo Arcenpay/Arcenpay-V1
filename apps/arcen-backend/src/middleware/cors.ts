@@ -93,7 +93,11 @@ function normalizeConfiguredOrigin(value?: string | null): string | null {
     const scheme = schemeSeparator === -1 ? "" : trimmed.slice(0, schemeSeparator + 3);
     const suffix = trimmed.slice(trimmed.indexOf("*.") + 1).toLowerCase();
     if (!suffix) return null;
-    return `${scheme.toLowerCase()}${suffix}`;
+    // Keep the `*.` marker: `matchesConfiguredOrigin` only takes its wildcard
+    // branch when the entry still contains `*.`. Stripping it silently turned an
+    // operator's `https://*.example.com` into an apex-only exact match, so a
+    // configured subdomain rule matched nothing.
+    return `${scheme.toLowerCase()}*${suffix}`;
   }
 
   return normalizeOrigin(trimmed);

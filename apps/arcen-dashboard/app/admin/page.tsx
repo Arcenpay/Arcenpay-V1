@@ -302,7 +302,11 @@ export default function AdminPage() {
   const [duneV2, setDuneV2] = useState("");
   const [activeEmbed, setActiveEmbed] = useState(1);
 
-  const hdrs = useCallback(() => ({ "Content-Type": "application/json", ...(authed ? { "x-admin-secret": "admin" } : {}) }), [authed]);
+  // NOTE: the admin API is authorized by the session cookie (`requireAdminAuth`
+  // checks a verified platform-admin session). A hardcoded `x-admin-secret`
+  // value used to be sent here — it was dead (the backend requires a 32+ char
+  // secret) but institutionalised a guessable credential, so it is gone.
+  const hdrs = useCallback(() => ({ "Content-Type": "application/json" }), []);
 
   const loadAll = useCallback(async () => {
     if (!authed) return;
