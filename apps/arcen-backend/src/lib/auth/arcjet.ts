@@ -204,6 +204,9 @@ export async function shouldBypassGlobalProtection(
   if (!auth) return false;
 
   const token = auth.startsWith("Bearer ") ? auth.slice(7).trim() : auth.trim();
+  // Only the TYPE PREFIX is ever logged (e.g. "sk_live_") — that is the
+  // documented type/environment indicator, not secret entropy.
+  const typePrefix = token.slice(0, 8);
   // Fail-closed: if the token doesn't even match a known credential format,
   // it definitely isn't one of our keys.
   const looksLikeKey =
@@ -213,7 +216,18 @@ export async function shouldBypassGlobalProtection(
     token.startsWith("rk_test_") ||
     token.startsWith("pk_live_") ||
     token.startsWith("pk_test_");
-  if (!looksLikeKey) return false;
+  if (!looksLikeKey) {
+    // This is the #1 cause of "I passed a key and still got BOT_BLOCKED":
+    // presenting something that is not an ArcenPay API key — most often the
+    // Cloudflare Turnstile SECRET key — in the API reference. Say so, once per
+    // request where the caller actually tried to authenticate.
+    console.warn(
+      `[arcjet] bypass denied: presented credential is not an ArcenPay key ` +
+        `(prefix "${typePrefix}…"). Expected sk_live_/sk_test_/rk_live_/rk_test_/pk_live_/pk_test_. ` +
+        `A Turnstile site/secret key is NOT an API key.`,
+    );
+    return false;
+  }
 
   // Verify against the DB — the ONLY source of truth. Unknown, revoked, or
   // expired keys get NO bypass (they fall through to bot/shield).
@@ -223,8 +237,19 @@ export async function shouldBypassGlobalProtection(
       where: { keyHash: hash },
       select: { id: true, revokedAt: true, expiresAt: true },
     });
-    if (!keyRecord || keyRecord.revokedAt) return false;
+    if (!keyRecord) {
+      console.warn(
+        `[arcjet] bypass denied: API key ${typePrefix}… is not registered on this ` +
+          `platform (unknown key) — bot/shield applies.`,
+      );
+      return false;
+    }
+    if (keyRecord.revokedAt) {
+      console.warn(`[arcjet] bypass denied: API key ${typePrefix}… is revoked.`);
+      return false;
+    }
     if (keyRecord.expiresAt && keyRecord.expiresAt.getTime() <= Date.now()) {
+      console.warn(`[arcjet] bypass denied: API key ${typePrefix}… is expired.`);
       return false;
     }
     return true;
