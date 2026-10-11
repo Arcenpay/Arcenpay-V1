@@ -4,7 +4,7 @@ import { apiFetch } from "@/lib/api-client";
 import { useEffect, useMemo, useState, useTransition } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useAccount, useChainId, useSignMessage } from "wagmi";
+import { useAccount, useChainId, useConfig, useSignMessage } from "wagmi";
 import {
   ArrowLeft,
   CheckCircle2,
@@ -29,7 +29,6 @@ import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { buildSIWEMessage } from "@/lib/auth";
 import { resolveReturnTo } from "@/lib/return-to";
-import { wagmiConfig } from "@/lib/wagmi";
 import {
   DEFAULT_WALLET_CHAIN_LABEL,
   SUPPORTED_WALLET_CHAIN_LABEL,
@@ -86,6 +85,7 @@ export function EmailAuthFlow({
   const { address, isConnected } = useAccount();
   const chainId = useChainId();
   const { signMessageAsync } = useSignMessage();
+  const wagmiConfig = useConfig();
   const {
     isOnRequiredNetwork,
     isSwitchingChain,

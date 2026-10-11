@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { GoogleAnalytics } from "@/components/analytics/google-analytics";
 import { DashboardStructuredData } from "@/components/seo/dashboard-structured-data";
-import { Web3Provider } from "@/components/providers/web3-provider";
+import { Web3Providers } from "./providers";
 import { ThemeProvider } from "@/components/theme-provider";
 import { rootMetadata } from "@/lib/seo";
 import "./globals.css";
@@ -68,7 +68,7 @@ export default async function RootLayout({
           storageKey="arcenpay-theme"
           disableTransitionOnChange
         >
-          <Web3Provider cookies={cookies}>{children}</Web3Provider>
+          <Web3Providers cookies={cookies}>{children}</Web3Providers>
         </ThemeProvider>
       </body>
     </html>

@@ -3,7 +3,7 @@ import { apiFetch } from "@/lib/api-client";
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useChainId, useSignMessage } from "wagmi";
+import { useChainId, useConfig, useSignMessage } from "wagmi";
 import {
   AlertTriangle,
   CheckCircle2,
@@ -16,7 +16,6 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { buildSIWEMessage } from "@/lib/auth";
-import { wagmiConfig } from "@/lib/wagmi";
 import {
   DEFAULT_WALLET_CHAIN_LABEL,
   SUPPORTED_WALLET_CHAIN_LABEL,
@@ -82,6 +81,7 @@ function EvmWalletConnect() {
   const router = useRouter();
   const chainId = useChainId();
   const { signMessageAsync } = useSignMessage();
+  const wagmiConfig = useConfig();
   const [isSigning, setIsSigning] = useState(false);
   const [storedWallet, setStoredWallet] = useState<string | null | undefined>(undefined);
   const {
