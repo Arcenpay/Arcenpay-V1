@@ -404,12 +404,14 @@ export const adminActivationKeysRouter = new Hono()
   })
   .get("/:id", requireAdminAuth(), async (c) => {
     const id = c.req.param("id");
+    if (!id) return c.json({ ok: false, error: "Not found" }, 404 as any);
     const key = await ActivationKeyService.getActivationKeyById(id);
     if (!key) return c.json({ ok: false, error: "Not found" }, 404 as any);
     return c.json({ ok: true, data: key });
   })
   .post("/:id/revoke", requireAdminAuth(), async (c) => {
     const id = c.req.param("id");
+    if (!id) return c.json({ ok: false, error: "Not found" }, 404 as any);
     const body = await c.req.json().catch(() => ({}));
     const parse = revokeKeySchema.safeParse(body);
     const reason = parse.success ? parse.data.reason : undefined;
@@ -418,6 +420,7 @@ export const adminActivationKeysRouter = new Hono()
   })
   .post("/:id/reactivate", requireAdminAuth(), async (c) => {
     const id = c.req.param("id");
+    if (!id) return c.json({ ok: false, error: "Not found" }, 404 as any);
     try { const r = await ActivationKeyService.reactivateActivationKey(id); return c.json({ ok: true, data: r }); }
     catch (err) { return c.json({ ok: false, error: publicErrorMessage(err) }, 400 as any); }
   })

@@ -71,7 +71,7 @@ import {
   type CompanyKeys,
 } from "../../lib/entitlements/flag-engine.js";
 import { resolveEmbedAccessToken } from "../../lib/entitlements/embed-access-token.js";
-import { getSession } from "../../lib/auth/auth.server.js";
+import { getSessionFromCtx } from "../../lib/auth/auth.server.js";
 import { resolveDashboardSessionIdentityDefaults } from "../../lib/auth/dashboard-session-identity.js";
 import { resolveBillingRecipientEmail } from "../../lib/billing/billing-events.js";
 import {
@@ -889,7 +889,7 @@ export async function POST(c: Context) {
     }
     teamId = auth.teamId;
     if (auth.source === "session") {
-      const session = await getSession();
+      const session = await getSessionFromCtx(c);
       if (session) {
         sessionDefaults = await resolveDashboardSessionIdentityDefaults(
           teamId,

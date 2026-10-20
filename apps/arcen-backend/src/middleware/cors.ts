@@ -204,12 +204,16 @@ function matchesConfiguredOrigin(requestOrigin: string, allowedOrigin: string): 
   if (normalizedAllowed === normalizedRequest) return true;
 
   // Explicit subdomain pattern: `https://*.arcenpay.com` → suffix `.arcenpay.com`.
+  // SECURITY: `split("*.")` drops the separating dot, so the bare suffix must be
+  // re-anchored before matching. Without the leading dot `https://evil-arcenpay.com`
+  // endsWith("arcenpay.com") and would be trusted — including with credentials.
   if (normalizedAllowed.includes("*.")) {
     const [scheme, suffix] = normalizedAllowed.split("*.");
     if (!suffix) return false;
+    const hostSuffix = `.${suffix.replace(/^\./, "")}`;
     return (
       normalizedRequest.startsWith(scheme) &&
-      normalizedRequest.slice(scheme.length).endsWith(suffix)
+      normalizedRequest.slice(scheme.length).endsWith(hostSuffix)
     );
   }
 

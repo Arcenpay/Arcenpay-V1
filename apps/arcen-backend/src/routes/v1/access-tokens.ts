@@ -35,7 +35,7 @@ import {
 import { deliverWebhook } from "../../lib/webhooks/deliver-webhook.js";
 import { Prisma } from "../../generated/client/client.js";
 import { resolveDashboardSessionIdentityDefaults } from "../../lib/auth/dashboard-session-identity.js";
-import { getSession } from "../../lib/auth/auth.server.js";
+import { getSessionFromCtx } from "../../lib/auth/auth.server.js";
 import { resolvePublishedInitialPlan } from "../../lib/catalog/catalog-billing.js";
 import { requireResolvedActiveEnvironment } from "../../lib/environments/workspace-environments.js";
 import { normalizeWallet } from "../../lib/billing/utils.js";
@@ -337,7 +337,7 @@ export async function POST(c: Context) {
   const expiresIn = rawExpiresIn;
   const expiresAt = new Date(Date.now() + expiresIn * 1000);
 
-  const session = ctx.source === "session" ? await getSession() : null;
+  const session = ctx.source === "session" ? await getSessionFromCtx(c) : null;
   const sessionDefaults =
     ctx.source === "session" && session
       ? await resolveDashboardSessionIdentityDefaults(

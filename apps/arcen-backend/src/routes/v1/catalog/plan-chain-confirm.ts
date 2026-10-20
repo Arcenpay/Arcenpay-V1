@@ -25,6 +25,7 @@ export async function confirmPlanOnChain(c: Context) {
   }
 
   const planId = c.req.param("id");
+  if (!planId) return c.json({ error: "Plan not found" }, 404 as any);
   const { txHash, onChainPlanId, success, errorMessage } = parsed.data;
 
   const plan = await db.catalogPlan.findFirst({
