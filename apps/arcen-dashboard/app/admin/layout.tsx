@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import { createPageMetadata } from "@/lib/seo";
-import { requireAdminSession } from "@/lib/auth.server";
+import { getSession } from "@/lib/auth.server";
 
 export const metadata: Metadata = createPageMetadata({
   title: "Platform Admin Console",
@@ -14,11 +15,16 @@ export default async function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
-  // Server-side gate. The page itself is a client component whose only check
-  // ran in the browser, so anonymous visitors were still served the admin shell.
-  // Every admin API call is independently protected, but the page should never
-  // render for a non-admin in the first place.
-  await requireAdminSession();
+  // Defence in depth only. The authoritative boundary is requireAdminAuth() on
+  // every /api/v1/admin route; page.tsx additionally gates the client UI.
+  //
+  // IMPORTANT: redirect solely on a *resolved non-admin* session. Returning
+  // null is ambiguous — the dashboard server does not reliably see the
+  // api.arcenpay.com session cookie (see proxy.ts), so redirecting on null
+  // locked signed-in admins out with a /login loop. A null result falls
+  // through to the client gate, which verifies against the API directly.
+  const session = await getSession();
+  if (session && !session.isPlatformAdmin) redirect("/");
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col font-sans">
