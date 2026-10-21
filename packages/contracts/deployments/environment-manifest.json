@@ -1,11 +1,18 @@
 {
   "manifestVersion": "2026-03-09.1",
-  "generatedAt": "2026-09-06T04:34:12.343Z",
+  "generatedAt": "2026-10-21T20:31:40.791Z",
+  "notes": {
+    "serviceUrls": "Empty strings mean the endpoint is deployment-specific and is not published in this repository. RPC URLs are public chain defaults.",
+    "placeholders": "Chains with \"placeholder\": true have deterministic stand-in addresses and are not deployed.",
+    "productionChains": "BOT Chain Mainnet (677) and Solana Mainnet (9100000) only."
+  },
   "chains": {
     "677": {
       "chainId": 677,
       "chainName": "BOT Chain",
+      "family": "evm",
       "isTestnet": false,
+      "status": "production",
       "contracts": {
         "subscriptionRegistry": "0xea549C49A1A97faC398F977BCC0D65256c5419d9",
         "autopayModule": "0xB240841d1c886455aC0620bB0A0AE1C194f3e275",
@@ -16,7 +23,7 @@
         "mirrorRegistry": "0xE8E068FC93E9687c7D85d303312Ac13806e73e2F"
       },
       "services": {
-        "rpcUrl": "",
+        "rpcUrl": "https://rpc.botchain.ai",
         "subgraphUrl": "",
         "facilitatorUrl": ""
       }
@@ -24,7 +31,10 @@
     "968": {
       "chainId": 968,
       "chainName": "BOT Chain Testnet",
+      "family": "evm",
       "isTestnet": true,
+      "status": "placeholder",
+      "placeholder": true,
       "contracts": {
         "subscriptionRegistry": "0x3000000000000000000000000000000000000968",
         "autopayModule": "0x6000000000000000000000000000000000000968",
@@ -35,7 +45,7 @@
         "mirrorRegistry": "0x7000000000000000000000000000000000000968"
       },
       "services": {
-        "rpcUrl": "",
+        "rpcUrl": "https://rpc.bohr.life",
         "subgraphUrl": "",
         "facilitatorUrl": ""
       }
@@ -43,7 +53,9 @@
     "84532": {
       "chainId": 84532,
       "chainName": "Base Sepolia",
+      "family": "evm",
       "isTestnet": true,
+      "status": "testnet",
       "contracts": {
         "subscriptionRegistry": "0xC2faa4DD73B2F449b6db1A661cC8C7C271187007",
         "autopayModule": "0xE8FFF520331E2ce6d75B5b57385e4ab15Cd3ae43",
@@ -54,7 +66,7 @@
         "mirrorRegistry": "0xC24cBC9C664aCA41dEf6D5a3E941c1e11C163fD1"
       },
       "services": {
-        "rpcUrl": "",
+        "rpcUrl": "https://sepolia.base.org",
         "subgraphUrl": "",
         "facilitatorUrl": ""
       }
@@ -62,7 +74,9 @@
     "5042002": {
       "chainId": 5042002,
       "chainName": "Arc Testnet",
+      "family": "evm",
       "isTestnet": true,
+      "status": "testnet",
       "contracts": {
         "subscriptionRegistry": "0x4a8B7CE3Fc1c767329c50D9230FA46c2c16df0A9",
         "autopayModule": "0x265E0dC80b00044d183AFa83237F5976bB4d585c",
@@ -73,7 +87,80 @@
         "mirrorRegistry": "0x05BdaB1b4A87a4a5DF3Af1Ebb9Da853A0d31592E"
       },
       "services": {
-        "rpcUrl": "",
+        "rpcUrl": "https://rpc.testnet.arc.network",
+        "subgraphUrl": "",
+        "facilitatorUrl": ""
+      }
+    },
+    "9000001": {
+      "chainId": 9000001,
+      "chainName": "Stellar Testnet",
+      "family": "stellar",
+      "isTestnet": true,
+      "status": "testnet",
+      "contracts": {
+        "subscriptionRegistry": "CBNUA7RLTYRKNQVYOCH4IFMLGTLFL56C5NTS5BEWC2AQGYQEQA4BSOOG",
+        "autopayModule": "CBIESVR5J3CWARGTUFX5N5B35L6YMW55G7XFLL2H2U3W6ZOH7X6SD657",
+        "planFactory": "CAF4VS5OMM6DW5ZN5JFJH4U2RJD6DODZYBHNXMTS6RSUMPDO3T4C73S7",
+        "feeCollector": "CCYRIQZNSWWO7KO6ZBA2AU4GAGQHR44ZQO577JYFVFXAHJW6WNB2XL5A",
+        "sessionVault": "CCFU6CXODJEGZLKYNSWI4Z5L5CGN7TCVGHZ33IPKPZK6HBXVDZKMVTLY",
+        "zkUsageVerifier": "CB5UVWDVPATDHJUKLMJXH5FJRNRDPXENXQYOXTT5FYDOXSJGDPUSIDU6",
+        "mirrorRegistry": "CB5GW6VAYJXMRTPKSEIFAJDT2WID2J5PSDLMAFH5LL7IAVQJNMS2OCO2"
+      },
+      "services": {
+        "rpcUrl": "https://soroban-testnet.stellar.org",
+        "sorobanRpcUrl": "https://soroban-testnet.stellar.org",
+        "subgraphUrl": "",
+        "facilitatorUrl": ""
+      }
+    },
+    "9100000": {
+      "chainId": 9100000,
+      "chainName": "Solana Mainnet",
+      "family": "solana",
+      "isTestnet": false,
+      "status": "production",
+      "contracts": {
+        "subscriptionRegistry": "D4ECHyomENvFHrdXWHcRncTwwQ1EQbyY4ga3CkcaYCP3",
+        "autopayModule": "D4ECHyomENvFHrdXWHcRncTwwQ1EQbyY4ga3CkcaYCP3",
+        "planFactory": "D4ECHyomENvFHrdXWHcRncTwwQ1EQbyY4ga3CkcaYCP3",
+        "feeCollector": "D4ECHyomENvFHrdXWHcRncTwwQ1EQbyY4ga3CkcaYCP3",
+        "sessionVault": "D4ECHyomENvFHrdXWHcRncTwwQ1EQbyY4ga3CkcaYCP3",
+        "zkUsageVerifier": "D4ECHyomENvFHrdXWHcRncTwwQ1EQbyY4ga3CkcaYCP3",
+        "mirrorRegistry": "D4ECHyomENvFHrdXWHcRncTwwQ1EQbyY4ga3CkcaYCP3"
+      },
+      "config": {
+        "configPda": "Hk8waLk49ssHb4WCKPcGqVN44HNBjF8EvLixJcB53qBk",
+        "treasury": "3hoVJKNDP9zpHvxizcKGYzZL2ZeTaBTZ2m2p68Wi9Tmv",
+        "admin": "8rJPx5E5CZkDxvW1WGeyQFQhSDkH55vxx98HKCFwnP34",
+        "upgradeAuthority": "8rJPx5E5CZkDxvW1WGeyQFQhSDkH55vxx98HKCFwnP34",
+        "feeBps": 50
+      },
+      "services": {
+        "rpcUrl": "https://api.mainnet-beta.solana.com",
+        "solanaRpcUrl": "https://api.mainnet-beta.solana.com",
+        "subgraphUrl": "",
+        "facilitatorUrl": ""
+      }
+    },
+    "9100001": {
+      "chainId": 9100001,
+      "chainName": "Solana Devnet",
+      "family": "solana",
+      "isTestnet": true,
+      "status": "testnet",
+      "contracts": {
+        "subscriptionRegistry": "D4ECHyomENvFHrdXWHcRncTwwQ1EQbyY4ga3CkcaYCP3",
+        "autopayModule": "D4ECHyomENvFHrdXWHcRncTwwQ1EQbyY4ga3CkcaYCP3",
+        "planFactory": "D4ECHyomENvFHrdXWHcRncTwwQ1EQbyY4ga3CkcaYCP3",
+        "feeCollector": "D4ECHyomENvFHrdXWHcRncTwwQ1EQbyY4ga3CkcaYCP3",
+        "sessionVault": "D4ECHyomENvFHrdXWHcRncTwwQ1EQbyY4ga3CkcaYCP3",
+        "zkUsageVerifier": "D4ECHyomENvFHrdXWHcRncTwwQ1EQbyY4ga3CkcaYCP3",
+        "mirrorRegistry": "D4ECHyomENvFHrdXWHcRncTwwQ1EQbyY4ga3CkcaYCP3"
+      },
+      "services": {
+        "rpcUrl": "https://api.devnet.solana.com",
+        "solanaRpcUrl": "https://api.devnet.solana.com",
         "subgraphUrl": "",
         "facilitatorUrl": ""
       }
@@ -81,7 +168,9 @@
     "11155111": {
       "chainId": 11155111,
       "chainName": "Sepolia",
+      "family": "evm",
       "isTestnet": true,
+      "status": "testnet",
       "contracts": {
         "subscriptionRegistry": "0xE206C519076535A9d24c852093860CFD780908C1",
         "autopayModule": "0xc82417e378b23AD9Ae73229EF08a4BA7896a4351",
@@ -92,7 +181,7 @@
         "mirrorRegistry": "0xC187CD32d569ec0E84B9b378f8E63f3a74afac74"
       },
       "services": {
-        "rpcUrl": "",
+        "rpcUrl": "https://ethereum-sepolia-rpc.publicnode.com",
         "subgraphUrl": "",
         "facilitatorUrl": ""
       }

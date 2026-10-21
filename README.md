@@ -8,7 +8,7 @@
 [![Architecture](https://img.shields.io/badge/protocol-ArcenPay%20%2B%20ZKVUB-purple.svg?style=flat-square)](./BILLING.md)
 [![TypeScript](https://img.shields.io/badge/typescript-5.9%20strict-3178c6.svg?style=flat-square)](./tsconfig.base.json)
 [![Turborepo](https://img.shields.io/badge/monorepo-turborepo-ef4444.svg?style=flat-square)](./turbo.json)
-[![License](https://img.shields.io/badge/license-Proprietary-gray.svg?style=flat-square)](#license)
+[![License](https://img.shields.io/badge/license-MIT-green.svg?style=flat-square)](./LICENSE)
 
 <br />
 
@@ -24,7 +24,7 @@
 
 ## Executive Overview
 
-**ArcenPay** is a production-grade Web3 entitlement and recurring billing platform engineered on the **ArcenPay Protocol** and **ZKVUB settlement architecture**. It bridges on-chain smart contracts (EVM on Base, Bohr/BOT Chain, Ethereum + Rust Soroban on Stellar) with enterprise-grade off-chain billing infrastructure (Hono, Prisma v7, PostgreSQL, and Redis), synchronized in real time via an autonomous facilitator bridge.
+**ArcenPay** is a Web3 entitlement and recurring billing platform engineered on the **ArcenPay Protocol** and **ZKVUB settlement architecture**. It bridges on-chain smart contracts (EVM on BOT Chain, Arc, Base and Ethereum; Rust Soroban on Stellar; Anchor on Solana) with enterprise-grade off-chain billing infrastructure (Hono, Prisma v7, PostgreSQL, and Redis), synchronized in real time via an autonomous facilitator bridge.
 
 ArcenPay provides SaaS operators, Web3 protocols, and AI agent developers with a turn-key billing engine:
 - **On-Chain Subscriptions & Smart Accounts:** ERC-7579 Autopay recurring allowances, ERC-20 token streaming, and Stellar Soroban subscription registries.
@@ -32,6 +32,27 @@ ArcenPay provides SaaS operators, Web3 protocols, and AI agent developers with a
 - **Zero-Knowledge Usage Settlement:** Cryptographic batch settlements via Groth16 zk-SNARK circuits without compromising sensitive consumer transaction volumes.
 - **Autonomous Agent Commerce:** HTTP 402 payment negotiation, signed payment vouchers, and direct Model Context Protocol (MCP) integrations for autonomous AI agents.
 - **Financial Compliance:** Double-entry ledger state, automated proration math, dunning cycle enforcement, ISO 20022 XML compliance, and HMAC-signed PDF invoicing.
+
+---
+
+## Deployment Status
+
+This table is the single source of truth for what is live. Addresses and deployment artifacts live in [`packages/contracts/deployments/`](./packages/contracts/deployments/) and [`packages/internal-core/src/addresses.ts`](./packages/internal-core/src/addresses.ts).
+
+| Network | Chain ID | Status | Notes |
+|---|---|---|---|
+| **BOT Chain Mainnet** | `677` | **Live — production** | UUPS contracts deployed 2026-09-05. USDT settlement. |
+| **Solana Mainnet** | `9100000` | **Live — production** | Anchor program `D4ECHyomENvFHrdXWHcRncTwwQ1EQbyY4ga3CkcaYCP3`, treasury `3hoVJKNDP9zpHvxizcKGYzZL2ZeTaBTZ2m2p68Wi9Tmv`, 50 bps fee. |
+| **Arc Testnet** | `5042002` | Testnet | Default development network. |
+| **Base Sepolia** | `84532` | Testnet | Development. |
+| **Stellar Testnet** | `9000001` | Testnet | Soroban contracts deployed. |
+| **Solana Devnet** | `9100001` | Testnet | Same Anchor program id as mainnet, different cluster. |
+| **Base Mainnet** | `8453` | Not deployed | Coming soon. |
+| **Stellar Mainnet** | `9000000` | Not deployed | Coming soon. |
+| **Ethereum Sepolia** | `11155111` | Testnet | Developer reference only. |
+| **BOT Chain Testnet (Bohr)** | `968` | Placeholder | Addresses are deterministic placeholders; not available for billing. |
+
+Production environments can only select BOT Chain Mainnet and Solana Mainnet. Base, Stellar, and Arc are testnet-only today.
 
 ---
 
@@ -328,5 +349,6 @@ ArcenPay handles mission-critical financial transactions and entitlement authori
 
 ## License
 
-Proprietary. Copyright © 2026 ArcenPay Inc. All rights reserved.
-Unauthorized copying, modification, or distribution of this software is strictly prohibited without prior written permission.
+MIT License. Copyright © 2026 ArcenPay Inc.
+
+See [`LICENSE`](./LICENSE) for the full text. The published SDK packages (`@arcenpay/react`, `@arcenpay/node`, `@arcenpay/agent`) use the same MIT license.

@@ -63,8 +63,19 @@ jobs:
       - name: Check bundle sizes
         run: |
           echo "=== SDK Bundle Sizes ==="
+          # Runtime dependencies must stay external (see
+          # packages/sdk-react/tsup.config.ts). This catches a regression like
+          # @arcenpay/react 1.2.0, whose 24 MB tarball bundled wagmi/viem/ethers.
+          limit_kb=5120
+          failed=0
           for pkg in sdk-node sdk-react sdk-agent; do
             if [ -d "packages/$pkg/dist" ]; then
-              echo "$pkg: $(du -sh packages/$pkg/dist/ | cut -f1)"
+              kb=$(du -sk "packages/$pkg/dist" | cut -f1)
+              echo "$pkg: ${kb} KB"
+              if [ "$kb" -gt "$limit_kb" ]; then
+                echo "::error::$pkg dist is ${kb} KB (limit ${limit_kb} KB); keep dependencies external."
+                failed=1
+              fi
             fi
           done
+          exit $failed

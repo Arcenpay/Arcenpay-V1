@@ -4,6 +4,37 @@ All notable changes to ArcenPay are documented here.
 
 ---
 
+## [Unreleased]
+
+### Added
+- `LICENSE` (MIT) and a README Deployment Status table that is the public source
+  of truth for which networks are live.
+
+### Changed
+- Deployment status now matches reality: BOT Chain Mainnet (`677`) and Solana
+  Mainnet (`9100000`) are production; Arc Testnet, Base Sepolia, Stellar Testnet,
+  and Solana Devnet are testnets; Base Mainnet and Stellar Mainnet are not
+  deployed.
+- Solana status corrected in `packages/solana-programs/README.md`,
+  `SOLANA_ARCHITECTURE.md`, `.env.example`, and the docs. The on-chain `Config`
+  PDA confirms treasury `3hoVJKNDP9zpHvxizcKGYzZL2ZeTaBTZ2m2p68Wi9Tmv` and a
+  50 bps fee.
+- `packages/contracts/deployments/environment-manifest.json` now includes Solana
+  Mainnet/Devnet and Stellar Testnet, fills public RPC defaults, marks BOT Chain
+  Testnet (`968`) as a placeholder, and documents empty service URLs.
+- `SECURITY.md` now discloses the current single-key admin/upgrade authorities
+  for BOT Chain and Solana instead of claiming a governance multisig.
+
+### Fixed
+- `@arcenpay/react` no longer bundles its runtime dependencies. `dist/` dropped
+  from 24 MB to 1.3 MB via `skipNodeModulesBundle`, and CI enforces a 5 MB
+  ceiling.
+- `api.arcenpay.com/` returns a service index, and `/v1/*` redirects (308) to
+  `/api/v1/*` instead of returning 404.
+- Repository licensing is consistently MIT across the root and package metadata.
+
+---
+
 ## [0.0.1] — Current (Pre-GA)
 
 ### Added

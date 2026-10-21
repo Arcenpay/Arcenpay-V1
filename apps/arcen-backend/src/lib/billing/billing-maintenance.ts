@@ -14,6 +14,10 @@ import { deliverWebhook } from "../webhooks/deliver-webhook.js";
 import { computeProrationQuote } from "./billing-proration.js";
 import { getLatestSubscriptionChangeRequest } from "./subscription-change-requests.js";
 import { asRecord, deriveBillingPeriodFromInterval } from "./utils.js";
+import {
+  runPlatformTierDunningSweep,
+  runPlatformTierRenewalSweep,
+} from "./platform-tier-billing.js";
 
 function normalizeBillingPeriod(
   value: unknown,
@@ -485,6 +489,21 @@ export async function runBillingMaintenance(input: {
           dryRun: true,
         };
 
+  const platformRenewals = await runPlatformTierRenewalSweep({
+    teamId: input.teamId,
+    now,
+    limit: input.limit ?? 100,
+  });
+
+  const platformDunning =
+    input.executeDunning
+      ? await runPlatformTierDunningSweep({
+          teamId: input.teamId,
+          now,
+          limit: input.limit ?? 100,
+        })
+      : { scanned: 0, enforced: 0, skipped: 0, results: [], dryRun: true };
+
   const reconciliationAfter = await getBillingReconciliationSummary({
     teamId: input.teamId,
     now,
@@ -498,6 +517,8 @@ export async function runBillingMaintenance(input: {
     recovery,
     scheduledTransitions,
     dunning,
+    platformRenewals,
+    platformDunning,
     reconciliationAfter,
   };
 }

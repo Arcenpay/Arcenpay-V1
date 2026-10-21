@@ -2,6 +2,7 @@
   "name": "@arcenpay/contracts",
   "version": "1.0.0",
   "private": true,
+  "license": "MIT",
   "description": "ArcenPay + ZKVUB Protocol Smart Contracts",
   "scripts": {
     "build": "HARDHAT_DISABLE_TELEMETRY_PROMPT=true hardhat compile",

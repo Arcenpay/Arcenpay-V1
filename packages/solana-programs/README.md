@@ -7,14 +7,22 @@ Solana. It mirrors the EVM launch-runtime contracts
 `SolanaChainAdapter` decodes the **same five billing events** it decodes for
 EVM and Stellar.
 
-> **Status: DEPLOYED on Devnet; Mainnet pending.**
-> Program id `D4ECHyomENvFHrdXWHcRncTwwQ1EQbyY4ga3CkcaYCP3` (Devnet, chainId
-> `9100001`), registered in `packages/internal-core/src/addresses.ts`. The SBF
-> build, 8 unit tests + a 2-case lifecycle suite (including the `settle` proof
-> gate), the local-validator lifecycle, and the **Devnet** end-to-end lifecycle
-> + settlement smokes all pass. Mainnet deploy is not done. `settle` supports an
-> opt-in Groth16 proof gate (CPI into a verifier program, see below); it is off
-> by default, where the trusted-settler + nullifier-replay model applies.
+> **Status: DEPLOYED on Solana Mainnet and Devnet.**
+> Program id `D4ECHyomENvFHrdXWHcRncTwwQ1EQbyY4ga3CkcaYCP3` serves every contract
+> role on both clusters (Mainnet synthetic chainId `9100000`, Devnet `9100001`),
+> registered in `packages/internal-core/src/addresses.ts`.
+>
+> Mainnet on-chain config (`Config` PDA
+> `Hk8waLk49ssHb4WCKPcGqVN44HNBjF8EvLixJcB53qBk`): treasury
+> `3hoVJKNDP9zpHvxizcKGYzZL2ZeTaBTZ2m2p68Wi9Tmv`, fee `50` bps, admin
+> `8rJPx5E5CZkDxvW1WGeyQFQhSDkH55vxx98HKCFwnP34`. Verified on-chain via
+> `getAccountInfo` against `api.mainnet-beta.solana.com`.
+>
+> The SBF build, 8 unit tests + a 2-case lifecycle suite (including the `settle`
+> proof gate), the local-validator lifecycle, and the Devnet end-to-end lifecycle
+> + settlement smokes all pass. `settle` supports an opt-in Groth16 proof gate
+> (CPI into a verifier program, see below); it is off by default, where the
+> trusted-settler + nullifier-replay model applies.
 
 ## Layout
 
@@ -127,18 +135,29 @@ anchor test                       # uses the local validator
 # keypair, deploys, and prints the env vars to register).
 # Requires a funded payer keypair.
 SOLANA_KEYPAIR=~/.config/solana/id.json npm run deploy:devnet
+
+# One-command Mainnet deploy (creates/checks the keypair, verifies funding,
+# resumes an interrupted buffer deploy). Requires ~1.7 SOL.
+packages/solana-programs/scripts/deploy-mainnet-all.sh
 ```
 
-Deployment prerequisites (all satisfied except funding):
+The Mainnet program is already deployed at
+`D4ECHyomENvFHrdXWHcRncTwwQ1EQbyY4ga3CkcaYCP3`. Re-running the deploy script
+above is only needed for an upgrade or a keypair rotation.
+
+Deployment prerequisites for a fresh deploy:
 - Solana CLI + `cargo-build-sbf` on `PATH`.
 - A **funded** payer keypair — devnet SOL comes from
   `solana airdrop 2 <pubkey> --url devnet` (the public faucet is rate-limited;
   use https://faucet.solana.com if the CLI is throttled).
-- Mainnet additionally needs a real (non-placeholder) program keypair kept
+- For a fresh Mainnet deploy, a real (non-placeholder) program keypair kept
   out of version control.
 
-After deploying, register the program id (`ARCENPAY_CONTRACT_9100001_*`, see
-the script output) and call `initialize_config(treasury, fee_bps)` once.
+After a fresh deploy, register the program id (`ARCENPAY_CONTRACT_9100001_*` /
+`ARCENPAY_CONTRACT_9100000_*`, see the script output) and call
+`initialize_config(treasury, fee_bps)` once. The current Mainnet deployment is
+already initialized with treasury `3hoVJKNDP9zpHvxizcKGYzZL2ZeTaBTZ2m2p68Wi9Tmv`
+and `fee_bps = 50`.
 
 ## Local validator smoke test
 

@@ -104,6 +104,26 @@ export function createApp() {
     c.json({ status: "ok", timestamp: new Date().toISOString() }),
   );
 
+  // ── API index ──────────────────────────────────────────────────────────────
+  // The API only mounts routes under /api/v1. A bare `/` or `/v1` used to
+  // return the generic 404 envelope, which reads like the service is down even
+  // though /health is green. Answer the index and redirect the common `/v1`
+  // typo instead.
+  app.get("/", (c) =>
+    c.json({
+      name: "ArcenPay API",
+      status: "ok",
+      apiBase: "/api/v1",
+      health: "/health",
+      docs: "https://docs.arcenpay.com",
+    }),
+  );
+  app.all("/v1", (c) => c.redirect("/api/v1", 308));
+  app.all("/v1/*", (c) => {
+    const url = new URL(c.req.url);
+    return c.redirect(`/api/v1${url.pathname.slice(3)}${url.search}`, 308);
+  });
+
   // ── Mount all routes under /api/v1 ─────────────────────────────────────────
   app.route("/api/v1", appRouter);
 

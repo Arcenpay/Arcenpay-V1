@@ -2,6 +2,7 @@
   "name": "arcenpay",
   "version": "1.0.0",
   "private": true,
+  "license": "MIT",
   "description": "Web3 Entitlement Layer \u2014 ArcenPay + ZKVUB Protocol",
   "workspaces": [
     "packages/*",

@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "description": "Private shared runtime for ArcenPay internal services",
-  "license": "UNLICENSED",
+  "license": "MIT",
   "homepage": "https://app.arcenpay.com",
   "keywords": [
     "arcenpay",

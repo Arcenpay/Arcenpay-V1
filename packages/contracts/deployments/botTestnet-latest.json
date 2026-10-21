@@ -1,6 +1,9 @@
 {
   "network": "botTestnet",
   "chainId": 968,
+  "status": "placeholder",
+  "placeholder": true,
+  "note": "Deterministic stand-in addresses. This is NOT a deployment: no contract code exists at these addresses and the chain is not available for billing. Replace with real output from scripts/deploy.ts before use.",
   "deployer": "0x0000000000000000000000000000000000000968",
   "deploymentKind": "uups",
   "contracts": {

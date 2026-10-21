@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "description": "ArcenPay subscription billing program for Solana (Anchor)",
-  "license": "UNLICENSED",
+  "license": "MIT",
   "scripts": {
     "test": "sh -c 'if command -v cargo >/dev/null 2>&1; then cargo test --manifest-path programs/arcenpay-solana/Cargo.toml; else echo \"[solana-programs] cargo unavailable; skipping unit tests\"; fi'",
     "test:cargo": "cargo test --manifest-path programs/arcenpay-solana/Cargo.toml",

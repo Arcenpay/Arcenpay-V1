@@ -1,5 +1,12 @@
 # BOT Chain Deployment Runbook
 
+> **Status: completed for BOT Chain Mainnet (`677`).** The UUPS contracts were
+> deployed on 2026-09-05 (`deployments/botMainnet-latest.json`) and their code is
+> live on-chain. This runbook is retained for redeploys and upgrades.
+> **BOT Chain Testnet (`968`) is still a placeholder** — the addresses in
+> `deployments/botTestnet-latest.json` are deterministic stand-ins, not a
+> deployment.
+
 Everything code-side is wired and validated. This is the exact sequence to run
 **yourself** (you hold the deployer private key — I never touch it). Follow it
 in order: testnet first, always.
@@ -128,5 +135,6 @@ the same for Mainnet with its own env file and `CHAIN_ID=677`.
 
 Everything above has been typechecked (`internal-core`, `facilitator`,
 `arcen-backend`, all 3 SDKs) and the contracts compile
-(`npx hardhat compile`, 72 Solidity files, cancun target). Nothing has been
-deployed or broadcast — steps 1–6 above are yours to run.
+(`npx hardhat compile`, 72 Solidity files, cancun target). Steps 1–2 (testnet)
+remain optional; steps 4–6 have been completed for BOT Chain Mainnet. Re-run
+them only for a redeploy or upgrade.

@@ -2,6 +2,8 @@
 
 Soroban Rust implementation of the ArcenPay Web3 Entitlement Layer smart contracts, ported from Solidity/EVM to Stellar Soroban.
 
+> **Status: deployed on Stellar Testnet (`9000001`) only.** Stellar Mainnet (`9000000`) is not deployed yet. Contract ids for the testnet deployment are registered in `packages/internal-core/src/addresses.ts` and `packages/contracts/deployments/environment-manifest.json`.
+
 ## Architecture
 
 ```

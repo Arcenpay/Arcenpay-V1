@@ -12,8 +12,10 @@ arcenpay_solana = "D4ECHyomENvFHrdXWHcRncTwwQ1EQbyY4ga3CkcaYCP3"
 [programs.devnet]
 arcenpay_solana = "D4ECHyomENvFHrdXWHcRncTwwQ1EQbyY4ga3CkcaYCP3"
 
-# Fill in the real program ids after `anchor deploy`, then mirror them into
-# packages/internal-core/src/addresses.ts (SOLANA_* entries) or the
+# The same program id serves every cluster: localnet, Devnet, and Mainnet-beta
+# are all deployed at D4ECHyomENvFHrdXWHcRncTwwQ1EQbyY4ga3CkcaYCP3. If the
+# program keypair is ever regenerated, run `anchor keys sync` and mirror the new
+# id into packages/internal-core/src/addresses.ts (SOLANA_* entries) and the
 # ARCENPAY_CONTRACT_<chainId>_* env vars.
 [programs.mainnet]
 arcenpay_solana = "D4ECHyomENvFHrdXWHcRncTwwQ1EQbyY4ga3CkcaYCP3"

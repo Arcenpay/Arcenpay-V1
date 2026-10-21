@@ -12,10 +12,10 @@ at all. Where a concept differs, the EVM equivalent is given.
 ## 0. TL;DR
 
 ArcenPay is a Web3 entitlements/billing platform. It supports three chain families: **EVM**
-(mature, works), **Stellar** (works), and **Solana** (new, ~80% built, one broken joint).
+(mature, production on BOT Chain), **Stellar** (testnet), and **Solana** (production on mainnet).
 
-- The **on-chain Anchor program is deployed, initialized, and working.** It mints subscriptions and
-  moves USDC on devnet.
+- The **on-chain Anchor program is deployed, initialized, and working on Solana Mainnet
+  (`9100000`) and Devnet (`9100001`).** It mints subscriptions and moves USDC on both clusters.
 - **Activation is fixed and was verified live.** The off-chain projection (`SubscriptionState`,
   invoice, payment, credit grant, entitlement) commits synchronously on the client's confirmed tx.
   The old "finalizing…" screen was a *masked error* (a catalog cuid coerced to `BigInt`); retries
@@ -48,15 +48,24 @@ This is correct and intentional, not a missing deployment.
 
 ---
 
-## 2. On-chain layer (devnet)
+## 2. On-chain layer (mainnet and devnet)
 
 ```
 Program ID (all roles): D4ECHyomENvFHrdXWHcRncTwwQ1EQbyY4ga3CkcaYCP3
-Upgradeable:            BPFLoaderUpgradeab1e…  ProgramData HsKrcZ1j…
-Authority:              ELcbYWG16Nisg8qqKjs2C8zQNw7QZy4yUssKEPLyHYPW
+Clusters:               mainnet-beta (9100000) and devnet (9100001)
+Upgradeable:            BPFLoaderUpgradeab1e…  ProgramData HsKrcZ1jBJzry27Hu3RJRfvNdKRRnuVk9Bfnw71LWCQZ
+Upgrade authority:      8rJPx5E5CZkDxvW1WGeyQFQhSDkH55vxx98HKCFwnP34
+Config PDA:             Hk8waLk49ssHb4WCKPcGqVN44HNBjF8EvLixJcB53qBk
+Treasury (mainnet):     3hoVJKNDP9zpHvxizcKGYzZL2ZeTaBTZ2m2p68Wi9Tmv
+Fee:                    50 bps
 Source:                 packages/solana-programs/programs/arcenpay-solana/src/lib.rs (~1,270 LOC)
-Second program:         mock-groth16-verifier (ZK proof verification for settlement)
+Second program:         mock-groth16-verifier (optional ZK proof verification for settlement)
 ```
+
+Verified against `api.mainnet-beta.solana.com`: the program account is executable, and the `Config`
+PDA decodes to `{ admin: 8rJPx5E5CZkDxvW1WGeyQFQhSDkH55vxx98HKCFwnP34, treasury:
+3hoVJKNDP9zpHvxizcKGYzZL2ZeTaBTZ2m2p68Wi9Tmv, feeBps: 50 }`. The upgrade authority is the same
+admin key today; a multisig migration is planned (see `SECURITY.md`).
 
 **Instructions (13):** `initialize_config`, `create_plan`, `update_plan`, `subscribe`, `execute`,
 `cancel`, `change_plan`, `authorize_settler`, `fund_session`, `settle`, `withdraw_session`,

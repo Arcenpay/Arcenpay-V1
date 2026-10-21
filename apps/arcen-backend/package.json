@@ -16,6 +16,7 @@
     "repair:platform-billing": "tsx scripts/repair-platform-billing.ts",
     "reset:platform-catalog": "tsx scripts/reset-platform-catalog.ts",
     "setup:platform-billing": "tsx scripts/setup-platform-billing.ts",
+    "dogfood:platform-billing": "tsx scripts/dogfood-platform-billing.ts",
     "verify:stellar:renewal": "tsx scripts/verify-stellar-renewal.ts",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
