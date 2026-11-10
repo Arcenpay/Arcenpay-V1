@@ -1,7 +1,9 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { createRequire } from "node:module";
 import { withSentryConfig } from "@sentry/nextjs";
 
+const require = createRequire(import.meta.url);
 const outputFileTracingRoot = path.join(
   path.dirname(fileURLToPath(import.meta.url)),
   "../..",
@@ -45,8 +47,6 @@ const nextConfig = {
     return [{ source: "/:path*", headers: securityHeaders }];
   },
   serverExternalPackages: [
-    "pino",
-    "pino-pretty",
     "thread-stream",
     "lokijs",
     "encoding",
@@ -65,6 +65,10 @@ const nextConfig = {
   webpack: (config) => {
     config.resolve.alias = {
       ...(config.resolve.alias || {}),
+      // WalletConnect's logger also enters the SSR bundle. Use Pino's real
+      // console logger there so OpenNext never bundles Node-only transports
+      // (including the optional, uninstalled pino-pretty package).
+      "pino$": require.resolve("pino/browser"),
       "@react-native-async-storage/async-storage": false,
     };
     config.resolve.fallback = {
@@ -73,7 +77,6 @@ const nextConfig = {
       tls: false,
     };
     config.externals.push(
-      "pino-pretty",
       "lokijs",
       "encoding",
       "@reclaimprotocol/js-sdk",

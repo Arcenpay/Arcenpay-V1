@@ -6,6 +6,7 @@
     "prebuild": "npm run build --workspace=@arcenpay/internal-core && npm run build --workspace=@arcenpay/shared-types && npm run build --workspace=@arcenpay/react",
     "pretypecheck": "npm run build --workspace=@arcenpay/internal-core && npm run build --workspace=@arcenpay/shared-types && npm run build --workspace=@arcenpay/react",
     "build": "NODE_OPTIONS=--max-old-space-size=4096 next build --webpack",
+    "build:cloudflare": "opennextjs-cloudflare build",
     "postbuild": "next-sitemap --config next-sitemap.config.mjs",
     "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
     "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
