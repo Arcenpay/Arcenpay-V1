@@ -9,9 +9,6 @@
     "binding": "ASSETS"
   },
   "minify": true,
-  "limits": {
-    "cpu_ms": 30000
-  },
   "placement": {
     "mode": "smart"
   },
