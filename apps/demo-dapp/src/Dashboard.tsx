@@ -152,7 +152,7 @@ export default function Dashboard({ onResetComponent }: { onResetComponent?: () 
     setConnectionStatus('idle')
     setIdentified(false)
     setIdentifyError(null)
-  }, [disconnectAsync])
+  }, [disconnectAsync, solana])
 
   useEffect(() => {
     isConnected().then((res) => {

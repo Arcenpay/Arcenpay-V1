@@ -133,9 +133,9 @@ const ADDRESSES: Record<number, ContractAddresses> = {
   },
 
   // ── Solana ──
-  // Addresses hold base58 program ids. Deploy via env overrides
-  // (ARCENPAY_CONTRACT_<chainId>_<key>) or `setContractAddresses` after the
-  // Anchor program is deployed. Empty string is the family "unset" sentinel.
+  // Addresses hold base58 program ids. One Anchor program serves every role.
+  // Mainnet (deployed) and Devnet both use the same program id; the cluster is
+  // selected by RPC endpoint, not by address.
   [SOLANA_MAINNET_CHAIN_ID]: {
     subscriptionRegistry: "D4ECHyomENvFHrdXWHcRncTwwQ1EQbyY4ga3CkcaYCP3",
     autopayModule: "D4ECHyomENvFHrdXWHcRncTwwQ1EQbyY4ga3CkcaYCP3",

@@ -262,7 +262,7 @@ const response = await agent.fetch("https://api.merchant.com/v1/inference", {
 ## Local Development & Operations
 
 ### Prerequisites
-- **Node.js:** `>= 20.0.0`
+- **Node.js:** 22 recommended (matches CI; package minimum is `>= 20.0.0`)
 - **Package Manager:** `npm >= 10.0.0`
 - **Container Runtime:** Docker Desktop or Docker Engine
 - **Solidity / Rust (Optional for contract development):** Foundry (`forge`) and Rust (`soroban-cli`)
@@ -273,7 +273,7 @@ const response = await agent.fetch("https://api.merchant.com/v1/inference", {
 # 1. Clone repository and install dependencies
 git clone https://github.com/Arcenpay/Arcenpay.git
 cd Arcenpay
-npm ci
+npm ci --include=dev --include=optional
 
 # 2. Configure environment
 cp .env.example .env
@@ -284,6 +284,16 @@ docker compose up -d
 # 4. Generate Prisma clients and build all workspaces
 npm run build
 ```
+
+Build tools such as Hardhat are workspace development dependencies. Install from
+the repository root with development dependencies included, even when preparing
+a production build. If a build reports `hardhat: command not found`, rerun the
+install command above before rebuilding. For Railway's backend/facilitator
+deployment, use `npm run build:railway` from the repository root.
+
+Run `npm run build`, `npm run typecheck`, `npm run test`, and `npm run lint`
+sequentially: the test pipeline also builds the dashboard, and simultaneous
+Next.js builds compete for the same `.next/lock`.
 
 ### Local Services & Port Reference
 
